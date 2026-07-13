@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "legal-agent"
+version = "0.1.0"
+description = "Ingestion layer for Crime OS legal RAG corpora"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic>=2.0",
+  "PyMuPDF>=1.23",
+  "qdrant-client>=1.10",
+  "sentence-transformers>=3.0",
+  "transformers>=4.40",
+]
+
+[tool.setuptools]
+py-modules = ["LEGAL_AGENT"]
+
+[tool.setuptools.packages.find]
+include = ["ingestion*", "legal_rag*", "llm*", "extractors*"]

@@ -1,0 +1,13 @@
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Iterable
+
+from .extract_text import PageExtraction
+from .parse_bns import parse_legal_act_pages
+from .schemas import LegalSectionRecord
+
+
+def parse_bsa_pdf(pdf_path: str | Path, pages: Iterable[PageExtraction]) -> list[LegalSectionRecord]:
+    return parse_legal_act_pages(pdf_path, pages, act="BSA", parser_name="parse_bsa")
+
