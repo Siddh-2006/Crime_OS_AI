@@ -128,6 +128,7 @@ class LegalSectionRecord(CrimeOSModel):
     chapter: str = ""
     chapter_tag: list[str] = Field(default_factory=list)
     content: str = ""
+    summary: str = ""
     references: list[str] = Field(default_factory=list)
     clauses: list[ClauseRecord] = Field(default_factory=list)
     subsections: list[SubsectionRecord] = Field(default_factory=list)

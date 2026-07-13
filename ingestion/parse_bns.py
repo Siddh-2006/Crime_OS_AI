@@ -20,6 +20,37 @@ from .utils import (
 )
 
 
+def _build_summary_lookup(page: PageExtraction) -> dict[str, list[str]]:
+    metadata = page.page_metadata if isinstance(page.page_metadata, dict) else {}
+    associations = metadata.get("paragraph_associations", [])
+    lookup: dict[str, list[str]] = {}
+    if not isinstance(associations, list):
+        return lookup
+
+    for association in associations:
+        if not isinstance(association, dict):
+            continue
+        paragraph = normalize_text(str(association.get("paragraph", "")))
+        summary = normalize_text(str(association.get("summary", "")))
+        if not paragraph or not summary:
+            continue
+        lookup.setdefault(paragraph, []).append(summary)
+    return lookup
+
+
+def _consume_summary(summary_lookup: dict[str, list[str]], text: str) -> str:
+    key = normalize_text(text)
+    if not key:
+        return ""
+    summaries = summary_lookup.get(key)
+    if not summaries:
+        return ""
+    summary = summaries.pop(0)
+    if not summaries:
+        summary_lookup.pop(key, None)
+    return summary
+
+
 def _append_line(node: dict[str, object], text: str, page_number: int) -> None:
     node.setdefault("content_lines", []).append(text)
     pages = node.setdefault("source_pages", [])
@@ -29,6 +60,12 @@ def _append_line(node: dict[str, object], text: str, page_number: int) -> None:
         node["page"] = page_number
     if not node.get("source_page"):
         node["source_page"] = page_number
+
+
+def _append_summary(node: dict[str, object], summary_text: str) -> None:
+    if not summary_text:
+        return
+    node.setdefault("summary_lines", []).append(summary_text)
 
 
 def _flush_clause(node: dict[str, object] | None, section_serial: str, parent_clauses: list[ClauseRecord]) -> None:
@@ -99,6 +136,7 @@ def _flush_section(records: list[LegalSectionRecord], node: dict[str, object] | 
 
     serial_number = str(node.get("serial_number") or "")
     chapter = str(node.get("chapter") or "")
+    summary = compact_lines(str(line) for line in node.get("summary_lines", []) if normalize_text(str(line)))
     section = LegalSectionRecord(
         id=build_record_id(act, serial_number, chapter, content[:200]),
         act=act,
@@ -106,6 +144,7 @@ def _flush_section(records: list[LegalSectionRecord], node: dict[str, object] | 
         chapter=chapter,
         chapter_tag=list(node.get("chapter_tag", [])),
         content=content,
+        summary=summary,
         references=extract_references(content, exclude=[serial_number]),
         clauses=list(node.get("clauses", [])),
         subsections=list(node.get("subsections", [])),
@@ -134,11 +173,13 @@ def parse_legal_act_pages(
     chapter_tag_buffer: list[str] = []
 
     for page in pages:
+        summary_lookup = _build_summary_lookup(page)
         lines = [line for line in page.lines if not is_legal_noise_line(line.text)]
         index = 0
         while index < len(lines):
             line = lines[index]
             text = normalize_text(line.text)
+            summary_text = _consume_summary(summary_lookup, text)
 
             chapter = extract_legal_chapter(text)
             if chapter:
@@ -177,6 +218,7 @@ def parse_legal_act_pages(
                     "subsections": [],
                     "current_subsection": None,
                     "current_clause": None,
+                    "summary_lines": [summary_text] if summary_text else [],
                     "page": page.page_number,
                     "source_page": page.page_number,
                     "source_pages": [page.page_number],
@@ -190,6 +232,8 @@ def parse_legal_act_pages(
                     chapter_tag_buffer.append(line.text)
                 index += 1
                 continue
+
+            _append_summary(current_section, summary_text)
 
             subsection_id = extract_legal_subsection_id(text)
             clause_id = extract_legal_clause_id(text)

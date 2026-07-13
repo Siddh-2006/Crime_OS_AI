@@ -41,6 +41,14 @@ LEGAL_NOISE_EXACT = {
     "SEC 1",
 }
 
+LEGAL_NOISE_PATTERNS = [
+    re.compile(r"^THE GAZETTE OF INDIA EXTRAORDINARY$"),
+    re.compile(r"^\[Part .*"),
+    re.compile(r"^Sec\.\s*\d+\]$"),
+    re.compile(r"^_+$"),
+    re.compile(r"^\d+\s+of\s+\d{4}\.$"),
+]
+
 
 def normalize_text(text: str) -> str:
     return " ".join(text.replace("\u00ad", "").replace("\xa0", " ").split()).strip()
@@ -78,6 +86,8 @@ def is_legal_noise_line(text: str) -> bool:
     if _is_noise_separator(normalized):
         return True
     if upper in LEGAL_NOISE_EXACT:
+        return True
+    if any(pattern.fullmatch(normalized) for pattern in LEGAL_NOISE_PATTERNS):
         return True
     if "THE GAZETTE OF INDIA" in upper or "MINISTRY OF LAW AND JUSTICE" in upper:
         return True
