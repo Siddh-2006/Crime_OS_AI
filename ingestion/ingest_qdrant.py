@@ -22,7 +22,14 @@ def load_embedded_records(path: str | Path) -> list[EmbeddedLegalRecord]:
         record = LegalSectionRecord.model_validate(item["record"])
         embedding_text = str(item.get("embedding_text") or "")
         embedding = list(item.get("embedding") or [])
-        records.append(EmbeddedLegalRecord(record=record, embedding_text=embedding_text, embedding=embedding))
+        kwargs = {
+            "record": record,
+            "embedding_text": embedding_text,
+            "embedding": embedding,
+        }
+        if item.get("uuid"):
+            kwargs["uuid"] = str(item["uuid"])
+        records.append(EmbeddedLegalRecord(**kwargs))
     return records
 
 

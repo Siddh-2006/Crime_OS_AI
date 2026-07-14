@@ -7,13 +7,25 @@ from ingestion.schemas import LegalSectionRecord
 
 from .models import EmbeddedLegalRecord, LegalRetrievalResult
 
-
 def _load_qdrant():
     try:
         from qdrant_client import QdrantClient, models
     except Exception as exc:  # pragma: no cover - dependency missing
         raise RuntimeError("qdrant-client is required for vector storage and retrieval.") from exc
     return QdrantClient, models
+
+
+def _extract_scroll_result(result: Any) -> tuple[list[Any], Any | None]:
+    points = getattr(result, "points", None)
+    next_offset = getattr(result, "next_page_offset", None)
+    if points is None:
+        if isinstance(result, tuple):
+            points = result[0] if result else []
+            if len(result) > 1:
+                next_offset = result[1]
+        else:
+            points = result or []
+    return list(points or []), next_offset
 
 
 @dataclass(slots=True)
@@ -81,7 +93,7 @@ class LegalQdrantStore:
         models = self._models
         points = [
             models.PointStruct(
-                id=record.record.id,
+                id=record.uuid,
                 vector=record.embedding,
                 payload=record.to_payload(),
             )
@@ -92,6 +104,31 @@ class LegalQdrantStore:
         except Exception as exc:  # pragma: no cover - network/runtime specific
             raise RuntimeError(self._connection_error_message()) from exc
         return len(points)
+
+    def list_sections(self, *, batch_size: int = 256) -> list[LegalSectionRecord]:
+        records: list[LegalSectionRecord] = []
+        offset = None
+        while True:
+            try:
+                result = self.client.scroll(
+                    collection_name=self.config.collection_name,
+                    limit=batch_size,
+                    offset=offset,
+                    with_payload=True,
+                )
+            except Exception as exc:  # pragma: no cover - network/runtime specific
+                raise RuntimeError(self._connection_error_message()) from exc
+
+            points, next_offset = _extract_scroll_result(result)
+            if not points:
+                break
+            for point in points:
+                payload = point.payload or {}
+                records.append(LegalSectionRecord.model_validate(payload))
+            if next_offset is None:
+                break
+            offset = next_offset
+        return records
 
     def search(self, query_vector: Sequence[float], *, limit: int = 20, query_filter: Any | None = None) -> list[LegalRetrievalResult]:
         hits = self._search_points(query_vector, limit=limit, query_filter=query_filter)
@@ -133,7 +170,7 @@ class LegalQdrantStore:
                 with_payload=True,
             )
             # qdrant-client versions vary in scroll return shape; keep the parsing defensive.
-            points = result[0]
+            points, _ = _extract_scroll_result(result)
             if not points:
                 continue
             payload = points[0].payload or {}

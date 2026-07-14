@@ -32,7 +32,7 @@ def _print_sections(title: str, results) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Evaluate legal retrieval quality for a complaint.")
     parser.add_argument("complaint", help="Natural language complaint")
-    parser.add_argument("--top-k", type=int, default=20, help="Vector search depth")
+    parser.add_argument("--top-k", type=int, default=20, help="Fused candidate count passed to reranking")
     parser.add_argument("--final-k", type=int, default=5, help="Reranked output size")
     parser.add_argument("--act", action="append", dest="acts", help="Optional legal act filter; can be repeated")
     args = parser.parse_args()
@@ -45,7 +45,7 @@ def main() -> int:
         return 1
     confidence = compute_confidence(bundle)
 
-    _print_results("Top 20 Retrieved", bundle.top_20)
+    _print_results("Top Fused Candidates", bundle.top_20)
     print()
     _print_results("Top 5 Reranked", bundle.top_5)
     print()

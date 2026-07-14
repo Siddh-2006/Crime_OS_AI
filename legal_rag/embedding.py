@@ -22,7 +22,6 @@ def build_legal_embedding_text(record: LegalSectionRecord) -> str:
     return (
         f"ACT:\n{record.act}\n\n"
         f"CHAPTER:\n{record.chapter or ''}\n\n"
-        f"CHAPTER TAGS:\n{_normalize_chapter_tags(record.chapter_tag)}\n\n"
         f"SECTION:\n{record.serial_number}\n\n"
         f"CONTENT:\n{record.content}"
     ).strip()

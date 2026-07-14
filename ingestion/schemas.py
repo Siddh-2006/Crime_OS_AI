@@ -130,11 +130,7 @@ class LegalSectionRecord(CrimeOSModel):
     content: str = ""
     summary: str = ""
     references: list[str] = Field(default_factory=list)
-    clauses: list[ClauseRecord] = Field(default_factory=list)
-    subsections: list[SubsectionRecord] = Field(default_factory=list)
-    page: int = 0
-    source_page: int = 0
-    source_pages: list[int] = Field(default_factory=list)
+    page_numbers: list[int] = Field(default_factory=list)
     metadata: DocumentMetadata = Field(default_factory=DocumentMetadata)
 
 

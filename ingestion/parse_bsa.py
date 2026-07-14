@@ -8,6 +8,10 @@ from .parse_bns import parse_legal_act_pages
 from .schemas import LegalSectionRecord
 
 
-def parse_bsa_pdf(pdf_path: str | Path, pages: Iterable[PageExtraction]) -> list[LegalSectionRecord]:
-    return parse_legal_act_pages(pdf_path, pages, act="BSA", parser_name="parse_bsa")
-
+def parse_bsa_pdf(
+    pdf_path: str | Path,
+    pages: Iterable[PageExtraction],
+    *,
+    output_dir: str | Path | None = None,
+) -> list[LegalSectionRecord] | Path:
+    return parse_legal_act_pages(pdf_path, pages, act="BSA", parser_name="parse_bsa", output_dir=output_dir)

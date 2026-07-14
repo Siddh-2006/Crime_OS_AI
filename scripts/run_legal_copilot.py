@@ -3,6 +3,11 @@ from __future__ import annotations
 import argparse
 import json
 
+import sys
+from pathlib import Path
+
+parent_path = Path(__file__).resolve().parent.parent
+sys.path.append(str(parent_path))
 from legal_rag.analysis import LegalAnalysisService, compute_confidence
 from legal_rag.retrieval import LegalRetriever
 from llm.qwen_client import QwenClient
@@ -21,7 +26,7 @@ def _print_results(title: str, results) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run the legal copilot pipeline for a complaint.")
     parser.add_argument("complaint", help="Natural language complaint")
-    parser.add_argument("--top-k", type=int, default=20, help="Vector search depth")
+    parser.add_argument("--top-k", type=int, default=20, help="Fused candidate count passed to reranking")
     parser.add_argument("--final-k", type=int, default=5, help="Reranked output size")
     parser.add_argument("--device", default=None, help="Local model device, e.g. cpu or cuda")
     parser.add_argument("--model", default="Qwen/Qwen3-8B-Instruct", help="Local Qwen model name or path")
@@ -38,7 +43,7 @@ def main() -> int:
         print(str(exc))
         return 1
 
-    _print_results("Top 20 Retrieved", bundle.top_20)
+    _print_results("Top Fused Candidates", bundle.top_20)
     print()
     _print_results("Top 5 Reranked", bundle.top_5)
     print()
