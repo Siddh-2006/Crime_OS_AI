@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Any
 from typing import Protocol
 
 
@@ -13,9 +14,11 @@ class TextBackend(Protocol):
 
 @dataclass(slots=True)
 class TransformersTextBackend:
-    model_name: str = "Qwen/Qwen3-8B-Instruct"
+    model_name: str = "Qwen/Qwen3-8B"
     device: str | None = None
     torch_dtype: str | None = "auto"
+    _tokenizer: Any = field(init=False, default=None)
+    _model: Any = field(init=False, default=None)
 
     def __post_init__(self) -> None:
         self._tokenizer = None
@@ -80,7 +83,7 @@ class QwenClient:
         self,
         *,
         backend: TextBackend | None = None,
-        model_name: str = "Qwen/Qwen3-8B-Instruct",
+        model_name: str = "Qwen/Qwen3-8B",
         device: str | None = None,
     ) -> None:
         self.backend = backend or TransformersTextBackend(model_name=model_name, device=device)

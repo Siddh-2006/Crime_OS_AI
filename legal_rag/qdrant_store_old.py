@@ -6,7 +6,6 @@ from typing import Any, Iterable, Sequence
 from ingestion.schemas import LegalSectionRecord
 
 from .models import EmbeddedLegalRecord, LegalRetrievalResult
-import uuid
 
 def _load_qdrant():
     try:
@@ -94,7 +93,7 @@ class LegalQdrantStore:
         models = self._models
         points = [
             models.PointStruct(
-                id=str(uuid.uuid4()),
+                id=record.uuid,
                 vector=record.embedding,
                 payload=record.to_payload(),
             )

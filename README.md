@@ -79,11 +79,6 @@ The legal parser removes common OCR noise patterns, including:
 - `BAAI/bge-m3`
 - Local inference only
 - `sentence-transformers`
-- Each legal section now produces 3 embeddings:
-  - `content_embedding`
-  - `summary_embedding`
-  - `chapter_tag_embedding`
-- Each embedding row carries its own `uuid` for Qdrant storage
 
 ## Reranker
 
@@ -94,7 +89,6 @@ The legal parser removes common OCR noise patterns, including:
 
 - Qdrant Local
 - Single collection: `legal`
-- Search results are deduped back to one result per section
 - Run locally with:
 
 ```bash
@@ -108,8 +102,6 @@ Generate embeddings from parsed JSON:
 ```bash
 python -m ingestion.embed_records parsed/BNS.json --out embedded/legal_embeddings.jsonl
 ```
-
-This writes 3 JSONL rows per section, one for each embedding type.
 
 Upload embeddings into Qdrant:
 
@@ -146,5 +138,4 @@ The terminal flow prints:
 ## Notes
 
 - Chapter metadata and chapter tags are carried into embeddings.
-- The section parser payload still uses the parsed section `id`, but Qdrant point ids now use embedding UUIDs.
 - Reference expansion is one level deep only.

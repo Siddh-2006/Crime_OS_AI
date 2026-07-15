@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from uuid import uuid4
 from typing import Any, Literal
 
 from ingestion.schemas import LegalSectionRecord
@@ -14,19 +13,16 @@ class EmbeddedLegalRecord:
     record: LegalSectionRecord
     embedding_text: str
     embedding: list[float] = field(default_factory=list)
-    uuid: str = field(default_factory=lambda: str(uuid4()))
 
     def to_payload(self) -> dict[str, Any]:
         return self.record.model_dump(exclude_none=True, mode="json")
 
     def to_json_dict(self) -> dict[str, Any]:
-        data = {
+        return {
             "record": self.record.model_dump(exclude_none=True, mode="json"),
             "embedding_text": self.embedding_text,
             "embedding": self.embedding,
-            "uuid": self.uuid,
         }
-        return data
 
 
 @dataclass(slots=True)

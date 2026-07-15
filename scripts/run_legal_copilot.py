@@ -29,7 +29,7 @@ def main() -> int:
     parser.add_argument("--top-k", type=int, default=20, help="Fused candidate count passed to reranking")
     parser.add_argument("--final-k", type=int, default=5, help="Reranked output size")
     parser.add_argument("--device", default=None, help="Local model device, e.g. cpu or cuda")
-    parser.add_argument("--model", default="Qwen/Qwen3-8B-Instruct", help="Local Qwen model name or path")
+    parser.add_argument("--model", default="Qwen/Qwen3-8B", help="Local Qwen model name or path")
     parser.add_argument("--act", action="append", dest="acts", help="Optional legal act filter; can be repeated")
     args = parser.parse_args()
 
