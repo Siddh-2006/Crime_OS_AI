@@ -1,0 +1,23 @@
+# write gitignore to ignore vscode files, nodemodules, and other common files
+# Visual Studio Code
+.vscode/
+# Node modules
+node_modules/   
+# Logs
+logs/
+*.log
+npm-debug.log*
+# Runtime data
+pids/
+*.pid
+*.seed
+# env
+.env
+# OS generated files
+.DS_Store
+# package-lock.json
+package-lock.json
+# .venv
+.venv/
+#_pycache__
+__pycache__/

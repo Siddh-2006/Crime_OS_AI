@@ -1,0 +1,813 @@
+import { v4 as uuidv4 } from 'uuid';
+import { IComplaintRepository } from '../repositories/IComplaintRepository';
+import { Complaint, IComplaint, IEvidenceMetadata } from '../models/Complaint.model';
+import { ComplaintStatus } from '../enums/complaintStatus.enum';
+import { ComplaintCategory } from '../enums/complaintCategory.enum';
+import { PoliceStation } from '../../police/models/PoliceStation.model';
+import { Officer } from '../../police/models/Officer.model';
+import { User } from '../../user/models/User.model';
+import { getRedisClient } from '../../../config/redis';
+import { REDIS_KEYS, REDIS_TTL } from '../../../shared/constants/redis.constants';
+import { NotFoundError } from '../../../common/errors/NotFoundError';
+import { ValidationError } from '../../../common/errors/ValidationError';
+import { AuthorizationError } from '../../../common/errors/AuthorizationError';
+import { ConflictError } from '../../../common/errors/ConflictError';
+import { EmailQueue } from '../../../shared/queue/EmailQueue';
+import { FirQueue } from '../../../shared/queue/FirQueue';
+import cloudinary from '../../../config/cloudinary';
+import { Types } from 'mongoose';
+import logger from '../../../config/logger';
+import axios from 'axios';
+import env from '../../../config/env';
+
+export class ComplaintService {
+  constructor(private readonly complaintRepository: IComplaintRepository) {}
+
+  // Helper to check if a complaint is locked (immutable FIR)
+  private checkLock(complaint: IComplaint): void {
+    if (complaint.status === ComplaintStatus.FIR_REGISTERED || complaint.status === ComplaintStatus.CLOSED) {
+      throw new ValidationError('This complaint is locked because the case has already been registered or closed.');
+    }
+  }
+
+  // ─── Direct Cloudinary Upload Parameter Generation ──────────────────────────
+  async getUploadSignature(citizenId: string): Promise<any> {
+    const timestamp = Math.round(new Date().getTime() / 1000);
+    const publicId = `evidence_${uuidv4()}`;
+    const folder = `crime-os/complaints/${citizenId}`;
+
+    const signature = cloudinary.utils.api_sign_request(
+      {
+        timestamp,
+        folder,
+        public_id: publicId,
+      },
+      cloudinary.config().api_secret!
+    );
+
+    return {
+      signature,
+      timestamp,
+      apiKey: cloudinary.config().api_key,
+      cloudName: cloudinary.config().cloud_name,
+      folder,
+      publicId,
+    };
+  }
+
+  // ─── Manual Search with Redis Cache ──────────────────────────────────────────
+  async searchPoliceStations(query: string): Promise<any[]> {
+    const redis = getRedisClient();
+    let stations: any[] = [];
+
+    // Try fetching from cache
+    const cached = await redis.get(REDIS_KEYS.POLICE_STATIONS_LIST);
+    if (cached) {
+      stations = JSON.parse(cached);
+    } else {
+      // DB Fallback
+      stations = await PoliceStation.find({ isActive: true }).lean().exec();
+      // Cache list for 24 hours
+      await redis.set(
+        REDIS_KEYS.POLICE_STATIONS_LIST,
+        JSON.stringify(stations),
+        'EX',
+        REDIS_TTL.POLICE_STATIONS
+      );
+    }
+
+    if (!query || !query.trim()) {
+      return stations;
+    }
+
+    // Normalization helper
+    const normalize = (str: string): string[] => {
+      return str
+        .toLowerCase()
+        .replace(/[^\w\s]/g, '') // remove punctuation
+        .replace(/\s+/g, ' ') // normalize whitespace
+        .trim()
+        .split(' ')
+        .filter(Boolean);
+    };
+
+    const queryWords = normalize(query);
+
+    const scored = stations.map((station) => {
+      const targetText = `${station.name} ${station.city} ${station.district} ${station.code}`;
+      const targetWords = normalize(targetText);
+
+      // Score based on word matches
+      let matchCount = 0;
+      queryWords.forEach((qWord) => {
+        if (targetWords.some((tWord) => tWord.includes(qWord) || qWord.includes(tWord))) {
+          matchCount++;
+        }
+      });
+
+      return { station, score: matchCount };
+    });
+
+    return scored
+      .filter((item) => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map((item) => item.station);
+  }
+
+  // ─── Create Complaint ───────────────────────────────────────────────────────
+  async createComplaint(citizenId: string, data: any, ip: string): Promise<IComplaint> {
+    const {
+      incidentDate,
+      incidentTime,
+      incidentPlace,
+      category,
+      shortDescription,
+      detailedDescription,
+      policeStation,
+      evidence = [],
+    } = data;
+
+    // Verify station exists
+    const stationExists = await PoliceStation.findById(policeStation);
+    if (!stationExists) {
+      throw new NotFoundError('Police Station');
+    }
+
+    // Generate unique complaint number
+    const complaintNumber = `COMP-${uuidv4()}`;
+
+    // Verify evidence uploads
+    if (evidence.length > 10) {
+      throw new ValidationError('Maximum 10 evidence files allowed.');
+    }
+
+    const validatedEvidence: IEvidenceMetadata[] = evidence.map((file: any) => ({
+      publicId: file.publicId,
+      secureUrl: file.secureUrl,
+      resourceType: file.resourceType,
+      mimeType: file.mimeType,
+      originalFilename: file.originalFilename || 'unnamed_file',
+      extension: file.extension || 'bin',
+      size: file.size || 0,
+      uploadedBy: new Types.ObjectId(citizenId),
+      uploadedAt: new Date(),
+      processingStatus: 'PENDING',
+    }));
+
+    const newComplaintData: Partial<IComplaint> = {
+      complaintNumber,
+      status: ComplaintStatus.SUBMITTED,
+      citizen: new Types.ObjectId(citizenId),
+      policeStation: new Types.ObjectId(policeStation),
+      incidentDate: new Date(incidentDate),
+      incidentTime,
+      incidentPlace,
+      category: category as ComplaintCategory,
+      shortDescription,
+      detailedDescription,
+      currentVersionNumber: 1,
+      evidence: validatedEvidence,
+      descriptionHistory: [
+        {
+          version: 1,
+          editedBy: 'Citizen',
+          editorId: new Types.ObjectId(citizenId),
+          content: detailedDescription,
+          timestamp: new Date(),
+        },
+      ],
+      timeline: [
+        {
+          user: 'Citizen',
+          timestamp: new Date(),
+          description: 'Complaint submitted successfully by Citizen.',
+        },
+      ],
+      auditLogs: [
+        {
+          actor: citizenId,
+          ip,
+          timestamp: new Date(),
+          newValue: JSON.stringify({ complaintNumber, category, status: ComplaintStatus.SUBMITTED }),
+          action: 'COMPLAINT_CREATION',
+        },
+      ],
+    };
+
+    const created = await this.complaintRepository.create(newComplaintData);
+    logger.info('Complaint filed by citizen', { citizenId, complaintNumber: created.complaintNumber, complaintId: created._id });
+    return created;
+  }
+
+  // ─── Get Citizen's Complaints ──────────────────────────────────────────────
+  async getCitizenComplaints(citizenId: string): Promise<IComplaint[]> {
+    return this.complaintRepository.findCitizenComplaints(citizenId);
+  }
+
+  // ─── Get Complaint By ID (with Ownership Check) ─────────────────────────────
+  async getComplaintById(id: string, user: { sub: string; role: string }): Promise<IComplaint> {
+    const complaint = await this.complaintRepository.findById(id);
+    if (!complaint) {
+      throw new NotFoundError('Complaint');
+    }
+
+    // Role-based auth
+    if (user.role === 'USER') {
+      if (String(complaint.citizen._id) !== user.sub) {
+        throw new AuthorizationError('You do not have access to view this complaint.');
+      }
+    } else {
+      // Police check: must belong to the officer's police station
+      const officer = await Officer.findById(user.sub);
+      if (!officer) {
+        throw new AuthorizationError('Police officer profile not found.');
+      }
+      if (String(complaint.policeStation._id) !== String(officer.policeStation)) {
+        throw new AuthorizationError('This complaint belongs to another police station.');
+      }
+    }
+
+    // Normalize PDF URL so browser can open it:
+    // 1. Raw uploads without fl_attachment → add it
+    // 2. Old uploads stored as /image/upload/ → rewrite to /raw/upload/fl_attachment/
+    const complaintObj = complaint.toObject ? complaint.toObject() : complaint;
+    if (complaintObj.firPdfUrl) {
+      let url = complaintObj.firPdfUrl as string;
+      if (url.includes('/image/upload/') && url.endsWith('.pdf')) {
+        // Old upload — switch resource type and add fl_attachment
+        url = url.replace('/image/upload/', '/raw/upload/fl_attachment/');
+      } else if (url.includes('/raw/upload/') && !url.includes('fl_attachment')) {
+        url = url.replace('/raw/upload/', '/raw/upload/fl_attachment/');
+      }
+      (complaintObj as any).firPdfUrl = url;
+    }
+
+    if (complaintObj.evidence && Array.isArray(complaintObj.evidence)) {
+      complaintObj.evidence = complaintObj.evidence.map((file: any) => {
+        let url = file.secureUrl as string;
+        if (url && url.endsWith('.pdf')) {
+          if (url.includes('/image/upload/')) {
+            url = url.replace('/image/upload/', '/raw/upload/fl_attachment/');
+          } else if (url.includes('/raw/upload/') && !url.includes('fl_attachment')) {
+            url = url.replace('/raw/upload/', '/raw/upload/fl_attachment/');
+          }
+          return { ...file, secureUrl: url };
+        }
+        return file;
+      });
+    }
+
+    return complaintObj as IComplaint;
+  }
+
+  // ─── Get Station Complaints (SHO/IO Queue) ──────────────────────────────────
+  async getStationComplaints(
+    officerId: string,
+    filters: any
+  ): Promise<{ complaints: IComplaint[]; total: number }> {
+    const officer = await Officer.findById(officerId);
+    if (!officer) {
+      throw new AuthorizationError('Police officer profile not found.');
+    }
+
+    return this.complaintRepository.findStationComplaints(String(officer.policeStation), filters);
+  }
+
+  // ─── Approve Complaint (SHO Only) ──────────────────────────────────────────
+  async approveComplaint(id: string, officerId: string, ioId: string, ip: string): Promise<IComplaint> {
+    const officer = await Officer.findById(officerId);
+    if (!officer || officer.role !== 'SHO') {
+      throw new AuthorizationError('Only the Station House Officer (SHO) can approve complaints.');
+    }
+
+    const complaint = await this.complaintRepository.findById(id);
+    if (!complaint) {
+      throw new NotFoundError('Complaint');
+    }
+
+    this.checkLock(complaint);
+
+    if (complaint.status !== ComplaintStatus.SUBMITTED && complaint.status !== ComplaintStatus.UNDER_REVIEW) {
+      throw new ValidationError(`Complaint is currently in ${complaint.status} status and cannot be approved.`);
+    }
+
+    // Verify IO belongs to the same station
+    const assignedIO = await Officer.findById(ioId);
+    if (!assignedIO || assignedIO.role !== 'IO' || String(assignedIO.policeStation) !== String(officer.policeStation)) {
+      throw new ValidationError('Invalid Investigation Officer selected for this station.');
+    }
+
+    const oldStatus = complaint.status;
+    complaint.status = ComplaintStatus.ASSIGNED_TO_IO;
+    complaint.assignedSHO = new Types.ObjectId(officerId);
+    complaint.assignedIO = new Types.ObjectId(ioId);
+    complaint.approvedAt = new Date();
+    complaint.assignedAt = new Date();
+
+    complaint.timeline.push({
+      user: `SHO (${officer.officerName})`,
+      timestamp: new Date(),
+      description: `Complaint approved and assigned to IO ${assignedIO.officerName}.`,
+    });
+
+    complaint.auditLogs.push({
+      actor: officerId,
+      ip,
+      timestamp: new Date(),
+      oldValue: oldStatus,
+      newValue: ComplaintStatus.ASSIGNED_TO_IO,
+      action: 'COMPLAINT_APPROVAL',
+    });
+
+    const saved = await this.complaintRepository.save(complaint);
+    logger.info('SHO assigned complaint to IO', { complaintId: saved._id, shoId: officerId, ioId: ioId });
+    return saved;
+  }
+
+  // ─── Reject Complaint (SHO Only) ───────────────────────────────────────────
+  async rejectComplaint(id: string, officerId: string, rejectionReason: string, ip: string): Promise<IComplaint> {
+    const officer = await Officer.findById(officerId);
+    if (!officer || officer.role !== 'SHO') {
+      throw new AuthorizationError('Only the Station House Officer (SHO) can reject complaints.');
+    }
+
+    const complaint = await this.complaintRepository.findById(id);
+    if (!complaint) {
+      throw new NotFoundError('Complaint');
+    }
+
+    this.checkLock(complaint);
+
+    if (complaint.status !== ComplaintStatus.SUBMITTED && complaint.status !== ComplaintStatus.UNDER_REVIEW) {
+      throw new ValidationError('Complaint cannot be rejected in its current status.');
+    }
+
+    const oldStatus = complaint.status;
+    complaint.status = ComplaintStatus.REJECTED;
+    complaint.rejectionReason = rejectionReason;
+    complaint.rejectedAt = new Date();
+
+    complaint.timeline.push({
+      user: `SHO (${officer.officerName})`,
+      timestamp: new Date(),
+      description: `Complaint rejected. Reason: ${rejectionReason}`,
+    });
+
+    complaint.auditLogs.push({
+      actor: officerId,
+      ip,
+      timestamp: new Date(),
+      oldValue: oldStatus,
+      newValue: ComplaintStatus.REJECTED,
+      action: 'COMPLAINT_REJECTION',
+    });
+
+    const saved = await this.complaintRepository.save(complaint);
+
+    // Enqueue rejection email job via BullMQ
+    const citizenUser = await User.findById(complaint.citizen);
+    if (citizenUser) {
+      await EmailQueue.enqueueComplaintRejectionEmail({
+        to: citizenUser.email,
+        name: `${citizenUser.firstName} ${citizenUser.lastName}`.trim(),
+        complaintNumber: complaint.complaintNumber,
+        rejectionReason,
+      });
+    }
+
+    return saved;
+  }
+
+  // ─── Update Complaint Details (IO Only) ────────────────────────────────────
+  async updateComplaint(id: string, officerId: string, updateData: any, ip: string): Promise<IComplaint> {
+    const officer = await Officer.findById(officerId);
+    if (!officer || officer.role !== 'IO') {
+      throw new AuthorizationError('Only the assigned Investigation Officer (IO) can edit complaint details.');
+    }
+
+    const complaint = await this.complaintRepository.findById(id);
+    if (!complaint) {
+      throw new NotFoundError('Complaint');
+    }
+
+    this.checkLock(complaint);
+
+    if (String(complaint.assignedIO?._id) !== officerId) {
+      throw new AuthorizationError('You are not the assigned Investigation Officer for this complaint.');
+    }
+
+    const { detailedDescription, crimeSummary, legalSections, investigationNotes } = updateData;
+
+    let hasEdits = false;
+    const nextVersion = complaint.currentVersionNumber + 1;
+
+    // Append to description history if edited
+    if (detailedDescription && detailedDescription !== complaint.detailedDescription) {
+      complaint.detailedDescription = detailedDescription;
+      complaint.descriptionHistory.push({
+        version: nextVersion,
+        editedBy: 'IO',
+        editorId: new Types.ObjectId(officerId),
+        content: detailedDescription,
+        timestamp: new Date(),
+      });
+      hasEdits = true;
+    }
+
+    // Append to crime summary history if edited
+    if (crimeSummary) {
+      const lastSummary = complaint.crimeSummaryHistory[complaint.crimeSummaryHistory.length - 1]?.content;
+      if (crimeSummary !== lastSummary) {
+        complaint.crimeSummaryHistory.push({
+          version: nextVersion,
+          editedBy: 'IO',
+          editorId: new Types.ObjectId(officerId),
+          content: crimeSummary,
+          timestamp: new Date(),
+        });
+        hasEdits = true;
+      }
+    }
+
+    // Append to legal sections history if edited
+    if (legalSections) {
+      const lastSections = complaint.legalSectionsHistory[complaint.legalSectionsHistory.length - 1]?.content;
+      if (legalSections !== lastSections) {
+        complaint.legalSectionsHistory.push({
+          version: nextVersion,
+          editedBy: 'IO',
+          editorId: new Types.ObjectId(officerId),
+          content: legalSections,
+          timestamp: new Date(),
+        });
+        hasEdits = true;
+      }
+    }
+
+    // Append to investigation notes history if edited
+    if (investigationNotes) {
+      const lastNotes = complaint.investigationNotesHistory[complaint.investigationNotesHistory.length - 1]?.content;
+      if (investigationNotes !== lastNotes) {
+        complaint.investigationNotesHistory.push({
+          version: nextVersion,
+          editedBy: 'IO',
+          editorId: new Types.ObjectId(officerId),
+          content: investigationNotes,
+          timestamp: new Date(),
+        });
+        hasEdits = true;
+      }
+    }
+
+    if (hasEdits) {
+      complaint.currentVersionNumber = nextVersion;
+      complaint.timeline.push({
+        user: `IO (${officer.officerName})`,
+        timestamp: new Date(),
+        description: `Complaint details updated (Version ${nextVersion}).`,
+      });
+
+      complaint.auditLogs.push({
+        actor: officerId,
+        ip,
+        timestamp: new Date(),
+        newValue: `Version ${nextVersion} saved`,
+        action: 'COMPLAINT_UPDATE',
+      });
+
+      return this.complaintRepository.save(complaint);
+    }
+
+    return complaint;
+  }
+
+  // ─── Register FIR (IO Only) ────────────────────────────────────────────────
+  async registerFir(id: string, officerId: string, ip: string): Promise<IComplaint> {
+    const officer = await Officer.findById(officerId);
+    if (!officer || officer.role !== 'IO') {
+      throw new AuthorizationError('Only the assigned Investigation Officer (IO) can register the FIR.');
+    }
+
+    const complaint = await this.complaintRepository.findById(id);
+    if (!complaint) {
+      throw new NotFoundError('Complaint');
+    }
+
+    this.checkLock(complaint);
+
+    if (String(complaint.assignedIO?._id) !== officerId) {
+      throw new AuthorizationError('You are not the assigned Investigation Officer for this complaint.');
+    }
+
+    if (complaint.status !== ComplaintStatus.ASSIGNED_TO_IO) {
+      throw new ValidationError('FIR can only be registered for complaints assigned to an IO.');
+    }
+
+    // Generate realistic FIR number: GJ-{StationCode}-{CurrentYear}-{4-digit-seq}
+    const station = await PoliceStation.findById(complaint.policeStation);
+    if (!station) {
+      throw new NotFoundError('Police Station associated with this complaint was not found.');
+    }
+
+    const currentYear = new Date().getFullYear();
+    const startOfYear = new Date(currentYear, 0, 1);
+
+    /**
+     * Race-condition-safe FIR number generation.
+     *
+     * The naive countDocuments+1 approach allows two concurrent requests to read
+     * the same count and generate an identical FIR number, causing an E11000
+     * duplicate key error on the unique `firNumber` index.
+     *
+     * Strategy: optimistic retry loop.
+     *  1. Count ALL FIR numbers ever issued for this station+year (across all
+     *     statuses), not just FIR_REGISTERED ones — this gives a high-water mark
+     *     that never decreases, so a retried candidate is always strictly higher.
+     *  2. Attempt to save. If MongoDB returns E11000 (concurrent write beat us),
+     *     increment the candidate by 1 and retry up to MAX_RETRIES times.
+     *  3. Any other error is re-thrown immediately.
+     */
+    const MAX_RETRIES = 5;
+    let saved: IComplaint | null = null;
+    let firNumber = '';
+
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      // Re-count on every attempt so we always pick up new rows written by
+      // concurrent requests that succeeded while we were retrying.
+      const issuedCount = await Complaint.countDocuments({
+        policeStation: complaint.policeStation,
+        firNumber: { $exists: true, $ne: null },
+        firRegisteredAt: { $gte: startOfYear },
+      });
+
+      const seq = issuedCount + 1 + attempt; // advance on each retry
+      firNumber = `GJ-${station.code}-${currentYear}-${String(seq).padStart(4, '0')}`;
+
+      complaint.status = ComplaintStatus.FIR_REGISTERED;
+      complaint.firNumber = firNumber;
+      complaint.firRegisteredAt = new Date();
+      complaint.firRegisteredBy = new Types.ObjectId(officerId);
+
+      // Rebuild timeline/audit only on first attempt to avoid duplicate entries
+      if (attempt === 0) {
+        complaint.timeline.push({
+          user: `IO (${officer.officerName})`,
+          timestamp: new Date(),
+          description: `FIR officially registered. Complaint is now immutable.`,
+        });
+
+        complaint.auditLogs.push({
+          actor: officerId,
+          ip,
+          timestamp: new Date(),
+          oldValue: ComplaintStatus.ASSIGNED_TO_IO,
+          newValue: ComplaintStatus.FIR_REGISTERED,
+          action: 'FIR_REGISTRATION',
+        });
+      }
+
+      try {
+        saved = await this.complaintRepository.save(complaint);
+        // Update timeline description with the confirmed FIR number now that save succeeded
+        saved.timeline[saved.timeline.length - 1].description =
+          `FIR officially registered (FIR Number: ${firNumber}). Complaint is now immutable.`;
+        await saved.save();
+        logger.info('FIR number assigned', { complaintId: saved._id, firNumber, attempt });
+        break; // success — exit retry loop
+      } catch (err: any) {
+        const isDuplicateKey =
+          err?.code === 11000 ||
+          (err?.errorResponse?.code === 11000) ||
+          err?.message?.includes('E11000');
+
+        if (!isDuplicateKey) {
+          throw err; // not a uniqueness conflict — propagate immediately
+        }
+
+        logger.warn('FIR number collision, retrying', { firNumber, attempt, complaintId: id });
+
+        if (attempt === MAX_RETRIES - 1) {
+          throw new ConflictError(
+            'Could not generate a unique FIR number after several attempts. Please try again.',
+          );
+        }
+      }
+    }
+
+    if (!saved) {
+      throw new ConflictError('Failed to register FIR. Please try again.');
+    }
+
+    // Enqueue PDF generation job via BullMQ
+    await FirQueue.enqueueGenerateFirPdf(String(saved._id));
+
+    return saved;
+  }
+
+  // ─── Get Investigation Officers for Station (SHO Flow) ──────────────────────
+  async getStationIOs(officerId: string, complaintId?: string): Promise<any[]> {
+    const officer = await Officer.findById(officerId);
+    if (!officer) {
+      throw new AuthorizationError('Officer not found.');
+    }
+    const ios = await Officer.find({
+      policeStation: officer.policeStation,
+      role: 'IO',
+      isActive: true,
+    }).select('officerName badgeNumber email phone').lean().exec();
+
+    if (complaintId && ios.length > 0) {
+      try {
+        const complaint = await this.complaintRepository.findById(complaintId);
+        if (complaint) {
+          const availableOfficers = ios.map(io => ({
+            officerId: io._id.toString(),
+            officerName: io.officerName,
+            badgeNumber: io.badgeNumber
+          }));
+
+          const payload = {
+            complaint: {
+              complaintId: complaint._id.toString(),
+              stationId: (complaint.policeStation as any)?._id?.toString() ?? complaint.policeStation.toString(),
+              category: complaint.category,
+              subCategory: complaint.crimeCategory || '',
+              shortDescription: complaint.shortDescription,
+              detailedDescription: complaint.detailedDescription,
+              incidentPlace: complaint.incidentPlace,
+              incidentDate: complaint.incidentDate.toISOString(),
+              evidenceSummary: complaint.evidence?.map(e => e.originalFilename).join(', ') || ''
+            },
+            availableOfficers
+          };
+
+          const aiUrl = `${env.AI_SERVICE_URL}/recommend-officers`;
+          logger.info('Calling AI Service for IO recommendations', { aiUrl, complaintId });
+          const aiResponse = await axios.post(aiUrl, payload);
+          const recommendations = aiResponse.data.recommendations || [];
+
+          const recMap = new Map(recommendations.map((r: any) => [r.officerId, r]));
+
+          return ios.map(io => {
+            const rec = recMap.get(io._id.toString()) as any;
+            return {
+              ...io,
+              aiRecommendation: rec ? {
+                score: rec.score,
+                matchedCases: rec.matchedCases,
+                averageSimilarity: rec.averageSimilarity,
+                reasons: rec.reasons
+              } : null
+            };
+          }).sort((a: any, b: any) => {
+            const scoreA = a.aiRecommendation?.score ?? -1;
+            const scoreB = b.aiRecommendation?.score ?? -1;
+            return scoreB - scoreA;
+          });
+        }
+      } catch (err: any) {
+        logger.error('Failed to get AI recommendation for officers', { error: err.message });
+      }
+    }
+
+    return ios;
+  }
+
+  // ─── Add Evidence to Existing Complaint (Citizen Flow) ──────────────────────
+  async addEvidence(id: string, citizenId: string, evidenceData: any[], ip: string): Promise<IComplaint> {
+    const complaint = await this.complaintRepository.findById(id);
+    if (!complaint) {
+      throw new NotFoundError('Complaint');
+    }
+
+    if (String(complaint.citizen._id) !== citizenId) {
+      throw new AuthorizationError('You do not have permission to modify this complaint.');
+    }
+
+    this.checkLock(complaint);
+
+    if (complaint.evidence.length + evidenceData.length > 10) {
+      throw new ValidationError('Maximum 10 evidence files allowed.');
+    }
+
+    const validatedEvidence: IEvidenceMetadata[] = evidenceData.map((file: any) => ({
+      publicId: file.publicId,
+      secureUrl: file.secureUrl,
+      resourceType: file.resourceType,
+      mimeType: file.mimeType,
+      originalFilename: file.originalFilename || 'unnamed_file',
+      extension: file.extension || 'bin',
+      size: file.size || 0,
+      uploadedBy: new Types.ObjectId(citizenId),
+      uploadedAt: new Date(),
+      processingStatus: 'PENDING',
+    }));
+
+    complaint.evidence.push(...validatedEvidence);
+
+    complaint.timeline.push({
+      user: 'Citizen',
+      timestamp: new Date(),
+      description: `Attached ${validatedEvidence.length} new evidence file(s).`,
+    });
+
+    complaint.auditLogs.push({
+      actor: citizenId,
+      ip,
+      timestamp: new Date(),
+      newValue: `Added ${validatedEvidence.length} evidence file(s)`,
+      action: 'ADD_EVIDENCE',
+    });
+
+    return this.complaintRepository.save(complaint);
+  }
+
+  // ─── Close Complaint / Case (IO / SHO Flow) ─────────────────────────────────
+  async closeComplaint(id: string, officerId: string, ip: string): Promise<IComplaint> {
+    const officer = await Officer.findById(officerId);
+    if (!officer || (officer.role !== 'IO' && officer.role !== 'SHO')) {
+      throw new AuthorizationError('Only the assigned IO or SHO can close this case.');
+    }
+
+    const complaint = await this.complaintRepository.findById(id);
+    if (!complaint) {
+      throw new NotFoundError('Complaint');
+    }
+
+    if (complaint.status === ComplaintStatus.CLOSED) {
+      return complaint; // already closed, idempotent
+    }
+
+    if (complaint.status !== ComplaintStatus.FIR_REGISTERED) {
+      throw new ValidationError('A case can only be closed after an FIR has been registered.');
+    }
+
+    const oldStatus = complaint.status;
+    complaint.status = ComplaintStatus.CLOSED;
+
+    complaint.timeline.push({
+      user: `${officer.role} (${officer.officerName})`,
+      timestamp: new Date(),
+      description: `Case closed and finalized. Sending to AI vector store for indexing.`,
+    });
+
+    complaint.auditLogs.push({
+      actor: officerId,
+      ip,
+      timestamp: new Date(),
+      oldValue: oldStatus,
+      newValue: ComplaintStatus.CLOSED,
+      action: 'CASE_CLOSURE',
+    });
+
+    const saved = await this.complaintRepository.save(complaint);
+    logger.info('Case closed by officer', { officerId, complaintId: saved._id, complaintNumber: saved.complaintNumber });
+
+    // Fetch station details for metadata (district)
+    const station = await PoliceStation.findById(saved.policeStation);
+
+    // Prepare Qdrant embedding payload
+    const lastSummary = saved.crimeSummaryHistory?.[saved.crimeSummaryHistory.length - 1]?.content;
+    const lastNotes = saved.investigationNotesHistory?.[saved.investigationNotesHistory.length - 1]?.content;
+    const lastSections = saved.legalSectionsHistory?.[saved.legalSectionsHistory.length - 1]?.content;
+
+    const sectionsList = lastSections
+      ? lastSections.split(',').map((s: string) => s.trim()).filter(Boolean)
+      : [];
+
+    const payload = {
+      firId: saved._id.toString(),
+      complaintId: saved._id.toString(),
+      // Extract ._id explicitly — these fields are populated objects after findById(),
+      // so .toString() on the whole object would serialize the full document instead of just the ID.
+      officerId: (saved.assignedIO as any)?._id?.toString() || (saved.assignedIO as any)?.toString() || officerId,
+      stationId: (saved.policeStation as any)?._id?.toString() || (saved.policeStation as any)?.toString(),
+      district: station?.district || 'Unknown District',
+      firNumber: saved.firNumber || 'N/A',
+      status: 'CLOSED',
+      closedDate: new Date().toISOString(),
+      createdAt: saved.createdAt.toISOString(),
+      crimeCategory: saved.category,
+      crimeSubCategory: saved.crimeCategory || '',
+      incidentSummary: saved.shortDescription,
+      modusOperandi: lastSummary || saved.shortDescription,
+      evidenceSummary: saved.evidence?.map((e: any) => `${e.originalFilename} (${e.mimeType})`).join(', ') || 'None',
+      investigationSummary: lastNotes || saved.detailedDescription,
+      sections: sectionsList,
+      location: saved.incidentPlace,
+    };
+
+    // Fire-and-forget or async call to FastAPI recommendation service
+    try {
+      const aiUrl = `${env.AI_SERVICE_URL}/embed-case`;
+      logger.info('Sending closed FIR payload to AI service', { aiUrl, firId: payload.firId });
+      axios.post(aiUrl, payload).catch((err) => {
+        logger.error('Background AI embedding request failed', { error: err.message });
+      });
+    } catch (err: any) {
+      logger.error('Failed to trigger AI embedding', { error: err.message });
+    }
+
+    return saved;
+  }
+}

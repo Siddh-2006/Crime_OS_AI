@@ -1,0 +1,169 @@
+import { Request, Response, NextFunction } from 'express';
+import { ComplaintService } from '../services/ComplaintService';
+import { sendSuccess } from '../../../shared/utils/response.util';
+import { HttpStatusCode } from '../../../common/enums/httpStatus.enum';
+
+export class ComplaintController {
+  constructor(private readonly complaintService: ComplaintService) {}
+
+  getUploadSignature = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const citizenId = req.user!.sub;
+      const signatureData = await this.complaintService.getUploadSignature(citizenId);
+      sendSuccess(res, HttpStatusCode.OK, 'Upload signature generated successfully', signatureData);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  searchPoliceStations = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const query = String(req.query.q ?? '');
+      const stations = await this.complaintService.searchPoliceStations(query);
+      sendSuccess(res, HttpStatusCode.OK, 'Police stations retrieved successfully', stations);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  createComplaint = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const citizenId = req.user!.sub;
+      const ip = req.ip ?? 'unknown';
+      const complaint = await this.complaintService.createComplaint(citizenId, req.body, ip);
+      sendSuccess(res, HttpStatusCode.CREATED, 'Complaint filed successfully', complaint);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  getCitizenComplaints = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const citizenId = req.user!.sub;
+      const complaints = await this.complaintService.getCitizenComplaints(citizenId);
+      sendSuccess(res, HttpStatusCode.OK, 'Citizen complaints retrieved successfully', complaints);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  getComplaintById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const user = req.user!;
+      const complaint = await this.complaintService.getComplaintById(id, { sub: user.sub, role: user.role });
+      sendSuccess(res, HttpStatusCode.OK, 'Complaint retrieved successfully', complaint);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  getStationComplaints = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const officerId = req.user!.sub;
+      const filters = {
+        status: req.query.status ? String(req.query.status) : undefined,
+        search: req.query.search ? String(req.query.search) : undefined,
+        page: req.query.page ? Number(req.query.page) : 1,
+        limit: req.query.limit ? Number(req.query.limit) : 10,
+      };
+
+      const result = await this.complaintService.getStationComplaints(officerId, filters);
+      sendSuccess(res, HttpStatusCode.OK, 'Station complaints retrieved successfully', result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  approveComplaint = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const officerId = req.user!.sub;
+      const { assignedIO } = req.body;
+      const ip = req.ip ?? 'unknown';
+
+      const complaint = await this.complaintService.approveComplaint(id, officerId, assignedIO, ip);
+      sendSuccess(res, HttpStatusCode.OK, 'Complaint approved and assigned to IO successfully', complaint);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  rejectComplaint = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const officerId = req.user!.sub;
+      const { rejectionReason } = req.body;
+      const ip = req.ip ?? 'unknown';
+
+      const complaint = await this.complaintService.rejectComplaint(id, officerId, rejectionReason, ip);
+      sendSuccess(res, HttpStatusCode.OK, 'Complaint rejected successfully', complaint);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  updateComplaint = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const officerId = req.user!.sub;
+      const ip = req.ip ?? 'unknown';
+
+      const complaint = await this.complaintService.updateComplaint(id, officerId, req.body, ip);
+      sendSuccess(res, HttpStatusCode.OK, 'Complaint updated successfully', complaint);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  registerFir = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const officerId = req.user!.sub;
+      const ip = req.ip ?? 'unknown';
+
+      const complaint = await this.complaintService.registerFir(id, officerId, ip);
+      sendSuccess(res, HttpStatusCode.OK, 'FIR registered successfully', complaint);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  getStationIOs = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const officerId = req.user!.sub;
+      const complaintId = req.query.complaintId ? String(req.query.complaintId) : undefined;
+      const ios = await this.complaintService.getStationIOs(officerId, complaintId);
+      sendSuccess(res, HttpStatusCode.OK, 'Investigation Officers retrieved successfully', ios);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  addEvidence = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const citizenId = req.user!.sub;
+      const { evidence } = req.body;
+      const ip = req.ip ?? 'unknown';
+
+      const complaint = await this.complaintService.addEvidence(id, citizenId, evidence, ip);
+      sendSuccess(res, HttpStatusCode.OK, 'Evidence added successfully', complaint);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  closeComplaint = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const officerId = req.user!.sub;
+      const ip = req.ip ?? 'unknown';
+
+      const complaint = await this.complaintService.closeComplaint(id, officerId, ip);
+      sendSuccess(res, HttpStatusCode.OK, 'Complaint/Case closed successfully', complaint);
+    } catch (err) {
+      next(err);
+    }
+  };
+}

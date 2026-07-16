@@ -1,0 +1,7 @@
+export enum IdProofType {
+  AADHAAR = 'AADHAAR',
+  PAN = 'PAN',
+  PASSPORT = 'PASSPORT',
+  VOTER_ID = 'VOTER_ID',
+  DRIVING_LICENSE = 'DRIVING_LICENSE',
+}

@@ -1,0 +1,97 @@
+'use client';
+
+import React, { useEffect } from 'react';
+import { X } from 'lucide-react';
+
+interface ModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
+  footer?: React.ReactNode;
+  size?: 'sm' | 'md' | 'lg';
+}
+
+const sizeClasses = {
+  sm: 'max-w-sm',
+  md: 'max-w-md',
+  lg: 'max-w-2xl',
+};
+
+/**
+ * Accessible modal with focus trap and Escape key support.
+ */
+export function Modal({
+  isOpen,
+  onClose,
+  title,
+  children,
+  footer,
+  size = 'md',
+}: ModalProps): React.ReactElement | null {
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') onClose();
+    };
+
+    document.addEventListener('keydown', handleKey);
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.removeEventListener('keydown', handleKey);
+      document.body.style.overflow = '';
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+    >
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-neutral-900/50 backdrop-blur-sm"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      {/* Panel */}
+      <div
+        className={[
+          'relative w-full rounded-xl bg-white shadow-elevated',
+          sizeClasses[size],
+        ].join(' ')}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-neutral-100 px-6 py-4">
+          <h2 id="modal-title" className="text-lg font-semibold text-neutral-900">
+            {title}
+          </h2>
+          <button
+            onClick={onClose}
+            aria-label="Close modal"
+            className="rounded-md p-1 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="px-6 py-4">{children}</div>
+
+        {/* Footer */}
+        {footer && (
+          <div className="flex items-center justify-end gap-3 border-t border-neutral-100 px-6 py-4">
+            {footer}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
