@@ -643,14 +643,13 @@ def _extract_page_with_ocr(ocr: Any, page: Any, page_number: int, width: float, 
     return PageExtraction(page_number=page_number, lines=lines, raw_text=raw_text, page_metadata=page_metadata)
 
 
-def extract_pdf_pages(pdf_path: str | Path) -> list[PageExtraction]:
+def iter_pdf_pages(pdf_path: str | Path) -> Iterable[PageExtraction]:
     pdf_path = Path(pdf_path)
     if not pdf_path.exists():
         raise FileNotFoundError(f"PDF not found: {pdf_path}")
 
     ocr = _build_ocr_engine()
     fitz = _require_fitz()
-    pages: list[PageExtraction] = []
     failures: list[tuple[int, Exception]] = []
     document = fitz.open(pdf_path)
     try:
@@ -658,32 +657,43 @@ def extract_pdf_pages(pdf_path: str | Path) -> list[PageExtraction]:
             try:
                 width = float(page.rect.width)
                 height = float(page.rect.height)
-                pages.append(_extract_page_with_ocr(ocr, page, page_number, width, height))
+                yield _extract_page_with_ocr(ocr, page, page_number, width, height)
             except Exception as exc:  # pragma: no cover - runtime OCR failure
                 LOGGER.exception("OCR failed for page %s", page_number)
                 failures.append((page_number, exc))
-                pages.append(
-                    PageExtraction(
-                        page_number=page_number,
-                        lines=(),
-                        raw_text="",
-                        page_metadata={
-                            "width": float(page.rect.width),
-                            "height": float(page.rect.height),
-                            "ocr_backend": "paddleocr-3.x",
-                            "ocr_error": str(exc),
-                        },
-                    )
+                yield PageExtraction(
+                    page_number=page_number,
+                    lines=(),
+                    raw_text="",
+                    page_metadata={
+                        "width": float(page.rect.width),
+                        "height": float(page.rect.height),
+                        "ocr_backend": "paddleocr-3.x",
+                        "ocr_error": str(exc),
+                    },
                 )
     finally:
         document.close()
 
-    if failures and not any(page.lines for page in pages):
-        first_page, first_exc = failures[0]
-        raise RuntimeError(f"OCR failed for all pages; first failure at page {first_page}: {first_exc}") from first_exc
+    LOGGER.info("OCR finished for %s with streamed pages and %s failures", pdf_path, len(failures))
 
-    LOGGER.info("OCR finished for %s with %s pages and %s failures", pdf_path, len(pages), len(failures))
+
+def extract_pdf_pages(pdf_path: str | Path) -> list[PageExtraction]:
+    pages = list(iter_pdf_pages(pdf_path))
+
+    if not any(page.lines for page in pages):
+        first_error = None
+        first_page = 0
+        for page in pages:
+            error = page.page_metadata.get("ocr_error") if isinstance(page.page_metadata, dict) else None
+            if error:
+                first_error = error
+                first_page = page.page_number
+                break
+        raise RuntimeError(f"OCR failed for all pages; first failure at page {first_page}: {first_error}")
+
+    LOGGER.info("OCR finished for %s with %s pages", pdf_path, len(pages))
     return pages
 
 
-__all__ = ["OCRBlock", "PageExtraction", "TextLine", "TextSpan", "extract_pdf_pages"]
+__all__ = ["OCRBlock", "PageExtraction", "TextLine", "TextSpan", "extract_pdf_pages", "iter_pdf_pages"]

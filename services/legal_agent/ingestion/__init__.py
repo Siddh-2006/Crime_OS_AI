@@ -1,9 +1,12 @@
-from .schemas import ClauseRecord, DocumentMetadata, LegalSectionRecord, SOPRecord, SubsectionRecord
+from .schemas import ClauseRecord, DocumentMetadata, LegalSectionRecord, SubsectionRecord, DeptRegistryRecord, StepRecord, DeadEndStrategyRecord, SOPRecord
 
 __all__ = [
     "ClauseRecord",
     "DocumentMetadata",
     "LegalSectionRecord",
-    "SOPRecord",
     "SubsectionRecord",
+    "DeptRegistryRecord",
+    "StepRecord",
+    "DeadEndStrategyRecord",
+    "SOPRecord"
 ]

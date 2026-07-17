@@ -1,0 +1,1269 @@
+[
+  {
+    "act": "sop",
+    "sop_id": "missing_adult_v1",
+    "crime_type": "Missing Person — Adult",
+    "title": "Standard Operating Procedure for Investigation of Missing Adults",
+    "source": "Synthesized from BPR&D Missing Person SOP and State Police Guidelines",
+    "steps": [
+      {
+        "step_id": "miss_adult_step_01_gd_fir",
+        "order": 1,
+        "title": "Registration of Missing Report / FIR & NCRB CCTNS Upload",
+        "description": "Immediately register a Missing Person Report in the General Diary (GD). If foul play or abduction is suspected, register a formal FIR under BNS Section 137 (formerly IPC 365). Obtain a recent photograph, complete physical description, and immediately upload the details onto the NCRB CCTNS portal and ZIPNET.",
+        "required_evidence": [
+          "Copy of General Diary (GD) entry or FIR",
+          "Recent photograph and detailed physical description of the missing person",
+          "NCRB CCTNS missing person registration acknowledgment"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": null,
+        "condition_to_start": "Family or acquaintance reports an adult missing from their usual residence/workplace.",
+        "condition_to_complete": "Missing entry logged, initial inquiry conducted, and national database updated.",
+        "on_complete_trigger": [
+          "miss_adult_step_02_telecom",
+          "miss_adult_step_03_hue_cry"
+        ],
+        "if_blocked": [
+          "If the complainant delays providing a photograph, dispatch a police officer to the missing person's residence to secure one from relatives or social media."
+        ]
+      },
+      {
+        "step_id": "miss_adult_step_02_telecom",
+        "order": 2,
+        "title": "Telecom Tracing & Digital Footprint Analysis",
+        "description": "Issue Section 94 BNSS notices to Telecom Service Providers for the missing person's Call Detail Records (CDR), Cell ID location history, and live IMEI tracking. Analyse the CDR for last contacted numbers to identify potential companions or threats.",
+        "required_evidence": [
+          "CDR and Cell ID logs covering the 72 hours prior to disappearance",
+          "Live cell tower location tracking report",
+          "Bank statement/UPI logs showing financial transactions post-disappearance"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Missing person's mobile number or IMEI identified.",
+        "condition_to_complete": "Telecom tracking active and last known digital footprint mapped.",
+        "on_complete_trigger": [
+          "miss_adult_step_04_cctv_transit"
+        ],
+        "if_blocked": [
+          "If the phone is switched off, query the missing person's bank accounts under entity_id bank_generic to track ATM withdrawals or UPI payments made after going missing."
+        ]
+      },
+      {
+        "step_id": "miss_adult_step_03_hue_cry",
+        "order": 3,
+        "title": "Hue and Cry Notices & Media Broadcast",
+        "description": "Publish and broadcast the missing person's physical description and photograph via local newspapers, television networks, and official police social media handles. Distribute physical Hue and Cry notices at prominent public places.",
+        "required_evidence": [
+          "Copies of published Hue and Cry notices",
+          "Log of broadcasts across local media and police social media pages"
+        ],
+        "legal_basis": null,
+        "department_entity_id": null,
+        "condition_to_start": "Photograph and descriptive particulars obtained.",
+        "condition_to_complete": "Public broadcast executed across multiple media channels.",
+        "on_complete_trigger": [
+          "miss_adult_step_04_cctv_transit"
+        ],
+        "if_blocked": [
+          "If the family requests privacy, restrict the broadcast to secure inter-departmental police wireless channels only."
+        ]
+      },
+      {
+        "step_id": "miss_adult_step_04_cctv_transit",
+        "order": 4,
+        "title": "CCTV Requisition & Transit Node Scrutiny",
+        "description": "Requisition CCTV footage from cameras around the place last seen. Issue alerts to railway police (GRP/RPF), bus terminals, and airport security. Check passenger reservation charts if outstation travel is suspected.",
+        "required_evidence": [
+          "CCTV video footage of the missing person's last known movement",
+          "Railway reservation chart matching the missing person's identity"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "railway_police",
+        "condition_to_start": "Last known location or suspected travel route identified.",
+        "condition_to_complete": "Transit hubs alerted and CCTV analysis concluded.",
+        "on_complete_trigger": [
+          "miss_adult_step_05_hospitals_morgues"
+        ],
+        "if_blocked": [
+          "If the person used a ride-hailing app, serve a Section 94 BNSS notice on entity_id ridehailing_delivery_apps for exact drop-off coordinates."
+        ]
+      },
+      {
+        "step_id": "miss_adult_step_05_hospitals_morgues",
+        "order": 5,
+        "title": "Verification of Hospitals, Morgues & Unidentified Bodies",
+        "description": "Systematically query emergency admission logs of local government and private hospitals. Check mortuary registries and the NCRB unidentified dead bodies database to rule out fatal accidents.",
+        "required_evidence": [
+          "Hospital ER inquiry logs",
+          "Mortuary verification reports matching unidentified bodies against missing person descriptors"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "hospital_forensic_medical",
+        "condition_to_start": "Missing person remains untraced after initial tracking.",
+        "condition_to_complete": "Hospitals and morgues cleared of any match.",
+        "on_complete_trigger": [
+          "miss_adult_step_06_recovery"
+        ],
+        "if_blocked": [
+          "If unidentified bodies match the description, immediately summon family members for physical identification or DNA profiling."
+        ]
+      },
+      {
+        "step_id": "miss_adult_step_06_recovery",
+        "order": 6,
+        "title": "Recovery, Statement & Closure",
+        "description": "Upon recovery, produce the missing person at the police station. Record their statement under BNSS to verify if they left voluntarily or were subjected to any crime (abduction/trafficking). Officially close the CCTNS alert.",
+        "required_evidence": [
+          "Recovery Panchnama / Memo",
+          "Written statement of the traced adult confirming voluntary/involuntary disappearance",
+          "CCTNS recovery update receipt"
+        ],
+        "legal_basis": "BNSS Section 180",
+        "department_entity_id": null,
+        "condition_to_start": "Missing person located or returns voluntarily.",
+        "condition_to_complete": "Person formally deregistered from missing lists and handed over to family (if desired).",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the recovered adult refuses to return to their family (e.g., escaping domestic abuse), police cannot compel them; document their safety and close the missing report."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Person is missing for over 30 days, no digital/financial footprint exists, and no ransom demands received.",
+        "suggested_actions": [
+          "Conduct DNA profiling of the first-degree blood relatives and upload it to the central database for automated matching against future unidentified bodies.",
+          "Investigate the person's financial debts, marital disputes, or employment conflicts that might prompt intentional absconding.",
+          "Transfer the case to the District Anti-Human Trafficking Unit (AHTU) for specialized deep-cover investigation."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "missing_child_v1",
+    "crime_type": "Missing Child",
+    "title": "Standard Operating Procedure for Investigation of Missing Children",
+    "source": "Synthesized from MHA Guidelines, TrackChild Portal SOP, and Supreme Court Directives (Bachpan Bachao Andolan)",
+    "steps": [
+      {
+        "step_id": "mchild_step_01_mandatory_fir",
+        "order": 1,
+        "title": "Mandatory FIR Registration & Presumption of Trafficking",
+        "description": "In strict compliance with Supreme Court directives, register an FIR forthwith upon receiving a complaint of a missing minor under BNS Section 137 (formerly IPC 363). There is an initial statutory presumption of abduction/trafficking. Immediate action must be taken by the Child Welfare Police Officer (CWPO).",
+        "required_evidence": [
+          "Copy of FIR under BNS Section 137",
+          "Recent photograph and descriptive roll of the child",
+          "Logbook entry showing CWPO assignment"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": null,
+        "condition_to_start": "Complaint received regarding a person below 18 years whose whereabouts are unknown.",
+        "condition_to_complete": "FIR registered without delay and initial presumption of trafficking applied.",
+        "on_complete_trigger": [
+          "mchild_step_02_trackchild"
+        ],
+        "if_blocked": [
+          "If local police refuse to register FIR citing jurisdictional issues, they must register a Zero FIR and transfer it immediately."
+        ]
+      },
+      {
+        "step_id": "mchild_step_02_trackchild",
+        "order": 2,
+        "title": "TrackChild Portal Upload & CCTNS Integration",
+        "description": "Upload the child's photograph and details to the national TrackChild portal (www.trackthemissingchild.gov.in) and CCTNS. Fill out Form 'M'. Notify the District Missing Persons Unit (DMPU).",
+        "required_evidence": [
+          "TrackChild Form 'M' upload confirmation",
+          "CCTNS missing person alert receipt"
+        ],
+        "legal_basis": null,
+        "department_entity_id": null,
+        "condition_to_start": "FIR registered and child's photograph secured.",
+        "condition_to_complete": "National portals updated to facilitate cross-state matching.",
+        "on_complete_trigger": [
+          "mchild_step_03_telecom_cctv"
+        ],
+        "if_blocked": [
+          "If internet connectivity fails at the station, the IO must physically transmit the data to the District Control Room for immediate upload."
+        ]
+      },
+      {
+        "step_id": "mchild_step_03_telecom_cctv",
+        "order": 3,
+        "title": "CCTV Scanning & Transit Node Alerts",
+        "description": "Scan CCTV cameras in the vicinity of the place last seen. Issue high-priority alerts to railway police (GRP/RPF), bus stands, and border check posts. Intercept suspicious adults traveling with unaccompanied minors.",
+        "required_evidence": [
+          "CCTV video footage of the child's last known movement",
+          "Alert dispatch logs to Railway Police and Border Checkpoints"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "railway_police",
+        "condition_to_start": "Place last seen identified.",
+        "condition_to_complete": "Surveillance mapping and transit node alerts executed.",
+        "on_complete_trigger": [
+          "mchild_step_04_hue_cry"
+        ],
+        "if_blocked": [
+          "If the child possesses a mobile phone, immediately issue a Section 94 BNSS notice to entity_id telecom_operator for live Cell ID tracking."
+        ]
+      },
+      {
+        "step_id": "mchild_step_04_hue_cry",
+        "order": 4,
+        "title": "Hue & Cry Notices and Community Broadcast",
+        "description": "Publish physical and digital Hue and Cry notices. Utilize loudspeakers in the local neighborhood, broadcast on local cable networks, and circulate on social media (with parents' consent).",
+        "required_evidence": [
+          "Copies of published Hue and Cry notices",
+          "Written consent from parents for photo broadcast"
+        ],
+        "legal_basis": null,
+        "department_entity_id": null,
+        "condition_to_start": "Child details formulated for public release.",
+        "condition_to_complete": "Widespread community awareness campaign launched.",
+        "on_complete_trigger": [
+          "mchild_step_05_cwc_production"
+        ],
+        "if_blocked": [
+          "If parental consent for photo broadcast is denied due to stigma, restrict alerts to closed LEA networks and NGO child-line services."
+        ]
+      },
+      {
+        "step_id": "mchild_step_05_cwc_production",
+        "order": 5,
+        "title": "Recovery, Medical Check & CWC Production",
+        "description": "Upon recovery, immediately subject the child to a medical and psychological examination to detect signs of abuse or trafficking. Produce the child before the Child Welfare Committee (CWC) for rehabilitation directives. Do not hand the child directly to parents without CWC verification.",
+        "required_evidence": [
+          "Medical examination report evaluating physical and sexual abuse",
+          "CWC Production Memo",
+          "CWC order directing restoration to parents or institutional care"
+        ],
+        "legal_basis": "Juvenile Justice Act Section 31",
+        "department_entity_id": "cwc_jjb_authority",
+        "condition_to_start": "Child traced or rescued.",
+        "condition_to_complete": "Child medically cleared and legally restored via CWC.",
+        "on_complete_trigger": [
+          "mchild_step_06_closure"
+        ],
+        "if_blocked": [
+          "If the child reveals they ran away due to domestic abuse by parents, the CWC must place the child in a protective shelter rather than restoring custody."
+        ]
+      },
+      {
+        "step_id": "mchild_step_06_closure",
+        "order": 6,
+        "title": "Investigation of Trafficking Links & Portal Update",
+        "description": "Conduct a thorough inquiry to determine if the child was subjected to forced labor or trafficking during the missing period. Fill out Form 'R' (Recovery) on TrackChild and update CCTNS.",
+        "required_evidence": [
+          "Child's statement under Section 180 BNSS / Section 183 BNSS (if abused)",
+          "TrackChild Form 'R' update confirmation"
+        ],
+        "legal_basis": "BNSS Section 180",
+        "department_entity_id": null,
+        "condition_to_start": "Child safely recovered and produced before CWC.",
+        "condition_to_complete": "Investigation closed or escalated to trafficking charges, and portals updated.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the child is not traced within 4 months, transfer the case file to the District Anti-Human Trafficking Unit (AHTU) as per MHA guidelines."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Child remains missing beyond initial search window, and no CCTV or witnesses are available.",
+        "suggested_actions": [
+          "Conduct systemic checks of all unclaimed children lodged in NGO shelter homes and beggar homes across the state.",
+          "Use facial recognition tools via NCRB to match the child's photo against the 'Found Children' national database.",
+          "Deploy intelligence networks around local brick kilns, illegal factories, and railway begging rings to spot newly arrived children."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "missing_dementia_v1",
+    "crime_type": "Missing Person with Mental Illness/Dementia",
+    "title": "Standard Operating Procedure for Missing Persons with Dementia / Mental Illness",
+    "source": "Synthesized from Vulnerable Persons Search Protocols (e.g., Herbert Protocol models adapted for India)",
+    "steps": [
+      {
+        "step_id": "dementia_step_01_intake",
+        "order": 1,
+        "title": "Immediate Intake & Medical Profiling",
+        "description": "Register the missing report in the GD immediately (waiving standard wait times due to vulnerability). Collect crucial medical data: diagnosis (Alzheimer's, Schizophrenia), communication ability, triggers, and whether they possess a tracking device/ID bracelet.",
+        "required_evidence": [
+          "GD Entry / Missing Report",
+          "Detailed medical profile and recent photograph",
+          "List of previous addresses, childhood homes, or familiar routes"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": null,
+        "condition_to_start": "Report of a missing vulnerable person with cognitive impairment.",
+        "condition_to_complete": "Intake completed with specialized focus on medical and behavioral history.",
+        "on_complete_trigger": [
+          "dementia_step_02_local_search"
+        ],
+        "if_blocked": [
+          "If caregivers do not have a recent photo, ask them to check recent family WhatsApp group media."
+        ]
+      },
+      {
+        "step_id": "dementia_step_02_local_search",
+        "order": 2,
+        "title": "Immediate Local Search & Hazardous Area Sweep",
+        "description": "Persons with dementia often wander on foot following familiar but outdated routes. Dispatch patrol vehicles to sweep a 2-5 km radius immediately. Check local hazards: water bodies, construction sites, highways, and railway tracks.",
+        "required_evidence": [
+          "Patrol dispatch logs",
+          "Search grids mapping local hazards and old familiar addresses"
+        ],
+        "legal_basis": null,
+        "department_entity_id": null,
+        "condition_to_start": "Medical profile and last known location confirmed.",
+        "condition_to_complete": "Immediate physical sweep of the high-risk perimeter completed.",
+        "on_complete_trigger": [
+          "dementia_step_03_community_alert"
+        ],
+        "if_blocked": [
+          "If the person uses public transport, immediately alert local bus depots and auto-rickshaw stands as they may travel aimlessly."
+        ]
+      },
+      {
+        "step_id": "dementia_step_03_community_alert",
+        "order": 3,
+        "title": "Community Alert & CCTV Scanning",
+        "description": "Broadcast alerts to local resident welfare associations (RWAs), shopkeepers, and community WhatsApp groups. Scan local CCTV to determine the exact direction of wandering.",
+        "required_evidence": [
+          "CCTV video footage of the wandering individual",
+          "Copies of community alerts / Hue and Cry notices"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "private_cctv_sources",
+        "condition_to_start": "Initial patrol sweep concludes without recovery.",
+        "condition_to_complete": "Direction of travel verified via CCTV and community alerted.",
+        "on_complete_trigger": [
+          "dementia_step_04_hospital_check"
+        ],
+        "if_blocked": [
+          "If CCTV shows them boarding a train, alert GRP under entity_id railway_police at all subsequent stops."
+        ]
+      },
+      {
+        "step_id": "dementia_step_04_hospital_check",
+        "order": 4,
+        "title": "Hospital, Shelter & NGO Coordination",
+        "description": "Vulnerable persons are frequently picked up by emergency services or NGOs. Query admission logs of local government hospitals, mental health institutes, and homeless shelters.",
+        "required_evidence": [
+          "Hospital ER inquiry logs",
+          "Verification reports from local homeless NGOs and shelters"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "hospital_forensic_medical",
+        "condition_to_start": "Person remains untraced for several hours.",
+        "condition_to_complete": "Institutional intake registries cleared of matches.",
+        "on_complete_trigger": [
+          "dementia_step_05_recovery"
+        ],
+        "if_blocked": [
+          "If hospitals admit 'Jane/John Does', dispatch an officer physically to the wards with the photograph."
+        ]
+      },
+      {
+        "step_id": "dementia_step_05_recovery",
+        "order": 5,
+        "title": "Compassionate Recovery & Handover",
+        "description": "Upon tracing, approach the individual calmly to avoid triggering panic. Provide immediate medical evaluation for dehydration or injury. Hand over to legal caregivers and update the CCTNS portal.",
+        "required_evidence": [
+          "Recovery Panchnama / Memo",
+          "Medical check-up report confirming physical stability",
+          "CCTNS recovery update receipt"
+        ],
+        "legal_basis": null,
+        "department_entity_id": null,
+        "condition_to_start": "Person located.",
+        "condition_to_complete": "Person safely restored to caregivers and report closed.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If caregivers are unavailable, place the person temporarily in a specialized psychiatric or elderly care shelter via magistrate orders."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Person is missing for over 24 hours in a densely populated urban area, and digital tracking (phone) is unavailable.",
+        "suggested_actions": [
+          "Leverage facial recognition cameras at major railway stations and bus terminals to spot the wandering individual.",
+          "Coordinate with municipal garbage collection crews and street sweepers, providing them with flyers, as they cover every street early in the morning.",
+          "Check unidentified accident victim records across the state mortuaries, as wandering individuals are at high risk of traffic collisions."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "domestic_violence_v1",
+    "crime_type": "Domestic Violence",
+    "title": "Standard Operating Procedure for Investigation of Domestic Violence",
+    "source": "Synthesized from PWDVA 2005, BPR&D SOP on Crimes Against Women, and One Stop Centre Guidelines",
+    "steps": [
+      {
+        "step_id": "dv_step_01_dir_intake",
+        "order": 1,
+        "title": "Domestic Incident Report (DIR) & Victim Intake",
+        "description": "When a victim reports abuse, coordinate with the designated Protection Officer (PO) or Service Provider to record a Domestic Incident Report (DIR) under the Protection of Women from Domestic Violence Act (PWDVA). Offer immediate referral to a One Stop Centre (OSC) for shelter and counseling.",
+        "required_evidence": [
+          "Copy of Domestic Incident Report (DIR) signed by Protection Officer",
+          "Victim's written statement detailing physical, emotional, or economic abuse",
+          "Referral log to One Stop Centre / Women Helpline (181)"
+        ],
+        "legal_basis": "PWDVA 2005 Section 9",
+        "department_entity_id": "one_stop_centre_helpline",
+        "condition_to_start": "Aggrieved woman reports domestic violence at the police station.",
+        "condition_to_complete": "DIR formulated and victim secured in a safe environment.",
+        "on_complete_trigger": [
+          "dv_step_02_medical_exam",
+          "dv_step_03_fir"
+        ],
+        "if_blocked": [
+          "If the Protection Officer is unavailable, the police officer must record the complaint in the GD and forward it to the Magistrate and PO immediately."
+        ]
+      },
+      {
+        "step_id": "dv_step_02_medical_exam",
+        "order": 2,
+        "title": "Medico-Legal Examination (MLC)",
+        "description": "If the victim has suffered physical injuries, immediately transport her to a government hospital for a Medico-Legal Case (MLC) examination to document bruises, fractures, or sexual violence.",
+        "required_evidence": [
+          "Certified Medico-Legal Case (MLC) wound certificate",
+          "Photographs of injuries (taken with victim's consent by female officer/staff)"
+        ],
+        "legal_basis": "BNSS Section 184",
+        "department_entity_id": "hospital_forensic_medical",
+        "condition_to_start": "Victim exhibits visible injuries or reports physical/sexual abuse.",
+        "condition_to_complete": "Medical injuries documented and treated.",
+        "on_complete_trigger": [
+          "dv_step_03_fir"
+        ],
+        "if_blocked": [
+          "If the victim refuses medical examination due to fear of the abuser, record her refusal in writing and focus on psychological counseling."
+        ]
+      },
+      {
+        "step_id": "dv_step_03_fir",
+        "order": 3,
+        "title": "FIR Registration (Cognizable Offenses)",
+        "description": "If the DIR or victim's statement reveals cognizable offenses (e.g., grievous hurt, criminal intimidation, attempt to murder, rape), register an FIR under relevant BNS Sections (e.g., BNS 85 for cruelty) independent of the civil PWDVA proceedings.",
+        "required_evidence": [
+          "Copy of FIR under applicable BNS sections",
+          "Seizure memo of any weapons used in the assault"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": null,
+        "condition_to_start": "Evidence of cognizable criminal offenses identified.",
+        "condition_to_complete": "Criminal case formally registered alongside domestic incident proceedings.",
+        "on_complete_trigger": [
+          "dv_step_04_magistrate_protection"
+        ],
+        "if_blocked": [
+          "If the abuse is purely economic or verbal (non-cognizable), assist the victim in filing a petition before the Magistrate solely under PWDVA."
+        ]
+      },
+      {
+        "step_id": "dv_step_04_magistrate_protection",
+        "order": 4,
+        "title": "Facilitating Magistrate Protection & Residence Orders",
+        "description": "Assist the Protection Officer in submitting the DIR to the Magistrate. Ensure the police strictly enforce any resulting Protection Orders (barring the abuser from contacting the victim) or Residence Orders (preventing eviction from the shared household).",
+        "required_evidence": [
+          "Magistrate's Protection Order / Residence Order under PWDVA",
+          "Station diary entry confirming receipt and enforcement plan of the court order"
+        ],
+        "legal_basis": "PWDVA 2005 Section 18/19",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "DIR and victim application submitted to the Magistrate.",
+        "condition_to_complete": "Court orders issued and enforced by local police.",
+        "on_complete_trigger": [
+          "dv_step_05_arrest_chargesheet"
+        ],
+        "if_blocked": [
+          "If the abuser breaches the protection order, register an immediate FIR under Section 31 PWDVA, which is a cognizable and non-bailable offense."
+        ]
+      },
+      {
+        "step_id": "dv_step_05_arrest_chargesheet",
+        "order": 5,
+        "title": "Arrest (if applicable) & Criminal Charge-Sheet",
+        "description": "If an FIR was registered for cognizable crimes, or if a protection order was breached, arrest the accused following Arnesh Kumar guidelines. Record witness statements (neighbors, children) under BNSS Section 180 and file the chargesheet.",
+        "required_evidence": [
+          "Arrest memo and checklist compliance (Section 35 BNSS)",
+          "Witness statements under Section 180 BNSS",
+          "Final Charge-Sheet under BNSS Section 193"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Cognizable FIR registered or Protection Order breached.",
+        "condition_to_complete": "Accused charged and sent for trial.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the victim wishes to withdraw the complaint due to family reconciliation, advise her to submit a formal application before the Magistrate or High Court for compounding/quashing the FIR."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Victim reports prolonged psychological abuse and economic deprivation but lacks physical injuries, and the abuser controls all financial documentation.",
+        "suggested_actions": [
+          "Issue Section 94 BNSS notices to banks under entity_id bank_generic to freeze joint accounts and secure the victim's access to her own salary or Stridhan.",
+          "Rely on the Protection Officer's DIR to secure immediate monetary relief and residence orders from the Magistrate without needing the higher evidentiary burden of criminal prosecution.",
+          "Secure testimonies from the victim's colleagues, friends, or extended family to corroborate the pattern of emotional and economic control."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "dowry_harassment_v1",
+    "crime_type": "Dowry Harassment (non-death)",
+    "title": "Standard Operating Procedure for Investigation of Dowry Harassment (Cruelty)",
+    "source": "Synthesized from BPR&D SOP, BNS Section 85 (formerly 498A IPC), and Supreme Court Guidelines",
+    "steps": [
+      {
+        "step_id": "dow_harass_step_01_fir",
+        "order": 1,
+        "title": "FIR Registration & Preliminary Inquiry",
+        "description": "Register FIR under BNS Section 85 (Cruelty by husband or relatives) and Section 3/4 Dowry Prohibition Act. Following Supreme Court guidelines, ensure a preliminary inquiry or counseling session (Parivar Paramarsh Kendra) is attempted unless there are severe physical injuries.",
+        "required_evidence": [
+          "Copy of FIR under BNS Section 85",
+          "Victim's detailed statement detailing specific dowry demands and acts of cruelty",
+          "Counseling cell report (if preliminary mediation was mandated)"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": "one_stop_centre_helpline",
+        "condition_to_start": "Wife reports cruelty or harassment for dowry demands.",
+        "condition_to_complete": "FIR registered and initial statement logged.",
+        "on_complete_trigger": [
+          "dow_harass_step_02_medical"
+        ],
+        "if_blocked": [
+          "If the victim alleges imminent threat to life, bypass the preliminary counseling and proceed immediately with FIR and protection protocols."
+        ]
+      },
+      {
+        "step_id": "dow_harass_step_02_medical",
+        "order": 2,
+        "title": "Medico-Legal Examination (if physical abuse alleged)",
+        "description": "If the victim reports physical beatings, torture, or starvation, arrange for an immediate Medico-Legal Case (MLC) examination to document injuries, establishing the 'cruelty' element objectively.",
+        "required_evidence": [
+          "Certified MLC wound certificate",
+          "Photographs of injuries"
+        ],
+        "legal_basis": "BNSS Section 184",
+        "department_entity_id": "hospital_forensic_medical",
+        "condition_to_start": "Victim reports physical violence.",
+        "condition_to_complete": "Injuries medically certified.",
+        "on_complete_trigger": [
+          "dow_harass_step_03_financial"
+        ],
+        "if_blocked": [
+          "If injuries are old and healed, rely on prior medical prescriptions or photographs taken by the victim at the time of assault."
+        ]
+      },
+      {
+        "step_id": "dow_harass_step_03_financial",
+        "order": 3,
+        "title": "Financial Tracing & Stridhan Recovery",
+        "description": "Investigate the financial trail of the dowry demands. Issue Section 94 BNSS notices to banks to verify transfers made by the victim's parents to the in-laws. Seize the victim's Stridhan (jewelry, gifts) retained by the in-laws under Section 106 BNSS.",
+        "required_evidence": [
+          "Bank statements confirming fund transfers or large cash withdrawals",
+          "Seizure memo and inventory of recovered Stridhan",
+          "Wedding receipts or photographs proving ownership of Stridhan items"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "bank_generic",
+        "condition_to_start": "Specific dowry payments or withheld Stridhan alleged.",
+        "condition_to_complete": "Financial demands corroborated and Stridhan recovered.",
+        "on_complete_trigger": [
+          "dow_harass_step_04_statements"
+        ],
+        "if_blocked": [
+          "If in-laws have hidden the jewelry in bank lockers, serve a freeze notice on the bank locker operations immediately."
+        ]
+      },
+      {
+        "step_id": "dow_harass_step_04_statements",
+        "order": 4,
+        "title": "Recording Statements of Witnesses & Digital Evidence",
+        "description": "Record statements of the victim's parents, relatives, and neighbors under BNSS Section 180 to corroborate the harassment. Retrieve and certify (u/s 63 BSA) digital evidence like threatening WhatsApp chats, call recordings, or emails.",
+        "required_evidence": [
+          "Section 180 BNSS witness statements",
+          "Certified printouts of WhatsApp chats and emails",
+          "Audio recordings of extortion calls"
+        ],
+        "legal_basis": "BNSS Section 180",
+        "department_entity_id": null,
+        "condition_to_start": "FIR registered and victim statement recorded.",
+        "condition_to_complete": "Corroborative testimonies and digital evidence secured.",
+        "on_complete_trigger": [
+          "dow_harass_step_05_arrest_chargesheet"
+        ],
+        "if_blocked": [
+          "If neighbors are hostile/unwilling to testify against the in-laws, rely heavily on digital communication records and parental testimonies."
+        ]
+      },
+      {
+        "step_id": "dow_harass_step_05_arrest_chargesheet",
+        "order": 5,
+        "title": "Arrest (with Caution) & Charge-Sheet Filing",
+        "description": "Evaluate the necessity of arrest strictly against the Arnesh Kumar / Section 35 BNSS guidelines (as punishment is less than 7 years). Issue a notice of appearance (Section 35(3) BNSS) instead of automatic arrest, unless there is severe violence or absconding risk. File the final chargesheet.",
+        "required_evidence": [
+          "Notice of Appearance compliance or justified Arrest Memo",
+          "Checklist justifying arrest (if executed)",
+          "Final Charge-Sheet under BNSS Section 193 specifying BNS 85"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Evidence of cruelty and dowry demand compiled.",
+        "condition_to_complete": "Accused formally charged in court.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If indiscriminate arrest of distant relatives is demanded by the complainant, the IO must document the lack of specific allegations against them and exclude them to prevent judicial reprimand."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Dowry demands were made entirely in unrecorded, in-person conversations with no digital trail, and Stridhan is claimed to be 'lost' by in-laws.",
+        "suggested_actions": [
+          "Focus on circumstantial proof of the 'cruelty' element: sudden drops in the victim's weight, restricted phone access (check CDRs), or sudden termination from employment forced by in-laws.",
+          "Invoke criminal breach of trust (CBT) under BNS for the 'lost' Stridhan, forcing the in-laws to prove how it was lost.",
+          "Secure testimonies from neutral third parties like the family doctor, domestic help, or building security guards regarding the treatment of the victim."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "child_bonded_labour_v1",
+    "crime_type": "Child Labour / Bonded Labour",
+    "title": "Standard Operating Procedure for Investigation of Child and Bonded Labour",
+    "source": "Synthesized from Bonded Labour System (Abolition) Act 1976, JJ Act, UNODC SOPs, and MHA Trafficking Guidelines",
+    "steps": [
+      {
+        "step_id": "clabour_step_01_intel_taskforce",
+        "order": 1,
+        "title": "Intelligence Gathering & Task Force Formation",
+        "description": "Upon receiving a complaint, conduct a discreet preliminary inquiry within 24 hours without alerting the employer. Form a multi-disciplinary rescue team comprising Police, SDM, Labour Department, CWC members, and NGO representatives.",
+        "required_evidence": [
+          "Complaint record or NGO tip-off",
+          "Confidential pre-rescue reconnaissance report",
+          "Task Force formation order issued by District Magistrate / SDM"
+        ],
+        "legal_basis": "Bonded Labour System (Abolition) Act 1976",
+        "department_entity_id": "employer_labour_dept",
+        "condition_to_start": "Complaint received regarding forced labor, debt bondage, or child labor at a specific premises.",
+        "condition_to_complete": "Intelligence verified and rescue team assembled.",
+        "on_complete_trigger": [
+          "clabour_step_02_tactical_rescue"
+        ],
+        "if_blocked": [
+          "If the factory owner has political influence and risk of tip-off is high, the raid must be authorized directly by the SP or DM with outside personnel."
+        ]
+      },
+      {
+        "step_id": "clabour_step_02_tactical_rescue",
+        "order": 2,
+        "title": "Tactical Search & Rescue Operation",
+        "description": "Execute the raid. Ensure NO interaction is allowed between the victims and the employer. Ask brief questions to the laborers (regarding advances, wages, freedom of movement) to establish bonded status. Seize wage registers, muster rolls, and debt ledgers.",
+        "required_evidence": [
+          "Rescue Memo / Magajar detailing identities of rescued laborers",
+          "Seizure memos of account books, attendance registers, and debt diaries",
+          "Video recording of the working conditions and rescue operation"
+        ],
+        "legal_basis": "BNSS Section 96",
+        "department_entity_id": "employer_labour_dept",
+        "condition_to_start": "Task force mobilized at the target premises.",
+        "condition_to_complete": "Victims secured, evidence seized, and employer separated from laborers.",
+        "on_complete_trigger": [
+          "clabour_step_03_medical_cwc"
+        ],
+        "if_blocked": [
+          "If the employer attempts to lock the factory gates, use police authority to force entry to prevent the concealment of child laborers."
+        ]
+      },
+      {
+        "step_id": "clabour_step_03_medical_cwc",
+        "order": 3,
+        "title": "Medical Examination, Age Verification & CWC Production",
+        "description": "Transport victims for medical examination to assess malnutrition, abuse, and determine age (via documents or ossification test). Produce child victims before the Child Welfare Committee (CWC) within 24 hours. Provide adult bonded laborers with immediate shelter.",
+        "required_evidence": [
+          "Medical examination and age estimation reports",
+          "CWC Production Memo and shelter placement orders",
+          "Initial statements of victims recorded away from the rescue site"
+        ],
+        "legal_basis": "Juvenile Justice Act Section 31",
+        "department_entity_id": "cwc_jjb_authority",
+        "condition_to_start": "Victims safely extracted from the premises.",
+        "condition_to_complete": "Victims medically assessed, age verified, and placed in safe custody.",
+        "on_complete_trigger": [
+          "clabour_step_04_release_certificate"
+        ],
+        "if_blocked": [
+          "If victims are adults but bonded, route them to SDM for formal declaration rather than CWC."
+        ]
+      },
+      {
+        "step_id": "clabour_step_04_release_certificate",
+        "order": 4,
+        "title": "Release Certificate & Immediate Rehabilitation",
+        "description": "The SDM must conduct a formal inquiry within 24 hours and issue a 'Release Certificate' to each bonded laborer, which extinguishes their debt and entitles them to immediate financial rehabilitation under the Central Sector Scheme.",
+        "required_evidence": [
+          "Formal inquiry report by the SDM",
+          "Official Release Certificates issued to victims",
+          "Disbursement records of immediate rehabilitation funds"
+        ],
+        "legal_basis": "Bonded Labour System (Abolition) Act 1976",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Victims safely sheltered and initial statements taken.",
+        "condition_to_complete": "Release certificates issued, legally extinguishing the bonded debt.",
+        "on_complete_trigger": [
+          "clabour_step_05_fir_arrest"
+        ],
+        "if_blocked": [
+          "If the SDM delays the release certificate, the IO must formally request expedition, as the certificate is essential proof of bonded status for the criminal trial."
+        ]
+      },
+      {
+        "step_id": "clabour_step_05_fir_arrest",
+        "order": 5,
+        "title": "FIR Registration & Arrest of Employer/Traffickers",
+        "description": "Register FIR under BNS Section 143 (Trafficking for forced labor), Juvenile Justice Act Section 79, and Bonded Labour Act. Arrest the employer, middle-men, and labor contractors. Freeze their bank accounts to target the economics of the crime.",
+        "required_evidence": [
+          "Copy of FIR specifying Trafficking and Child Labour charges",
+          "Arrest memos of employer and placement agents",
+          "Confirmation of bank account freezes under BNSS Section 106"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": "bank_generic",
+        "condition_to_start": "Rescue completed and bonded/child labor status established.",
+        "condition_to_complete": "Employers arrested and financial assets targeted.",
+        "on_complete_trigger": [
+          "clabour_step_06_chargesheet_repatriation"
+        ],
+        "if_blocked": [
+          "If labor contractors (middlemen) are in a different state, issue LOCs or coordinate with state CID to apprehend the source-village recruiters."
+        ]
+      },
+      {
+        "step_id": "clabour_step_06_chargesheet_repatriation",
+        "order": 6,
+        "title": "Repatriation, Wage Recovery & Charge-Sheet Filing",
+        "description": "Coordinate safe repatriation of victims to their home states. The Labour Department must initiate proceedings to recover back-wages and statutory fines from the employer. File the final chargesheet, treating the crime as organized trafficking.",
+        "required_evidence": [
+          "Repatriation travel logs and home-district handover receipts",
+          "Labour Department wage recovery/fine imposition orders",
+          "Final Charge-Sheet under BNSS Section 193"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "employer_labour_dept",
+        "condition_to_start": "Investigation complete and victims ready for travel.",
+        "condition_to_complete": "Victims repatriated, back-wages demanded, and chargesheet filed.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If home verification indicates the victim's family sold them into bondage, the CWC must place the child in long-term institutional care instead of repatriating them."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Employers maintain no written ledgers, pay in cash, and coach laborers to claim they are working voluntarily and are over 18.",
+        "suggested_actions": [
+          "Enforce the legal presumption under the Bonded Labour Act: if minimum wages are not paid, it is legally presumed to be forced labor. The burden of proof shifts to the employer.",
+          "Conduct bone ossification tests on suspected child laborers to scientifically prove their minor status despite verbal claims.",
+          "Examine the physical living conditions (locked dormitories, lack of hygiene, restricted movement) to circumstantially prove trafficking and coercion."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "elder_abuse_neglect_v1",
+    "crime_type": "Elder Abuse / Neglect",
+    "title": "Standard Operating Procedure for Investigation of Elder Abuse and Neglect",
+    "source": "Synthesized from Maintenance and Welfare of Parents and Senior Citizens Act 2007 and MHA Advisories",
+    "steps": [
+      {
+        "step_id": "elder_step_01_intake",
+        "order": 1,
+        "title": "Complaint Intake & Emergency Medical/Shelter Assistance",
+        "description": "Receive the complaint from the senior citizen, a relative, or via Elder Helpline (14567). If there is physical abuse or severe neglect (malnutrition/abandonment), provide immediate medical assistance and offer safe shelter (Old Age Home).",
+        "required_evidence": [
+          "General Diary (GD) entry or FIR (if physical assault occurred)",
+          "Victim's statement detailing the abuse, neglect, or forced eviction",
+          "Medical evaluation report (if physical harm or starvation is present)"
+        ],
+        "legal_basis": "MWPSC Act 2007",
+        "department_entity_id": "hospital_forensic_medical",
+        "condition_to_start": "Senior citizen reports abuse, eviction, or severe neglect by children/heirs.",
+        "condition_to_complete": "Victim medically stabilized and initial facts recorded.",
+        "on_complete_trigger": [
+          "elder_step_02_sdm_tribunal"
+        ],
+        "if_blocked": [
+          "If the senior citizen is bedridden or immobile, the IO must visit their residence to record the statement and assess the living conditions."
+        ]
+      },
+      {
+        "step_id": "elder_step_02_sdm_tribunal",
+        "order": 2,
+        "title": "Initiation of MWPSC Tribunal Proceedings",
+        "description": "Assist the senior citizen in filing a formal application before the Maintenance Tribunal (presided by the SDM) under the Maintenance and Welfare of Parents and Senior Citizens Act. This provides a fast-track mechanism for eviction of abusive children, monthly maintenance, and protection of property.",
+        "required_evidence": [
+          "Application filed before the Maintenance Tribunal",
+          "Property documents showing the senior citizen's ownership of the residence"
+        ],
+        "legal_basis": "MWPSC Act 2007 Section 4/5",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Intake completed and victim wishes to seek legal recourse against heirs.",
+        "condition_to_complete": "Tribunal proceedings initiated for maintenance or eviction.",
+        "on_complete_trigger": [
+          "elder_step_03_fir_abandonment"
+        ],
+        "if_blocked": [
+          "If the heirs attempt to forcibly evict the senior citizen during pending tribunal proceedings, deploy local beat police to maintain status quo and protect the victim."
+        ]
+      },
+      {
+        "step_id": "elder_step_03_fir_abandonment",
+        "order": 3,
+        "title": "FIR Registration for Abandonment or Cognizable Assault",
+        "description": "If the senior citizen was physically assaulted, or intentionally abandoned in any place by a person having care/protection of them, register a criminal FIR under BNS sections for assault and Section 24 of the MWPSC Act (Abandonment).",
+        "required_evidence": [
+          "Copy of FIR under Section 24 MWPSC Act and relevant BNS assault sections",
+          "Witness statements from neighbors or caregivers",
+          "CCTV footage (if abuse occurred in public or monitored areas)"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": null,
+        "condition_to_start": "Evidence of deliberate abandonment or physical violence.",
+        "condition_to_complete": "Criminal case registered parallel to tribunal proceedings.",
+        "on_complete_trigger": [
+          "elder_step_04_enforcement"
+        ],
+        "if_blocked": [
+          "If the abuse is purely emotional/verbal, rely on the Maintenance Tribunal for protection orders rather than criminal prosecution."
+        ]
+      },
+      {
+        "step_id": "elder_step_04_enforcement",
+        "order": 4,
+        "title": "Enforcement of Tribunal Orders & Property Reversal",
+        "description": "Enforce the orders of the SDM/Tribunal strictly. This includes executing the eviction of abusive children from the senior citizen's property, enforcing monthly maintenance payments, and reversing property transfers made under coercion (u/s 23 MWPSC Act).",
+        "required_evidence": [
+          "Certified copy of the Maintenance Tribunal Order",
+          "Police compliance report detailing execution of eviction or property restoration",
+          "Sub-Registrar records updating the reversed property title"
+        ],
+        "legal_basis": "MWPSC Act 2007 Section 23",
+        "department_entity_id": "sub_registrar_property",
+        "condition_to_start": "Tribunal passes an order in favor of the senior citizen.",
+        "condition_to_complete": "Orders physically enforced, securing the victim's residence and financial support.",
+        "on_complete_trigger": [
+          "elder_step_05_monitoring"
+        ],
+        "if_blocked": [
+          "If heirs refuse to vacate the premises despite tribunal orders, utilize police force under Magisterial direction to remove them."
+        ]
+      },
+      {
+        "step_id": "elder_step_05_monitoring",
+        "order": 5,
+        "title": "Periodic Monitoring and Senior Citizen Help Desk",
+        "description": "Enroll the senior citizen in the local police station's Senior Citizen Register. Assign beat constables to conduct periodic welfare checks to ensure no retaliatory abuse occurs after legal actions.",
+        "required_evidence": [
+          "Entry in the Police Station Senior Citizen Register",
+          "Beat constable periodic visit logs"
+        ],
+        "legal_basis": null,
+        "department_entity_id": null,
+        "condition_to_start": "Legal action concluded and victim living independently.",
+        "condition_to_complete": "Victim integrated into ongoing police community monitoring programs.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the victim has severe dementia, coordinate with State Social Welfare Department to shift them to an assisted living facility rather than leaving them alone."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "The senior citizen transferred property to their children years ago unconditionally, and the children now refuse maintenance but have not committed physical violence.",
+        "suggested_actions": [
+          "Invoke Section 23 of the MWPSC Act, which allows the Tribunal to declare previous property transfers void if the transferee fails to provide basic amenities and physical needs, legally presuming the transfer was made by fraud/coercion.",
+          "Counsel the children using the local Maintenance Officer, warning them of the mandatory 3-month imprisonment penalty for failing to pay tribunal-ordered maintenance.",
+          "Coordinate with NGOs and the District Social Welfare Officer to arrange immediate free medical care and daily meals for the victim while tribunal proceedings are pending."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "senior_citizen_financial_fraud_v1",
+    "crime_type": "Senior Citizen Financial Fraud",
+    "title": "Standard Operating Procedure for Investigation of Financial Frauds Targeting Senior Citizens",
+    "source": "Synthesized from MHA Cyber Fraud SOPs, CFCFRMS Guidelines, and RBI Customer Protection Circulars",
+    "steps": [
+      {
+        "step_id": "srfraud_step_01_triage",
+        "order": 1,
+        "title": "Priority Triage & Emergency NCRP / 1930 Reporting",
+        "description": "Senior citizens are highly vulnerable to digital arrest, investment, and pension scams. Prioritize their complaint. Immediately log the transaction details on the NCRP portal / 1930 helpline to trigger an emergency debit freeze across the banking system.",
+        "required_evidence": [
+          "NCRP / CFCFRMS Ticket Acknowledgement Number",
+          "Victim's bank statements showing unauthorized debits or transfers",
+          "Screenshots of fraudulent communications (WhatsApp, SMS, fake documents)"
+        ],
+        "legal_basis": "BNSS Section 106",
+        "department_entity_id": "upi_npci",
+        "condition_to_start": "Senior citizen reports a cyber financial fraud or scam.",
+        "condition_to_complete": "Complaint logged in national portal and emergency freeze initiated.",
+        "on_complete_trigger": [
+          "srfraud_step_02_bank_freeze"
+        ],
+        "if_blocked": [
+          "If the senior citizen cannot navigate the online portal, the station cyber-desk officer must personally input the data into the CFCFRMS dashboard on their behalf."
+        ]
+      },
+      {
+        "step_id": "srfraud_step_02_bank_freeze",
+        "order": 2,
+        "title": "Bank Account Tracing & Lien Marking",
+        "description": "Issue urgent Section 106 BNSS notices to the beneficiary banks identified in the fraud. Freeze the suspect accounts, obtain complete KYC dossiers of the account holders, and secure internet banking login IP logs.",
+        "required_evidence": [
+          "Certified bank statements and KYC of recipient accounts",
+          "Confirmation of debit freeze under BNSS Section 106",
+          "Login IP addresses and device fingerprints of the fraudulent accounts"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "bank_generic",
+        "condition_to_start": "Destination bank accounts identified from the victim's transfer records.",
+        "condition_to_complete": "Funds frozen in the banking system and suspect identities gathered.",
+        "on_complete_trigger": [
+          "srfraud_step_03_telecom_trace"
+        ],
+        "if_blocked": [
+          "If funds were moved to crypto exchanges, issue immediate freeze notices to entity_id vasp_crypto_exchange."
+        ]
+      },
+      {
+        "step_id": "srfraud_step_03_telecom_trace",
+        "order": 3,
+        "title": "Telecom Tracing of Scammers (Vishing/Digital Arrest)",
+        "description": "Analyse the phone numbers used to call the senior citizen. Scammers often pose as CBI, RBI, or Customs officials. Issue notices to TSPs for CAF, CDRs, and Cell ID locations of the calling numbers to locate the scam call center.",
+        "required_evidence": [
+          "CAF and CDR with Cell ID locations for scam phone numbers",
+          "IMEI tracking history revealing devices used by telecallers",
+          "WhatsApp/Skype IP login logs (if VOIP was used)"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Scam phone numbers or VoIP handles identified.",
+        "condition_to_complete": "Physical location and identity of the scam operators tracked.",
+        "on_complete_trigger": [
+          "srfraud_step_04_raid_arrest"
+        ],
+        "if_blocked": [
+          "If scammers used spoofed international numbers, route the investigation through IPDR traces of the bank account logins instead."
+        ]
+      },
+      {
+        "step_id": "srfraud_step_04_raid_arrest",
+        "order": 4,
+        "title": "Raid, Arrest & Seizure of Infrastructure",
+        "description": "Conduct raids at the identified physical locations. Arrest the telecallers, money mules, and syndicate handlers. Seize mobile phones, laptops, fake ID cards, and bank kits used to dupe the elderly.",
+        "required_evidence": [
+          "Seizure memos of computing devices, SIM boxes, and financial ledgers",
+          "Forensic imaging of computers showing victim databases and extortion scripts",
+          "Arrest memos"
+        ],
+        "legal_basis": "BNSS Section 96",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Actionable intelligence on the physical location of the scam syndicate.",
+        "condition_to_complete": "Syndicate dismantled and digital evidence secured.",
+        "on_complete_trigger": [
+          "srfraud_step_05_restitution"
+        ],
+        "if_blocked": [
+          "If the syndicate operates from inter-state cyber hubs (e.g., Jamtara), coordinate the raid with the State Cyber CID."
+        ]
+      },
+      {
+        "step_id": "srfraud_step_05_restitution",
+        "order": 5,
+        "title": "Expedited Restitution of Funds u/s 503 BNSS",
+        "description": "Senior citizens rely on life savings. Expedite the restitution process. Under new MHA SOPs for frauds below Rs 50,000, facilitate direct bank refunds. For larger amounts, file an urgent application before the Magistrate under BNSS Section 503 to return frozen funds.",
+        "required_evidence": [
+          "Schedule of frozen bank balances",
+          "Investigating Officer's report endorsing the return of funds",
+          "Court order directing banks to release frozen money back to the victim"
+        ],
+        "legal_basis": "BNSS Section 503",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Funds successfully frozen in beneficiary accounts.",
+        "condition_to_complete": "Defrauded money restored to the senior citizen's account.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the bank refuses a direct refund, guide the victim to file a grievance with the RBI Banking Ombudsman citing failure of the bank's fraud monitoring systems."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Funds were withdrawn as cash from ATMs immediately by masked mules, leaving no digital balance to freeze.",
+        "suggested_actions": [
+          "Procure ATM CCTV footage under entity_id bank_generic to identify the physical mules; cross-reference their faces with local criminal databases.",
+          "Trace the IP addresses used to operate the mule accounts via internet banking; map the IPDR under entity_id isp_non_telecom to locate the syndicate's financial handlers.",
+          "Check the victim's interaction logs: if the fraud involved a fake courier delivery or physically signed cheques, interrogate the local delivery agents or bank staff who cleared the unusual large transaction without verifying with the elderly customer."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "juvenile_in_conflict_v1",
+    "crime_type": "Juvenile in Conflict with Law",
+    "title": "Standard Operating Procedure for Apprehension and Investigation of Juveniles in Conflict with Law (JCL)",
+    "source": "Synthesized from Juvenile Justice (Care and Protection of Children) Act 2015 and Model Rules",
+    "steps": [
+      {
+        "step_id": "jj_step_01_apprehension",
+        "order": 1,
+        "title": "Child-Friendly Apprehension (No Handcuffs, No Uniform)",
+        "description": "Apprehend the juvenile suspect. Ensure police officers are in plain clothes, DO NOT use handcuffs, and DO NOT use coercion. The child must be placed under the charge of the Child Welfare Police Officer (CWPO) or Special Juvenile Police Unit (SJPU). Note: Local police station / SJPU is not present in the registry, hence department_entity_id is set to null.",
+        "required_evidence": [
+          "Apprehension Memo (NOT an Arrest Memo)",
+          "Logbook entry confirming plain clothes apprehension by CWPO",
+          "Initial age verification document (e.g., Aadhaar, school ID) establishing minority"
+        ],
+        "legal_basis": "Juvenile Justice Act Section 10",
+        "department_entity_id": null,
+        "condition_to_start": "Juvenile suspected of committing a cognizable offense.",
+        "condition_to_complete": "Child safely apprehended following statutory child-friendly protocols.",
+        "on_complete_trigger": [
+          "jj_step_02_parent_probation_info"
+        ],
+        "if_blocked": [
+          "If the age is disputed, presume the person is a child until verified otherwise by documents or a medical board."
+        ]
+      },
+      {
+        "step_id": "jj_step_02_parent_probation_info",
+        "order": 2,
+        "title": "Information to Parents & Probation Officer",
+        "description": "Immediately inform the parent or guardian of the child regarding the apprehension, the location of the police station, and the date/time the child will be produced before the Juvenile Justice Board (JJB). Simultaneously, inform the Probation Officer to begin preparing a Social Investigation Report.",
+        "required_evidence": [
+          "Written/electronic intimation sent to Parents/Guardians",
+          "Formal intimation dispatch to the District Probation Officer"
+        ],
+        "legal_basis": "Juvenile Justice Act Section 13",
+        "department_entity_id": null,
+        "condition_to_start": "Child apprehended and brought to the station.",
+        "condition_to_complete": "Parents and Probation Officer statutorily notified.",
+        "on_complete_trigger": [
+          "jj_step_03_medical_exam"
+        ],
+        "if_blocked": [
+          "If parents are untraceable or unfit, notify the CWC and the District Legal Services Authority to provide immediate representation."
+        ]
+      },
+      {
+        "step_id": "jj_step_03_medical_exam",
+        "order": 3,
+        "title": "Medical Examination & Age Determination",
+        "description": "Subject the child to a medical examination to document any injuries and ensure physical well-being. If documentary proof of age (birth certificate, school records) is unavailable, request the medical board to conduct an ossification test for age determination under Section 94 JJ Act.",
+        "required_evidence": [
+          "Medical fitness report",
+          "Municipal Birth Certificate or School Admission Register copy; OR",
+          "Medical Board Ossification Age Estimation Report"
+        ],
+        "legal_basis": "Juvenile Justice Act Section 94",
+        "department_entity_id": "hospital_forensic_medical",
+        "condition_to_start": "Child in CWPO custody prior to JJB production.",
+        "condition_to_complete": "Health verified and statutory age proven.",
+        "on_complete_trigger": [
+          "jj_step_04_jjb_production"
+        ],
+        "if_blocked": [
+          "If the crime requires collection of DNA (e.g., sexual offenses), ensure sample collection is done gently in the presence of parents/guardians."
+        ]
+      },
+      {
+        "step_id": "jj_step_04_jjb_production",
+        "order": 4,
+        "title": "Production before Juvenile Justice Board (JJB) within 24 Hours",
+        "description": "Produce the child before the Juvenile Justice Board (JJB) strictly within 24 hours of apprehension. The child must NEVER be kept in a police lock-up or jail. The JJB will decide on bail or placement in an Observation Home.",
+        "required_evidence": [
+          "JJB Production Memo",
+          "Order of the JJB granting bail or directing placement in an Observation Home",
+          "FIR and preliminary investigation reports (excluding child's identity from public documents)"
+        ],
+        "legal_basis": "Juvenile Justice Act Section 10",
+        "department_entity_id": "cwc_jjb_authority",
+        "condition_to_start": "Medical and administrative intake complete.",
+        "condition_to_complete": "Child legally handed over to JJB jurisdiction within the 24-hour statutory limit.",
+        "on_complete_trigger": [
+          "jj_step_05_investigation_sir"
+        ],
+        "if_blocked": [
+          "If the JJB is not in session (e.g., night/holiday), produce the child before an individual member of the JJB at their residence."
+        ]
+      },
+      {
+        "step_id": "jj_step_05_investigation_sir",
+        "order": 5,
+        "title": "Investigation & Social Investigation Report (SIR)",
+        "description": "Complete the investigation into the offense. The Probation Officer submits the Social Investigation Report (SIR) detailing the child's background, family circumstances, and psychological state. For heinous offenses by a child aged 16-18, the JJB will conduct a preliminary assessment to decide if they should be tried as an adult.",
+        "required_evidence": [
+          "Final Police Report (equivalent to chargesheet but avoiding the term 'accused')",
+          "Social Investigation Report (SIR) from the Probation Officer",
+          "JJB Preliminary Assessment order (for heinous crimes, age 16-18)"
+        ],
+        "legal_basis": "Juvenile Justice Act Section 14/15",
+        "department_entity_id": "cwc_jjb_authority",
+        "condition_to_start": "Child produced before JJB and inquiry initiated.",
+        "condition_to_complete": "Investigation finalized and submitted to JJB for final disposition or transfer to Children's Court.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the child was coerced by adults into committing the crime, redirect the primary criminal prosecution onto the adult handlers while treating the juvenile primarily as a victim in need of rehabilitation."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "The juvenile refuses to speak, provides fake names, and has no identification documents or local guardians.",
+        "suggested_actions": [
+          "Submit the child's biometric data to UIDAI via entity_id uidai_aadhaar (with JJB permission) to locate demographic details and parental linkage.",
+          "Liaise with NGOs and District Child Protection Units (DCPU) to counsel the child in a non-threatening environment to extract home address details.",
+          "Rely on objective forensic evidence (CCTV, fingerprints) to establish involvement in the incident without relying on self-incrimination, which is invalid for juveniles."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "disability_abuse_exploitation_v1",
+    "crime_type": "Disability-related Abuse/Exploitation",
+    "title": "Standard Operating Procedure for Investigation of Abuse against Persons with Disabilities",
+    "source": "Synthesized from Rights of Persons with Disabilities (RPWD) Act 2016 and BNSS Guidelines",
+    "steps": [
+      {
+        "step_id": "pwd_step_01_intake_interpreter",
+        "order": 1,
+        "title": "Sensitive Intake & Deployment of Special Educators/Interpreters",
+        "description": "When a Person with Disability (PwD) reports abuse, register the FIR under the RPWD Act 2016 and relevant BNS sections. Immediately arrange for a certified sign language interpreter, special educator, or psychologist to facilitate communication. Ensure the environment is accessible and non-intimidating.",
+        "required_evidence": [
+          "Copy of FIR under RPWD Act Section 92 and BNS",
+          "Disability Certificate of the victim",
+          "Logbook entry showing deployment of certified interpreter or special educator"
+        ],
+        "legal_basis": "RPWD Act 2016 Section 7",
+        "department_entity_id": null,
+        "condition_to_start": "Person with physical, mental, or intellectual disability reports violence, abuse, or exploitation.",
+        "condition_to_complete": "FIR registered with specialized communication support established.",
+        "on_complete_trigger": [
+          "pwd_step_02_medical_care"
+        ],
+        "if_blocked": [
+          "If an interpreter is unavailable immediately, allow a trusted family member or caregiver to assist, ensuring they are not the suspected abusers."
+        ]
+      },
+      {
+        "step_id": "pwd_step_02_medical_care",
+        "order": 2,
+        "title": "Specialized Medical Examination",
+        "description": "Forward the victim for a Medico-Legal Case (MLC) examination. The medical officer must be briefed on the victim's specific disability to ensure physical handling is appropriate. Document injuries, neglect, or sexual assault comprehensively.",
+        "required_evidence": [
+          "Certified MLC report",
+          "Medical board evaluation (if required to assess impact of abuse on the specific disability)"
+        ],
+        "legal_basis": "BNSS Section 184",
+        "department_entity_id": "hospital_forensic_medical",
+        "condition_to_start": "Intake completed and physical/sexual abuse alleged.",
+        "condition_to_complete": "Medical evidence secured without causing secondary trauma.",
+        "on_complete_trigger": [
+          "pwd_step_03_magistrate_statement"
+        ],
+        "if_blocked": [
+          "If the victim is bedridden or institutionalized, dispatch a mobile medical unit and a Magistrate to their location."
+        ]
+      },
+      {
+        "step_id": "pwd_step_03_magistrate_statement",
+        "order": 3,
+        "title": "Video-Recorded Judicial Statement u/s 183 BNSS",
+        "description": "Sponsor an application to the Magistrate to record the judicial statement under BNSS Section 183. The law mandates that for temporarily or permanently disabled victims, the statement MUST be video-graphed, and the Magistrate must take the assistance of an interpreter or special educator.",
+        "required_evidence": [
+          "Certified copy of Section 183 BNSS judicial statement",
+          "Mandatory audio-visual recording of the statement proceedings",
+          "Interpreter's certification of accurate translation"
+        ],
+        "legal_basis": "BNSS Section 183(5)",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Victim medically stable and interpreter available.",
+        "condition_to_complete": "Legally admissible, video-recorded judicial statement procured.",
+        "on_complete_trigger": [
+          "pwd_step_04_protection_arrest"
+        ],
+        "if_blocked": [
+          "If the victim is non-verbal and uses augmentative communication devices, ensure the camera clearly captures the device interface and user inputs."
+        ]
+      },
+      {
+        "step_id": "pwd_step_04_protection_arrest",
+        "order": 4,
+        "title": "Arrest, Evidence Collection & Victim Protection",
+        "description": "Arrest the perpetrators. If the abuser is the primary caregiver or family member, coordinate with the Executive Magistrate or Social Welfare Department to immediately transfer the victim to a safe, accessible shelter or specialized care home.",
+        "required_evidence": [
+          "Arrest memos of the abusers",
+          "Seizure memos of any weapons or misappropriated disability aids/finances",
+          "Transfer order placing the victim in a protective shelter"
+        ],
+        "legal_basis": "RPWD Act 2016 Section 7(2)",
+        "department_entity_id": "one_stop_centre_helpline",
+        "condition_to_start": "Evidentiary basis established via medical reports and statements.",
+        "condition_to_complete": "Abusers arrested and victim secured in an alternative care environment.",
+        "on_complete_trigger": [
+          "pwd_step_05_chargesheet"
+        ],
+        "if_blocked": [
+          "If the abuse involves financial exploitation (stealing disability pensions), issue Section 94 BNSS notices to entity_id bank_generic to audit and freeze the accounts."
+        ]
+      },
+      {
+        "step_id": "pwd_step_05_chargesheet",
+        "order": 5,
+        "title": "Final Charge-Sheet & Special Court Filing",
+        "description": "Compile the final chargesheet invoking specific aggravated penalties under the RPWD Act and BNS. File the chargesheet before the designated Special Court for speedy trial as mandated by the RPWD Act.",
+        "required_evidence": [
+          "Final Charge-Sheet under BNSS Section 193 specifying RPWD Act violations",
+          "All video recordings, MLCs, and interpreter certifications",
+          "Judicial cognizance order by the Special Court"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Investigation complete and victim safely sheltered.",
+        "condition_to_complete": "Case formally submitted for trial in the designated Special Court.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the defense attempts to discredit the victim's testimony based on intellectual disability, rely on the Special Educator's expert testimony and corroborative physical evidence."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "The abuse occurred within a closed care institution (asylum/shelter), there are no external witnesses, and the institution's management has erased CCTV footage.",
+        "suggested_actions": [
+          "Charge the institutional management with destruction of evidence (BNS 238) and seize the DVRs for forensic data carving at FSL to recover deleted footage.",
+          "Subpoena the inspection logs and visitor registers of the State Disability Commissioner to identify historical complaints against the facility.",
+          "Interview former employees, medical staff, or other residents (using interpreters) to establish a systemic pattern of institutional neglect and abuse."
+        ]
+      }
+    ]
+  }
+]

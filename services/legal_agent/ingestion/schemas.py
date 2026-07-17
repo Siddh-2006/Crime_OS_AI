@@ -128,25 +128,46 @@ class LegalSectionRecord(CrimeOSModel):
     chapter: str = ""
     chapter_tag: list[str] = Field(default_factory=list)
     content: str = ""
+    summary: str = ""
     references: list[str] = Field(default_factory=list)
-    clauses: list[ClauseRecord] = Field(default_factory=list)
-    subsections: list[SubsectionRecord] = Field(default_factory=list)
-    page: int = 0
-    source_page: int = 0
-    source_pages: list[int] = Field(default_factory=list)
+    page_numbers: list[int] = Field(default_factory=list)
     metadata: DocumentMetadata = Field(default_factory=DocumentMetadata)
 
+class DeptRegistryRecord(BaseModel):
+    act: str = ""
+    entity_id: str = ""
+    entity_name: str = ""
+    category: str = ""
+    what_they_can_provide: list[str] = Field(default_factory=list)
+    legal_basis_typically_cited: list[str] = Field(default_factory=list)
+    request_format_expected: str = ""
+    typical_response_time: str = ""
+    escalation_path_if_no_response: str = ""
+    notes_or_caveats: str = ""
+    confidence: str = ""
 
-class SOPRecord(CrimeOSModel):
-    id: str = ""
-    document_type: str = "sop_manual"
-    act: str = "NCRP"
-    document: str = "NCRP_SOP"
-    chapter: str | None = None
-    section: str | None = None
-    subsection: str | None = None
-    content: str = ""
-    source_page: int = 0
-    source_pages: list[int] = Field(default_factory=list)
-    hierarchy: list[str] = Field(default_factory=list)
-    metadata: DocumentMetadata = Field(default_factory=DocumentMetadata)
+class StepRecord(BaseModel):
+    step_id: str = ""
+    order: int = 0
+    title: str = ""
+    description: str = ""
+    required_evidence: list[str] = Field(default_factory=list)
+    legal_basis: Optional[str] = None
+    department_entity_id: Optional[str] = None
+    condition_to_start: Optional[str] = None
+    condition_to_complete: Optional[str] = None
+    on_complete_trigger: list[str] = Field(default_factory=list)
+    if_blocked: list[str] = Field(default_factory=list)
+
+class DeadEndStrategyRecord(BaseModel):
+    condition: str = ""
+    suggested_actions: list[str] = Field(default_factory=list)
+
+class SOPRecord(BaseModel):
+    act: str = ""
+    sop_id: str = ""
+    crime_type: str = ""
+    title: str = ""
+    source: str = ""
+    steps: list[StepRecord] = Field(default_factory=list)
+    dead_end_strategies: list[DeadEndStrategyRecord] = Field(default_factory=list)

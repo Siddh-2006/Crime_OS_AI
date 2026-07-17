@@ -1,0 +1,2162 @@
+[
+  {
+    "act": "sop",
+    "sop_id": "murder_v1",
+    "crime_type": "Murder",
+    "title": "Standard Operating Procedure for Investigation of Murder Cases",
+    "source": "Synthesized from BPR&D Investigation Manual for Homicide Cases, BNSS 2023, and State Police Homicide SOPs",
+    "steps": [
+      {
+        "step_id": "murd_step_01_fir_protection",
+        "order": 1,
+        "title": "FIR Registration & Immediate Crime Scene Protection",
+        "description": "Upon receipt of information regarding homicide, immediately record the FIR under BNSS Section 173 (formerly CrPC Section 154). The Investigating Officer (IO) must rush to the spot, cordon off the entire crime scene with forensic barricade tape, prevent unauthorized entry of public/media, and log all persons present. Note: Local police station / first responder unit is not present in the registry, hence department_entity_id is set to null.",
+        "required_evidence": [
+          "Copy of recorded FIR with statutory date and hour of recording",
+          "Crime scene logbook documenting arrival timestamps and identity of first responders",
+          "Initial rough sketch map of the scene prepared by the first responder"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": null,
+        "condition_to_start": "Receipt of information regarding a suspicious death or unlawful killing.",
+        "condition_to_complete": "FIR registered, crime scene secured, and physical barricades erected.",
+        "on_complete_trigger": [
+          "murd_step_02_inquest_body_dispatch",
+          "murd_step_03_forensic_examination"
+        ],
+        "if_blocked": [
+          "If the crime scene is in a public thoroughfare with hostile crowds, immediately request additional armed reinforcement from District Police Lines before cordoning."
+        ]
+      },
+      {
+        "step_id": "murd_step_02_inquest_body_dispatch",
+        "order": 2,
+        "title": "Police Inquest Proceedings & Dead Body Challan",
+        "description": "Conduct formal inquest proceedings (Panchnama) under BNSS Section 194 (formerly CrPC Section 174) in the presence of two or more respectable inhabitants of the neighborhood. Document the apparent cause of death, exact posture of the corpse, ligature marks, and wounds. Prepare the Dead Body Challan and dispatch the corpse under official police escort for autopsy.",
+        "required_evidence": [
+          "Inquest Report (Panchnama) signed by IO and independent witnesses (Panchas)",
+          "Detailed inventory of clothing, jewelry, and personal effects found on the corpse",
+          "Dead Body Challan / Forwarding Memo addressed to the Medical Officer"
+        ],
+        "legal_basis": "BNSS Section 194",
+        "department_entity_id": "hospital_forensic_medical",
+        "condition_to_start": "Crime scene secured and body accessible to the investigating team.",
+        "condition_to_complete": "Inquest finalized, signed by panchas, and corpse transferred to hospital morgue under police seal.",
+        "on_complete_trigger": [
+          "murd_step_04_post_mortem"
+        ],
+        "if_blocked": [
+          "If the identity of the deceased is unknown, take clear identification photographs, record fingerprints, and issue an all-station missing person broadcast before autopsy."
+        ]
+      },
+      {
+        "step_id": "murd_step_03_forensic_examination",
+        "order": 3,
+        "title": "Mandatory Forensic Crime Scene Examination & Evidence Seizure",
+        "description": "In compliance with BNSS Section 176(3) (mandatory forensic investigation for offenses punishable with 7+ years imprisonment), summon the State FSL mobile forensic van. Ensure scientific collection, labeling, and sealing of biological evidence (bloodstains, hair, tissue), ballistic items (cartridge cases, bullets), weapon impressions, and trace evidence under Seizure Memos.",
+        "required_evidence": [
+          "Seizure memos for blood-stained soil, control soil, biological exhibits, and weapons",
+          "High-resolution photographic and videographic documentation of the crime scene from all angles",
+          "Forensic scene inspection report signed by the scientific officer"
+        ],
+        "legal_basis": "BNSS Section 176(3)",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Forensic science team arrives at the protected crime scene.",
+        "condition_to_complete": "All physical and trace evidence scientifically lifted, packaged, sealed with official seal, and documented.",
+        "on_complete_trigger": [
+          "murd_step_05_telecom_tracing",
+          "murd_step_06_cctv_requisition"
+        ],
+        "if_blocked": [
+          "If the FSL mobile van is delayed beyond 24 hours, the IO must personally lift and seal volatile blood/trace evidence utilizing standardized forensic evidence collection kits under videography."
+        ]
+      },
+      {
+        "step_id": "murd_step_04_post_mortem",
+        "order": 4,
+        "title": "Medico-Legal Post-Mortem Autopsy Requisition",
+        "description": "Submit a formal written requisition to the autopsy surgeon / forensic medical examiner to conduct post-mortem examination. Request specific opinion on cause and manner of death, time since death, type of weapon used, and preservation of viscera, blood samples, and clothes for FSL chemical/serological analysis.",
+        "required_evidence": [
+          "Certified Medico-Legal Post-Mortem Autopsy Report",
+          "Sealed containers containing preserved viscera, blood on gauze, and clothes of the deceased",
+          "Autopsy video recording (mandatory in custodial deaths or unidentified bodies)"
+        ],
+        "legal_basis": "BNSS Section 194",
+        "department_entity_id": "hospital_forensic_medical",
+        "condition_to_start": "Corpse delivered to hospital morgue along with Inquest papers and Dead Body Challan.",
+        "condition_to_complete": "Receipt of provisional autopsy opinion and handover of sealed biological exhibits to police escort.",
+        "on_complete_trigger": [
+          "murd_step_07_weapon_tracing"
+        ],
+        "if_blocked": [
+          "If the medical officer is unable to determine the exact cause of death due to putrefaction, request immediate forwarding of preserved bones/viscera to CFSL for advanced osteological and toxicological analysis."
+        ]
+      },
+      {
+        "step_id": "murd_step_05_telecom_tracing",
+        "order": 5,
+        "title": "Telecom CDR, Cell Site Analysis & Tower Dump Requisition",
+        "description": "Issue notices under BNSS Section 94 to Telecom Service Providers to obtain Call Detail Records (CDRs), Subscriber Application Forms (CAF), and IMEI histories of the deceased and suspected individuals. Request Cell Tower Dump records for the crime scene location covering the estimated time of murder.",
+        "required_evidence": [
+          "CAF and CDRs with Cell ID tower locations for deceased and suspect mobile numbers",
+          "Tower dump logs of all active cellular devices at the crime scene during the occurrence window",
+          "Section 63 Bharatiya Sakshya Adhiniyam (BSA) electronic certificates from TSP nodal officers"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Deceased's mobile number identified or estimated time of murder established from autopsy.",
+        "condition_to_complete": "Receipt of certified CDRs, tower dumps, and subscriber KYC from telecom operators.",
+        "on_complete_trigger": [
+          "murd_step_08_search_arrest"
+        ],
+        "if_blocked": [
+          "If suspects utilized encrypted VoIP applications (WhatsApp/Signal) instead of cellular calls, serve Section 94 notices on messaging intermediaries under entity_id meta_platforms for IP access logs."
+        ]
+      },
+      {
+        "step_id": "murd_step_06_cctv_requisition",
+        "order": 6,
+        "title": "CCTV Surveillance Footage Procurement",
+        "description": "Identify all private residential, commercial, and municipal CCTV cameras covering the crime scene, approach roads, and escape routes. Issue immediate Section 94 BNSS notices to premises owners or municipal control rooms to procure unedited footage and DVR storage media.",
+        "required_evidence": [
+          "CCTV video footage covering the occurrence window and escape routes",
+          "Seizure memo of physical DVR/NVR hard drives (if live export is not possible)",
+          "Section 63 BSA electronic certificate signed by the CCTV system owner/operator"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "private_cctv_sources",
+        "condition_to_start": "Mapping of surveillance cameras along the crime scene perimeter and approach routes.",
+        "condition_to_complete": "Procurement of relevant video footage accompanied by mandatory electronic admissibility certificates.",
+        "on_complete_trigger": [
+          "murd_step_08_search_arrest"
+        ],
+        "if_blocked": [
+          "If private CCTV owners refuse cooperation or threaten to overwrite footage, execute an immediate search and seizure of the physical DVR instrument under BNSS Section 106."
+        ]
+      },
+      {
+        "step_id": "murd_step_07_weapon_tracing",
+        "order": 7,
+        "title": "Firearm / Weapon Tracing & Licensing Verification",
+        "description": "If the homicide involved firearms, verify weapon serial numbers, caliber, and cartridge markings against the National Database on Arms and Licenses (NDAL-ALIS). Issue Section 94 BNSS notices to the Arms Licensing Authority to verify ownership, ammunition purchase ledgers, and dealer stock registers.",
+        "required_evidence": [
+          "Arms license dossier and NDAL-ALIS UIN verification report",
+          "Ammunition purchase ledgers from licensed gunsmiths/dealers",
+          "FSL ballistic preliminary comparison report matching fired bullets/cartridges to suspect weapons"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "arms_licensing_authority",
+        "condition_to_start": "Autopsy or crime scene inspection confirms use of firearms or registered edged weapons.",
+        "condition_to_complete": "Weapon registration status verified and ownership trail established.",
+        "on_complete_trigger": [
+          "murd_step_08_search_arrest"
+        ],
+        "if_blocked": [
+          "If the weapon is an unlicensed country-made firearm (Katta), interrogate informants and coordinate with State Crime Branch to trace the illicit manufacturing nexus."
+        ]
+      },
+      {
+        "step_id": "murd_step_08_search_arrest",
+        "order": 8,
+        "title": "Search, Seizure of Weapon/Blood Clothes & Arrest of Accused",
+        "description": "Execute search warrants under BNSS Section 96 at suspect hideouts. Arrest the accused under BNSS Section 35. Conduct thorough interrogation leading to voluntary disclosure and discovery of hidden murder weapons or blood-stained clothes under Section 23 BSA (formerly Section 27 Evidence Act). Ensure mandatory medical examination of accused under BNSS Section 51/53.",
+        "required_evidence": [
+          "Arrest memo and personal search memo of the accused",
+          "Voluntary disclosure memorandum recorded in the presence of independent witnesses",
+          "Seizure memo of recovered murder weapon and blood-stained garments recovered pursuant to disclosure",
+          "Medico-legal examination report and DNA profiling sample collection of accused u/s 51/53 BNSS"
+        ],
+        "legal_basis": "BNSS Section 35",
+        "department_entity_id": "hospital_forensic_medical",
+        "condition_to_start": "Actionable intelligence and evidentiary linkage established against suspect.",
+        "condition_to_complete": "Accused arrested, disclosure recorded, weapon/clothes recovered, and medical examination completed.",
+        "on_complete_trigger": [
+          "murd_step_09_statement_recording"
+        ],
+        "if_blocked": [
+          "If the accused absconds across state boundaries, obtain a non-bailable warrant (NBW) from court and coordinate interstate transit remand with railway/state police units."
+        ]
+      },
+      {
+        "step_id": "murd_step_09_statement_recording",
+        "order": 9,
+        "title": "Recording of Witness Statements & Judicial Confessions",
+        "description": "Record detailed statements of material witnesses, eyewitnesses, and first responders under BNSS Section 180 (formerly Section 161 CrPC). For critical eyewitnesses or voluntary confessions by accused, sponsor applications before the Magistrate for audio-video recording of statements under BNSS Section 183 (formerly Section 164 CrPC).",
+        "required_evidence": [
+          "Written Section 180 BNSS statements of eyewitnesses, circumstantial witnesses, and panchas",
+          "Certified copy of Section 183 BNSS judicial statement / confession recorded by Magistrate",
+          "Audio-visual recording media of the Section 183 proceedings"
+        ],
+        "legal_basis": "BNSS Section 183",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Witnesses identified and accused willing to make a voluntary judicial confession.",
+        "condition_to_complete": "All material witness statements recorded and certified judicial statements procured from Magistrate.",
+        "on_complete_trigger": [
+          "murd_step_10_chargesheet_compilation"
+        ],
+        "if_blocked": [
+          "If eyewitnesses face intimidation, immediately invoke witness protection protocols and request the trial court for name redaction and in-camera deposition."
+        ]
+      },
+      {
+        "step_id": "murd_step_10_chargesheet_compilation",
+        "order": 10,
+        "title": "Compilation of Scientific Reports & Final Charge-Sheet Filing",
+        "description": "Collect all definitive scientific expert reports from FSL (serology, DNA matching, ballistics, toxicology) admissible under BNSS Section 329. Assemble the comprehensive chargesheet (police report) under BNSS Section 193 (formerly Section 173 CrPC) and file it before the jurisdictional court within the statutory 90-day timeline.",
+        "required_evidence": [
+          "Certified FSL reports confirming DNA matching between deceased's blood and stains on accused's weapon/clothes",
+          "Complete chain of custody registers (Malkhana registers and Road Certificates)",
+          "Final chargesheet under BNSS Section 193 listing all accused, charges, witnesses, and exhibits"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "All investigative steps executed, accused remanded, and FSL forensic reports received.",
+        "condition_to_complete": "Formal submission and judicial cognizance of the final chargesheet before the Sessions/Magistrate Court.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If FSL reports are delayed near the 90-day statutory limit, file the primary chargesheet with available evidence to prevent default bail, and file the FSL report later as a supplementary chargesheet under BNSS Section 193(9)."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Blind murder case with no eyewitnesses, unidentified corpse, and no hits on CCTV or cellular tower dumps.",
+        "suggested_actions": [
+          "Upload corpse photographs, dental charts, and biometric fingerprints to the NCRB CCTNS portal and UIDAI database (via High Court order under entity_id uidai_aadhaar) to establish identity.",
+          "Perform forensic facial reconstruction or isotope analysis on skeletal remains at CFSL to determine geographical origin and socioeconomic profile of the deceased.",
+          "Analyse recent missing person reports across adjoining districts and railway corridors under entity_id railway_police matching the deceased's physical description and clothing labels."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "attempt_to_murder_v1",
+    "crime_type": "Attempt to Murder",
+    "title": "Standard Operating Procedure for Investigation of Attempt to Murder Cases",
+    "source": "Synthesized from BPR&D Police Investigation Manual, BNSS 2023, and Medico-Legal Case (MLC) Guidelines",
+    "steps": [
+      {
+        "step_id": "attm_step_01_fir_evacuation",
+        "order": 1,
+        "title": "FIR Registration & Emergency Medical Evacuation",
+        "description": "Register FIR under BNSS Section 173 upon receiving information of a violent assault with intent to cause death. The first priority of the IO is to ensure immediate emergency medical evacuation of the injured victim to the nearest hospital without waiting for legal formalities, while deploying a guard to secure the crime scene. Note: Local police station / first responder unit is not present in the registry, hence department_entity_id is set to null.",
+        "required_evidence": [
+          "Copy of recorded FIR under BNS Section 109 (formerly IPC Section 307)",
+          "Emergency hospital admission record / police dispatch log",
+          "Initial rough crime scene boundary inspection note"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": null,
+        "condition_to_start": "Report of violent assault involving dangerous weapons or severe trauma with intent to kill.",
+        "condition_to_complete": "Victim admitted to emergency medical care and FIR formally registered.",
+        "on_complete_trigger": [
+          "attm_step_02_mlc_requisition",
+          "attm_step_04_scene_forensic"
+        ],
+        "if_blocked": [
+          "If private hospitals hesitate to admit the victim, serve an immediate notice citing Supreme Court guidelines (Pt. Parmanand Katara) and BNSS provisions mandating compulsory emergency treatment."
+        ]
+      },
+      {
+        "step_id": "attm_step_02_mlc_requisition",
+        "order": 2,
+        "title": "Medico-Legal Case (MLC) & Injury Severity Certification",
+        "description": "Issue a formal police requisition to the treating hospital / forensic medical officer to prepare a detailed Medico-Legal Case (MLC) report. Specifically request certification on whether the injuries are 'dangerous to life', the dimensions and nature of wounds (incised, lacerated, gunshot), and weapon compatibility.",
+        "required_evidence": [
+          "Certified Medico-Legal Case (MLC) report detailing exact wound measurements and locations",
+          "Surgeon's expert opinion stating whether the injury was sufficient in the ordinary course of nature to cause death",
+          "Sealed packages containing bullets/pellets surgically extracted from the victim's body, or blood-soaked clothes removed during triage"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "hospital_forensic_medical",
+        "condition_to_start": "Victim admitted to medical emergency room.",
+        "condition_to_complete": "Receipt of formal MLC report and surgically removed evidentiary exhibits under medical seal.",
+        "on_complete_trigger": [
+          "attm_step_03_dying_declaration",
+          "attm_step_05_weapon_recovery"
+        ],
+        "if_blocked": [
+          "If the victim requires immediate major surgery, collect external wound photographs and blood samples in the preoperative room before surgical intervention alters wounds."
+        ]
+      },
+      {
+        "step_id": "attm_step_03_dying_declaration",
+        "order": 3,
+        "title": "Recording of Dying Declaration / Judicial Statement of Victim",
+        "description": "If the victim's condition is critical, immediately requisition a Judicial or Executive Magistrate to record a Dying Declaration under Section 26 BSA (formerly Section 32 Evidence Act). Obtain prior medical fitness certification from the treating doctor. If the victim survives, this statement operates as a highly substantive judicial statement under BNSS Section 183.",
+        "required_evidence": [
+          "Doctor's written certificate endorsing the victim's mental fitness to give a statement",
+          "Certified copy of the Dying Declaration / Section 183 BNSS statement recorded by the Magistrate",
+          "Audio-visual recording of the statement recording process (if feasible)"
+        ],
+        "legal_basis": "BNSS Section 183",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Medical officer confirms victim is conscious and fit to make a statement, but critical.",
+        "condition_to_complete": "Magistrate successfully records and seals the victim's statement.",
+        "on_complete_trigger": [
+          "attm_step_06_cctv_telecom"
+        ],
+        "if_blocked": [
+          "If no Magistrate can reach the hospital in time due to extreme emergency, the IO must record the statement in the presence of two independent witnesses and the treating doctor."
+        ]
+      },
+      {
+        "step_id": "attm_step_04_scene_forensic",
+        "order": 4,
+        "title": "Crime Scene Inspection & Blood Stain Seizure",
+        "description": "Summon the scientific experts / FSL team under BNSS Section 176(3) to inspect the scene. Lift liquid blood samples, blood-stained earth, control earth, weapon sheaths, or ballistic casings. Ensure accurate mapping of the assailant's vantage point and victim's position.",
+        "required_evidence": [
+          "Seizure memos for bloodstains, trace evidence, and weapons found at spot",
+          "Spot inspection sketch map and scene photographs",
+          "Forensic scene examination report"
+        ],
+        "legal_basis": "BNSS Section 176(3)",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Crime scene barricaded and secured by police guard.",
+        "condition_to_complete": "Physical exhibits lifted, sealed, labeled, and forwarded to FSL.",
+        "on_complete_trigger": [
+          "attm_step_05_weapon_recovery"
+        ],
+        "if_blocked": [
+          "If rain or weather threatens outdoor bloodstains, immediately cover the spot with waterproof protective domes until scientific lifting is completed."
+        ]
+      },
+      {
+        "step_id": "attm_step_05_weapon_recovery",
+        "order": 5,
+        "title": "Weapon Seizure, Arms Verification & Ballistic Requisition",
+        "description": "If a firearm was used, query the Arms Licensing Authority database under Section 94 BNSS to check weapon registration and license validity. Forward seized firearms, fired cartridge cases, and bullets extracted from the victim's body to FSL for ballistic comparison.",
+        "required_evidence": [
+          "Seizure memo of firearm / edged weapon",
+          "Arms Licensing Authority verification report (for licensed weapons)",
+          "FSL ballistic comparison report confirming weapon operability and bullet matching"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Weapon recovered from scene, suspect, or surgical extraction.",
+        "condition_to_complete": "Weapon registration verified and ballistic exhibits forwarded to laboratory.",
+        "on_complete_trigger": [
+          "attm_step_07_arrest_custody"
+        ],
+        "if_blocked": [
+          "If the weapon was dumped in a water body, deploy specialized police divers or municipal disaster response teams to recover the instrument before corrosion occurs."
+        ]
+      },
+      {
+        "step_id": "attm_step_06_cctv_telecom",
+        "order": 6,
+        "title": "CCTV Surveillance & Telecom CDR Tracing",
+        "description": "Requisition CCTV footage from private establishments, housing societies, or municipal cameras covering the assault location and escape routes under BNSS Section 94. Simultaneously issue notices to TSPs for CDRs and Cell ID locations of suspects and victim to establish presence and prior enmity.",
+        "required_evidence": [
+          "CCTV video footage showing the execution of assault or assailant flight",
+          "Section 63 BSA electronic admissibility certificates for video media",
+          "Telecom CDRs and cell tower geolocation mapping reports"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Assault location and suspect mobile identities identified.",
+        "condition_to_complete": "Video surveillance media and telecom tracking logs procured and certified.",
+        "on_complete_trigger": [
+          "attm_step_07_arrest_custody"
+        ],
+        "if_blocked": [
+          "If CCTV is hosted on cloud servers operated by non-telecom ISPs, route Section 94 notices through entity_id isp_non_telecom."
+        ]
+      },
+      {
+        "step_id": "attm_step_07_arrest_custody",
+        "order": 7,
+        "title": "Arrest of Accused, Custody Remand & Medical Profiling",
+        "description": "Arrest the assailant under BNSS Section 35. Conduct mandatory medical examination under BNSS Section 51 and collect DNA/blood samples under Section 53 to match against bloodstains found on the victim. Produce accused before Magistrate and seek police custody remand under BNSS Section 187 for weapon recovery.",
+        "required_evidence": [
+          "Arrest memo, personal search memo, and medical inspection report of accused",
+          "Voluntary disclosure statement leading to recovery of weapon or blood-stained clothes",
+          "Magistrate's order granting police custody remand under Section 187 BNSS"
+        ],
+        "legal_basis": "BNSS Section 187",
+        "department_entity_id": "hospital_forensic_medical",
+        "condition_to_start": "Evidentiary linkage established against suspect via victim statement, CCTV, or CDR.",
+        "condition_to_complete": "Accused arrested, medically profiled, biological samples drawn, and police remand secured.",
+        "on_complete_trigger": [
+          "attm_step_08_chargesheet"
+        ],
+        "if_blocked": [
+          "If the accused claims an alibi, immediately verify their cellular tower location and workplace attendance logs under Section 94 BNSS to confirm or disprove the claim."
+        ]
+      },
+      {
+        "step_id": "attm_step_08_chargesheet",
+        "order": 8,
+        "title": "Expert Report Synthesis & Final Charge-Sheet Filing",
+        "description": "Collect FSL chemical, serological, and ballistic reports. Ensure the hospital MLC report explicitly states the injury was dangerous to life (essential to sustain BNS Section 109 / IPC 307 charge). Compile and file the final chargesheet under BNSS Section 193 before the competent court.",
+        "required_evidence": [
+          "Final FSL serology/ballistic reports admissible under BNSS Section 329",
+          "Final MLC / Wound Certificate with explicit life-endangerment medical opinion",
+          "Comprehensive police chargesheet under BNSS Section 193 accompanied by all witness statements and exhibits"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Investigation completed, accused remanded, and medical/forensic reports received.",
+        "condition_to_complete": "Charge-sheet formally filed and cognizance taken by the jurisdictional Magistrate/Sessions Court.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the victim subsequently succumbs to injuries during investigation, immediately submit a memo to court altering the charge from Attempt to Murder (BNS 109) to Murder (BNS 103) and conduct inquest/autopsy."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Victim is comatose or suffering from severe amnesia, unable to identify assailants, and assault occurred in an unmonitored blind spot.",
+        "suggested_actions": [
+          "Conduct a rigorous victim background profiling: examine financial disputes, recent property mutations under entity_id sub_registrar_property, or litigation history to identify motives.",
+          "Analyse the victim's Call Detail Records (CDR) for the 30 days preceding the assault to identify threats, frequent unknown callers, or sudden communication breaks.",
+          "Perform automated ANPR (Automatic Number Plate Recognition) analysis across regional transport checkpoints under entity_id rto_parivahan for vehicles leaving the vicinity at high speed post-incident."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "culpable_homicide_not_murder_v1",
+    "crime_type": "Culpable Homicide Not Amounting to Murder",
+    "title": "Standard Operating Procedure for Investigation of Culpable Homicide Not Amounting to Murder",
+    "source": "Synthesized from BPR&D Homicide Investigation Guidelines, BNSS 2023, and Indian Penal Jurisprudence (Exceptions to Murder)",
+    "steps": [
+      {
+        "step_id": "culp_step_01_fir_classification",
+        "order": 1,
+        "title": "FIR Registration & Preliminary Legal Classification",
+        "description": "Register FIR under BNSS Section 173 for unlawful homicide. Evaluate initial facts to determine if the act falls under Culpable Homicide Not Amounting to Murder (BNS Section 105 / IPC Section 304) — such as death caused by sudden provocation, sudden fight without premeditation, exceeding right of private defense, or rash/negligent assault without intent to kill. Note: Local police station / first responder unit is not present in the registry, hence department_entity_id is set to null.",
+        "required_evidence": [
+          "Copy of recorded FIR under BNS Section 105",
+          "Initial crime scene inspection memo noting absence of premeditation markers (e.g., improvised weapons found at spot)",
+          "First responder logbook entries"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": null,
+        "condition_to_start": "Receipt of information regarding a death resulting from sudden altercation, brawl, or reckless assault.",
+        "condition_to_complete": "FIR registered and preliminary classification between Murder (BNS 103) and Culpable Homicide (BNS 105) documented in case diary.",
+        "on_complete_trigger": [
+          "culp_step_02_inquest_autopsy",
+          "culp_step_03_scene_inspection"
+        ],
+        "if_blocked": [
+          "If intent is ambiguous, initially register the FIR under the higher charge of Murder (BNS Section 103) and subsequently alter the section upon evidence of sudden provocation or lack of premeditation."
+        ]
+      },
+      {
+        "step_id": "culp_step_02_inquest_autopsy",
+        "order": 2,
+        "title": "Inquest Proceedings & Medico-Legal Post-Mortem Autopsy",
+        "description": "Conduct inquest proceedings under BNSS Section 194. Forward the corpse for post-mortem autopsy with a specific questionnaire to the medical officer: determine exact cause of death, whether injuries were fatal in ordinary course of nature, force applied, and whether death resulted from a single blow or repeated premeditated trauma.",
+        "required_evidence": [
+          "Inquest Report (Panchnama) with detailed external injury descriptions",
+          "Certified Medico-Legal Post-Mortem Autopsy Report",
+          "Surgeon's specific opinion regarding the force of impact and fatal nature of individual blows"
+        ],
+        "legal_basis": "BNSS Section 194",
+        "department_entity_id": "hospital_forensic_medical",
+        "condition_to_start": "Corpse secured at the crime scene or hospital.",
+        "condition_to_complete": "Autopsy finalized, medical opinion on injury lethality received, and biological samples preserved.",
+        "on_complete_trigger": [
+          "culp_step_04_witness_provocation"
+        ],
+        "if_blocked": [
+          "If the defense claims death occurred due to pre-existing medical conditions (e.g., enlarged spleen or cardiac arrest during a minor scuffle), request histopathological examination of organs at FSL."
+        ]
+      },
+      {
+        "step_id": "culp_step_03_scene_inspection",
+        "order": 3,
+        "title": "Crime Scene Examination & Spontaneous Weapon Seizure",
+        "description": "Summon the FSL scientific team under BNSS Section 176(3). Inspect the scene to document evidence of a sudden brawl or struggle (overturned furniture, scattered belongings). Seize weapons of opportunity (wooden logs, stones, domestic utensils, agricultural tools) used in the heat of passion.",
+        "required_evidence": [
+          "Seizure memos for spontaneous weapons, bloodstains, and broken objects at the scene",
+          "Photographic and sketch map documentation of the altercation arena",
+          "FSL scientific scene inspection report"
+        ],
+        "legal_basis": "BNSS Section 176(3)",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Crime scene secured by investigating police team.",
+        "condition_to_complete": "Physical exhibits lifted, sealed, labeled, and dispatched to laboratory.",
+        "on_complete_trigger": [
+          "culp_step_05_arrest_medical"
+        ],
+        "if_blocked": [
+          "If the incident occurred in a crowded establishment (bar, restaurant), immediately seize guest registers and order slips under Section 94 BNSS to identify all patrons present."
+        ]
+      },
+      {
+        "step_id": "culp_step_04_witness_provocation",
+        "order": 4,
+        "title": "Recording Statements to Verify Sudden Provocation / Fight",
+        "description": "Examine eyewitnesses and record statements under BNSS Section 180. Focus questioning on establishing the statutory exceptions: did the deceased offer grave and sudden provocation? Was there a sudden fight upon the heat of passion without premeditation? Did the accused take undue advantage or act in a cruel/unusual manner?",
+        "required_evidence": [
+          "Section 180 BNSS statements of eyewitnesses detailing the exact sequence of verbal altercation leading to physical violence",
+          "Section 183 BNSS judicial statements recorded by Magistrate for independent neutral witnesses",
+          "Audio-video recordings of witness examinations (where applicable under BNSS)"
+        ],
+        "legal_basis": "BNSS Section 180",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Eyewitnesses or bystanders identified from the crime scene.",
+        "condition_to_complete": "Comprehensive witness testimony compiled establishing the lack of premeditation or presence of provocation.",
+        "on_complete_trigger": [
+          "culp_step_06_cctv_telecom"
+        ],
+        "if_blocked": [
+          "If eyewitnesses give conflicting accounts regarding who initiated the aggression, re-examine the physical injury patterns on both deceased and accused to reconstruct the sequence."
+        ]
+      },
+      {
+        "step_id": "culp_step_05_arrest_medical",
+        "order": 5,
+        "title": "Arrest of Accused, Injury Documentation & Medical Examination",
+        "description": "Arrest the accused under BNSS Section 35. Conduct immediate medical examination under BNSS Section 51/53. Meticulously document any defensive wounds, bruises, or injuries on the accused's body, which serve as critical evidence of a mutual fight or scuffle.",
+        "required_evidence": [
+          "Arrest memo and personal search memo",
+          "Accused Medico-Legal Examination Report detailing defense wounds or mutual struggle injuries",
+          "Seizure memo of accused's blood-stained clothing worn during the altercation"
+        ],
+        "legal_basis": "BNSS Section 35",
+        "department_entity_id": "hospital_forensic_medical",
+        "condition_to_start": "Suspect apprehended by investigating team.",
+        "condition_to_complete": "Accused arrested, injuries medically certified, and clothing seized under seal.",
+        "on_complete_trigger": [
+          "culp_step_07_toxicology_fsl"
+        ],
+        "if_blocked": [
+          "If the accused claims they acted in self-defense against a lethal attack by the deceased, collect medical records of any prior assaults or threats between the parties."
+        ]
+      },
+      {
+        "step_id": "culp_step_06_cctv_telecom",
+        "order": 6,
+        "title": "CCTV Footage & Telecom Enmity Verification",
+        "description": "Requisition CCTV footage from private sources or municipal cameras covering the altercation spot under BNSS Section 94 to visually verify who initiated the fight. Requisition telecom CDRs to check whether the accused and deceased had prior communication, planning, or longstanding enmity.",
+        "required_evidence": [
+          "CCTV footage showing the spontaneous initiation of the altercation and physical struggle",
+          "Section 63 BSA electronic admissibility certificates",
+          "Telecom CDR analysis report confirming or ruling out prior premeditated coordination"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Surveillance cameras or mobile phones identified at the scene.",
+        "condition_to_complete": "Video and telecom evidence procured and evaluated for premeditation markers.",
+        "on_complete_trigger": [
+          "culp_step_08_chargesheet"
+        ],
+        "if_blocked": [
+          "If private establishments refuse CCTV footage, execute an immediate seizure of the DVR/NVR under BNSS Section 106."
+        ]
+      },
+      {
+        "step_id": "culp_step_07_toxicology_fsl",
+        "order": 7,
+        "title": "Forensic Toxicology & Alcohol/Drug Screening Requisition",
+        "description": "Since culpable homicide brawls frequently involve intoxication, submit preserved blood and viscera samples of both deceased and accused to FSL under BNSS Section 329 for toxicological screening. Determine blood alcohol concentration (BAC) or presence of psychotropic drugs to establish state of intoxication during the fight.",
+        "required_evidence": [
+          "Certified FSL Toxicological Report establishing BAC / drug levels in deceased and accused",
+          "FSL Serological report matching bloodstains on spontaneous weapons to the deceased"
+        ],
+        "legal_basis": "BNSS Section 329",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Biological samples of deceased and accused collected during autopsy/arrest.",
+        "condition_to_complete": "Receipt of formal chemical and toxicological analysis reports from FSL.",
+        "on_complete_trigger": [
+          "culp_step_08_chargesheet"
+        ],
+        "if_blocked": [
+          "If the laboratory faces pendency, request expedited testing from the Director FSL citing statutory remand expiration timelines."
+        ]
+      },
+      {
+        "step_id": "culp_step_08_chargesheet",
+        "order": 8,
+        "title": "Legal Synthesis & Final Charge-Sheet Filing",
+        "description": "Synthesize medical, forensic, and witness evidence to firmly establish that while the accused had knowledge or intention that the blow could cause death, the act occurred under statutory mitigating circumstances (sudden fight, provocation). File final chargesheet under BNSS Section 193 specifying BNS Section 105 (Part I or Part II based on intent vs. knowledge).",
+        "required_evidence": [
+          "Comprehensive police chargesheet under BNSS Section 193",
+          "All FSL scientific reports, autopsy findings, and MLC certificates",
+          "Evaluative legal memorandum in case diary justifying charge under BNS 105 over BNS 103"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Investigation completed, evidence compiled, and statutory reports received.",
+        "condition_to_complete": "Charge-sheet formally filed and cognizance taken by the jurisdictional court.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the Magistrate disagrees with the lower classification and considers the act premeditated murder, be prepared to submit supplementary evidence supporting framing of charges under alternate heads (BNS 103 r/w 105)."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Death occurred days after a minor road-rage or street altercation due to internal hemorrhage, with no CCTV footage and witnesses refusing to testify.",
+        "suggested_actions": [
+          "Requisition emergency vehicle dispatch logs (108 ambulance) and initial hospital admission triage notes under Section 94 BNSS to record the victim's earliest spontaneous statements regarding the altercation.",
+          "Analyse e-Challan and toll plaza databases under entity_id rto_parivahan along the route of the road-rage incident to identify vehicle registration numbers and owners present at the exact timestamp.",
+          "Examine the weapon of opportunity (e.g., vehicle tire iron or helmet) for latent fingerprints or epithelial touch-DNA at FSL to link the physical object directly to the accused."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "rape_sexual_assault_adult_v1",
+    "crime_type": "Rape / Sexual Assault (Adult Victim)",
+    "title": "Standard Operating Procedure for Procedural Investigation of Rape and Sexual Assault Cases (Adult Victim)",
+    "source": "Synthesized strictly from BPR&D SOP for Investigation and Prosecution of Rape Cases, BNSS 2023, and MHA Guidelines",
+    "steps": [
+      {
+        "step_id": "rape_step_01_fir_registration",
+        "order": 1,
+        "title": "Mandatory FIR Registration by Woman Officer & Forthwith Magistrate Dispatch",
+        "description": "In accordance with BPR&D SOP and BNSS Section 173 (formerly CrPC Section 154), immediately register the FIR upon receipt of information. The FIR MUST be recorded by a woman police officer or any woman officer. The victim can lodge the FIR in any police station (Zero FIR principle), which shall subsequently be transferred to the jurisdictional station. A copy of the FIR shall be given forthwith, free of cost, to the victim. Under BNSS Section 175 (formerly CrPC Section 157), an unedited copy of the FIR MUST be dispatched forthwith to the jurisdictional Magistrate within 24 hours without fail. Note: Local police station is not present in the registry, hence department_entity_id is set to null.",
+        "required_evidence": [
+          "Copy of recorded FIR signed by woman police officer with exact date and hour of recording [1.2.1]",
+          "Written acknowledgment of free FIR copy handover to the survivor",
+          "Official dispatch receipt proving delivery of FIR copy to the Magistrate within 24 hours"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": null,
+        "condition_to_start": "Survivor or informant approaches police station or transmits information regarding sexual assault.",
+        "condition_to_complete": "FIR registered by woman officer, free copy provided to survivor, and statutory dispatch to Magistrate completed within 24 hours.",
+        "on_complete_trigger": [
+          "rape_step_02_medical_examination",
+          "rape_step_04_scene_forensic"
+        ],
+        "if_blocked": [
+          "If a woman police officer is not available at the station, the DCP/SP of the district must immediately depute a woman officer from another station or specialized unit to record the FIR [1.1.5]."
+        ]
+      },
+      {
+        "step_id": "rape_step_02_medical_examination",
+        "order": 2,
+        "title": "Emergency Medico-Legal Examination of Victim within 24 Hours",
+        "description": "Under BNSS Section 184 (formerly CrPC Section 164-A) and BPR&D SOP, the Investigating Officer (accompanied by a female police officer) MUST arrange for the medico-legal examination of the victim as soon as possible, and strictly within 24 hours from the time of receiving information, at the nearest government hospital. The examination shall be conducted strictly by a female registered medical practitioner. Mandatory informed written consent of the victim must be obtained prior to examination. The IO shall prepare an injury sheet detailing scratches, bruises, and nail marks to accompany the victim. The medical officer shall collect sexual assault evidence (vaginal/anal swabs, smear slides, clothing, blood samples) using standardized Sexual Assault Forensic Evidence (SAFE) kits.",
+        "required_evidence": [
+          "Informed written consent form signed by the adult victim [1.1.5]",
+          "Police injury sheet prepared by IO accompanying the victim",
+          "Certified Medico-Legal Examination Report prepared by female medical officer u/s 184 BNSS",
+          "Sealed SAFE kit containing biological exhibits, clothing, and swabs with medical officer's specimen seal"
+        ],
+        "legal_basis": "BNSS Section 184",
+        "department_entity_id": "hospital_forensic_medical",
+        "condition_to_start": "FIR registered and victim available for medical examination.",
+        "condition_to_complete": "Medical examination finalized within 24 hours by female doctor and sealed SAFE kit handed over to police escort under seizure memo.",
+        "on_complete_trigger": [
+          "rape_step_03_magistrate_statement",
+          "rape_step_06_fsl_dispatch"
+        ],
+        "if_blocked": [
+          "If the victim refuses medical examination, the woman IO must explain the evidentiary importance of forensic samples; if refusal persists, document the formal written refusal signed by the victim in the presence of an NGO/support person [1.1.5]."
+        ]
+      },
+      {
+        "step_id": "rape_step_03_magistrate_statement",
+        "order": 3,
+        "title": "Mandatory Judicial Statement Recording u/s 183 BNSS by Magistrate",
+        "description": "In compliance with BNSS Section 183 (formerly CrPC Section 164) and BPR&D SOP, the IO shall sponsor an application to the Chief Judicial Magistrate to record the statement of the victim at the earliest possible instance. The statement shall be recorded by a female Judicial Magistrate. The recording shall preferably be audio-videographed as permitted under BNSS Section 183. The IO must ensure no police presence inside the chamber during judicial recording.",
+        "required_evidence": [
+          "Police application submitted to CJM requesting appointment of female Magistrate for statement recording",
+          "Certified sealed copy of the judicial statement recorded u/s 183 BNSS by the Magistrate [1.1.5]",
+          "Audio-video recording storage media (if utilized by the Magistrate)"
+        ],
+        "legal_basis": "BNSS Section 183",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Victim medically examined and medically/psychologically fit to depose.",
+        "condition_to_complete": "Judicial statement formally recorded by female Magistrate and sealed copy placed in court records.",
+        "on_complete_trigger": [
+          "rape_step_05_accused_arrest_medical"
+        ],
+        "if_blocked": [
+          "If the victim is temporarily or permanently mentally or physically disabled, the Magistrate shall take the assistance of an interpreter or special educator and video record the statement u/s 183(5) BNSS [1.2.1]."
+        ]
+      },
+      {
+        "step_id": "rape_step_04_scene_forensic",
+        "order": 4,
+        "title": "Crime Scene Protection, Videography & Evidentiary Seizure",
+        "description": "Under BPR&D SOP and BNSS Section 176(3), whoever arrives at the scene first must safeguard and rope off the area with crime scene tape. The scene MUST be carefully documented and videographed from all directions before lifting exhibits. The IO or FSL/CFSL team must systematically collect blood-stained clothing, bedsheets, soil, biological fluids, hair, and electronic evidence (CCTV footage) under Seizure Memos. A detailed spot map must be drawn depicting distances.",
+        "required_evidence": [
+          "High-resolution videography and photographic log of the un-tampered crime scene [1.1.4]",
+          "Seizure memos for bedsheets, clothing, biological stains, and physical exhibits lifted from spot",
+          "Detailed Spot Map indicating distances between evidentiary objects",
+          "Section 63 BSA electronic admissibility certificate for any CCTV footage recovered"
+        ],
+        "legal_basis": "BNSS Section 176(3)",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Identification of the specific indoor or outdoor crime scene location.",
+        "condition_to_complete": "Scene videographed, spot map drawn, and physical exhibits scientifically packaged to prevent contamination or putrefaction.",
+        "on_complete_trigger": [
+          "rape_step_06_fsl_dispatch"
+        ],
+        "if_blocked": [
+          "If the crime scene is a moving vehicle or public transport, immediately impound the vehicle under BNSS Section 106 and seal it in the police station malkhana until FSL inspection."
+        ]
+      },
+      {
+        "step_id": "rape_step_05_accused_arrest_medical",
+        "order": 5,
+        "title": "Arrest of Accused & Mandatory Medical / DNA Examination",
+        "description": "Upon establishing identity, arrest the accused under BNSS Section 35. In strict compliance with BNSS Sections 51, 52, and 53 (formerly CrPC Sections 53/53A), forward the arrested accused immediately to a registered medical practitioner for comprehensive medical examination. The medical officer shall document age, marks of violence/resistance, take DNA profiling samples (blood, semen, hair, pubic hair, nail clippings), and certify whether the accused is capable of performing sexual intercourse.",
+        "required_evidence": [
+          "Arrest memo and personal search memo of the accused",
+          "Certified Accused Medico-Legal Examination Report under BNSS Section 52/53 detailing potency and injury marks [1.1.4]",
+          "Sealed forensic kit containing accused's blood, hair, nail scrapings, and DNA profiling samples with doctor's seal"
+        ],
+        "legal_basis": "BNSS Section 52",
+        "department_entity_id": "hospital_forensic_medical",
+        "condition_to_start": "Accused apprehended by investigating team.",
+        "condition_to_complete": "Accused arrested, medical potency certification received, and sealed DNA/biological samples handed over to police.",
+        "on_complete_trigger": [
+          "rape_step_06_fsl_dispatch"
+        ],
+        "if_blocked": [
+          "If the accused refuses to allow blood/biological sample collection, the medical officer and IO are statutorily empowered under Section 52(2) BNSS to use such reasonable force as is necessary to collect the samples."
+        ]
+      },
+      {
+        "step_id": "rape_step_06_fsl_dispatch",
+        "order": 6,
+        "title": "Dispatch of Sealed Forensic Exhibits & DNA Profiling Requisition",
+        "description": "Assemble all sealed SAFE kits from the victim, medical kits from the accused, and physical exhibits from the crime scene. In accordance with BPR&D SOP and BNSS Section 329 (formerly CrPC Section 293), forward all sealed packages through a secure Road Certificate to the State FSL / CFSL without delay. Requisition specific serological matching, DNA profiling and comparative analysis between victim's samples, accused's samples, and scene exhibits.",
+        "required_evidence": [
+          "Official forwarding letter addressed to Director FSL / CFSL detailing the questionnaire",
+          "Copy of Road Certificate (RC) and Malkhana register entry proving intact chain of custody",
+          "Specimen seal impression letter verifying seals on SAFE kits and exhibit packages",
+          "Certified FSL Serological and DNA Profiling Expert Report admissible u/s 329 BNSS"
+        ],
+        "legal_basis": "BNSS Section 329",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Sealed biological kits and scene exhibits gathered in station malkhana.",
+        "condition_to_complete": "Exhibits formally accepted by FSL and scientific DNA profiling analysis report delivered to IO.",
+        "on_complete_trigger": [
+          "rape_step_08_chargesheet_filing"
+        ],
+        "if_blocked": [
+          "If FSL intake is delayed due to backlog, the IO must obtain an expedited prioritization endorsement from the DCP/SP of the district citing statutory time limits [1.1.5]."
+        ]
+      },
+      {
+        "step_id": "rape_step_07_supervisory_monitoring",
+        "order": 7,
+        "title": "Mandatory Supervisory Monitoring & Special Report Dispatch",
+        "description": "In strict compliance with BPR&D SOP, as rape cases are Grave/Special Report Cases, the investigation MUST be actively monitored by the Deputy Commissioner of Police (DCP) / Superintendent of Police (SP) of the district concerned. An Initial Special Report giving details of facts, evidence available, and instructions to IOs shall be issued by a Gazetted Officer within 72 hours of occurrence. Continuation Special Reports shall be issued fortnightly regarding investigation progress.",
+        "required_evidence": [
+          "Fortnightly Continuation Special Reports signed by DCP/SP logging investigative guidance",
+          "Supervisory inspection notes in the official Case Diary"
+        ],
+        "legal_basis": "BNSS Section 192",
+        "department_entity_id": null,
+        "condition_to_start": "Registration of FIR for sexual assault.",
+        "condition_to_complete": "Initial Special Report dispatched within 72 hours and continuous fortnightly monitoring logged until chargesheet filing.",
+        "on_complete_trigger": [
+          "rape_step_08_chargesheet_filing"
+        ],
+        "if_blocked": [
+          "If the woman IO faces administrative bottlenecks in securing forensic or medical coordination, the monitoring DCP/SP must immediately intervene using district executive authority [1.1.5]."
+        ]
+      },
+      {
+        "step_id": "rape_step_08_chargesheet_filing",
+        "order": 8,
+        "title": "Mandatory Completion of Investigation & Charge-Sheet Filing within 60 Days",
+        "description": "In strict compliance with statutory mandate under BNSS Section 193(3) (formerly CrPC Section 173(1A)) and BPR&D SOP, the investigation of rape MUST be completed within 2 months (60 days) from the date on which information was recorded by the police. The IO shall compile the final chargesheet incorporating FIR, MLC reports, Section 183 BNSS judicial statement, FSL DNA report, and witness statements, and file it before the jurisdictional Special Court / Sessions Court.",
+        "required_evidence": [
+          "Comprehensive Police Charge-Sheet under BNSS Section 193 filed within 60 days of FIR [1.2.2]",
+          "Complete list of witnesses and relied-upon evidentiary documents (MLC, FSL DNA report, Section 183 statement)",
+          "Formal judicial order taking cognizance of the charge-sheet by the Special / Sessions Court"
+        ],
+        "legal_basis": "BNSS Section 193(3)",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "All investigation steps, witness examinations, and forensic requisitions finalized.",
+        "condition_to_complete": "Charge-sheet formally submitted and accepted by the court strictly within the statutory 60-day window.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the FSL DNA report is delayed beyond 50 days, file the primary chargesheet within 60 days with MLC and Section 183 statements to comply with BNSS Section 193(3), and submit the FSL report upon receipt as a supplementary chargesheet u/s 193(9) BNSS."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Assault occurred in a secluded, unmonitored outdoor area, accused is an unknown stranger, and victim is unable to provide a detailed facial description due to trauma or darkness.",
+        "suggested_actions": [
+          "Deploy mobile forensic units to lift touch-DNA and biological fluids from the victim's clothing and body; upload the extracted DNA profile to state and national offender DNA databases for cold-hit matching.",
+          "Requisition cell tower dump logs from all surrounding cellular base stations under entity_id telecom_operator covering a 2-hour window around the incident; cross-reference active mobile numbers against records of history-sheeters and repeat sexual offenders u/s BNSS.",
+          "Utilize forensic psychologists and trained facial composites experts at state CID under entity_id state_cyber_cell_cid to conduct cognitive interviewing of the survivor once medically stabilized to reconstruct an accurate facial composite."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "pocso_child_sexual_abuse_v1",
+    "crime_type": "POCSO — Child Sexual Abuse",
+    "title": "Standard Operating Procedure for Procedural Investigation of POCSO / Child Sexual Abuse Cases",
+    "source": "Synthesized strictly from BPR&D SOP for POCSO Investigations, POCSO Act 2012, POCSO Rules 2020, and Model Guidelines u/s 39",
+    "steps": [
+      {
+        "step_id": "pocso_step_01_fir_registration",
+        "order": 1,
+        "title": "Mandatory FIR Registration u/s 19 POCSO Act & Child-Friendly Intake",
+        "description": "In strict compliance with Section 19 of the POCSO Act and BPR&D SOP, immediately register the FIR upon receiving information of an offense against a child. The FIR MUST be recorded by a woman police officer designated as Child Welfare Police Officer (CWPO) or an officer of the Special Juvenile Police Unit (SJPU). Under Section 24 POCSO Act, the police officer SHALL NOT be in uniform during recording or examination. Under Section 24(4), NO CHILD can be held or detained overnight in a police station for any reason whatsoever. The information shall be recorded in simple language understandable to the child. A copy of the FIR shall be provided forthwith, free of cost, to the child's parent/guardian. Note: Local police station / SJPU is not present in the registry, hence department_entity_id is set to null.",
+        "required_evidence": [
+          "Copy of recorded FIR under POCSO Act read with relevant BNSS sections [1.2.2]",
+          "Logbook entry confirming recording by a woman police officer / CWPO not in uniform",
+          "Written acknowledgment of free FIR copy handover to parent/guardian",
+          "Dispatch receipt confirming sending of FIR copy to Special POCSO Court / Magistrate within 24 hours"
+        ],
+        "legal_basis": "Protection of Children from Sexual Offences Act Section 19",
+        "department_entity_id": null,
+        "condition_to_start": "Receipt of information from any person, caregiver, school, or medical facility regarding sexual offense against a minor.",
+        "condition_to_complete": "FIR registered in child-friendly manner without uniform, free copy provided, and child safely handed over to parent/guardian or shelter.",
+        "on_complete_trigger": [
+          "pocso_step_02_cwc_notification",
+          "pocso_step_03_medical_examination"
+        ],
+        "if_blocked": [
+          "If the child's parent/guardian is implicated in the abuse (incest u/s 5(n) POCSO), immediately remove the child to a specialized shelter home and take consent/presence of a Child Welfare Committee member or NGO representative for FIR registration."
+        ]
+      },
+      {
+        "step_id": "pocso_step_02_cwc_notification",
+        "order": 2,
+        "title": "Mandatory 24-Hour Notification to CWC & Support Person Appointment",
+        "description": "In strict compliance with Section 19(6) of the POCSO Act and Rule 4(7) of POCSO Rules, the CWPO / Investigating Officer MUST report the matter to the local Child Welfare Committee (CWC) within 24 hours of recording the FIR. Concurrently, the IO must request the CWC / District Legal Services Authority (DLSA) to appoint a trained Support Person to render assistance to the child throughout the process of investigation and trial, preventing secondary victimization.",
+        "required_evidence": [
+          "Official statutory notification letter dispatched to the Child Welfare Committee (CWC) within 24 hours [1.2.4]",
+          "CWC order / acknowledgment confirming receipt of notification and initiation of Child Protection Plan (CPP)",
+          "Formal appointment order of the designated Support Person issued by CWC/DLSA"
+        ],
+        "legal_basis": "Protection of Children from Sexual Offences Act Section 19(6)",
+        "department_entity_id": "cwc_jjb_authority",
+        "condition_to_start": "FIR registered under POCSO Act.",
+        "condition_to_complete": "CWC notified within statutory 24-hour window and formal Support Person assigned to the child victim.",
+        "on_complete_trigger": [
+          "pocso_step_03_medical_examination",
+          "pocso_step_04_statement_recording"
+        ],
+        "if_blocked": [
+          "If the CWC is not sitting on a weekend/holiday, serve the mandatory statutory notification directly to the CWC Chairperson or Member at their residence via registered electronic/physical dispatch."
+        ]
+      },
+      {
+        "step_id": "pocso_step_03_medical_examination",
+        "order": 3,
+        "title": "Emergency Medical Examination u/s 27 POCSO Act within 24 Hours",
+        "description": "Under Section 27 of the POCSO Act read with BNSS Section 184 (formerly CrPC Section 164-A) and BPR&D SOP, the IO must ensure medical examination of the child within 24 hours of receiving information, at the nearest government hospital. Under Section 27(2), the examination SHALL be conducted in the presence of the parent of the child, or any other person in whom the child has trust and confidence (such as the Support Person). In case of a female child, the examination SHALL be conducted by a woman medical practitioner. Under statutory guidelines, the invasive two-finger test is strictly prohibited. The doctor shall collect biological evidence using child-SAFE kits.",
+        "required_evidence": [
+          "Certified Medico-Legal Examination Report prepared by woman doctor u/s 27 POCSO r/w 184 BNSS",
+          "Sealed forensic SAFE kit containing biological exhibits and clothing with medical officer's seal",
+          "Medical verification confirming examination was conducted in the presence of trusted adult/parent u/s 27(2)"
+        ],
+        "legal_basis": "Protection of Children from Sexual Offences Act Section 27",
+        "department_entity_id": "hospital_forensic_medical",
+        "condition_to_start": "FIR registered and child available for medical examination.",
+        "condition_to_complete": "Medical examination completed within 24 hours by woman doctor in presence of trusted adult, and sealed SAFE kit handed over to police.",
+        "on_complete_trigger": [
+          "pocso_step_04_statement_recording",
+          "pocso_step_07_fsl_dispatch"
+        ],
+        "if_blocked": [
+          "If the parent/guardian refuses medical examination out of social stigma, the CWPO and CWC Support Person must counsel them on statutory requirements; if refusal persists, obtain written refusal endorsed by CWC [1.2.4]."
+        ]
+      },
+      {
+        "step_id": "pocso_step_04_statement_recording",
+        "order": 4,
+        "title": "Child-Friendly Police & Judicial Statement Recording u/s 24/25 POCSO Act",
+        "description": "Under Section 24 POCSO Act, the police statement of the child shall be recorded at the residence of the child or at a place where the child usually resides or at a place of choice of the child, by a woman police officer not in uniform. Under Section 24(3), the IO must ensure that the child is NEVER in any way brought in contact with the accused. Under Section 25 POCSO Act read with BNSS Section 183 (formerly CrPC Section 164), the IO shall sponsor an application to the Magistrate to record the judicial statement as soon as possible. Under Section 26 POCSO Act, the Magistrate SHALL record the statement as spoken by the child, preferably with the assistance of an interpreter/special educator if needed, and ensure audio-visual recording.",
+        "required_evidence": [
+          "Certified copy of judicial statement recorded u/s 25 POCSO Act read with BNSS Section 183 by Magistrate",
+          "Audio-video electronic recording storage media of the statement recording",
+          "Statutory log confirming no contact occurred between child and accused during recording"
+        ],
+        "legal_basis": "Protection of Children from Sexual Offences Act Section 24",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Child medically examined and supported by CWC Support Person/parent.",
+        "condition_to_complete": "Police statement and Magistrate judicial statement formally recorded in child-friendly environment without uniform or accused contact.",
+        "on_complete_trigger": [
+          "pocso_step_05_age_determination",
+          "pocso_step_06_accused_arrest"
+        ],
+        "if_blocked": [
+          "If the child is traumatized and unable to speak before the Magistrate, request an adjournment and utilize child-friendly court rooms or video-conferencing with CWC support person assistance."
+        ]
+      },
+      {
+        "step_id": "pocso_step_05_age_determination",
+        "order": 5,
+        "title": "Statutory Age Determination & Verification of Victim u/s 34 POCSO Act",
+        "description": "Under Section 34 of the POCSO Act read with Section 94 of the Juvenile Justice Act and BPR&D SOP, the IO must establish the exact age of the victim to confirm minor status (below 18 years). Issue Section 94 BNSS notices to obtain: (i) Birth certificate from the Municipal Corporation / Registrar of Births and Deaths; or (ii) Date of birth certificate from the school first attended (matriculation/equivalent certificate). In the absence of documentary proof, immediately requisition a government medical board for ossification / radiological age estimation.",
+        "required_evidence": [
+          "Certified Municipal Birth Certificate from Registrar of Births and Deaths; OR",
+          "Certified school matriculation / first attendance admission register copy showing date of birth; OR",
+          "Medical Board Ossification Age Estimation Report admissible under JJ Act Section 94"
+        ],
+        "legal_basis": "Protection of Children from Sexual Offences Act Section 34",
+        "department_entity_id": "municipal_corporation",
+        "condition_to_start": "FIR registered under POCSO Act requiring definitive statutory proof of minority.",
+        "condition_to_complete": "Statutory documentary proof of age or medical ossification report procured and filed in case diary.",
+        "on_complete_trigger": [
+          "pocso_step_08_chargesheet_filing"
+        ],
+        "if_blocked": [
+          "If school records are suspected to be forged or manipulated, immediately prioritize municipal birth registry extraction or medical ossification board evaluation [1.2.3]."
+        ]
+      },
+      {
+        "step_id": "pocso_step_06_accused_arrest",
+        "order": 6,
+        "title": "Arrest of Accused, Custody & Medical/DNA Sample Collection",
+        "description": "Apprehend the accused under BNSS Section 35. Under BPR&D SOP and BNSS Sections 51, 52, and 53, immediately forward the accused for medico-legal examination. The medical officer shall document injury marks, potency, and draw mandatory DNA profiling samples (blood, semen, hair, nail clippings). Note: If the accused is also a minor (CICL - Child in Conflict with Law), arrest procedures must strictly follow Section 10/13 JJ Act (no handcuffs, plain clothes, production before Juvenile Justice Board within 24 hours).",
+        "required_evidence": [
+          "Arrest memo and personal search memo (or Apprehension memo for juvenile accused)",
+          "Certified Accused Medico-Legal Examination Report detailing potency and injury marks [1.1.4]",
+          "Sealed forensic kit containing accused's blood, hair, and DNA profiling samples with doctor's seal",
+          "JJB production order (if accused is a minor under JJ Act)"
+        ],
+        "legal_basis": "BNSS Section 52",
+        "department_entity_id": "hospital_forensic_medical",
+        "condition_to_start": "Evidentiary linkage and identity of accused established.",
+        "condition_to_complete": "Accused arrested (or apprehended if minor), potency certified, and sealed DNA samples secured.",
+        "on_complete_trigger": [
+          "pocso_step_07_fsl_dispatch"
+        ],
+        "if_blocked": [
+          "If an adult accused absconds, obtain non-bailable warrant from Special POCSO Court and initiate proclamation proceedings u/s 84 BNSS."
+        ]
+      },
+      {
+        "step_id": "pocso_step_07_fsl_dispatch",
+        "order": 7,
+        "title": "Dispatch of Sealed Forensic Exhibits & DNA Profiling Requisition",
+        "description": "In strict compliance with BPR&D SOP and BNSS Section 329, forward all sealed child-SAFE kits, accused medical kits, and crime scene exhibits through a secure Road Certificate to the State FSL / CFSL without delay. Requisition serological matching and comparative DNA profiling between the child victim's samples, accused's samples, and physical scene exhibits. Ensure chain of custody registers are scrupulously maintained.",
+        "required_evidence": [
+          "Official forwarding letter addressed to Director FSL / CFSL detailing the questionnaire",
+          "Copy of Road Certificate (RC) and Malkhana register entry proving intact chain of custody",
+          "Specimen seal impression letter verifying seals on SAFE kits and exhibit packages",
+          "Certified FSL Serological and DNA Profiling Expert Report admissible u/s 329 BNSS"
+        ],
+        "legal_basis": "BNSS Section 329",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Sealed biological kits from victim and accused gathered in station malkhana.",
+        "condition_to_complete": "Exhibits formally accepted by FSL and scientific DNA profiling analysis report delivered to IO.",
+        "on_complete_trigger": [
+          "pocso_step_08_chargesheet_filing"
+        ],
+        "if_blocked": ""
+      },
+      {
+        "step_id": "pocso_step_08_chargesheet_filing",
+        "order": 8,
+        "title": "Mandatory Investigation Completion within 60 Days & In-Camera Trial Setup",
+        "description": "In strict compliance with statutory mandate under BNSS Section 193(3) (formerly CrPC Section 173(1A)), POCSO Act Section 35, and BPR&D SOP, the investigation of child sexual abuse MUST be completed within 2 months (60 days) from the date of FIR. Assemble the chargesheet incorporating FIR, statutory age proof, MLC reports, Section 25 POCSO judicial statement, FSL DNA report, and CWC protection records. File the chargesheet before the designated Special POCSO Court. Ensure statutory coordination for in-camera trial u/s 33 POCSO Act and interim victim compensation u/s 33(8) POCSO Act.",
+        "required_evidence": [
+          "Comprehensive Police Charge-Sheet under BNSS Section 193 filed strictly within 60 days of FIR [1.2.2]",
+          "Complete list of relied-upon documents (Age certificate, MLC, FSL DNA report, Section 25 statement)",
+          "Judicial order taking cognizance by Special POCSO Court and initiating in-camera trial protocols",
+          "Application submitted to Special Court / Legal Services Authority for interim victim compensation u/s 33(8) POCSO Act"
+        ],
+        "legal_basis": "BNSS Section 193(3)",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "All investigative steps, witness examinations, and age/forensic verification finalized.",
+        "condition_to_complete": "Charge-sheet submitted and accepted by Special POCSO Court within statutory 60-day window, and trial protection protocols activated.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the FSL DNA report is pending at the 55-day mark, file the primary chargesheet within 60 days with MLC, age proof, and Section 25 statements to comply with BNSS Section 193(3), and submit the FSL report upon receipt as a supplementary chargesheet u/s 193(9) BNSS."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Child victim is pre-verbal or suffering from severe intellectual disability, unable to narrate the incident u/s 24/25 POCSO Act, and no direct eyewitnesses exist.",
+        "suggested_actions": [
+          "In accordance with Section 24(2) and Section 25(1) POCSO Act, immediately engage a qualified special educator, speech therapist, or child psychologist from the approved CWC/DLSA panel to communicate using non-verbal methods, anatomical dolls, or drawings under video recording.",
+          "Rely heavily on scientific and physical evidence: prioritize immediate FSL collection of touch-DNA from the child's body/clothing and thorough biological examination of the suspect's garments and living quarters u/s BNSS.",
+          "Requisition medical records of any physical trauma, genital inflammation, or sexually transmitted infections (STIs) from treating pediatricians under Section 94 BNSS to establish the factum of abuse independently of verbal deposition."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "kidnapping_abduction_adult_v1",
+    "crime_type": "Kidnapping / Abduction (Adult)",
+    "title": "Standard Operating Procedure for Investigation of Kidnapping and Abduction of Adults",
+    "source": "Synthesized from BPR&D Investigation Manual, BNSS 2023, and Police Anti-Human Trafficking / Missing Persons Guidelines",
+    "steps": [
+      {
+        "step_id": "kidn_step_01_fir_broadcast",
+        "order": 1,
+        "title": "FIR Registration & Immediate All-India Police Broadcast",
+        "description": "Upon receipt of reliable information regarding wrongful taking, confinement, or abduction of an adult, register FIR under BNSS Section 173 (BNS Section 137 / 138; formerly IPC Section 363/365). Immediately upload victim photographs, physical identifiers, and suspected vehicle details onto the national NCRB CCTNS portal and issue a statewide wireless flash / all-station police broadcast. Note: Local police station / district control room is not present in the registry, hence department_entity_id is set to null.",
+        "required_evidence": [
+          "Copy of recorded FIR under BNS Section 137/138",
+          "NCRB CCTNS missing/abducted person registration acknowledgment",
+          "Copy of all-station police wireless broadcast / hue and cry notice"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": null,
+        "condition_to_start": "Report of involuntary disappearance, abduction, or forcible kidnapping of an adult.",
+        "condition_to_complete": "FIR registered, national CCTNS alert uploaded, and wireless broadcast transmitted.",
+        "on_complete_trigger": [
+          "kidn_step_02_telecom_tracking",
+          "kidn_step_03_cctv_highway"
+        ],
+        "if_blocked": [
+          "If the jurisdiction of kidnapping is disputed between stations, immediately register a Zero FIR and initiate pursuit without wasting time on territorial arguments."
+        ]
+      },
+      {
+        "step_id": "kidn_step_02_telecom_tracking",
+        "order": 2,
+        "title": "Telecom CDR, Cell Site Analysis & Live Location Tracking",
+        "description": "Issue urgent emergency requisitions under BNSS Section 94 to Telecom Service Providers for Call Detail Records (CDRs), Subscriber Application Forms (CAF), IMEI tracking, and real-time Cell Site / Tower location tracking of the victim's mobile phone and known suspect numbers.",
+        "required_evidence": [
+          "CAF and CDRs with Cell ID locations for victim and suspect mobile numbers",
+          "Real-time cell tower triangulation / live location tracking logs",
+          "Section 63 BSA electronic admissibility certificates from TSP nodal officers"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Victim or suspect mobile phone numbers identified.",
+        "condition_to_complete": "Live geolocation monitoring established and historical CDR communication graphs compiled.",
+        "on_complete_trigger": [
+          "kidn_step_06_tactical_rescue"
+        ],
+        "if_blocked": [
+          "If the victim's phone is powered off, perform last-active cell tower analysis and obtain subscriber details of all numbers that communicated with the victim in the 48 hours prior to abduction."
+        ]
+      },
+      {
+        "step_id": "kidn_step_03_cctv_highway",
+        "order": 3,
+        "title": "CCTV Surveillance & Highway Toll Plaza ANPR Tracing",
+        "description": "Map the abduction spot and suspected escape routes. Issue Section 94 BNSS notices to private CCTV owners, municipal smart-city control rooms, and toll plaza operators under entity_id rto_parivahan to procure video surveillance and Automatic Number Plate Recognition (ANPR) logs of escaping vehicles.",
+        "required_evidence": [
+          "CCTV video footage capturing the abduction or getaway vehicle",
+          "Toll plaza ANPR transaction logs showing vehicle registration number, timestamp, and direction of flight",
+          "Section 63 BSA electronic certificates for visual and ANPR media"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "rto_parivahan",
+        "condition_to_start": "Abduction location and suspected getaway vehicle type/color identified.",
+        "condition_to_complete": "Getaway vehicle registration number identified and highway escape trajectory mapped.",
+        "on_complete_trigger": [
+          "kidn_step_06_tactical_rescue"
+        ],
+        "if_blocked": [
+          "If fake number plates are used on the getaway vehicle, utilize RTO VAHAN database to cross-reference engine/chassis numbers from toll plaza high-resolution CCTV captures."
+        ]
+      },
+      {
+        "step_id": "kidn_step_04_transport_transit_check",
+        "order": 4,
+        "title": "Public Transport, Railway & Ride-Hailing Passenger Verification",
+        "description": "If the victim was abducted via public transport, taxis, or trains, issue Section 94 BNSS notices to railway police (GRP/RPF) for station CCTV and reservation charts, and to ride-hailing aggregators (Uber, Ola) for trip GPS telemetry, driver KYC, and booking logs.",
+        "required_evidence": [
+          "Railway station CCTV footage and IRCTC / CRIS passenger reservation charts",
+          "Ride-hailing app trip GPS telemetry logs, driver KYC, and vehicle registration details",
+          "Written statements of transit staff, drivers, or co-passengers"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "railway_police",
+        "condition_to_start": "Intelligence indicates victim was transported via trains, buses, or app-based cabs.",
+        "condition_to_complete": "Transit vehicle identified, driver/operator interrogated, and drop-off coordinates confirmed.",
+        "on_complete_trigger": [
+          "kidn_step_06_tactical_rescue"
+        ],
+        "if_blocked": [
+          "If cab bookings were made using burner phones, trace the payment method (UPI/card) through payment aggregators to identify the booking account holder."
+        ]
+      },
+      {
+        "step_id": "kidn_step_05_border_immigration_alert",
+        "order": 5,
+        "title": "Border Checkpoint Alert & Look Out Circular (LOC) Issuance",
+        "description": "If intelligence suggests the victim is being abducted across international borders (e.g., Nepal, Bangladesh) or escaping via airports/seaports, immediately submit a formal proposal from SP/DCP rank to the Bureau of Immigration to open an emergency Look Out Circular (LOC) against the abductors.",
+        "required_evidence": [
+          "MHA mandatory Proforma for opening Look Out Circular (LOC) signed by SP/DCP",
+          "Bureau of Immigration confirmation of LOC activation across airports and Integrated Check Posts (ICPs)",
+          "Passenger manifest and border crossing logs (if applicable)"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "immigration_border",
+        "condition_to_start": "Imminence of cross-border flight or international human smuggling established.",
+        "condition_to_complete": "LOC active across all immigration checkpoints and border security units alerted.",
+        "on_complete_trigger": [
+          "kidn_step_06_tactical_rescue"
+        ],
+        "if_blocked": [
+          "For open land borders (e.g., Indo-Nepal border), immediately coordinate with Sashastra Seema Bal (SSB) border outposts to conduct physical vehicle inspections."
+        ]
+      },
+      {
+        "step_id": "kidn_step_06_tactical_rescue",
+        "order": 6,
+        "title": "Tactical Search, Hostage Rescue & Arrest of Abductors",
+        "description": "Execute tactical search and rescue operations under BNSS Section 96 at the identified hideout (derived from live CDR triangulation, ANPR tracking, or transit logs). Secure the safe recovery of the abducted victim. Arrest the kidnappers under BNSS Section 35 and seize weapons, vehicles, and communication gear.",
+        "required_evidence": [
+          "Victim Recovery / Rescue Memorandum recorded in the presence of independent witnesses",
+          "Arrest memo, personal search memo, and medical inspection report of abductors",
+          "Seizure memo of getaway vehicles, weapons, ropes/ligatures, and mobile phones utilized in captivity"
+        ],
+        "legal_basis": "BNSS Section 96",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Actionable physical hideout location established via intelligence or technical tracking.",
+        "condition_to_complete": "Victim safely rescued, abductors arrested, and physical/digital exhibits seized.",
+        "on_complete_trigger": [
+          "kidn_step_07_victim_medical_statement"
+        ],
+        "if_blocked": [
+          "If the hideout is in a fortified or hostile interstate terrain, coordinate with State Crime Branch / SWAT units before launching physical assault."
+        ]
+      },
+      {
+        "step_id": "kidn_step_07_victim_medical_statement",
+        "order": 7,
+        "title": "Victim Medico-Legal Examination & Judicial Statement u/s 183 BNSS",
+        "description": "Immediately forward the rescued victim for medical examination under BNSS Section 184 to document physical injuries, sedation, or sexual assault. Sponsor an application before the Magistrate to record the victim's independent judicial statement under BNSS Section 183 (formerly Section 164 CrPC).",
+        "required_evidence": [
+          "Certified Medico-Legal Case (MLC) report of the rescued victim detailing physical injuries or toxicology",
+          "Certified copy of Section 183 BNSS judicial statement recorded by the Magistrate",
+          "Audio-visual recording media of the judicial statement recording"
+        ],
+        "legal_basis": "BNSS Section 183",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Victim rescued and brought to safety.",
+        "condition_to_complete": "Medical examination finalized and independent judicial statement recorded by Magistrate.",
+        "on_complete_trigger": [
+          "kidn_step_08_chargesheet"
+        ],
+        "if_blocked": [
+          "If the victim is heavily sedated or suffering from Stockholm syndrome/trauma, provide psychological counseling at One Stop Centre before scheduling magisterial deposition."
+        ]
+      },
+      {
+        "step_id": "kidn_step_08_chargesheet",
+        "order": 8,
+        "title": "Evidence Synthesis & Final Charge-Sheet Filing",
+        "description": "Synthesize CDR tracking graphs, ANPR highway logs, rescue memos, FSL reports on seized weapons/sedatives, MLC reports, and Section 183 BNSS statements. Assemble and file the final chargesheet under BNSS Section 193 before the competent court within statutory timelines.",
+        "required_evidence": [
+          "Comprehensive police chargesheet under BNSS Section 193 specifying BNS Sections 137/138 (or higher aggravated sections)",
+          "All FSL chemical/ballistic reports, ANPR electronic certificates, and telecom cell-site maps",
+          "Judicial cognizance order from the trial court"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Investigation completed, abductors remanded, and scientific reports procured.",
+        "condition_to_complete": "Charge-sheet formally submitted and accepted by the jurisdictional court.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the abduction was motivated by inter-caste marriage opposition (honor crime), immediately move the court for long-term police protection orders for the rescued couple."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Victim disappeared without witnesses, mobile phone was destroyed immediately at the abduction spot, and no ransom demands or extortion calls have been received.",
+        "suggested_actions": [
+          "Conduct a deep victim financial and personal background investigation: query bank accounts and credit cards under entity_id bank_generic for sudden ATM withdrawals or digital transactions post-disappearance.",
+          "Check hospital emergency admission logs, unidentified accident victims, and mortuary registries across municipal jurisdictions under entity_id municipal_corporation to rule out hit-and-run accidents or medical emergencies.",
+          "Analyse the victim's social media and dating platform accounts under entity_id dating_matrimonial_platforms via Section 94 BNSS notices to check for catfishing, luring, or secret meetings arranged prior to disappearance."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "kidnapping_for_ransom_v1",
+    "crime_type": "Kidnapping for Ransom",
+    "title": "Standard Operating Procedure for Investigation of Kidnapping for Ransom Cases",
+    "source": "Synthesized from BPR&D Investigation Manual, BNSS 2023, and Special Cell / Crime Branch Kidnapping Negotiation SOPs",
+    "steps": [
+      {
+        "step_id": "ransom_step_01_fir_crisis_setup",
+        "order": 1,
+        "title": "FIR Registration & Covert Crisis Negotiation Setup",
+        "description": "Register FIR immediately under BNSS Section 173 (BNS Section 140; formerly IPC Section 364A). To protect hostage life, maintain strict media secrecy. Set up a covert police operational command desk at the victim family's residence. Install voice recording equipment and line-tap monitors on family telephones with statutory authorization. Note: Local police station / specialized anti-extortion cell is not present in the registry, hence department_entity_id is set to null.",
+        "required_evidence": [
+          "Copy of recorded FIR under BNS Section 140 (Kidnapping for ransom)",
+          "Statutory interception / recording authorization order from competent authority",
+          "Initial crisis management logbook establishing communication protocols with family"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": null,
+        "condition_to_start": "Receipt of report regarding abduction accompanied by demands for ransom, extortion, or political concessions.",
+        "condition_to_complete": "FIR registered, covert command desk operational, and recording devices installed on family communication lines.",
+        "on_complete_trigger": [
+          "ransom_step_02_call_interception",
+          "ransom_step_03_financial_surveillance"
+        ],
+        "if_blocked": [
+          "If the family is terrified and uncooperative with police presence out of fear of kidnapper retaliation, deploy plainclothes negotiators in unmarked vehicles to maintain covert liaison."
+        ]
+      },
+      {
+        "step_id": "ransom_step_02_call_interception",
+        "order": 2,
+        "title": "Ransom Call Interception, VoIP Tracing & CDR Analysis",
+        "description": "Intercept and record all incoming ransom calls or text messages. Issue urgent notices under BNSS Section 94 to TSPs for real-time live location tracking, Cell ID tower dumps, and CDRs of caller numbers. If calls use internet VoIP (WhatsApp, Skype, FaceTime), serve notices on messaging intermediaries and ISPs to trace source IP addresses and SIP trunking gateways.",
+        "required_evidence": [
+          "High-fidelity audio recordings of ransom calls and screenshots of extortion chats",
+          "Real-time cell tower triangulation and live location tracking logs of kidnapper phones",
+          "IPDR logs and subscriber KYC resolving VoIP public IP addresses to physical locations",
+          "Section 63 BSA electronic admissibility certificates"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Kidnappers initiate communication demanding ransom via cellular call, SMS, or VoIP app.",
+        "condition_to_complete": "Ransom calls successfully intercepted, recorded, and technical geolocation tracing active.",
+        "on_complete_trigger": [
+          "ransom_step_04_cctv_anpr_tracing",
+          "ransom_step_05_trap_drop_surveillance"
+        ],
+        "if_blocked": [
+          "If kidnappers use international spoofed numbers or burner SIMs active only for seconds, perform IMEI clustering to identify other SIM cards used in the same physical handset."
+        ]
+      },
+      {
+        "step_id": "ransom_step_03_financial_surveillance",
+        "order": 3,
+        "title": "Financial Surveillance of Bank Accounts, UPI VPAs & Crypto Wallets",
+        "description": "If kidnappers demand ransom payment via bank transfers, UPI VPAs, digital wallets, or cryptocurrency (Bitcoin/USDT), issue immediate notices under BNSS Section 106/94 to banks, NPCI, and Virtual Asset Service Providers (VASPs). Monitor accounts for withdrawal attempts, freeze balances upon deposit, and trace P2P crypto cash-out mules.",
+        "required_evidence": [
+          "Bank statements, KYC dossiers, and IP login logs of designated ransom recipient bank accounts",
+          "VASP user KYC, wallet deposit ledgers, and blockchain transaction hash (TxID) tracking reports",
+          "BNSS Section 106 freezing order confirmations from banks and crypto exchanges"
+        ],
+        "legal_basis": "BNSS Section 106",
+        "department_entity_id": "bank_generic",
+        "condition_to_start": "Kidnappers provide bank account numbers, UPI VPAs, or crypto wallet addresses for ransom payment.",
+        "condition_to_complete": "Financial tracking channels actively monitored, accounts frozen, and account holder identities extracted.",
+        "on_complete_trigger": [
+          "ransom_step_05_trap_drop_surveillance"
+        ],
+        "if_blocked": [
+          "If crypto demands utilize decentralized privacy mixers, maintain automated blockchain monitoring while focusing tactical operations on cellular and physical drop-site leads."
+        ]
+      },
+      {
+        "step_id": "ransom_step_04_cctv_anpr_tracing",
+        "order": 4,
+        "title": "CCTV & Highway ANPR Surveillance of Abduction & Movement Routes",
+        "description": "Map the abduction spot and suspected movement corridors. Issue Section 94 BNSS notices to private CCTV owners, municipal smart-city control rooms, and toll plaza operators under entity_id rto_parivahan to procure video surveillance and Automatic Number Plate Recognition (ANPR) logs of suspect vehicles.",
+        "required_evidence": [
+          "CCTV video footage capturing the abduction or vehicle movement along transit corridors",
+          "Toll plaza ANPR transaction logs showing vehicle registration, timestamp, and direction of travel",
+          "Section 63 BSA electronic admissibility certificates for visual and ANPR media"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "rto_parivahan",
+        "condition_to_start": "Abduction location and suspected getaway vehicle type/color identified.",
+        "condition_to_complete": "Getaway vehicle registration identified and highway movement trajectory mapped.",
+        "on_complete_trigger": [
+          "ransom_step_05_trap_drop_surveillance"
+        ],
+        "if_blocked": [
+          "If vehicle number plates are obscured, identify vehicle make/model distinctives (stickers, body damage) across regional toll plaza CCTV captures."
+        ]
+      },
+      {
+        "step_id": "ransom_step_05_trap_drop_surveillance",
+        "order": 5,
+        "title": "Tactical Trap / Ransom Drop-Site Surveillance & Hostage Rescue",
+        "description": "When kidnappers designate a physical drop-site for cash ransom, organize a covert tactical trap under BNSS Section 96. Use marked currency notes (treated with phenolphthalein powder or invisible UV ink if appropriate). Deploy plainclothes SWAT/crime branch teams around the drop zone. Prioritize hostage safety above immediate arrest: execute rescue raid simultaneously with or immediately following ransom handover.",
+        "required_evidence": [
+          "Pre-trap memorandum listing serial numbers of currency notes and chemical treatment details",
+          "Hostage Recovery / Rescue Memorandum recorded at the spot in presence of independent witnesses",
+          "Post-trap recovery memorandum of marked ransom currency from apprehended kidnappers",
+          "High-resolution covert video/photographic recording of the ransom handover and tactical raid"
+        ],
+        "legal_basis": "BNSS Section 96",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Kidnappers finalize physical cash drop location and time with negotiating family.",
+        "condition_to_complete": "Hostage safely rescued, ransom retrieval operatives apprehended, and marked currency recovered.",
+        "on_complete_trigger": [
+          "ransom_step_06_syndicate_arrest_forensics"
+        ],
+        "if_blocked": [
+          "If kidnappers change drop-sites repeatedly while moving in traffic, utilize aerial drone surveillance and GPS trackers concealed inside the ransom bag to maintain visual contact without compromising cover."
+        ]
+      },
+      {
+        "step_id": "ransom_step_06_syndicate_arrest_forensics",
+        "order": 6,
+        "title": "Arrest of Syndicate, Voice Sample Seizure & Ballistic Recovery",
+        "description": "Arrest all gang operatives, negotiators, and hideout guards under BNSS Section 35. Seize weapons, vehicles, mobile phones, and captivity chains under Section 106/96 BNSS. Sponsor an application before the Magistrate under BNSS Section 349 (formerly Section 311A CrPC) to compel arrested accused to provide voice samples for spectrographic comparison against recorded ransom calls at FSL.",
+        "required_evidence": [
+          "Arrest memos, personal search memos, and medical examination reports of all syndicate members",
+          "Seizure memos of weapons, getaway vehicles, mobile phones, and marked currency notes",
+          "Magistrate's order u/s 349 BNSS directing accused to provide voice samples",
+          "FSL Voice Spectrographic Comparison Report matching accused voice to recorded ransom calls"
+        ],
+        "legal_basis": "BNSS Section 349",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Hostage rescued and abductors apprehended.",
+        "condition_to_complete": "Syndicate arrested, weapons/phones seized, and voice samples extracted and matched by FSL.",
+        "on_complete_trigger": [
+          "ransom_step_07_victim_medical_statement"
+        ],
+        "if_blocked": [
+          "If an accused refuses to provide voice samples despite court order u/s 349 BNSS, request the court to draw an adverse legal presumption under Section 119 BSA (formerly Section 114 Evidence Act)."
+        ]
+      },
+      {
+        "step_id": "ransom_step_07_victim_medical_statement",
+        "order": 7,
+        "title": "Victim Medico-Legal Examination & Judicial Statement u/s 183 BNSS",
+        "description": "Forward the rescued hostage immediately to a hospital under BNSS Section 184 for comprehensive Medico-Legal Case (MLC) examination to document physical torture, binding marks, malnutrition, or sedation. Requisition the Magistrate to record the victim's independent judicial statement under BNSS Section 183 detailing captivity conditions and identifying captors.",
+        "required_evidence": [
+          "Certified Medico-Legal Case (MLC) report detailing captivity injuries, ligature marks, or toxicology",
+          "Certified copy of Section 183 BNSS judicial statement recorded by the Magistrate",
+          "Audio-visual recording media of the judicial statement recording"
+        ],
+        "legal_basis": "BNSS Section 183",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Hostage safely rescued from captivity.",
+        "condition_to_complete": "MLC examination finalized and independent judicial statement recorded by Magistrate.",
+        "on_complete_trigger": [
+          "ransom_step_08_chargesheet"
+        ],
+        "if_blocked": [
+          "If the victim suffers from extreme trauma or amnesia regarding hideout locations, conduct a supervised Test Identification Parade (TIP) of the hideout and accused under Section 54 BNSS once recovered."
+        ]
+      },
+      {
+        "step_id": "ransom_step_08_chargesheet",
+        "order": 8,
+        "title": "Evidence Synthesis & Final Charge-Sheet Filing",
+        "description": "Synthesize ransom call recordings, FSL voice spectrography reports, marked currency recovery memos, CDR live-tracking graphs, MLC reports, and Section 183 BNSS statements. Assemble and file the final chargesheet under BNSS Section 193 before the competent court invoking BNS Section 140 (carrying death penalty / life imprisonment).",
+        "required_evidence": [
+          "Comprehensive police chargesheet under BNSS Section 193 specifying BNS Section 140",
+          "All FSL reports (voice spectrography, chemical note analysis, ballistics), ANPR logs, and CDR maps",
+          "Section 63 BSA electronic admissibility certificates for all audio recordings and digital tracks",
+          "Formal judicial order taking cognizance of the charge-sheet by the Sessions Court"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "All investigative steps executed, syndicate remanded, and FSL expert reports received.",
+        "condition_to_complete": "Charge-sheet formally submitted and accepted by the Sessions Court within statutory timelines.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If FSL voice spectrography reports face administrative delay near the statutory 90-day limit, file the primary chargesheet with CDRs and marked currency recovery memos, and file the voice report later u/s 193(9) BNSS."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Ransom negotiations are conducted entirely by an overseas syndicate via end-to-end encrypted darkweb chat rooms, hostage is held in an unknown domestic location by cut-out mercenaries, and no physical drop-site is used (pure crypto demand).",
+        "suggested_actions": [
+          "Deploy advanced blockchain forensic tracking under entity_id vasp_crypto_exchange to monitor the ransom crypto wallet; identify exchange deposit off-ramps or P2P cash-out traders in India to trace the domestic financial beneficiaries.",
+          "Analyse pattern of life and proof-of-life media sent by kidnappers (photos/videos of hostage): examine background audio, lighting, architectural details, and electrical frequency humming (ENF analysis at FSL) to narrow down the geographic hideout location.",
+          "Conduct comprehensive intelligence screening of the victim's business associates, recently fired employees, and domestic staff to identify the local 'spotter' who provided the offshore syndicate with the victim's schedule and financial profile."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "human_trafficking_v1",
+    "crime_type": "Human Trafficking",
+    "title": "Standard Operating Procedure for Investigation of Human Trafficking and Commercial Sexual Exploitation",
+    "source": "Synthesized strictly from BPR&D SOP on Investigation of Human Trafficking, ITPA 1956, and MHA Advisories",
+    "steps": [
+      {
+        "step_id": "traf_step_01_fir_intelligence",
+        "order": 1,
+        "title": "FIR Registration & Pre-Rescue Intelligence Gathering",
+        "description": "Upon receipt of information regarding trafficking of women or children for commercial sexual exploitation, forced labor, or organ harvesting, register FIR under BNSS Section 173 (BNS Section 143; formerly IPC Section 370) read with relevant sections of the Immoral Traffic (Prevention) Act, 1956 (ITPA) and POCSO Act. Conduct discrete pre-rescue intelligence gathering under ITPA Section 13/15: verify brothel/workplace locations, identify traffickers/pimps, and map entry/exit points without alerting suspects. Note: Local police station / Anti-Human Trafficking Unit (AHTU) is not present in the registry, hence department_entity_id is set to null.",
+        "required_evidence": [
+          "Copy of recorded FIR under BNS Section 143 read with ITPA Sections 3, 4, 5, 6, 7 [1.2.3]",
+          "Pre-rescue intelligence reconnaissance report and spot surveillance logs",
+          "List of identified traffickers, brothel keepers, and commercial facilitators"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": null,
+        "condition_to_start": "Receipt of intelligence, missing person link, or victim rescue call regarding human trafficking.",
+        "condition_to_complete": "FIR registered, target premises verified, and tactical rescue plan finalized by Special Police Officer (SPO).",
+        "on_complete_trigger": [
+          "traf_step_02_search_rescue",
+          "traf_step_06_telecom_transit_tracing"
+        ],
+        "if_blocked": [
+          "If local police station personnel are suspected of collusion with brothel keepers, the raid and investigation must be directly executed by the district Anti-Human Trafficking Unit (AHTU) or State Crime Branch [1.1.3]."
+        ]
+      },
+      {
+        "step_id": "traf_step_02_search_rescue",
+        "order": 2,
+        "title": "Coordinated Tactical Search & Rescue Operation u/s 15 ITPA",
+        "description": "Under Section 15 of the ITPA read with BNSS Section 96, a designated Special Police Officer (SPO) / AHTU team shall execute a tactical search and rescue raid without prior warrant if delay would defeat the rescue. The raid team MUST include woman police officers and should associate independent social workers / NGO representatives as witness observers. Secure all victims safely. Arrest brothel keepers, traffickers, pimps, and customers (prosecutable under ITPA/POCSO/BNS). Seize cash, registers, mobile phones, condoms, and customer identity documents under Seizure Memos.",
+        "required_evidence": [
+          "Arrest memos of traffickers, brothel managers, pimps, and customers found on premises",
+          "Seizure memos for account ledgers, cash, mobile phones, customer IDs, and physical paraphernalia",
+          "Video and photographic recording of the rescue operation and premises layout"
+        ],
+        "legal_basis": "Immoral Traffic (Prevention) Act Section 15",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Actionable intelligence and operational readiness established by Special Police Officer.",
+        "condition_to_complete": "Victims safely rescued, traffickers/customers arrested, and physical/digital evidence seized.",
+        "on_complete_trigger": [
+          "traf_step_03_post_rescue_care",
+          "traf_step_07_financial_tracing"
+        ],
+        "if_blocked": [
+          "If brothel owners utilize concealed underground vaults or secret rooms to hide victims during raids, deploy architectural structural scanners and FSL teams to breach false walls [1.2.3]."
+        ]
+      },
+      {
+        "step_id": "traf_step_03_post_rescue_care",
+        "order": 3,
+        "title": "Post-Rescue Victim Care, Shelter Referral & CWC Notification",
+        "description": "In strict compliance with ITPA Sections 16/17, POCSO Act, and BPR&D SOP, treat rescued victims with dignity as victims of crime, NOT offenders. Immediately separate victims from traffickers/employers. For minor victims, send mandatory notification to the Child Welfare Committee (CWC) within 24 hours under JJ Act Section 31 and transfer them to an approved Protective Rehabilitation Shelter Home. For adult female victims, refer to One Stop Centre or Protective Home u/s 17 ITPA.",
+        "required_evidence": [
+          "Protective Shelter Home admission / handover custody acknowledgment receipts",
+          "Initial counselor trauma assessment report from One Stop Centre / Shelter"
+        ],
+        "legal_basis": "Immoral Traffic (Prevention) Act Section 16",
+        "department_entity_id": "one_stop_centre_helpline",
+        "condition_to_start": "Victims extracted from exploitation premises during tactical raid.",
+        "condition_to_complete": "All victims safely housed in protective shelter homes and CWC statutorily notified within 24 hours.",
+        "on_complete_trigger": [
+          "traf_step_04_medical_age_verification",
+          "traf_step_05_magistrate_statement"
+        ],
+        "if_blocked": [
+          "If traffickers attempt to present fraudulent guardianship papers to claim custody of minor victims at the police station, strictly refuse handover and refer all custody adjudication exclusively to the CWC [1.2.3]."
+        ]
+      },
+      {
+        "step_id": "traf_step_04_medical_age_verification",
+        "order": 4,
+        "title": "Medico-Legal Examination & Statutory Age Determination",
+        "description": "Forward rescued victims for medico-legal examination under BNSS Section 184 (or POCSO Section 27 for minors) within 24 hours to document sexual violence, physical abuse, sexually transmitted infections, or malnutrition. Requisition statutory age verification: obtain municipal birth certificates or school records under Section 94 BNSS. In the absence of documents, refer victims to a government medical board for ossification / radiological age estimation under Section 94 JJ Act / Section 15 ITPA.",
+        "required_evidence": [
+          "Municipal Birth Certificate or School Admission Register copy confirming date of birth; OR",
+          "Medical Board Ossification Age Estimation Report admissible under JJ Act / ITPA"
+        ],
+        "legal_basis": "BNSS Section 184",
+        "department_entity_id": "hospital_forensic_medical",
+        "condition_to_start": "Victims admitted to protective shelter care.",
+        "condition_to_complete": "Medical examination completed, injury/health profile documented, and statutory age legally established.",
+        "on_complete_trigger": [
+          "traf_step_05_magistrate_statement",
+          "traf_step_08_chargesheet"
+        ],
+        "if_blocked": [
+          "If medical age estimation yields a margin of error spanning across 18 years (e.g., 17-19 years), statutory jurisprudence mandates adopting the lower age to extend POCSO and juvenile protections to the victim [1.2.3]."
+        ]
+      },
+      {
+        "step_id": "traf_step_05_magistrate_statement",
+        "order": 5,
+        "title": "Recording of Judicial Statements u/s 183 BNSS by Magistrate",
+        "description": "Sponsor applications before the Chief Judicial Magistrate to record the independent judicial statements of all rescued victims under BNSS Section 183 (formerly Section 164 CrPC) at the earliest instance. For minor victims, statement recording must strictly adhere to Section 25 POCSO Act (child-friendly environment, female Magistrate, no uniform, audio-video recording). Ensure statements capture recruitment luring, transportation routes, financial bondage, and identification of traffickers/customers.",
+        "required_evidence": [
+          "Police application submitted to CJM for statement recording under BNSS Section 183 / POCSO Section 25",
+          "Certified sealed copies of judicial statements recorded by the Magistrate",
+          "Audio-video recording media of the deposition proceedings"
+        ],
+        "legal_basis": "BNSS Section 183",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Victims medically examined and psychologically stabilized in shelter care.",
+        "condition_to_complete": "Judicial statements formally recorded by Magistrate and placed in court records.",
+        "on_complete_trigger": [
+          "traf_step_08_chargesheet"
+        ],
+        "if_blocked": [
+          "If victims suffer from severe trauma or language barriers (interstate/cross-border victims), the Magistrate must appoint a certified translator or special educator to assist during deposition [1.2.1]."
+        ]
+      },
+      {
+        "step_id": "traf_step_06_telecom_transit_tracing",
+        "order": 6,
+        "title": "Telecom, Transit & Inter-State/Cross-Border Route Tracing",
+        "description": "Issue Section 94 BNSS notices to TSPs for CDRs, tower dumps, and IMEI clustering of mobile phones seized from traffickers, pimps, and brothel managers to map the organized trafficking network. Requisition passenger reservation charts and CCTV footage from railway authorities (GRP/RPF) and bus terminals to trace the transportation of victims from source villages to destination cities.",
+        "required_evidence": [
+          "Telecom CDRs, cell site analysis, and IMEI clustering reports linking recruiters, transporters, and brothel owners [1.2.3]",
+          "Railway reservation charts, ticketing IP logs, and station CCTV footage confirming victim transportation",
+          "Section 63 BSA electronic admissibility certificates for telecom and transit records"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Trafficker mobile phones seized and source villages identified from victim statements.",
+        "condition_to_complete": "Complete transit mapping from source to destination established with certified electronic records.",
+        "on_complete_trigger": [
+          "traf_step_08_chargesheet"
+        ],
+        "if_blocked": [
+          "If victims were transported via trains across multiple railway zones, coordinate with railway police under entity_id railway_police to pull historical booking ledgers from CRIS/IRCTC."
+        ]
+      },
+      {
+        "step_id": "traf_step_07_financial_tracing",
+        "order": 7,
+        "title": "Financial Follow-the-Money Tracing & Property Attachment",
+        "description": "Trafficking is an organized crime for commercial gain. Issue Section 94/106 BNSS notices to banks, UPI PSPs, and money transfer agents to freeze bank accounts, lockers, and digital wallets of brothel owners, traffickers, and syndicates. Query sub-registrar offices to identify real estate purchased with trafficking proceeds. Sponsor applications under BNSS Section 107 / Section 18 ITPA for attachment and closure of brothel premises and forfeiture of proceeds of crime.",
+        "required_evidence": [
+          "Certified bank ledger statements and KYC dossiers of trafficking syndicate accounts [1.2.3]",
+          "BNSS Section 106 freezing orders for bank accounts and financial assets",
+          "Property title deeds and Encumbrance Certificates of brothel premises and syndicate real estate",
+          "Judicial attachment order under BNSS Section 107 / ITPA Section 18 ordering eviction and closure of brothel premises"
+        ],
+        "legal_basis": "BNSS Section 106",
+        "department_entity_id": "bank_generic",
+        "condition_to_start": "Financial ledgers, bank books, or account numbers seized during rescue raid.",
+        "condition_to_complete": "Syndicate bank accounts frozen, real estate identified, and judicial property attachment orders procured.",
+        "on_complete_trigger": [
+          "traf_step_08_chargesheet"
+        ],
+        "if_blocked": [
+          "If massive multi-state money laundering is uncovered, immediately refer the financial dossier to the Enforcement Directorate (ED) for parallel attachment under PMLA provisions."
+        ]
+      },
+      {
+        "step_id": "traf_step_08_chargesheet",
+        "order": 8,
+        "title": "Comprehensive Charge-Sheet & Victim Rehabilitation Filing",
+        "description": "Compile the final chargesheet under BNSS Section 193 invoking BNS Section 143 (Trafficking), ITPA Sections 3-7, and POCSO Sections (for minors) against recruiters, transporters, brothel keepers, financiers, and exploitative customers. File the chargesheet before the Special Sessions Court within statutory timelines. Simultaneously move applications under Section 357A CrPC / BNSS Section 395 and victim compensation schemes for interim rehabilitation awards for rescued survivors.",
+        "required_evidence": [
+          "All relied-upon documents: Rescue panchnama, MLCs, Age reports, Section 183 statements, CDR graphs, and financial freeze orders",
+          "Formal judicial order taking cognizance by the Special Court / Sessions Court",
+          "Application filed before District Legal Services Authority (DLSA) for victim compensation and rehabilitation awards"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "All investigative steps executed, syndicate remanded, and statutory reports received.",
+        "condition_to_complete": "Charge-sheet formally submitted and accepted by the court, and victim compensation proceedings initiated.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If cross-border traffickers (e.g., from Nepal or Bangladesh) reside outside India, coordinate with Interpol via CBI Nodal Officer to issue Red Notices and initiate extradition proceedings."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Rescued victims turn hostile during investigation due to severe trauma, debt-bondage threats against their rural families by source-village recruiters, or fear of social stigma.",
+        "suggested_actions": [
+          "Build an independent, victim-less prosecution case relying on objective electronic and physical evidence: brothel account ledgers showing victim names/earnings, seized condoms, customer registers, CDR communication graphs, and rescue panchnamas.",
+          "Immediately invoke Witness Protection Schemes: arrange secure residential shelter relocation outside the victim's home state and request the court for in-camera trials with identity masking u/s BNSS/POCSO.",
+          "Coordinate with district police authorities in the victim's native source village to deploy protective patrols around the victim's family and arrest local debt-bondage recruiters threatening them."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "acid_attack_v1",
+    "crime_type": "Acid Attack",
+    "title": "Standard Operating Procedure for Investigation of Acid Attack and Corrosive Substance Assault Cases",
+    "source": "Synthesized from BPR&D Investigation Guidelines, BNSS 2023, MHA Advisories, and Supreme Court Guidelines (Laxmi v. UOI / Parivartan Kendra)",
+    "steps": [
+      {
+        "step_id": "acid_step_01_fir_medical_evacuation",
+        "order": 1,
+        "title": "Immediate FIR Registration & Emergency Medical Evacuation / Free Treatment Requisition",
+        "description": "Upon receipt of information regarding an acid or corrosive substance attack, immediately register FIR under BNSS Section 173 (BNS Section 124; formerly IPC Section 326A/326B). The paramount duty of the IO is immediate medical evacuation of the victim to a specialized burn unit / hospital. In accordance with BNSS Section 396 (formerly CrPC Section 357C) and Supreme Court directives (Laxmi v. UOI), serve binding statutory notice on the hospital mandating immediate, free-of-cost first aid and medical treatment without waiting for legal formalities. Note: Local police station / first responder unit is not present in the registry, hence department_entity_id is set to null.",
+        "required_evidence": [
+          "Copy of recorded FIR under BNS Section 124 (carrying minimum 10 years to life imprisonment)",
+          "Statutory notice served on hospital u/s 396 BNSS mandating free emergency medical treatment",
+          "Hospital admission and emergency triage log"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": null,
+        "condition_to_start": "Report of throwing or administering acid or chemical corrosive substance on any person.",
+        "condition_to_complete": "Victim admitted to specialized burn emergency care, free treatment initiated, and FIR formally registered.",
+        "on_complete_trigger": [
+          "acid_step_02_mlc_burn_certification",
+          "acid_step_04_scene_forensic"
+        ],
+        "if_blocked": [
+          "If a private hospital demands monetary deposit or refuses admission, immediately initiate criminal prosecution against the hospital doctor/management under BNS Section 114 (formerly IPC Section 166B)."
+        ]
+      },
+      {
+        "step_id": "acid_step_02_mlc_burn_certification",
+        "order": 2,
+        "title": "Medico-Legal Case (MLC) & Chemical Burn Severity Certification",
+        "description": "Requisition the treating burn surgeon / forensic medical officer to prepare a comprehensive Medico-Legal Case (MLC) report. Specifically document the percentage and depth of chemical burns, permanent disfigurement, loss of vision/hearing, and bodily disability. Ensure the medical officer preserves chemical-soaked clothing, skin scrapings, and liquid acid washings from the victim's body in clean glass/polypropylene containers sealed with glass stoppers for FSL analysis.",
+        "required_evidence": [
+          "Certified Medico-Legal Case (MLC) wound certificate detailing burn depth, disfigurement, and organ damage",
+          "Ophthalmological / specialized evaluation reports documenting visual or functional impairment",
+          "Sealed, non-reactive glass/plastic containers containing acid-soaked garments, skin debris, and chemical washings with doctor's specimen seal"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "hospital_forensic_medical",
+        "condition_to_start": "Victim admitted to hospital burn unit.",
+        "condition_to_complete": "Receipt of detailed MLC report and sealed chemical burn exhibits from medical officer.",
+        "on_complete_trigger": [
+          "acid_step_03_dying_declaration",
+          "acid_step_05_vendor_licensing_trace"
+        ],
+        "if_blocked": [
+          "If the victim is undergoing emergency debridement surgery, ensure the forensic medical team collects external swab samples and burn photographs in the operating theater prior to wound dressing."
+        ]
+      },
+      {
+        "step_id": "acid_step_03_dying_declaration",
+        "order": 3,
+        "title": "Recording of Dying Declaration / Judicial Statement of Victim",
+        "description": "Due to high mortality and trauma in acid burn cases, immediately requisition a Judicial or Executive Magistrate to record the victim's statement / Dying Declaration under Section 26 BSA (formerly Section 32 Evidence Act) after obtaining medical fitness certification. If the victim survives, this statement operates as a substantive judicial deposition under BNSS Section 183. Ensure video recording of the statement.",
+        "required_evidence": [
+          "Medical officer's written certification endorsing victim's mental fitness to give a statement",
+          "Certified copy of Dying Declaration / Section 183 BNSS judicial statement recorded by Magistrate",
+          "High-resolution audio-visual recording of the statement recording process"
+        ],
+        "legal_basis": "BNSS Section 183",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Treating surgeon certifies victim is conscious and mentally fit to depose.",
+        "condition_to_complete": "Magistrate formally records, videographs, and seals the victim's deposition.",
+        "on_complete_trigger": [
+          "acid_step_06_cctv_telecom_trace"
+        ],
+        "if_blocked": [
+          "If facial burns or endotracheal intubation prevent verbal speech, the Magistrate must record the statement via written notes, hand gestures, or communication boards under video recording."
+        ]
+      },
+      {
+        "step_id": "acid_step_04_scene_forensic",
+        "order": 4,
+        "title": "Forensic Crime Scene Examination & Corrosive Residue Seizure",
+        "description": "Summon the FSL chemical / forensic science team under BNSS Section 176(3). Inspect the attack location. Lift liquid chemical puddles using glass pipettes, collect acid-stained soil, control soil, melted objects, and containers/bottles discarded by the assailant. Package exhibits in airtight, chemical-resistant glass or virgin polypropylene containers to prevent reaction or evaporation.",
+        "required_evidence": [
+          "Seizure memos for corrosive liquid residues, acid bottles, stained soil, and melted materials",
+          "High-resolution scene photographs and spot sketch map showing chemical splash patterns",
+          "FSL scientific scene examination report"
+        ],
+        "legal_basis": "BNSS Section 176(3)",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Crime scene secured by investigating police team.",
+        "condition_to_complete": "All chemical and trace exhibits scientifically lifted, sealed in inert containers, labeled, and forwarded to FSL.",
+        "on_complete_trigger": [
+          "acid_step_05_vendor_licensing_trace"
+        ],
+        "if_blocked": [
+          "If rain or municipal washing threatens to dilute chemical residues on streets, immediately deploy pH test strips and lift surface swabs into distilled water vials before evidence is lost."
+        ]
+      },
+      {
+        "step_id": "acid_step_05_vendor_licensing_trace",
+        "order": 5,
+        "title": "Investigation of Acid / Corrosive Sale & Vendor Licensing Verification",
+        "description": "In compliance with Supreme Court guidelines (Laxmi v. UOI) and Model Poisons Rules regulating acid sales, investigate the source of the corrosive substance. Issue Section 94 BNSS notices to local chemical stockists, hardware vendors, and industrial suppliers. Requisition mandatory acid sale registers (recording buyer photo ID, address, and quantity). Verify vendor licensing compliance with the Sub-Divisional Magistrate (SDM) / Excise authorities.",
+        "required_evidence": [
+          "Certified extracts of mandatory Acid Sale Registers from chemical/hardware vendors",
+          "Vendor statutory retail license / permit verification report from SDM or Excise department",
+          "CCTV footage from retail chemical shops showing the buyer purchasing acid",
+          "Seizure memo of stock registers from non-compliant or illicit chemical vendors"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "excise_dept_ncb",
+        "condition_to_start": "Chemical identity of corrosive substance determined or general commercial acid used.",
+        "condition_to_complete": "Point of sale identified, vendor registers verified, and illegal chemical stockists prosecuted.",
+        "on_complete_trigger": [
+          "acid_step_07_arrest_medical_custody"
+        ],
+        "if_blocked": [
+          "If the acid was stolen from an industrial workplace, educational laboratory, or battery repair shop, subpoena inventory ledgers and employee access logs of that establishment under Section 94 BNSS."
+        ]
+      },
+      {
+        "step_id": "acid_step_06_cctv_telecom_trace",
+        "order": 6,
+        "title": "CCTV Surveillance & Telecom Enmity Tracing",
+        "description": "Requisition CCTV footage from private establishments, housing societies, or municipal cameras covering the assault spot and escape routes under BNSS Section 94. Simultaneously issue notices to TSPs for CDRs and Cell ID locations of suspects and victim to establish presence, tracking, or prior harassment/stalking history.",
+        "required_evidence": [
+          "CCTV video footage showing the execution of the acid attack or assailant flight",
+          "Section 63 BSA electronic admissibility certificates for video media",
+          "Telecom CDRs and cell tower geolocation mapping reports confirming suspect stalking/presence"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Assault location and suspect mobile identities identified.",
+        "condition_to_complete": "Video surveillance media and telecom tracking logs procured and certified.",
+        "on_complete_trigger": [
+          "acid_step_07_arrest_medical_custody"
+        ],
+        "if_blocked": [
+          "If CCTV is hosted on cloud servers operated by non-telecom ISPs, route Section 94 notices through entity_id isp_non_telecom."
+        ]
+      },
+      {
+        "step_id": "acid_step_07_arrest_medical_custody",
+        "order": 7,
+        "title": "Arrest of Accused, Medical Chemical Profiling & Remand",
+        "description": "Arrest the assailant under BNSS Section 35. Conduct immediate medical examination under BNSS Section 51/53: specifically inspect and swab the accused's hands, face, and forearms for chemical burn marks or corrosive residues resulting from splash-back during the attack. Seize the accused's clothing worn during the incident under sealed glass containers.",
+        "required_evidence": [
+          "Arrest memo, personal search memo, and medical inspection report of accused",
+          "Seizure memo of accused's clothing and chemical skin swabs sealed in inert containers",
+          "Voluntary disclosure statement leading to recovery of acid storage containers or weapons",
+          "Magistrate's order granting police custody remand under Section 187 BNSS"
+        ],
+        "legal_basis": "BNSS Section 187",
+        "department_entity_id": "hospital_forensic_medical",
+        "condition_to_start": "Evidentiary linkage established against suspect via victim statement, CCTV, or CDR.",
+        "condition_to_complete": "Accused arrested, chemically swabbed, clothing seized, and police remand secured.",
+        "on_complete_trigger": [
+          "acid_step_08_fsl_synthesis_chargesheet"
+        ],
+        "if_blocked": [
+          "If the accused claims an alibi, immediately verify cellular tower location and workplace attendance logs under Section 94 BNSS."
+        ]
+      },
+      {
+        "step_id": "acid_step_08_fsl_synthesis_chargesheet",
+        "order": 8,
+        "title": "FSL Chemical Report Synthesis, Compensation Award & Charge-Sheet Filing",
+        "description": "Procure definitive FSL Chemical Analysis reports under BNSS Section 329 confirming identical chemical composition (e.g., sulfuric acid, nitric acid) between liquid thrown on victim, residues at scene, stains on accused's clothes, and stock seized from vendor. File final chargesheet under BNSS Section 193 specifying BNS Section 124. Concurrently file formal application before District Legal Services Authority (DLSA) under BNSS Section 395 (formerly Section 357A CrPC) and NALSA Victim Compensation Scheme for mandatory statutory compensation award (minimum Rs. 3 Lakhs upwards) for rehabilitation and reconstructive surgeries.",
+        "required_evidence": [
+          "Certified FSL Chemical Analysis Report matching corrosive substance across victim, scene, accused, and vendor exhibits",
+          "Comprehensive police chargesheet under BNSS Section 193 specifying BNS Section 124",
+          "All relied-upon documents: MLC, visual disability reports, Section 183 statements, CCTV, and vendor registers",
+          "Application filed before DLSA requesting immediate release of statutory victim compensation and surgical medical funding"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Investigation completed, accused remanded, and FSL chemical reports received.",
+        "condition_to_complete": "Charge-sheet formally submitted and accepted by the Sessions Court, and statutory compensation proceedings initiated.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If DLSA compensation disbursement is delayed, move an urgent application before the trying Sessions Judge under BNSS Section 395(2) to pass an immediate interim compensation order against state funds."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Attack occurred at night in a blind spot by a masked, unidentified assailant on a two-wheeler without number plates, and the victim has no known enmity.",
+        "suggested_actions": [
+          "Conduct exhaustive victim background profiling: examine rejected marriage proposals, workplace rivalries, or one-sided stalking history by analyzing mobile phone backup chat archives under Section 94 BNSS.",
+          "Perform chemical fingerprinting (trace impurity profiling) of the acid at CFSL to determine the specific industrial manufacturing batch and regional distributor network.",
+          "Analyse cell tower dump logs from all surrounding cellular base stations under entity_id telecom_operator covering the attack window; cross-reference active numbers against CDRs of individuals who frequently called or stalked the victim in the past year."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "grievous_hurt_assault_v1",
+    "crime_type": "Grievous Hurt / Assault",
+    "title": "Standard Operating Procedure for Investigation of Grievous Hurt and Severe Assault Cases",
+    "source": "Synthesized from BPR&D Police Investigation Manual, BNSS 2023, and Medico-Legal Jurisprudence (BNS Section 116/117)",
+    "steps": [
+      {
+        "step_id": "hurt_step_01_fir_evacuation",
+        "order": 1,
+        "title": "FIR Registration & Emergency Medical Evacuation",
+        "description": "Upon receipt of information regarding severe physical assault, register FIR under BNSS Section 173 (BNS Section 117/118; formerly IPC Section 325/326). Ensure immediate medical evacuation of the injured victim to the nearest hospital for emergency treatment, while dispatching a police team to safeguard the assault location. Note: Local police station / first responder unit is not present in the registry, hence department_entity_id is set to null.",
+        "required_evidence": [
+          "Copy of recorded FIR under BNS Section 117/118",
+          "Emergency hospital admission record / police dispatch log",
+          "Initial rough spot boundary inspection note"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": null,
+        "condition_to_start": "Report of violent assault resulting in bone fractures, permanent impairment, or severe bodily trauma.",
+        "condition_to_complete": "Victim admitted to emergency medical care and FIR formally registered.",
+        "on_complete_trigger": [
+          "hurt_step_02_mlc_grievous_certification",
+          "hurt_step_04_scene_inspection"
+        ],
+        "if_blocked": [
+          "If the victim is unconscious, register the FIR on the statement of an eyewitness, relative, or the first responder police officer as state complainant."
+        ]
+      },
+      {
+        "step_id": "hurt_step_02_mlc_grievous_certification",
+        "order": 2,
+        "title": "Medico-Legal Case (MLC) & Grievous Injury Certification",
+        "description": "Issue formal police requisition to the treating hospital / forensic medical officer for a detailed Medico-Legal Case (MLC) report. Specifically request certification on whether the injury falls under statutory definitions of 'Grievous Hurt' under BNS Section 116 (formerly IPC Section 320) — such as emasculation, permanent loss/impairment of sight, hearing, or joint, bone fracture/dislocation, facial disfigurement, or injury causing severe pain/inability to follow ordinary pursuits for 20 days.",
+        "required_evidence": [
+          "Certified Medico-Legal Case (MLC) wound certificate detailing exact injury dimensions and locations",
+          "Radiological reports (X-ray, CT scan, MRI films) confirming bone fracture, dislocation, or internal organ trauma",
+          "Surgeon's definitive expert opinion classifying the injury as 'Grievous' under BNS Section 116",
+          "Sealed packages containing blood-soaked clothing removed from victim during medical triage"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "hospital_forensic_medical",
+        "condition_to_start": "Victim admitted to hospital medical emergency.",
+        "condition_to_complete": "Receipt of formal MLC wound certificate, radiological proof of fracture/impairment, and sealed clothing exhibits.",
+        "on_complete_trigger": [
+          "hurt_step_03_witness_statements",
+          "hurt_step_05_weapon_recovery"
+        ],
+        "if_blocked": [
+          "If initial MLC marks injury as 'simple' pending X-ray, ensure follow-up requisition after 20 days to check if hospital hospitalization/disability duration qualifies it as grievous under statutory 20-day rule."
+        ]
+      },
+      {
+        "step_id": "hurt_step_03_witness_statements",
+        "order": 3,
+        "title": "Recording of Victim & Eyewitness Statements u/s 180 BNSS",
+        "description": "Examine the injured victim (once certified medically fit to speak) and all eyewitnesses. Record comprehensive statements under BNSS Section 180 (formerly Section 161 CrPC). Document the exact sequence of events, identity of assailants, specific weapons wielded by each accused, and underlying motive (property dispute, enmity, sudden quarrel).",
+        "required_evidence": [
+          "Section 180 BNSS written statement of the injured victim detailing the assault and identifying assailants",
+          "Section 180 BNSS statements of independent eyewitnesses, bystanders, and first responders",
+          "Audio-video recordings of witness examinations (where applicable under BNSS)"
+        ],
+        "legal_basis": "BNSS Section 180",
+        "department_entity_id": null,
+        "condition_to_start": "Victim medically stabilized and witnesses identified from spot.",
+        "condition_to_complete": "Comprehensive witness testimony compiled establishing individual roles and weapon usage of each accused.",
+        "on_complete_trigger": [
+          "hurt_step_06_cctv_telecom"
+        ],
+        "if_blocked": [
+          "If the victim's speech is impaired due to facial/jaw fractures, record statement via written answers or gestures in the presence of an independent medical officer."
+        ]
+      },
+      {
+        "step_id": "hurt_step_04_scene_inspection",
+        "order": 4,
+        "title": "Crime Scene Examination & Physical Exhibit Seizure",
+        "description": "Inspect the assault spot under BNSS Section 176(3) (or standard crime scene protocols). Lift liquid bloodstains, blood-stained earth, control earth, torn clothing, or weapons/instruments left behind by assailants (iron rods, wooden lathis, knives, bricks). Prepare spot sketch map and panchnama.",
+        "required_evidence": [
+          "Seizure memos for bloodstains, weapons, and torn garments found at spot",
+          "Spot inspection sketch map and photographic log of the assault location",
+          "Forensic spot examination report"
+        ],
+        "legal_basis": "BNSS Section 176(3)",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Assault location secured by investigating police team.",
+        "condition_to_complete": "Physical exhibits lifted, sealed with official seal, labeled, and dispatched to FSL.",
+        "on_complete_trigger": [
+          "hurt_step_05_weapon_recovery"
+        ],
+        "if_blocked": [
+          "If the assault occurred inside a private residence or commercial shop, seize internal access logs and CCTV records under Section 94 BNSS."
+        ]
+      },
+      {
+        "step_id": "hurt_step_05_weapon_recovery",
+        "order": 5,
+        "title": "Weapon Seizure & Forensic Compatibility Examination",
+        "description": "Recover the weapons used in the assault (either from crime scene, upon arrest, or pursuant to accused disclosure). Submit seized weapons alongside the hospital MLC report to the forensic medical officer / FSL under Section 94/329 BNSS for expert opinion on whether the specific grievous injuries documented on the victim could be caused by the seized weapons.",
+        "required_evidence": [
+          "Seizure memo of dangerous weapons / blunt or sharp instruments",
+          "Surgeon's / FSL Weapon Compatibility Expert Report matching weapon shape/dimensions to victim wound patterns",
+          "FSL Serological report confirming presence of victim's blood on recovered weapons"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Weapons recovered by investigating team.",
+        "condition_to_complete": "Weapons medically and scientifically linked to the victim's grievous injuries.",
+        "on_complete_trigger": [
+          "hurt_step_07_arrest_medical"
+        ],
+        "if_blocked": [
+          "If the weapon is a common domestic or agricultural tool (axe, sickle, pestle), distinguish it from household items by testing for microscopic blood/epithelial traces in crevices at FSL."
+        ]
+      },
+      {
+        "step_id": "hurt_step_06_cctv_telecom",
+        "order": 6,
+        "title": "CCTV Surveillance & Telecom Enmity Tracing",
+        "description": "Requisition CCTV footage from private establishments, housing societies, or municipal cameras covering the assault location under BNSS Section 94 to visually confirm the aggression. Simultaneously issue notices to TSPs for CDRs and Cell ID locations of suspects and victim to verify presence and prior disputes.",
+        "required_evidence": [
+          "CCTV video footage capturing the physical assault and weapon wielding",
+          "Section 63 BSA electronic admissibility certificates for video media",
+          "Telecom CDRs and cell tower geolocation mapping reports"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Surveillance cameras or mobile phones identified at the scene.",
+        "condition_to_complete": "Video surveillance media and telecom tracking logs procured and certified.",
+        "on_complete_trigger": [
+          "hurt_step_07_arrest_medical"
+        ],
+        "if_blocked": [
+          "If CCTV is hosted on cloud servers operated by non-telecom ISPs, route Section 94 notices through entity_id isp_non_telecom."
+        ]
+      },
+      {
+        "step_id": "hurt_step_07_arrest_medical",
+        "order": 7,
+        "title": "Arrest of Accused, Custody Remand & Medical Profiling",
+        "description": "Arrest the assailant under BNSS Section 35. Conduct immediate medical examination under BNSS Section 51/53 to document any mutual altercation injuries and draw blood/reference samples. If weapons or blood-stained clothes are hidden, produce accused before Magistrate to secure police custody remand under BNSS Section 187 for recovery under Section 23 BSA.",
+        "required_evidence": [
+          "Arrest memo, personal search memo, and medical inspection report of accused",
+          "Voluntary disclosure statement leading to recovery of weapon or blood-stained clothes under Section 23 BSA",
+          "Magistrate's order granting police custody remand under Section 187 BNSS"
+        ],
+        "legal_basis": "BNSS Section 187",
+        "department_entity_id": "hospital_forensic_medical",
+        "condition_to_start": "Evidentiary linkage established against suspect.",
+        "condition_to_complete": "Accused arrested, medically profiled, biological samples drawn, and weapon recovery finalized.",
+        "on_complete_trigger": [
+          "hurt_step_08_chargesheet"
+        ],
+        "if_blocked": [
+          "If multiple accused participated in a mob assault, invoke Section 3(5) BNS (common intention) or Section 190 BNS (unlawful assembly) in the arrest memos to assign joint criminal liability."
+        ]
+      },
+      {
+        "step_id": "hurt_step_08_chargesheet",
+        "order": 8,
+        "title": "Legal Synthesis & Final Charge-Sheet Filing",
+        "description": "Ensure all radiological reports (X-rays/CT scans) and doctor certifications explicitly classifying the injury as 'Grievous Hurt' under BNS Section 116 are placed in the file. Assemble all FSL reports, witness statements, and recovery memos. File the final chargesheet under BNSS Section 193 specifying BNS Section 117 (Grievous hurt) or Section 118 (Grievous hurt by dangerous weapons).",
+        "required_evidence": [
+          "Comprehensive police chargesheet under BNSS Section 193 specifying BNS Section 117/118",
+          "Certified MLC report, radiological films, and expert wound classification certificates",
+          "All FSL serological and weapon compatibility reports admissible under BNSS Section 329",
+          "Judicial cognizance order from the trial court"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Investigation completed, accused remanded, and medical/forensic reports received.",
+        "condition_to_complete": "Charge-sheet formally submitted and accepted by the jurisdictional court within statutory timelines.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the hospital delays issuing the final wound certificate due to ongoing outpatient orthopedic treatment, file the primary chargesheet with provisional MLC and submit final disability certificate u/s 193(9) BNSS."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Assault occurred during a unmonitored neighborhood or agrarian property dispute with mutual rioting, both sides suffered injuries, and cross-complaints (counter-FIRs) have been filed with partisan witnesses.",
+        "suggested_actions": [
+          "Conduct independent investigation of both cross-cases simultaneously by the same IO as per Supreme Court jurisprudence (Nathi Lal v. State of UP) to determine which party was the aggressor.",
+          "Examine the nature, location, and severity of wounds documented in the hospital MLC reports of both sides: defensive wounds (forearms/palms) vs. offensive primary impact wounds (head/torso) scientifically identify the defending party.",
+          "Subpoena historical land records, revenue mutation entries under entity_id sub_registrar_property, or prior preventive litigation (107/116 CrPC / BNSS) to establish who held peaceful physical possession of the disputed property when aggression occurred."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "dowry_death_v1",
+    "crime_type": "Dowry Death",
+    "title": "Standard Operating Procedure for Investigation of Dowry Death Cases",
+    "source": "Synthesized from BPR&D Investigation Guidelines for Dowry Death, BNSS 2023, Dowry Prohibition Act 1961, and MHA Advisories",
+    "steps": [
+      {
+        "step_id": "dowry_step_01_fir_magistrate_intimation",
+        "order": 1,
+        "title": "FIR Registration & Immediate Intimation to Executive Magistrate",
+        "description": "Upon receipt of information regarding the unnatural death (burns, bodily injury, hanging, poisoning) of a woman within 7 years of marriage, immediately register FIR under BNSS Section 173 (BNS Section 80; formerly IPC Section 304B) read with Section 498A IPC / BNS Section 85 and Dowry Prohibition Act. In strict compliance with BNSS Section 194/196 (formerly CrPC Section 174/176), immediately send special intimation to the jurisdictional Executive Magistrate / Sub-Divisional Magistrate (SDM) to conduct statutory inquest proceedings. Note: Local police station / first responder unit is not present in the registry, hence department_entity_id is set to null.",
+        "required_evidence": [
+          "Copy of recorded FIR under BNS Section 80 read with Section 3/4 Dowry Prohibition Act",
+          "Written dispatch receipt of immediate intimation sent to Executive Magistrate / SDM",
+          "Marriage certificate, wedding invitation card, or municipal marriage registration proving marriage occurred within 7 years"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": null,
+        "condition_to_start": "Report of unnatural death of a married woman occurring within 7 years of her marriage.",
+        "condition_to_complete": "FIR registered, marriage duration statutorily verified, and Executive Magistrate formally requisitioned.",
+        "on_complete_trigger": [
+          "dowry_step_02_sdm_inquest",
+          "dowry_step_04_scene_forensic"
+        ],
+        "if_blocked": [
+          "If the husband/in-laws attempt to secretly cremate or dispose of the body before police arrival, deploy armed police teams immediately to halt cremation and seize the corpse under Section 106 BNSS."
+        ]
+      },
+      {
+        "step_id": "dowry_step_02_sdm_inquest",
+        "order": 2,
+        "title": "Statutory Executive Magistrate Inquest Proceedings u/s 196 BNSS",
+        "description": "Under BNSS Section 196 (formerly CrPC Section 176), the inquest of a woman dying unnaturally within 7 years of marriage MUST be conducted by the Executive Magistrate / SDM (or Judicial Magistrate in custodial cases). Assist the Magistrate in conducting the inquest at the spot or morgue in the presence of the deceased's parents/relatives. Document exact posture, burn patterns, ligature marks, and defense wounds.",
+        "required_evidence": [
+          "Statutory Executive Magistrate Inquest Report (Panchnama) recorded u/s 196 BNSS",
+          "Statements of deceased's parents, brothers, and blood relatives recorded during inquest by the Magistrate",
+          "High-resolution photographic and videographic recording of the inquest proceedings"
+        ],
+        "legal_basis": "BNSS Section 196",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Executive Magistrate arrives at crime scene or hospital morgue.",
+        "condition_to_complete": "Inquest finalized and signed by Executive Magistrate and blood relatives of the deceased.",
+        "on_complete_trigger": [
+          "dowry_step_03_panel_autopsy"
+        ],
+        "if_blocked": [
+          "If the Executive Magistrate is unavailable due to unavoidable administrative exigency, the IO must conduct police inquest u/s 194 BNSS in the presence of two independent panchas and deceased's parents, while recording reasons for Magistrate absence."
+        ]
+      },
+      {
+        "step_id": "dowry_step_03_panel_autopsy",
+        "order": 3,
+        "title": "Panel Doctor Post-Mortem Autopsy & Mandatory Video Recording",
+        "description": "Submit a formal requisition under BNSS Section 194 to the Chief Medical Officer (CMO) to conduct post-mortem examination by a Board of Doctors (Panel of at least two medical officers, including a female doctor or forensic expert). In accordance with NHRC and MHA guidelines for dowry deaths, the entire autopsy procedure MUST be videographed from start to finish. Request specific opinion on ante-mortem vs. post-mortem burns/hanging, cause of death, and preservation of viscera.",
+        "required_evidence": [
+          "Certified Panel Medico-Legal Post-Mortem Autopsy Report signed by Board of Doctors",
+          "Unedited video recording of the complete autopsy procedure on digital storage media",
+          "Sealed containers containing preserved viscera, blood, stomach contents, and skin tags with doctor's specimen seal"
+        ],
+        "legal_basis": "BNSS Section 194",
+        "department_entity_id": "hospital_forensic_medical",
+        "condition_to_start": "Corpse delivered to hospital morgue along with SDM Inquest report.",
+        "condition_to_complete": "Autopsy completed by medical board under videography, cause of death certified, and sealed exhibits handed over to police.",
+        "on_complete_trigger": [
+          "dowry_step_05_parent_statements",
+          "dowry_step_08_fsl_viscera"
+        ],
+        "if_blocked": [
+          "If the panel autopsy reveals signs of homicidal strangulation disguised as suicidal hanging (e.g., fracture of hyoid bone, continuous horizontal ligature mark), immediately alter investigative trajectory to premeditated Murder (BNS Section 103)."
+        ]
+      },
+      {
+        "step_id": "dowry_step_04_scene_forensic",
+        "order": 4,
+        "title": "Forensic Crime Scene Examination & Physical Exhibit Seizure",
+        "description": "Summon the State FSL scientific team under BNSS Section 176(3). Thoroughly inspect the matrimonial home / room where death occurred. In burn cases: seize kerosene/petrol stove, fuel containers, matchboxes, burnt fabric, and control floor flooring to test for accelerants. In hanging cases: seize ceiling fan, ligature material (rope/sari), and stool/table; check for knot types and fiber transfers. In poisoning cases: seize medicine bottles, utensils, and vomit traces.",
+        "required_evidence": [
+          "Seizure memos for accelerant containers, burnt garments, ligatures, matchboxes, and chemical residues",
+          "High-resolution scene photographs, videography, and spot sketch map",
+          "FSL scientific scene inspection report confirming presence or absence of forced entry or struggle"
+        ],
+        "legal_basis": "BNSS Section 176(3)",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Matrimonial crime scene secured and sealed by investigating police team.",
+        "condition_to_complete": "All physical, chemical, and trace exhibits scientifically lifted, packaged, sealed with official seal, and forwarded to FSL.",
+        "on_complete_trigger": [
+          "dowry_step_08_fsl_viscera"
+        ],
+        "if_blocked": [
+          "If the in-laws washed or scrubbed the room prior to police arrival to destroy kerosene or poison traces, immediately register additional charges for destruction of evidence under BNS Section 238 (formerly Section 201 IPC)."
+        ]
+      },
+      {
+        "step_id": "dowry_step_05_parent_statements",
+        "order": 5,
+        "title": "Recording Statements of Deceased's Parents & Relatives u/s 180/183 BNSS",
+        "description": "Examine the parents, siblings, relatives, and neighbors of the deceased. Record detailed statements under BNSS Section 180. To secure un-tampered evidentiary value, sponsor applications before the Magistrate to record judicial statements of the parents and key relatives under BNSS Section 183 (formerly Section 164 CrPC). Focus strictly on establishing statutory ingredients: specific demands for dowry (cash, car, gold, property), specific instances of cruelty/harassment, and proof that such cruelty occurred 'soon before her death'.",
+        "required_evidence": [
+          "Section 180 BNSS written statements of parents, siblings, and independent neighborhood witnesses",
+          "Certified copy of Section 183 BNSS judicial statements of parents recorded by Magistrate",
+          "Letters, SMS, WhatsApp chats, audio recordings, or diary entries written by the deceased detailing dowry harassment"
+        ],
+        "legal_basis": "BNSS Section 183",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Parents and blood relatives of the deceased available for examination.",
+        "condition_to_complete": "Comprehensive witness testimony compiled establishing dowry cruelty 'soon before death' and Section 183 statements procured.",
+        "on_complete_trigger": [
+          "dowry_step_06_financial_dowry_trace",
+          "dowry_step_07_telecom_tracing"
+        ],
+        "if_blocked": [
+          "If parents reside in a distant state, utilize BNSS provisions permitting audio-video electronic examination or coordinate through local jurisdictional police to record depositions."
+        ]
+      },
+      {
+        "step_id": "dowry_step_06_financial_dowry_trace",
+        "order": 6,
+        "title": "Financial Tracing of Dowry Transactions, Bank Transfers & Property",
+        "description": "Investigate the financial trail of dowry demands and payments. Issue Section 94 BNSS notices to banks for account statements of the deceased's parents showing large cash withdrawals, RTGS/NEFT transfers, or cheque payments made to the husband/in-laws. Query bank lockers and sub-registrar offices under entity_id sub_registrar_property to trace real estate, vehicles, or gold ornaments transferred as dowry or demanded prior to death. Seize Stridhan property under Section 106 BNSS.",
+        "required_evidence": [
+          "Certified bank statements of parents showing money transfers or cash withdrawals corresponding to wedding/dowry dates",
+          "Bank statements of husband and in-laws showing receipt of funds or unexplained deposits",
+          "Invoices/receipts for gold jewelry, vehicles, or consumer durables purchased by parents for in-laws",
+          "Seizure memo / inventory of recovered Stridhan (gold jewelry, gifts) from the matrimonial home or bank lockers"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "bank_generic",
+        "condition_to_start": "Specific dowry demands or financial transactions alleged in parental statements.",
+        "condition_to_complete": "Financial ledgers procured, bank transfers documented, and Stridhan property seized/inventoried.",
+        "on_complete_trigger": [
+          "dowry_step_09_arrest_remand"
+        ],
+        "if_blocked": [
+          "If dowry was paid entirely in unaccounted cash without receipts, substantiate the transaction by examining wedding expenditure ledgers, marriage hall bookings, and jeweler witness statements."
+        ]
+      },
+      {
+        "step_id": "dowry_step_07_telecom_tracing",
+        "order": 7,
+        "title": "Telecom CDR & Digital Communication History Analysis",
+        "description": "Issue Section 94 BNSS notices to TSPs for Call Detail Records (CDRs), SMS logs, and Cell ID locations of the deceased, husband, and in-laws covering the 6 months prior to death. Analyse communication frequency and tower locations to establish who was present in the house at the time of death. Requisition IP logs and cloud backups from messaging platforms (WhatsApp/Email) to recover threatening messages or distress communications sent by the deceased.",
+        "required_evidence": [
+          "CDRs and cell tower geolocation mapping reports confirming presence of husband/in-laws at matrimonial home during death window",
+          "Screenshots and certified export logs of SMS, WhatsApp chats, or emails showing dowry demands or distress complaints",
+          "Section 63 BSA electronic admissibility certificates from TSP nodal officers and platform compliance desks"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Mobile phone numbers of deceased, husband, and in-laws identified.",
+        "condition_to_complete": "Telecom tracking logs and digital communication archives procured and certified under Section 63 BSA.",
+        "on_complete_trigger": [
+          "dowry_step_09_arrest_remand"
+        ],
+        "if_blocked": [
+          "If the deceased's phone was broken or formatted by in-laws post-death, submit the physical handset to FSL / State Cyber CID for advanced chip-off memory extraction and data carving."
+        ]
+      },
+      {
+        "step_id": "dowry_step_08_fsl_viscera",
+        "order": 8,
+        "title": "FSL Toxicological, Chemical & Histopathological Report Requisition",
+        "description": "In compliance with BNSS Section 329, forward all sealed viscera samples, blood, burnt clothing, accelerant residues, or hanging ligatures to the State FSL / CFSL through a secure Road Certificate. In poisoning cases: requisition chemical screening for organic/inorganic poisons (pesticides, cyanide, arsenic). In burn cases: requisition chemical analysis confirming presence of kerosene/petrol hydrocarbons on clothing and skin. In hanging cases: requisition microscopic examination of ligature fibers and skin tissue.",
+        "required_evidence": [
+          "Official forwarding letter addressed to Director FSL / CFSL detailing the specific chemical/toxicological questionnaire",
+          "Copy of Road Certificate (RC) and Malkhana register entry proving intact chain of custody",
+          "Certified FSL Toxicological / Chemical Analysis Report admissible under BNSS Section 329",
+          "FSL Serological / Physical comparison report for hanging ligatures and burnt fabric"
+        ],
+        "legal_basis": "BNSS Section 329",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Sealed viscera, medical exhibits, and scene exhibits gathered in station malkhana.",
+        "condition_to_complete": "Exhibits formally accepted by FSL and definitive chemical/toxicological analysis reports delivered to IO.",
+        "on_complete_trigger": [
+          "dowry_step_10_chargesheet_filing"
+        ],
+        "if_blocked": [
+          "If FSL toxicological analysis is delayed beyond 60 days, obtain an expedited prioritization endorsement from the monitoring DCP/SP citing statutory gravity of dowry death."
+        ]
+      },
+      {
+        "step_id": "dowry_step_09_arrest_remand",
+        "order": 9,
+        "title": "Arrest of Husband & Implicated In-Laws, Custody & Interrogation",
+        "description": "Upon establishing statutory ingredients (death within 7 years, unnatural cause, cruelty soon before death for dowry), arrest the husband and specifically implicated in-laws under BNSS Section 35. Ensure strict adherence to arrest guidelines (avoiding indiscriminate arrest of distant, non-resident relatives without specific evidence as cautioned by Supreme Court in Arnesh Kumar / Social Action Forum). Conduct medical examination under BNSS Section 51. Produce accused before Magistrate for custody remand.",
+        "required_evidence": [
+          "Arrest memos, personal search memos, and medical examination reports of husband and implicated in-laws",
+          "Specific evidentiary justification memorandum in case diary proving direct involvement of each arrested relative",
+          "Magistrate's order granting judicial or police custody remand under Section 187 BNSS",
+          "Seizure memo of any Stridhan or dowry items recovered during police custody interrogation"
+        ],
+        "legal_basis": "BNSS Section 35",
+        "department_entity_id": "hospital_forensic_medical",
+        "condition_to_start": "Evidentiary linkage established against husband and specific co-residing in-laws via statements, CDRs, and financial trails.",
+        "condition_to_complete": "Accused lawfully arrested, medically profiled, and remanded to judicial/police custody.",
+        "on_complete_trigger": [
+          "dowry_step_10_chargesheet_filing"
+        ],
+        "if_blocked": [
+          "If accused in-laws apply for anticipatory bail, strongly oppose before Sessions/High Court by presenting Section 183 parent statements, FSL chemical reports, and financial dowry trails."
+        ]
+      },
+      {
+        "step_id": "dowry_step_10_chargesheet_filing",
+        "order": 10,
+        "title": "Legal Synthesis, Statutory Presumption Invocation & Final Charge-Sheet Filing",
+        "description": "Synthesize all evidentiary strands: marriage within 7 years, panel autopsy video, SDM inquest, FSL chemical/viscera report, parental Section 183 statements, bank transfer ledgers, and CDR presence logs. In the final chargesheet compiled under BNSS Section 193, explicitly invoke the mandatory legal presumption of Dowry Death under Section 118 BSA (formerly Section 113B Evidence Act) — which mandates that when cruelty soon before death for dowry is shown, the court SHALL presume that the accused caused the dowry death. File the chargesheet before the competent court within statutory timelines.",
+        "required_evidence": [
+          "Comprehensive police chargesheet under BNSS Section 193 specifying BNS Section 80 (Dowry Death) read with Section 85 (Cruelty) and Sections 3/4 Dowry Prohibition Act",
+          "Complete list of relied-upon documents: SDM Inquest, Panel Autopsy video, FSL chemical reports, Section 183 statements, bank ledgers, and CDRs",
+          "Specific legal memorandum in charge-sheet invoking mandatory statutory presumption under Section 118 Bharatiya Sakshya Adhiniyam (BSA)",
+          "Formal judicial order taking cognizance of the charge-sheet by the Sessions Court"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "All investigative steps executed, accused remanded, and FSL/medical expert reports received.",
+        "condition_to_complete": "Charge-sheet formally submitted and accepted by the Sessions Court within statutory timelines.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If FSL viscera reports face administrative delay near the 90-day statutory limit, file the primary chargesheet with SDM inquest, panel autopsy, and Section 183 statements to invoke Section 118 BSA presumption, and file the viscera report later u/s 193(9) BNSS."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Deceased died of burn injuries in the kitchen, husband/in-laws claim it was an accidental stove burst, there are no eyewitnesses inside the house, and in-laws have sanitized the physical scene.",
+        "suggested_actions": [
+          "Requisition the mechanical and chemical examination of the stove, cylinder, and regulator by FSL physics/chemical experts under BNSS Section 176(3): scientific distinction between a genuine mechanical stove blast (outward metal tearing, uniform soot) versus deliberate kerosene pouring (localized splash burn patterns on floor/body without stove rupture) conclusively exposes staged accidents.",
+          "Examine the exact burn injury distribution documented in the panel autopsy report: accidental kitchen burns predominantly affect front lower extremities and hands with splash marks, whereas homicidal immolation shows circumferential deep burns on back, scalp, and torso with defensive posturing.",
+          "Analyse the delay timeline between the fire occurrence, hospital admission, and police intimation: unexplained delays by in-laws in seeking emergency medical aid or taking the victim to a distant private facility instead of the nearest burn unit serve as strong circumstantial evidence of culpable mens rea under Section 6 BSA (conduct subsequent to fact)."
+        ]
+      }
+    ]
+  }
+]

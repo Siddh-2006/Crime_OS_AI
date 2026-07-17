@@ -1,0 +1,1292 @@
+[
+  {
+    "act": "sop",
+    "sop_id": "ndps_drug_trafficking_v1",
+    "crime_type": "NDPS Act — Drug Possession/Trafficking",
+    "title": "Standard Operating Procedure for Investigation of Narcotics and Psychotropic Substances",
+    "source": "Synthesized from NDPS Act 1985, NCB Field Officers Handbook, and Supreme Court Guidelines",
+    "steps": [
+      {
+        "step_id": "ndps_step_01_intel_record",
+        "order": 1,
+        "title": "Recording of Information & Forwarding to Superior Officer",
+        "description": "Upon receiving specific intelligence regarding drugs, immediately record it in writing in the Daily Diary and forward a copy to the immediate superior officer within 72 hours under NDPS Section 42.",
+        "required_evidence": [
+          "Written Information Record (Information u/s 42 NDPS)",
+          "Dispatch receipt of information forwarded to superior officer"
+        ],
+        "legal_basis": "NDPS Act Section 42",
+        "department_entity_id": null,
+        "condition_to_start": "Receipt of actionable intelligence regarding drug possession, storage, or transport.",
+        "condition_to_complete": "Information reduced to writing and statutorily reported to superior.",
+        "on_complete_trigger": [
+          "ndps_step_02_search_seizure"
+        ],
+        "if_blocked": [
+          "If immediate search is necessary between sunset and sunrise to prevent evidence destruction, IO must record the grounds of belief for such necessity before proceeding."
+        ]
+      },
+      {
+        "step_id": "ndps_step_02_search_seizure",
+        "order": 2,
+        "title": "Personal Search, Notice u/s 50 & Seizure",
+        "description": "Apprehend the suspect. Serve statutory notice under NDPS Section 50 informing the suspect of their right to be searched before a Gazetted Officer or Magistrate. Conduct search, seize contraband, and prepare a detailed panchnama.",
+        "required_evidence": [
+          "Section 50 NDPS Notice and suspect's written response",
+          "Seizure memo and detailed Panchnama with signatures of independent witnesses",
+          "Arrest memo of the accused"
+        ],
+        "legal_basis": "NDPS Act Section 50",
+        "department_entity_id": null,
+        "condition_to_start": "Suspect intercepted based on intelligence.",
+        "condition_to_complete": "Contraband seized following strict procedural safeguards.",
+        "on_complete_trigger": [
+          "ndps_step_03_sampling_magistrate"
+        ],
+        "if_blocked": [
+          "If the suspect demands a Gazetted Officer, halt the personal search immediately and summon a Gazetted Officer to the spot."
+        ]
+      },
+      {
+        "step_id": "ndps_step_03_sampling_magistrate",
+        "order": 3,
+        "title": "Inventory & Sampling before Magistrate u/s 52A",
+        "description": "Forward the seized contraband to the jurisdictional Magistrate to prepare an inventory, certify photographs, and draw representative samples in the presence of the Magistrate under NDPS Section 52A.",
+        "required_evidence": [
+          "Magistrate's certification of inventory and photographs",
+          "Representative samples drawn and sealed by the Magistrate"
+        ],
+        "legal_basis": "NDPS Act Section 52A",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Contraband seized and secured.",
+        "condition_to_complete": "Statutory samples drawn and certified by the Magistrate for primary evidence.",
+        "on_complete_trigger": [
+          "ndps_step_04_fsl_dispatch"
+        ],
+        "if_blocked": [
+          "If the Magistrate is unavailable immediately, secure the contraband in the station malkhana with double locks and produce it at the earliest."
+        ]
+      },
+      {
+        "step_id": "ndps_step_04_fsl_dispatch",
+        "order": 4,
+        "title": "Dispatch of Samples to FSL",
+        "description": "Dispatch the sealed representative samples along with a test memo to the State FSL or CFSL within 72 hours for chemical analysis to confirm the nature and purity of the narcotic/psychotropic substance.",
+        "required_evidence": [
+          "Forwarding letter and test memo with facsimile of seals",
+          "Road Certificate (RC) proving chain of custody",
+          "FSL Chemical Analysis Report"
+        ],
+        "legal_basis": "BNSS Section 329",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Samples certified and sealed by Magistrate.",
+        "condition_to_complete": "Samples received by FSL and chemical report obtained.",
+        "on_complete_trigger": [
+          "ndps_step_05_telecom_trace"
+        ],
+        "if_blocked": [
+          "If FSL is overloaded, request the court to direct priority testing, especially for commercial quantity cases where 180-day remand applies."
+        ]
+      },
+      {
+        "step_id": "ndps_step_05_telecom_trace",
+        "order": 5,
+        "title": "Telecom & Syndicate Network Tracing",
+        "description": "Issue Section 94 BNSS notices to Telecom Operators for CDRs, Cell ID locations, and IMEI histories of the arrested drug peddler to identify the upstream suppliers and downstream buyers.",
+        "required_evidence": [
+          "CDRs and Cell ID logs of the accused",
+          "Telecom network graph showing frequent contacts",
+          "Section 63 BSA electronic admissibility certificates"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Accused arrested and mobile phone seized.",
+        "condition_to_complete": "Drug distribution network mapped via telecom analysis.",
+        "on_complete_trigger": [
+          "ndps_step_06_financial_trace"
+        ],
+        "if_blocked": [
+          "If the accused used darknet or encrypted apps, refer the seized device to State Cyber Cell for advanced forensic extraction."
+        ]
+      },
+      {
+        "step_id": "ndps_step_06_financial_trace",
+        "order": 6,
+        "title": "Financial Investigation & NCB Coordination",
+        "description": "Trace the financial assets of the trafficker. Issue notices to banks to freeze accounts linked to drug proceeds. Coordinate with the Narcotics Control Bureau (NCB) and ED for freezing illegally acquired properties under Chapter VA of the NDPS Act.",
+        "required_evidence": [
+          "Bank statements showing drug-related transactions",
+          "Confirmation of bank account freezes",
+          "Dossier forwarded to SAFEMA competent authority / NCB"
+        ],
+        "legal_basis": "NDPS Act Section 68E",
+        "department_entity_id": "excise_dept_ncb",
+        "condition_to_start": "Syndicate network identified and financial assets suspected.",
+        "condition_to_complete": "Proceeds of crime identified and freezing orders initiated.",
+        "on_complete_trigger": [
+          "ndps_step_07_chargesheet"
+        ],
+        "if_blocked": [
+          "If proceeds are hidden in cryptocurrency, route tracing through entity_id vasp_crypto_exchange to freeze wallets."
+        ]
+      },
+      {
+        "step_id": "ndps_step_07_chargesheet",
+        "order": 7,
+        "title": "Filing of Final Complaint / Charge-Sheet",
+        "description": "Compile the FSL reports, Section 52A magistrate certifications, CDRs, and financial ledgers. File the chargesheet (police report) before the Special NDPS Court within 60/180 days based on the quantity (small vs. commercial).",
+        "required_evidence": [
+          "Final Charge-Sheet under BNSS Section 193",
+          "All relied-upon documents and FSL reports",
+          "Judicial cognizance order by the Special NDPS Court"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Investigation complete and forensic reports received.",
+        "condition_to_complete": "Chargesheet filed within statutory timelines to prevent default bail.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the FSL report is delayed near the 180-day mark, file the chargesheet with the Magistrate's inventory and submit the FSL report later."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Drugs found abandoned in public transport (train/bus) with no direct claimant or possessor.",
+        "suggested_actions": [
+          "Check CCTV footage of the boarding station and reservation charts under entity_id railway_police to identify the passenger occupying that specific berth.",
+          "Examine the packaging material for latent fingerprints and submit to FSL.",
+          "Check the call details of ticket PNRs booked nearby."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "arms_act_violation_v1",
+    "crime_type": "Arms Act Violation",
+    "title": "Standard Operating Procedure for Investigation of Illegal Firearms and Arms Act Violations",
+    "source": "Synthesized from Arms Act 1959, Arms Rules 2016, and State Police Anti-Gangster SOPs",
+    "steps": [
+      {
+        "step_id": "arms_step_01_fir_seizure",
+        "order": 1,
+        "title": "Interception, Search & Seizure of Weapon",
+        "description": "Upon interception or raid, seize the illegal firearm and ammunition under a detailed seizure memo. Register FIR under relevant sections of the Arms Act (Section 25/27). Sketch the weapon, noting its make, model, barrel length, and any visible serial numbers.",
+        "required_evidence": [
+          "Copy of FIR under Arms Act",
+          "Seizure memo with signatures of independent witnesses",
+          "Photographs and physical description of the firearm/ammunition"
+        ],
+        "legal_basis": "Arms Act Section 25",
+        "department_entity_id": null,
+        "condition_to_start": "Suspect found in possession of an unlicensed firearm or ammunition.",
+        "condition_to_complete": "Weapon seized safely and FIR registered.",
+        "on_complete_trigger": [
+          "arms_step_02_arms_verification"
+        ],
+        "if_blocked": [
+          "If witnesses refuse to sign the seizure memo out of fear, video record the entire recovery process."
+        ]
+      },
+      {
+        "step_id": "arms_step_02_arms_verification",
+        "order": 2,
+        "title": "Verification of Firearm Status & UIN",
+        "description": "If the weapon has a serial number, issue a Section 94 BNSS notice to the Arms Licensing Authority to verify if it is stolen from a legitimate licensee or armory, checking the NDAL-ALIS database.",
+        "required_evidence": [
+          "NDAL-ALIS verification report",
+          "Report from Arms Licensing Authority confirming unlicensed status or identifying genuine owner"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "arms_licensing_authority",
+        "condition_to_start": "Firearm seized and serial numbers noted.",
+        "condition_to_complete": "Status of the weapon (country-made vs. stolen factory-made) established.",
+        "on_complete_trigger": [
+          "arms_step_03_telecom_tracing"
+        ],
+        "if_blocked": [
+          "If serial numbers are erased, send the weapon to FSL for chemical etching restoration."
+        ]
+      },
+      {
+        "step_id": "arms_step_03_telecom_tracing",
+        "order": 3,
+        "title": "Interrogation & Telecom Tracing of Supply Chain",
+        "description": "Interrogate the accused to trace the illicit manufacturer or smuggler. Issue notices to telecom operators to analyze the accused's CDRs and identify contacts with known arms smugglers or gun-running syndicates.",
+        "required_evidence": [
+          "Interrogation disclosure statement",
+          "CDRs and cell site tracking logs mapping the syndicate"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Accused arrested and mobile phone secured.",
+        "condition_to_complete": "Upstream supplier or gunsmith identified.",
+        "on_complete_trigger": [
+          "arms_step_04_ballistic_exam"
+        ],
+        "if_blocked": [
+          "If the accused uses burner phones, trace the IMEI clustering to find their genuine contact numbers."
+        ]
+      },
+      {
+        "step_id": "arms_step_04_ballistic_exam",
+        "order": 4,
+        "title": "FSL Ballistic Examination",
+        "description": "Forward the seized firearm and ammunition to the FSL Ballistics division to certify its working condition (operability) and determine if it matches any unsolved firing/murder cases in the database (IBIS).",
+        "required_evidence": [
+          "Forwarding letter to FSL",
+          "FSL Ballistic Expert Report certifying operability"
+        ],
+        "legal_basis": "BNSS Section 329",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Weapon seized and packed securely.",
+        "condition_to_complete": "Forensic certification of the weapon's lethal nature received.",
+        "on_complete_trigger": [
+          "arms_step_05_sanction_chargesheet"
+        ],
+        "if_blocked": [
+          "If the weapon is heavily rusted or jammed, FSL must certify if it can still be fired after minor oiling/repair."
+        ]
+      },
+      {
+        "step_id": "arms_step_05_sanction_chargesheet",
+        "order": 5,
+        "title": "Prosecution Sanction & Charge-Sheet",
+        "description": "Obtain mandatory statutory sanction for prosecution from the District Magistrate / Commissioner of Police under Section 39 of the Arms Act. Compile the FSL report, sanction order, and seizure memos into the final chargesheet.",
+        "required_evidence": [
+          "Prosecution Sanction Order from DM/CP",
+          "Final Charge-Sheet under BNSS Section 193",
+          "Court cognizance order"
+        ],
+        "legal_basis": "Arms Act Section 39",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Investigation complete and FSL operability report received.",
+        "condition_to_complete": "Sanction obtained and chargesheet filed before the Magistrate.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the sanctioning authority delays the order, file the primary chargesheet to prevent default bail and submit the sanction immediately upon receipt."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Suspect dumped the weapon in a public place prior to arrest, and there are no direct eyewitnesses to the physical possession.",
+        "suggested_actions": [
+          "Lift latent fingerprints and touch-DNA from the dumped weapon before sending it to FSL.",
+          "Check CCTV cameras covering the dump site to place the suspect there.",
+          "Rely on the suspect's voluntary disclosure statement under Section 23 BSA leading to the recovery."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "excise_illicit_liquor_v1",
+    "crime_type": "Excise Act Violation (Illicit Liquor)",
+    "title": "Standard Operating Procedure for Investigation of Illicit Liquor and Excise Violations",
+    "source": "Synthesized from State Excise Acts, NDPS Protocols (analogous), and BPR&D Guidelines",
+    "steps": [
+      {
+        "step_id": "excise_step_01_raid_seizure",
+        "order": 1,
+        "title": "Raid, Seizure & FIR Registration",
+        "description": "Conduct a raid on the illicit distillation unit, transport vehicle, or illegal vend. Seize the spurious liquor, distillation apparatus (wash, vats), and vehicles. Register FIR under the relevant State Excise Act and BNS sections (if poisonous).",
+        "required_evidence": [
+          "Copy of FIR",
+          "Seizure memo of liquor containers, distillation apparatus, and vehicles",
+          "Arrest memos of operators"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": "excise_dept_ncb",
+        "condition_to_start": "Intel received regarding illicit liquor distillation or smuggling.",
+        "condition_to_complete": "Raid executed, contraband seized, and FIR registered.",
+        "on_complete_trigger": [
+          "excise_step_02_sampling"
+        ],
+        "if_blocked": [
+          "If a large hostile mob protects the distillation unit, coordinate a joint operation with the State Excise Department and armed police reserve."
+        ]
+      },
+      {
+        "step_id": "excise_step_02_sampling",
+        "order": 2,
+        "title": "Representative Sampling & Sealing",
+        "description": "Draw representative samples from the seized liquor batches on the spot. Seal them in clean glass bottles with the official police seal and signature of witnesses to prevent tampering allegations.",
+        "required_evidence": [
+          "Sampling panchnama",
+          "Sealed sample bottles with facsimile of seals"
+        ],
+        "legal_basis": "BNSS Section 176",
+        "department_entity_id": null,
+        "condition_to_start": "Bulk illicit liquor seized.",
+        "condition_to_complete": "Samples legally drawn, sealed, and ready for forensic dispatch.",
+        "on_complete_trigger": [
+          "excise_step_03_fsl_chemical"
+        ],
+        "if_blocked": [
+          "If the volume is thousands of liters (e.g., wash/lahan), obtain Magistrate permission to destroy the bulk material on-site after sampling to prevent logistical hazards."
+        ]
+      },
+      {
+        "step_id": "excise_step_03_fsl_chemical",
+        "order": 3,
+        "title": "Chemical Analysis at FSL",
+        "description": "Forward the sealed samples to the State FSL or Excise Chemical Examiner to ascertain the alcoholic strength (proof) and check for the presence of deadly adulterants (like methyl alcohol/methanol).",
+        "required_evidence": [
+          "Forwarding letter with Road Certificate",
+          "FSL/Excise Chemical Examiner Report"
+        ],
+        "legal_basis": "BNSS Section 329",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Samples properly sealed.",
+        "condition_to_complete": "Chemical composition of the liquor legally certified.",
+        "on_complete_trigger": [
+          "excise_step_04_vehicle_trace"
+        ],
+        "if_blocked": [
+          "If there are fatalities (hooch tragedy), expedite the analysis to support BNS 105 (Culpable Homicide) charges."
+        ]
+      },
+      {
+        "step_id": "excise_step_04_vehicle_trace",
+        "order": 4,
+        "title": "Tracing Vehicle Ownership & Raw Material Supply",
+        "description": "If a vehicle was used to transport the liquor, query the RTO VAHAN database to identify the owner. Investigate the source of raw materials (industrial solvents, molasses) by checking local chemical suppliers.",
+        "required_evidence": [
+          "RTO VAHAN ownership report",
+          "Invoices or supply chain trails from chemical suppliers",
+          "Notices issued to vehicle owners under BNSS Section 94"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "rto_parivahan",
+        "condition_to_start": "Transport vehicle seized or raw materials identified.",
+        "condition_to_complete": "Vehicle owner implicated and supply chain mapped.",
+        "on_complete_trigger": [
+          "excise_step_05_chargesheet"
+        ],
+        "if_blocked": [
+          "If fake license plates are used, trace the engine/chassis number through the RTO."
+        ]
+      },
+      {
+        "step_id": "excise_step_05_chargesheet",
+        "order": 5,
+        "title": "Charge-Sheet & Confiscation Proceedings",
+        "description": "Compile the FSL reports, seizure memos, and witness statements. File the chargesheet. Initiate parallel proceedings before the District Collector / Excise Commissioner for the statutory confiscation of the seized vehicles and property.",
+        "required_evidence": [
+          "Final Charge-Sheet under BNSS Section 193",
+          "Confiscation order from the competent authority for the seized vehicle"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Investigation complete and chemical reports received.",
+        "condition_to_complete": "Accused charged and confiscation of assets initiated.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the vehicle owner claims lack of knowledge, prove complicity via telecom CDRs establishing regular contact with the smugglers."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Liquor smuggled through inter-state borders using hidden compartments in commercial trucks, driver claims ignorance.",
+        "suggested_actions": [
+          "Extract GPS and FASTag/ANPR toll data to map the truck's exact stopping points, locating where the hidden compartment was loaded.",
+          "Perform financial tracing of the driver's bank accounts to find large unexplained cash deposits from syndicate handlers.",
+          "Cut open the compartment and check for latent fingerprints/DNA of the loaders."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "hit_and_run_fatal_v1",
+    "crime_type": "Motor Vehicles Act — Hit and Run / Fatal Accident",
+    "title": "Standard Operating Procedure for Investigation of Hit and Run and Fatal Accidents",
+    "source": "Synthesized from Motor Vehicles Act 1988, BNS Traffic Offenses, and BPR&D Accident Investigation Manual",
+    "steps": [
+      {
+        "step_id": "accident_step_01_fir_evacuation",
+        "order": 1,
+        "title": "FIR Registration & Victim Evacuation",
+        "description": "Register FIR under BNS Section 106 (Causing death by negligence). Immediately transport the victim to the hospital for MLC or pronounce death and shift the body for post-mortem. Secure the accident scene.",
+        "required_evidence": [
+          "Copy of FIR under BNS Section 106",
+          "Hospital admission or death declaration report",
+          "Rough spot sketch"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": "hospital_forensic_medical",
+        "condition_to_start": "Report of a fatal road accident where the offending vehicle fled.",
+        "condition_to_complete": "Victim medically attended/shifted, scene secured, and FIR registered.",
+        "on_complete_trigger": [
+          "accident_step_02_scene_forensics",
+          "accident_step_03_cctv"
+        ],
+        "if_blocked": [
+          "If an angry mob gathers, call for reinforcements to prevent the destruction of physical evidence (skid marks, debris) on the road."
+        ]
+      },
+      {
+        "step_id": "accident_step_02_scene_forensics",
+        "order": 2,
+        "title": "Crime Scene Forensics & Debris Collection",
+        "description": "Inspect the road for skid marks, gouge marks, and blood trails to determine the point of impact and vehicle speed. Collect broken glass, paint chips, and plastic debris left by the fleeing vehicle for matching.",
+        "required_evidence": [
+          "Detailed spot panchnama and high-resolution photographs",
+          "Seizure memo of vehicle debris (glass, paint flakes)",
+          "Skid mark measurement logs"
+        ],
+        "legal_basis": "BNSS Section 176",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Scene secured and victim evacuated.",
+        "condition_to_complete": "Physical trace evidence and accident dynamics documented.",
+        "on_complete_trigger": [
+          "accident_step_03_cctv"
+        ],
+        "if_blocked": [
+          "If rain washes away skid marks, rely heavily on structural damage to the victim's vehicle and CCTV."
+        ]
+      },
+      {
+        "step_id": "accident_step_03_cctv",
+        "order": 3,
+        "title": "CCTV Requisition & Escape Route Mapping",
+        "description": "Issue Section 94 BNSS notices to secure private and municipal CCTV footage covering the accident spot and surrounding intersections. Identify the make, model, color, and partial/full license plate of the fleeing vehicle.",
+        "required_evidence": [
+          "CCTV video footage of the collision or fleeing vehicle",
+          "Section 63 BSA electronic admissibility certificates"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "private_cctv_sources",
+        "condition_to_start": "Location and exact time of accident established.",
+        "condition_to_complete": "Fleeing vehicle visually identified.",
+        "on_complete_trigger": [
+          "accident_step_04_rto_insurance"
+        ],
+        "if_blocked": [
+          "If the accident is in a blind spot, check the toll plaza ANPR data leading away from the location."
+        ]
+      },
+      {
+        "step_id": "accident_step_04_rto_insurance",
+        "order": 4,
+        "title": "RTO Vehicle Tracking & Insurance Verification",
+        "description": "Query the RTO VAHAN database to identify the registered owner of the fleeing vehicle. Issue notices to insurance companies to check for recent sudden claims for vehicle damage matching the accident profile.",
+        "required_evidence": [
+          "RTO VAHAN ownership extract",
+          "Notice served on registered owner u/s 94 BNSS or MV Act",
+          "Insurance claim records (if any)"
+        ],
+        "legal_basis": "Motor Vehicles Act Section 133",
+        "department_entity_id": "rto_parivahan",
+        "condition_to_start": "Vehicle license plate or distinct description identified.",
+        "condition_to_complete": "Owner identified and summoned.",
+        "on_complete_trigger": [
+          "accident_step_05_arrest_mvi"
+        ],
+        "if_blocked": [
+          "If the vehicle is sold multiple times without RC transfer, track the chain of sale agreements to the current possessor."
+        ]
+      },
+      {
+        "step_id": "accident_step_05_arrest_mvi",
+        "order": 5,
+        "title": "Vehicle Seizure, Arrest & Mechanical Inspection",
+        "description": "Arrest the driver. Seize the offending vehicle. Requisition the Motor Vehicle Inspector (MVI) to conduct a mechanical inspection of the vehicle to rule out mechanical failure (brakes/steering) and to match the seized debris with the vehicle damage. Note: MVI department is not in the registry, hence department_entity_id is null.",
+        "required_evidence": [
+          "Arrest and vehicle seizure memos",
+          "Motor Vehicle Inspector (MVI) Mechanical Inspection Report",
+          "FSL report matching paint/glass debris to the seized vehicle"
+        ],
+        "legal_basis": "BNSS Section 96",
+        "department_entity_id": null,
+        "condition_to_start": "Vehicle and driver located.",
+        "condition_to_complete": "Vehicle scientifically linked to the accident and mechanical failure ruled out.",
+        "on_complete_trigger": [
+          "accident_step_06_chargesheet"
+        ],
+        "if_blocked": [
+          "If the driver claims someone else was driving, pull cell tower dumps for their mobile phone to verify their location at the time of the crash."
+        ]
+      },
+      {
+        "step_id": "accident_step_06_chargesheet",
+        "order": 6,
+        "title": "Post-Mortem Synthesis & Charge-Sheet",
+        "description": "Collect the post-mortem report confirming the cause of death was blunt force trauma from an accident. Compile MVI, FSL, and CCTV evidence. File the final chargesheet and submit the Accident Information Report (AIR) to the Motor Accident Claims Tribunal (MACT).",
+        "required_evidence": [
+          "Certified Post-Mortem Autopsy Report",
+          "Accident Information Report (AIR) / Form 54",
+          "Final Charge-Sheet under BNSS Section 193"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Investigation complete and expert reports received.",
+        "condition_to_complete": "Driver charged and MACT procedures initiated for victim compensation.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the driver was intoxicated, ensure the medical report (blood alcohol) is attached to invoke harsher penalties."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Hit-and-run on a rural highway at night, no witnesses, no CCTV, and victim is dead.",
+        "suggested_actions": [
+          "Sweep local garages, denting/painting shops, and spare part dealers within a 50 km radius for vehicles brought in for sudden front-end repairs.",
+          "Check cell tower dumps covering the highway stretch; heavy vehicles often use GPS/telematics tracking which can be subpoenaed.",
+          "Analyze the exact type of debris left (e.g., specific headlight glass) to identify the exact make and year of the offending vehicle to narrow the search."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "rash_negligent_driving_v1",
+    "crime_type": "Rash & Negligent Driving",
+    "title": "Standard Operating Procedure for Investigation of Rash and Negligent Driving",
+    "source": "Synthesized from Motor Vehicles Act 1988, BNS Traffic Offenses, and Traffic Police SOPs",
+    "steps": [
+      {
+        "step_id": "rash_step_01_interception_fir",
+        "order": 1,
+        "title": "Interception & FIR Registration",
+        "description": "Intercept the vehicle engaging in rash/dangerous driving (e.g., wrong-side driving, extreme speeding, stunt driving). Register FIR under BNS Section 281 (Rash driving). Secure the vehicle and the driver on the spot.",
+        "required_evidence": [
+          "Copy of FIR under BNS Section 281",
+          "Spot panchnama / apprehension memo"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": null,
+        "condition_to_start": "Police intercept a vehicle driving dangerously, or citizen reports with video evidence.",
+        "condition_to_complete": "Driver intercepted, vehicle secured, and FIR registered.",
+        "on_complete_trigger": [
+          "rash_step_02_medical_intoxication"
+        ],
+        "if_blocked": [
+          "If the driver flees a checkpoint, note the license plate and issue a pursuit alert to forward traffic nakas."
+        ]
+      },
+      {
+        "step_id": "rash_step_02_medical_intoxication",
+        "order": 2,
+        "title": "Breathalyzer & Medical Examination for Intoxication",
+        "description": "Immediately administer a breathalyzer test. If positive or if drugs are suspected, forward the driver to a government hospital for a blood/urine test to certify the blood alcohol concentration (BAC) or presence of narcotics.",
+        "required_evidence": [
+          "Breathalyzer test slip printout",
+          "Certified Medico-Legal Examination report and Blood Alcohol Concentration (BAC) report"
+        ],
+        "legal_basis": "Motor Vehicles Act Section 185",
+        "department_entity_id": "hospital_forensic_medical",
+        "condition_to_start": "Driver intercepted and secured.",
+        "condition_to_complete": "Intoxication status scientifically and medically verified.",
+        "on_complete_trigger": [
+          "rash_step_03_vehicle_docs"
+        ],
+        "if_blocked": [
+          "If the driver refuses the breathalyzer or blood test, note the refusal formally, which carries an adverse legal presumption under the MV Act."
+        ]
+      },
+      {
+        "step_id": "rash_step_03_vehicle_docs",
+        "order": 3,
+        "title": "Seizure of Vehicle & Document Verification",
+        "description": "Seize the vehicle under BNSS Section 106. Confiscate and verify the driver's Driving License (DL), Registration Certificate (RC), and insurance via the RTO VAHAN/SARATHI databases.",
+        "required_evidence": [
+          "Seizure memo of the vehicle and keys",
+          "Verification extracts from VAHAN (vehicle) and SARATHI (license) portals",
+          "Impounding memo for the Driving License (for suspension recommendation)"
+        ],
+        "legal_basis": "BNSS Section 106",
+        "department_entity_id": "rto_parivahan",
+        "condition_to_start": "Driver processed for medical evaluation.",
+        "condition_to_complete": "Vehicle impounded and legal documents verified.",
+        "on_complete_trigger": [
+          "rash_step_04_cctv_witness"
+        ],
+        "if_blocked": [
+          "If documents are digital (DigiLocker), scan the QR code to verify authenticity through entity_id digilocker_meity."
+        ]
+      },
+      {
+        "step_id": "rash_step_04_cctv_witness",
+        "order": 4,
+        "title": "CCTV Retrieval & Witness Statements",
+        "description": "To sustain a conviction for 'rash and negligent' driving, objective proof of the driving manner is required. Procure CCTV/dashcam footage of the driving. Record statements of intercepting officers, co-passengers, or public witnesses.",
+        "required_evidence": [
+          "CCTV, speed camera, or dashcam video footage of the stunt/rash driving",
+          "Section 63 BSA electronic admissibility certificates",
+          "Written statements of witnesses under BNSS Section 180"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "private_cctv_sources",
+        "condition_to_start": "Incident location identified.",
+        "condition_to_complete": "Visual and testimonial proof of the driving behavior secured.",
+        "on_complete_trigger": [
+          "rash_step_05_chargesheet"
+        ],
+        "if_blocked": [
+          "If no CCTV exists, rely on the detailed deposition of the intercepting traffic officers and the skid mark dynamics."
+        ]
+      },
+      {
+        "step_id": "rash_step_05_chargesheet",
+        "order": 5,
+        "title": "DL Suspension Recommendation & Charge-Sheet",
+        "description": "Forward a report to the RTO recommending suspension or cancellation of the driver's license. File the final chargesheet before the Magistrate. Advise the owner to seek vehicle release via court Superdari.",
+        "required_evidence": [
+          "Copy of letter sent to RTO recommending DL suspension",
+          "Final Charge-Sheet under BNSS Section 193",
+          "Court cognizance order"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Investigation complete and intoxication/documentation reports received.",
+        "condition_to_complete": "Driver charged and regulatory penalties initiated.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the driver is a juvenile, handle apprehension strictly under JJ Act protocols and charge the vehicle owner/parents under the MV Act."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Viral social media video shows a vehicle performing dangerous stunts, but the date, location, and driver are unknown.",
+        "suggested_actions": [
+          "Enhance the video to extract the license plate; query the RTO VAHAN database to identify the registered owner.",
+          "Issue a Section 133 MV Act notice to the registered owner compelling them to disclose who was driving the vehicle at the time.",
+          "Identify landmarks in the video and deploy local intelligence to pinpoint the stretch of road, then check local CCTV to establish the exact timestamp."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "illegal_mining_v1",
+    "crime_type": "Illegal Mining/Sand Mining",
+    "title": "Standard Operating Procedure for Investigation of Illegal Sand/Mineral Mining",
+    "source": "Synthesized from MMDR Act, NGT Directives, and Environmental Crime Guidelines",
+    "steps": [
+      {
+        "step_id": "mine_step_01_raid_seizure",
+        "order": 1,
+        "title": "Joint Raid, Seizure of Machinery & FIR",
+        "description": "Conduct a surprise joint raid with the Revenue / Mining Department based on intelligence. Seize heavy machinery (JCBs, excavators, tractors, boats) and illegally mined minerals. Register FIR under BNS Section 303 (Theft) and Section 21 of the MMDR Act. Note: Mining/Revenue Dept is not in the registry, hence department_entity_id is null.",
+        "required_evidence": [
+          "Copy of FIR",
+          "Seizure memo of heavy machinery, trucks, and mined minerals",
+          "Joint inspection report signed by Police and Mining/Revenue officials"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": null,
+        "condition_to_start": "Intelligence regarding illegal extraction of sand/minerals from riverbeds or restricted areas.",
+        "condition_to_complete": "Raid executed, equipment seized, and FIR registered.",
+        "on_complete_trigger": [
+          "mine_step_02_rto_tracking"
+        ],
+        "if_blocked": [
+          "If the mining mafia attacks the raiding party, register additional cases for assault on public servants and Attempt to Murder."
+        ]
+      },
+      {
+        "step_id": "mine_step_02_rto_tracking",
+        "order": 2,
+        "title": "Vehicle Ownership & Logistics Tracking",
+        "description": "Query the RTO VAHAN database using the license plates and chassis numbers of the seized trucks and excavators to identify the registered owners, who are often the financiers of the syndicate.",
+        "required_evidence": [
+          "RTO VAHAN ownership extracts for all seized vehicles",
+          "Notices issued to registered owners under BNSS Section 94"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "rto_parivahan",
+        "condition_to_start": "Machinery and transport vehicles seized at the site.",
+        "condition_to_complete": "Registered owners and logistics providers identified.",
+        "on_complete_trigger": [
+          "mine_step_03_telecom_trace"
+        ],
+        "if_blocked": [
+          "If vehicles lack license plates, extract engine/chassis numbers and coordinate directly with the manufacturer to trace the buyer."
+        ]
+      },
+      {
+        "step_id": "mine_step_03_telecom_trace",
+        "order": 3,
+        "title": "Telecom Tracing of Mafia Network",
+        "description": "Issue Section 94 BNSS notices to TSPs to pull CDRs and tower dumps of the mining site. Identify the spotters, logistics coordinators, and syndicate bosses directing the illegal operation via phone.",
+        "required_evidence": [
+          "Cell ID tower dumps for the riverbed/mining site",
+          "CDRs of arrested laborers/drivers mapping calls to the syndicate bosses",
+          "Section 63 BSA electronic admissibility certificates"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Raid completed and mobile phones of ground workers seized.",
+        "condition_to_complete": "Telecom mapping of the mining syndicate hierarchy established.",
+        "on_complete_trigger": [
+          "mine_step_04_financial_trace"
+        ],
+        "if_blocked": [
+          "If walkie-talkies or unlisted radios are used, seize the equipment and request technical analysis of the frequencies used."
+        ]
+      },
+      {
+        "step_id": "mine_step_04_financial_trace",
+        "order": 4,
+        "title": "Financial Follow-the-Money Tracing",
+        "description": "Illegal mining is highly lucrative. Issue notices to banks to trace the accounts of the truck owners, contractors, and suspected mafia bosses. Freeze accounts containing proceeds of the illegal sale of minerals.",
+        "required_evidence": [
+          "Certified bank statements of syndicate members",
+          "Confirmation of bank account freezes under BNSS Section 106"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "bank_generic",
+        "condition_to_start": "Owners and syndicate bosses identified via RTO and telecom traces.",
+        "condition_to_complete": "Financial trails mapping the sale of illegal sand/minerals secured.",
+        "on_complete_trigger": [
+          "mine_step_05_environmental_chargesheet"
+        ],
+        "if_blocked": [
+          "If transactions are entirely cash-based, look for large unexplained cash purchases of real estate or heavy machinery through MCA/Sub-Registrar."
+        ]
+      },
+      {
+        "step_id": "mine_step_05_environmental_chargesheet",
+        "order": 5,
+        "title": "Environmental Assessment & Charge-Sheet",
+        "description": "Obtain an expert environmental damage assessment report from the Pollution Control Board or Mining Department to quantify the theft and ecological damage. Arrest the masterminds and file the comprehensive chargesheet. Move for confiscation of seized heavy machinery.",
+        "required_evidence": [
+          "Expert Environmental Damage / Mineral Valuation Report",
+          "Final Charge-Sheet under BNSS Section 193 specifying MMDR Act and BNS Theft",
+          "Confiscation orders for vehicles/machinery"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Investigation complete and syndicate hierarchy mapped.",
+        "condition_to_complete": "Accused charged and state moves to permanently confiscate mining assets.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the courts routinely release seized trucks on superdari, file strong objections citing NGT directives mandating heavy environmental compensation penalties before release."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Mining mafia operates in remote riverbeds at night, fleeing before police arrive, leaving only tire tracks and disturbed terrain.",
+        "suggested_actions": [
+          "Deploy covert drone surveillance with thermal/night-vision cameras to capture the operations and vehicle license plates from a safe distance before launching physical raids.",
+          "Identify and raid the downstream stockyards, construction material suppliers, and brick kilns where the illegal sand is deposited for sale.",
+          "Set up unannounced checkpoints on the main exit routes from the riverbed during the early morning hours to catch the overloaded transport trucks."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "wildlife_forest_offense_v1",
+    "crime_type": "Wildlife / Forest Offense",
+    "title": "Standard Operating Procedure for Investigation of Wildlife and Forest Offenses",
+    "source": "Synthesized from Wildlife (Protection) Act 1972, WCCB Guidelines, and Forest Act",
+    "steps": [
+      {
+        "step_id": "wild_step_01_interception_seizure",
+        "order": 1,
+        "title": "Interception, Seizure & FIR / Offense Report",
+        "description": "Intercept poachers, smugglers, or illegal loggers. Seize the contraband (animal parts, ivory, timber, pangolin scales) and weapons/snares. Register a Preliminary Offense Report (POR) under the Wildlife Protection Act or Forest Act, and coordinate with the Forest Department. Note: Forest Department is not in the registry, hence department_entity_id is null.",
+        "required_evidence": [
+          "Copy of Preliminary Offense Report (POR) / FIR",
+          "Seizure memo of wildlife contraband, weapons, and vehicles",
+          "Photographic and video documentation of the seized items"
+        ],
+        "legal_basis": "Wildlife Protection Act Section 50",
+        "department_entity_id": null,
+        "condition_to_start": "Intelligence or patrol intercepts wildlife contraband or poaching activity.",
+        "condition_to_complete": "Contraband seized safely and initial legal report filed.",
+        "on_complete_trigger": [
+          "wild_step_02_expert_identification"
+        ],
+        "if_blocked": [
+          "If live animals are seized, immediately hand them over to recognized rescue centers or zoo authorities for specialized care."
+        ]
+      },
+      {
+        "step_id": "wild_step_02_expert_identification",
+        "order": 2,
+        "title": "Expert Species Identification (FSL / WII)",
+        "description": "Forward the seized animal parts, meat, or timber to the State FSL, Wildlife Institute of India (WII), or Zoological Survey of India to scientifically identify the species and confirm its protected status under the WLPA Schedules.",
+        "required_evidence": [
+          "Forwarding letter establishing chain of custody",
+          "Scientific Expert Report confirming the exact species and schedule classification"
+        ],
+        "legal_basis": "BNSS Section 329",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Contraband seized and sealed.",
+        "condition_to_complete": "Scientific proof of the contraband's protected wildlife nature obtained.",
+        "on_complete_trigger": [
+          "wild_step_03_telecom_smuggling"
+        ],
+        "if_blocked": [
+          "If the parts are heavily processed (e.g., carved ivory or ground horn), request specialized DNA or microscopic structural analysis."
+        ]
+      },
+      {
+        "step_id": "wild_step_03_telecom_smuggling",
+        "order": 3,
+        "title": "Telecom & Supply Chain Tracing",
+        "description": "Interrogate the arrested poachers/carriers to identify the middlemen and international buyers. Issue Section 94 BNSS notices to TSPs for CDRs and tower dumps of the poaching site to map the smuggling syndicate.",
+        "required_evidence": [
+          "CDRs and cell ID logs of the arrested poachers",
+          "Interrogation disclosure statements identifying middlemen",
+          "Telecom network mapping of the syndicate"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Poachers arrested and mobile phones seized.",
+        "condition_to_complete": "Higher-level smugglers and buyers identified via telecom trails.",
+        "on_complete_trigger": [
+          "wild_step_04_ecommerce_postal"
+        ],
+        "if_blocked": [
+          "If poachers are indigenous tribesmen without phones, use informant networks to identify the urban traders who visit to collect the goods."
+        ]
+      },
+      {
+        "step_id": "wild_step_04_ecommerce_postal",
+        "order": 4,
+        "title": "Tracing Online Sales & Courier Routes",
+        "description": "Wildlife contraband (like monitor lizard scales or exotic pets) is often sold online or shipped via courier. Issue notices to e-commerce platforms and courier companies to identify seller accounts, shipment trails, and buyer KYC.",
+        "required_evidence": [
+          "E-commerce listing IP logs and seller KYC",
+          "Courier consignment tracking and sender/receiver details",
+          "Seizure of parcels in transit (if applicable)"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "postal_courier_services",
+        "condition_to_start": "Intelligence indicates use of online marketplaces or postal routes.",
+        "condition_to_complete": "Digital and logistics supply chain mapped and intercepted.",
+        "on_complete_trigger": [
+          "wild_step_05_complaint_filing"
+        ],
+        "if_blocked": [
+          "If trade occurs on darknet markets, coordinate with State Cyber Cell to monitor the specific forums and crypto wallets involved."
+        ]
+      },
+      {
+        "step_id": "wild_step_05_complaint_filing",
+        "order": 5,
+        "title": "Filing of Statutory Complaint",
+        "description": "Under the Wildlife Protection Act, cognizance is generally taken upon a formal complaint filed by the Chief Wildlife Warden or an authorized forest/police officer. Compile all forensic reports, telecom data, and seizure memos into a comprehensive statutory complaint before the Magistrate.",
+        "required_evidence": [
+          "Formal Statutory Complaint under Section 55 of Wildlife Protection Act",
+          "FSL/WII Species Identification Report",
+          "Court cognizance order"
+        ],
+        "legal_basis": "Wildlife Protection Act Section 55",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Investigation complete and species certified.",
+        "condition_to_complete": "Complaint filed in court by authorized officer and prosecution initiated.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "Ensure the designated Forest Officer signs the formal complaint, as courts may quash cases filed purely as police charge-sheets under WLPA without proper authorization."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Carcass of a protected animal found in the forest with bullet wounds or poisoning, but no suspects, weapons, or witnesses are present.",
+        "suggested_actions": [
+          "Recover the bullet from the carcass and send to FSL ballistics; compare with licensed firearms of known hunters in adjacent villages.",
+          "Check local mobile tower dumps covering the forest grid for the estimated time of death.",
+          "If poisoned, send viscera to FSL to identify the pesticide used, and check local agricultural shops for recent bulk buyers of that specific chemical."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "environmental_offense_v1",
+    "crime_type": "Environmental Offense (Pollution)",
+    "title": "Standard Operating Procedure for Investigation of Industrial Pollution and Environmental Offenses",
+    "source": "Synthesized from Environment (Protection) Act 1986, Water/Air Acts, NGT Directives, and Police Environmental SOPs",
+    "steps": [
+      {
+        "step_id": "env_step_01_joint_inspection",
+        "order": 1,
+        "title": "Joint Inspection & FIR Registration",
+        "description": "Upon receiving a complaint of illegal hazardous waste dumping or toxic effluent discharge, organize a joint inspection with the State Pollution Control Board (SPCB) officials. Register FIR under BNS Sections 279/293 (Fouling water/Making atmosphere noxious) and EPA provisions. Note: SPCB is not in the registry, hence department_entity_id is null.",
+        "required_evidence": [
+          "Copy of FIR under BNS / Environment Protection Act",
+          "Joint Inspection Report signed by Police and SPCB officials",
+          "Photographs/Videography of the effluent discharge or waste dump"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": null,
+        "condition_to_start": "Report of severe industrial pollution, toxic dumping, or fish kill in a water body.",
+        "condition_to_complete": "Site inspected, inter-agency report drafted, and FIR registered.",
+        "on_complete_trigger": [
+          "env_step_02_sampling"
+        ],
+        "if_blocked": [
+          "If the factory attempts to block entry, use police authority to force entry under BNSS search provisions to prevent evidence flushing."
+        ]
+      },
+      {
+        "step_id": "env_step_02_sampling",
+        "order": 2,
+        "title": "Scientific Sampling & FSL Dispatch",
+        "description": "Collect samples of the discharged water, contaminated soil, or hazardous sludge in the presence of SPCB experts and independent witnesses. Seal the samples in chemically inert containers and forward them to FSL or certified environmental labs.",
+        "required_evidence": [
+          "Sampling Panchnama detailing exact coordinates of collection",
+          "Sealed sample containers with official seals",
+          "FSL or Certified Environmental Lab Chemical Analysis Report"
+        ],
+        "legal_basis": "BNSS Section 176",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Inspection ongoing at the pollution site.",
+        "condition_to_complete": "Samples legally drawn, sealed, and dispatched for analysis.",
+        "on_complete_trigger": [
+          "env_step_03_mca_ownership"
+        ],
+        "if_blocked": [
+          "If the effluent pipe is hidden underground, requisition earth-moving equipment to unearth the illegal bypass lines."
+        ]
+      },
+      {
+        "step_id": "env_step_03_mca_ownership",
+        "order": 3,
+        "title": "Corporate Ownership & Liability Tracing (MCA21)",
+        "description": "Query the MCA21 database to identify the corporate entity owning the polluting factory. Obtain incorporation documents and Director Identification Numbers (DIN) to establish the personal liability of the Board of Directors and factory managers.",
+        "required_evidence": [
+          "Certificate of Incorporation, MOA, and AOA",
+          "DIN master details identifying the active directors/managers",
+          "Factory license and SPCB consent-to-operate documents"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "mca21_roc",
+        "condition_to_start": "Polluting factory or corporate vehicle identified.",
+        "condition_to_complete": "Corporate veil pierced and responsible management figures identified.",
+        "on_complete_trigger": [
+          "env_step_04_health_impact"
+        ],
+        "if_blocked": [
+          "If the company uses proxy directors, check the bank account signatory mandates to find the true financial controller."
+        ]
+      },
+      {
+        "step_id": "env_step_04_health_impact",
+        "order": 4,
+        "title": "Documenting Public Health Impact",
+        "description": "If the pollution caused illness, hospitalization, or death among local residents, issue notices to local hospitals to gather Medico-Legal Cases (MLCs), toxicology reports, and treatment records to substantiate aggravated charges (e.g., Culpable Homicide or Grievous Hurt).",
+        "required_evidence": [
+          "Certified MLCs and hospital treatment records of affected citizens",
+          "Medical expert opinion linking the illness directly to the specific chemical toxins released"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "hospital_forensic_medical",
+        "condition_to_start": "Pollution incident resulted in public sickness or casualties.",
+        "condition_to_complete": "Medical evidence linking pollution to human injury secured.",
+        "on_complete_trigger": [
+          "env_step_05_complaint_filing"
+        ],
+        "if_blocked": [
+          "If chronic long-term exposure is alleged, rely on epidemiological surveys from the Health Department rather than single acute MLCs."
+        ]
+      },
+      {
+        "step_id": "env_step_05_complaint_filing",
+        "order": 5,
+        "title": "Statutory Complaint & Factory Sealing",
+        "description": "Compile the FSL reports, medical evidence, and corporate records. Under the EPA, prosecution usually requires a formal complaint by the SPCB or an authorized officer. File the comprehensive chargesheet/complaint. Coordinate with SPCB to cut power/water and seal the polluting factory.",
+        "required_evidence": [
+          "Formal Statutory Complaint under Environment Protection Act / Water Act",
+          "Final Police Charge-Sheet (for BNS offenses)",
+          "Administrative orders sealing the premises and disconnecting utilities"
+        ],
+        "legal_basis": "Environment Protection Act Section 19",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Investigation complete and scientific proof of pollution secured.",
+        "condition_to_complete": "Prosecution initiated and the source of pollution legally neutralized.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "Ensure statutory notice requirements (e.g., 60 days notice if a private citizen is filing) under the EPA are strictly observed to prevent technical dismissal."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Toxic industrial waste was dumped on a highway or vacant land by unknown tanker trucks at night.",
+        "suggested_actions": [
+          "Conduct a chemical analysis of the waste to identify specific industrial byproducts; cross-reference with SPCB records to find local factories producing that specific chemical profile.",
+          "Pull toll plaza ANPR data under entity_id rto_parivahan to identify chemical tanker trucks moving in the area during the night.",
+          "Check CCTV of major industrial estates to spot tankers leaving factories matching the description of the dumping vehicle."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "communal_hate_speech_v1",
+    "crime_type": "Communal Offense / Hate Speech",
+    "title": "Standard Operating Procedure for Investigation of Communal Hate Speech and Incitement",
+    "source": "Synthesized from BNS Hate Speech Provisions, IT Rules 2021, and MHA Cyber Guidelines",
+    "steps": [
+      {
+        "step_id": "hate_step_01_fir_containment",
+        "order": 1,
+        "title": "Immediate FIR Registration & Public Containment",
+        "description": "Register FIR immediately under BNS Sections 196 (Promoting enmity between groups) and 299 (Deliberate intent to outrage religious feelings). If the speech causes public unrest, deploy rapid action forces and initiate preventive orders (BNSS Section 163).",
+        "required_evidence": [
+          "Copy of FIR under BNS 196/299",
+          "Prohibitory orders under BNSS Section 163 (formerly 144 CrPC) if deployed",
+          "Initial intelligence report on public order impact"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": null,
+        "condition_to_start": "Report of inflammatory speech, video, or social media post inciting communal hatred.",
+        "condition_to_complete": "FIR registered and physical law & order contained.",
+        "on_complete_trigger": [
+          "hate_step_02_url_preservation"
+        ],
+        "if_blocked": [
+          "If the speech occurred in a physical gathering, immediately secure raw unedited video footage from news channels or police videographers present at the scene."
+        ]
+      },
+      {
+        "step_id": "hate_step_02_url_preservation",
+        "order": 2,
+        "title": "Social Media Evidence Preservation & Takedown",
+        "description": "If the hate speech is online, capture exact URLs, screenshots, and video downloads. Issue urgent notices to social media platforms (Meta, X, YouTube) to preserve the uploader's account data and take down the inflammatory content to stop virality.",
+        "required_evidence": [
+          "Screenshots, URLs, and downloaded media files of the hate speech",
+          "Platform confirmation of content removal",
+          "Subscriber KYC, email/phone, and creation IP logs from the platform"
+        ],
+        "legal_basis": "Information Technology Act Section 79",
+        "department_entity_id": "meta_platforms",
+        "condition_to_start": "Hate speech is disseminated via online social platforms.",
+        "condition_to_complete": "Content removed, spread halted, and backend digital footprint secured.",
+        "on_complete_trigger": [
+          "hate_step_03_isp_trace"
+        ],
+        "if_blocked": [
+          "If the platform delays takedown, submit an emergency blocking request to CERT-In / Ministry of I&B under Section 69A IT Act."
+        ]
+      },
+      {
+        "step_id": "hate_step_03_isp_trace",
+        "order": 3,
+        "title": "ISP Tracing & Uploader Identification",
+        "description": "Analyse the IP addresses provided by the social media platform. Issue Section 94 BNSS notices to ISPs to obtain IPDR, NAT port binding records, and the physical installation address of the person who uploaded the content.",
+        "required_evidence": [
+          "IPDR logs resolving public upload IPs to private subscriber IPs",
+          "ISP subscriber KYC showing the physical address of the uploader"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "isp_non_telecom",
+        "condition_to_start": "Upload IP addresses obtained from the intermediary.",
+        "condition_to_complete": "Physical identity and location of the digital instigator established.",
+        "on_complete_trigger": [
+          "hate_step_04_forensic_audio"
+        ],
+        "if_blocked": [
+          "If IP addresses resolve to mobile data networks, route IPDR requisitions through entity_id telecom_operator."
+        ]
+      },
+      {
+        "step_id": "hate_step_04_forensic_audio",
+        "order": 4,
+        "title": "FSL Voice Spectrography & Video Authentication",
+        "description": "To prove the authenticity of the video/audio and rule out deepfakes, send the raw digital file to FSL. Arrest the suspect and obtain voice samples under Magistrate orders (BNSS Section 349) for voice spectrographic comparison.",
+        "required_evidence": [
+          "FSL report certifying the video is unedited/authentic",
+          "Magistrate order u/s 349 BNSS for voice sample collection",
+          "FSL Voice Spectrography report matching the suspect to the audio"
+        ],
+        "legal_basis": "BNSS Section 329",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Digital media secured and suspect apprehended.",
+        "condition_to_complete": "Scientific proof establishing the authenticity and origin of the speech.",
+        "on_complete_trigger": [
+          "hate_step_05_chargesheet"
+        ],
+        "if_blocked": [
+          "If the accused claims their account was hacked, demand a full forensic examination of their seized mobile devices to find the original source file."
+        ]
+      },
+      {
+        "step_id": "hate_step_05_chargesheet",
+        "order": 5,
+        "title": "Sanction for Prosecution & Charge-Sheet",
+        "description": "Obtain mandatory statutory sanction from the State Government under BNSS Section 218 (formerly CrPC 196) for prosecuting offenses against the state or promoting enmity. Compile FSL reports and digital evidence into the final chargesheet.",
+        "required_evidence": [
+          "Prosecution Sanction Order from the State Government",
+          "Final Charge-Sheet under BNSS Section 193",
+          "Section 63 BSA electronic admissibility certificates"
+        ],
+        "legal_basis": "BNSS Section 218",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Investigation complete and scientific reports received.",
+        "condition_to_complete": "Government sanction obtained and chargesheet filed in court.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If government sanction is delayed, keep the accused on police/judicial remand for other non-sanction offenses (if any) while pressing for the administrative order."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Inflammatory message is forwarded rapidly on WhatsApp groups without a clear source, and end-to-end encryption prevents intermediary visibility.",
+        "suggested_actions": [
+          "Seize the mobile phone of a group member or complainant who received the message; use digital forensics to trace the forwarding metadata and identify the specific group admin.",
+          "Issue a notice to the group admin under IT rules, holding them accountable for failing to moderate or report the illegal content.",
+          "Rely on traditional human intelligence networks within the community to identify the local instigators who first circulated the rumor offline."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "extortion_protection_racket_v1",
+    "crime_type": "Extortion / Protection Racket",
+    "title": "Standard Operating Procedure for Investigation of Extortion and Protection Rackets",
+    "source": "Synthesized from Anti-Extortion Cell Manuals, BNS Extortion Provisions, and Organized Crime Guidelines",
+    "steps": [
+      {
+        "step_id": "extort_step_01_fir_recording",
+        "order": 1,
+        "title": "FIR Registration & Covert Audio Recording",
+        "description": "Register FIR under BNS Section 308 (Extortion). Maintain strict confidentiality to protect the victim. Instruct the victim to record all further threat calls using automatic call recorders. Note physical descriptions of gang members who visit for 'protection money' (Hafta).",
+        "required_evidence": [
+          "Copy of FIR under BNS Section 308",
+          "Initial audio recordings of extortion demands",
+          "Victim's statement detailing the fear of injury/death"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": null,
+        "condition_to_start": "Victim reports demands for money under threat of violence or business disruption.",
+        "condition_to_complete": "FIR registered covertly and call recording protocols established.",
+        "on_complete_trigger": [
+          "extort_step_02_telecom_interception"
+        ],
+        "if_blocked": [
+          "If the victim is too terrified to file a written complaint, register a suo-moto FIR based on police intelligence and treat the victim as a protected witness."
+        ]
+      },
+      {
+        "step_id": "extort_step_02_telecom_interception",
+        "order": 2,
+        "title": "Telecom Tracing & Lawful Interception",
+        "description": "Issue Section 94 BNSS notices to TSPs to obtain CDRs, Cell ID locations, and IMEI histories of the extortionist's numbers. If the racket is ongoing, obtain statutory authorization to place the suspect numbers under Lawful Interception (live tapping).",
+        "required_evidence": [
+          "CDRs and cell tower geolocation logs of the extortionist",
+          "Statutory Lawful Interception order from the Home Secretary",
+          "Live audio surveillance logs of the syndicate's communications"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Threat calls received via cellular network.",
+        "condition_to_complete": "Extortionists' location tracked and communications monitored.",
+        "on_complete_trigger": [
+          "extort_step_03_financial_trace"
+        ],
+        "if_blocked": [
+          "If calls are made using internet VoIP (WhatsApp/Signal), issue notices to ISPs and intermediaries for IP access logs and SIP trunking details."
+        ]
+      },
+      {
+        "step_id": "extort_step_03_financial_trace",
+        "order": 3,
+        "title": "Financial Tracing (If paid via digital channels)",
+        "description": "If the victim has already transferred protection money via RTGS, NEFT, or UPI, issue notices to the beneficiary banks. Freeze the accounts under BNSS Section 106 and procure the account holder's KYC to identify the money mules.",
+        "required_evidence": [
+          "Certified bank statements showing extortion payments",
+          "Confirmation of bank account freezes under BNSS Section 106",
+          "KYC dossiers of the recipient bank accounts"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "bank_generic",
+        "condition_to_start": "Extortion money paid via bank transfers or digital wallets.",
+        "condition_to_complete": "Financial beneficiaries identified and funds frozen.",
+        "on_complete_trigger": [
+          "extort_step_04_trap_arrest"
+        ],
+        "if_blocked": [
+          "If payments are made in cash, proceed to setting up a physical tactical trap."
+        ]
+      },
+      {
+        "step_id": "extort_step_04_trap_arrest",
+        "order": 4,
+        "title": "Tactical Trap, Marked Currency & Arrest",
+        "description": "If extortionists demand a physical cash drop, organize a covert trap under BNSS Section 96. Provide the victim with marked currency (treated with phenolphthalein powder). Arrest the suspects immediately upon accepting the cash, and conduct a hand-wash test to prove acceptance.",
+        "required_evidence": [
+          "Pre-trap memo detailing currency serial numbers",
+          "Post-trap recovery memo of marked currency",
+          "FSL report of the positive phenolphthalein hand-wash test",
+          "Arrest memos of the ground operatives"
+        ],
+        "legal_basis": "BNSS Section 96",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Physical cash drop scheduled by the extortionists.",
+        "condition_to_complete": "Operatives arrested red-handed with scientifically marked evidence.",
+        "on_complete_trigger": [
+          "extort_step_05_prison_syndicate"
+        ],
+        "if_blocked": [
+          "If the gang uses innocent third-party couriers (like app-based delivery agents) to collect the cash, track the courier secretly to the final handover point."
+        ]
+      },
+      {
+        "step_id": "extort_step_05_prison_syndicate",
+        "order": 5,
+        "title": "Prison Database Check & Syndicate Mapping",
+        "description": "Extortion rings are often orchestrated by incarcerated gang leaders. Cross-reference the arrested operatives and intercepted phone numbers with the Prisons Department to check if calls are originating from inside a jail.",
+        "required_evidence": [
+          "Prison visitor logs matching the arrested operatives",
+          "Jail cell search/seizure reports of smuggled mobile phones",
+          "Criminal dossiers of the mastermind"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "prisons_department",
+        "condition_to_start": "Operatives arrested or intel suggests jail orchestration.",
+        "condition_to_complete": "Mastermind identified inside or outside prison.",
+        "on_complete_trigger": [
+          "extort_step_06_chargesheet"
+        ],
+        "if_blocked": [
+          "If the mastermind is abroad, coordinate with CBI/Interpol for Red Corner Notices and invoke organized crime acts (e.g., MCOCA/GUJCTOC) if applicable."
+        ]
+      },
+      {
+        "step_id": "extort_step_06_chargesheet",
+        "order": 6,
+        "title": "Voice Spectrography & Charge-Sheet",
+        "description": "Obtain Magistrate orders to collect voice samples of the arrested masterminds/callers. Send samples to FSL for comparison with the extortion call recordings. File the final chargesheet outlining the organized syndicate.",
+        "required_evidence": [
+          "Magistrate order u/s 349 BNSS for voice samples",
+          "FSL Voice Spectrography report linking accused to threat calls",
+          "Final Charge-Sheet under BNSS Section 193"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Investigation complete and suspects in custody.",
+        "condition_to_complete": "Accused charged with objective voice/forensic evidence.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If witnesses are afraid to testify, apply for witness protection protocols and closed-door hearings before the trial begins."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Extortion demand originates from overseas VOIP numbers with threats to leak stolen corporate data (Ransomware/Data Extortion), and no physical meeting is demanded.",
+        "suggested_actions": [
+          "Shift from traditional anti-extortion tactics to cyber-incident response: engage CERT-In to secure the corporate network.",
+          "Track the cryptocurrency wallet addresses provided for the extortion payment via entity_id vasp_crypto_exchange.",
+          "Liaise with international LEA through I4C to identify the offshore server infrastructure hosting the stolen data."
+        ]
+      }
+    ]
+  }
+]

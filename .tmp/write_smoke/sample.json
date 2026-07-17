@@ -1,0 +1,25 @@
+[{
+  "id": "fe045121cd4c8c166024bef6",
+  "document_type": "legal_act",
+  "act": "BNS",
+  "serial_number": "1",
+  "chapter": "CHAPTER I",
+  "chapter_tag": [
+    "GENERAL"
+  ],
+  "content": "1. Short title and commencement.",
+  "summary": "",
+  "references": [],
+  "page_numbers": [
+    1
+  ],
+  "metadata": {
+    "source_path": "sample.pdf",
+    "source_filename": "sample.pdf",
+    "parser_name": "parse_bns",
+    "parser_version": "1.0",
+    "source_pages": [],
+    "created_at": "2026-07-13T17:02:13.717569+00:00",
+    "extra": {}
+  }
+}]

@@ -1,0 +1,1176 @@
+[
+    {
+        "act": "sop",
+        "sop_id": "public_order_rioting_v1",
+        "crime_type": "Public Order / Unlawful Assembly / Rioting",
+        "title": "Standard Operating Procedure for Investigation of Unlawful Assembly and Rioting",
+        "source": "Synthesized from BPR&D Guidelines on Public Order Management and BNSS 2023",
+        "steps": [
+            {
+                "step_id": "riot_step_01_containment_fir",
+                "order": 1,
+                "title": "Scene Containment & FIR Registration",
+                "description": "Deploy adequate force to contain the unlawful assembly. Announce warnings to disperse under BNSS Section 148. Register FIR under BNS Sections 189/191 (Rioting). Identify and apprehend the ringleaders at the spot if possible.",
+                "required_evidence": [
+                    "Copy of FIR under BNS Sections 189/191",
+                    "Public order deployment logs and videography of dispersal warnings",
+                    "Apprehension memos of rioters caught red-handed"
+                ],
+                "legal_basis": "BNSS Section 173",
+                "department_entity_id": null,
+                "condition_to_start": "Gathering of 5 or more persons sharing a common object to commit violence or mischief.",
+                "condition_to_complete": "Situation contained, initial arrests made, and FIR registered.",
+                "on_complete_trigger": [
+                    "riot_step_02_medical_triage",
+                    "riot_step_03_cctv_requisition"
+                ],
+                "if_blocked": [
+                    "If the mob is heavily armed, invoke higher force multipliers and request Magistrate presence for firing orders if necessary."
+                ]
+            },
+            {
+                "step_id": "riot_step_02_medical_triage",
+                "order": 2,
+                "title": "Medical Evacuation & MLC of Injured",
+                "description": "Evacuate injured civilians and police personnel to government hospitals. Requisition Medico-Legal Case (MLC) reports to document the nature of injuries (stone pelting, sharp weapons, bullet wounds) to sustain grievous hurt/attempt to murder charges.",
+                "required_evidence": [
+                    "Certified MLC reports of injured victims and police officers",
+                    "Post-mortem reports in case of fatalities"
+                ],
+                "legal_basis": "BNSS Section 184",
+                "department_entity_id": "hospital_forensic_medical",
+                "condition_to_start": "Injuries sustained during the riot.",
+                "condition_to_complete": "All injured medically evaluated and injuries formally documented.",
+                "on_complete_trigger": [
+                    "riot_step_04_fsl_scene"
+                ],
+                "if_blocked": [
+                    "If hospitals are overwhelmed, deploy mobile medical units and ensure doctors document the basic wound types before shifting patients."
+                ]
+            },
+            {
+                "step_id": "riot_step_03_cctv_requisition",
+                "order": 3,
+                "title": "CCTV & Open Source Video Analysis",
+                "description": "Issue BNSS Section 94 notices to seize CCTV footage from private establishments, traffic junctions, and municipal cameras. Analyze police videography, media broadcasts, and social media live streams to identify active participants and instigators.",
+                "required_evidence": [
+                    "CCTV and media video footage of the riot",
+                    "Section 63 BSA electronic admissibility certificates",
+                    "Video enhancement reports highlighting faces of stone-pelters/arsonists"
+                ],
+                "legal_basis": "BNSS Section 94",
+                "department_entity_id": "private_cctv_sources",
+                "condition_to_start": "Riot contained and area secured.",
+                "condition_to_complete": "Visual evidence of the rioting compiled and suspects identified.",
+                "on_complete_trigger": [
+                    "riot_step_05_telecom_trace"
+                ],
+                "if_blocked": [
+                    "If rioters destroyed CCTV cameras, seize the DVRs for FSL data recovery of footage recorded just prior to destruction."
+                ]
+            },
+            {
+                "step_id": "riot_step_04_fsl_scene",
+                "order": 4,
+                "title": "Crime Scene Examination & Weapon Seizure",
+                "description": "Summon the FSL team to the riot scene. Seize abandoned weapons (swords, lathis, firearms), unexploded crude bombs, petrol bombs, and stones. Document vandalism and destruction of public/private property.",
+                "required_evidence": [
+                    "Seizure memos of weapons, projectiles, and incendiary devices",
+                    "Spot panchnama assessing property damage",
+                    "FSL examination report"
+                ],
+                "legal_basis": "BNSS Section 176(3)",
+                "department_entity_id": "forensic_science_lab",
+                "condition_to_start": "Area sanitized for investigative entry.",
+                "condition_to_complete": "Physical evidence of rioting lifted and secured.",
+                "on_complete_trigger": [
+                    "riot_step_06_arrest_chargesheet"
+                ],
+                "if_blocked": [
+                    "If the area remains volatile, deploy rapid action units to secure the perimeter while FSL completes the sweep."
+                ]
+            },
+            {
+                "step_id": "riot_step_05_telecom_trace",
+                "order": 5,
+                "title": "Telecom & Social Media Instigation Tracing",
+                "description": "Issue notices to TSPs for tower dumps covering the riot area. Analyze WhatsApp groups and social media platforms for premeditated mobilization or inflammatory rumors that sparked the riot.",
+                "required_evidence": [
+                    "Cell ID tower dump logs",
+                    "Social media posting logs and IP addresses of instigators",
+                    "Subscriber KYC of identified ringleaders"
+                ],
+                "legal_basis": "BNSS Section 94",
+                "department_entity_id": "telecom_operator",
+                "condition_to_start": "Suspects identified or social media rumors detected.",
+                "condition_to_complete": "Premeditation and network of rioters mapped.",
+                "on_complete_trigger": [
+                    "riot_step_06_arrest_chargesheet"
+                ],
+                "if_blocked": [
+                    "If mobilization was offline, interrogate local community leaders and informants to map the syndicate."
+                ]
+            },
+            {
+                "step_id": "riot_step_06_arrest_chargesheet",
+                "order": 6,
+                "title": "Arrest, Damage Assessment & Charge-Sheet",
+                "description": "Arrest the identified rioters. Compile damage assessment reports for the Prevention of Damage to Public Property Act. File the chargesheet detailing common object, individual roles, and forensic links.",
+                "required_evidence": [
+                    "Arrest memos of identified rioters",
+                    "Property damage valuation reports",
+                    "Final Charge-Sheet under BNSS Section 193"
+                ],
+                "legal_basis": "BNSS Section 193",
+                "department_entity_id": "court_magistrate_office",
+                "condition_to_start": "Investigation complete and suspects identified from footage/telecom.",
+                "condition_to_complete": "Accused charged and submitted for trial.",
+                "on_complete_trigger": [],
+                "if_blocked": [
+                    "If mass arrests are required, establish a temporary holding facility and ensure Magistrates are available for mass remand hearings."
+                ]
+            }
+        ],
+        "dead_end_strategies": [
+            {
+                "condition": "Riot occurred spontaneously at night with masked participants and no CCTV coverage.",
+                "suggested_actions": [
+                    "Conduct a massive cordon-and-search operation in the immediate adjoining neighborhoods to look for individuals treating fresh injuries or hiding riot gear.",
+                    "Check local hospital and private clinic admissions for suspicious injuries that were not reported to the police.",
+                    "Analyze the cell tower dump for numbers that suddenly congregated in the area just before the outbreak and dispersed rapidly afterward."
+                ]
+            }
+        ]
+    },
+    {
+        "act": "sop",
+        "sop_id": "arson_v1",
+        "crime_type": "Arson",
+        "title": "Standard Operating Procedure for Investigation of Arson and Incendiary Crimes",
+        "source": "Synthesized from Fire Investigation Manuals and BPR&D Guidelines",
+        "steps": [
+            {
+                "step_id": "arson_step_01_fir_firebrigade",
+                "order": 1,
+                "title": "FIR Registration & Fire Brigade Coordination",
+                "description": "Register FIR under BNS Section 326 (Mischief by fire). Coordinate immediately with the Fire Brigade to secure the incident report. The Fire Officer's initial assessment of the fire's origin and cause is critical.",
+                "required_evidence": [
+                    "Copy of FIR under BNS Section 326",
+                    "Official Fire Incident Report from Fire Brigade",
+                    "Emergency control room logs"
+                ],
+                "legal_basis": "BNSS Section 173",
+                "department_entity_id": "fire_brigade",
+                "condition_to_start": "Report of intentional destruction of property by fire.",
+                "condition_to_complete": "FIR registered and initial fire assessment procured.",
+                "on_complete_trigger": [
+                    "arson_step_02_medical",
+                    "arson_step_03_fsl_scene"
+                ],
+                "if_blocked": [
+                    "If the fire is still raging, focus entirely on perimeter control and victim evacuation until the fire department declares the scene cold."
+                ]
+            },
+            {
+                "step_id": "arson_step_02_medical",
+                "order": 2,
+                "title": "Medical Evacuation & MLC",
+                "description": "Evacuate any burn victims to specialized burn units. Obtain MLC reports detailing the degree of burns to substantiate higher charges (Attempt to Murder or Culpable Homicide if fatalities occur).",
+                "required_evidence": [
+                    "Certified MLC wound certificates",
+                    "Post-Mortem reports (if fatalities)"
+                ],
+                "legal_basis": "BNSS Section 184",
+                "department_entity_id": "hospital_forensic_medical",
+                "condition_to_start": "Victims present at the arson scene.",
+                "condition_to_complete": "Victims treated and injuries medically documented.",
+                "on_complete_trigger": [
+                    "arson_step_03_fsl_scene"
+                ],
+                "if_blocked": [
+                    "If victims are critical, requisition a Magistrate immediately for a Dying Declaration."
+                ]
+            },
+            {
+                "step_id": "arson_step_03_fsl_scene",
+                "order": 3,
+                "title": "Forensic Examination for Accelerants",
+                "description": "Once the scene is cold, summon FSL to locate the 'seat of the fire'. Collect debris, burnt flooring, and containers in airtight glass jars to test for hydrocarbon accelerants (petrol, kerosene, diesel).",
+                "required_evidence": [
+                    "Seizure memos of burnt debris, soil, and containers",
+                    "FSL Chemical Analysis report confirming accelerants",
+                    "Photographs showing 'V-patterns' or multiple points of origin"
+                ],
+                "legal_basis": "BNSS Section 176(3)",
+                "department_entity_id": "forensic_science_lab",
+                "condition_to_start": "Fire extinguished and scene declared safe.",
+                "condition_to_complete": "Scientific proof of deliberate ignition (accelerants) secured.",
+                "on_complete_trigger": [
+                    "arson_step_04_cctv",
+                    "arson_step_05_insurance"
+                ],
+                "if_blocked": [
+                    "If heavy water from fire hoses washed away evidence, look for protected areas like baseboards or soil beneath the floorboards."
+                ]
+            },
+            {
+                "step_id": "arson_step_04_cctv",
+                "order": 4,
+                "title": "CCTV Requisition & Perimeter Check",
+                "description": "Issue Section 94 BNSS notices to procure CCTV footage of the perimeter to identify suspects throwing incendiary devices or fleeing the scene.",
+                "required_evidence": [
+                    "CCTV video footage of suspects",
+                    "Section 63 BSA electronic admissibility certificates"
+                ],
+                "legal_basis": "BNSS Section 94",
+                "department_entity_id": "private_cctv_sources",
+                "condition_to_start": "Scene secured and investigation initiated.",
+                "condition_to_complete": "Visual evidence of the perpetrator procured.",
+                "on_complete_trigger": [
+                    "arson_step_06_telecom"
+                ],
+                "if_blocked": [
+                    "If the building's own CCTV was destroyed, retrieve the DVR for FSL data carving to check if the fire was recorded before the unit melted."
+                ]
+            },
+            {
+                "step_id": "arson_step_05_insurance",
+                "order": 5,
+                "title": "Motive Investigation (Insurance Fraud / Enmity)",
+                "description": "Investigate the motive. Issue notices to insurance companies to check for recent high-value policy upgrades or financial distress of the owner (to rule out self-arson for insurance claims). Check for business or personal enmity.",
+                "required_evidence": [
+                    "Insurance policy dossier and claim history",
+                    "Bank statements indicating financial distress",
+                    "Statements of witnesses establishing enmity"
+                ],
+                "legal_basis": "BNSS Section 94",
+                "department_entity_id": "insurance_company",
+                "condition_to_start": "Arson confirmed by FSL/Fire Brigade.",
+                "condition_to_complete": "Motive (fraud vs. revenge) established.",
+                "on_complete_trigger": [
+                    "arson_step_07_chargesheet"
+                ],
+                "if_blocked": [
+                    "If insurance companies delay, examine the MCA/GST filings of the business to assess financial insolvency."
+                ]
+            },
+            {
+                "step_id": "arson_step_06_telecom",
+                "order": 6,
+                "title": "Telecom Tracing of Suspects",
+                "description": "Analyze tower dumps for the time of the fire. Trace the numbers of known enemies or the business owner if fraud is suspected. Map locations to the crime scene.",
+                "required_evidence": [
+                    "Cell ID tower dumps",
+                    "CDRs of identified suspects"
+                ],
+                "legal_basis": "BNSS Section 94",
+                "department_entity_id": "telecom_operator",
+                "condition_to_start": "Time of fire established.",
+                "condition_to_complete": "Telecom presence of suspects confirmed.",
+                "on_complete_trigger": [
+                    "arson_step_07_chargesheet"
+                ],
+                "if_blocked": [
+                    "If the suspect's phone was 'left at home', scrutinize CCTV or toll records to prove physical movement."
+                ]
+            },
+            {
+                "step_id": "arson_step_07_chargesheet",
+                "order": 7,
+                "title": "Arrest & Charge-Sheet",
+                "description": "Arrest the perpetrator. Compile the Fire Brigade report, FSL chemical analysis, motive documentation, and CCTV footage. File the final chargesheet.",
+                "required_evidence": [
+                    "Arrest and search memos",
+                    "Final Charge-Sheet under BNSS Section 193",
+                    "Judicial cognizance order"
+                ],
+                "legal_basis": "BNSS Section 193",
+                "department_entity_id": "court_magistrate_office",
+                "condition_to_start": "Investigation complete and expert reports received.",
+                "condition_to_complete": "Accused charged and submitted for trial.",
+                "on_complete_trigger": [],
+                "if_blocked": [
+                    "If the fire destroyed all trace evidence, rely heavily on circumstantial evidence like sudden insurance upgrades and CCTV presence."
+                ]
+            }
+        ],
+        "dead_end_strategies": [
+            {
+                "condition": "Total burnout of a warehouse, fire brigade rules cause 'undetermined', and no CCTV is available.",
+                "suggested_actions": [
+                    "Audit the inventory: request GST filings and supplier invoices to verify if the warehouse was actually empty before the fire (indicating insurance fraud).",
+                    "Interview the first responding fire crew; they often observe unusual fire behavior or smell accelerants before the structure collapses.",
+                    "Check the building's electrical maintenance logs; true electrical fires often have a history of complaints, while staged fires might show recent tampering with the main breaker."
+                ]
+            }
+        ]
+    },
+    {
+        "act": "sop",
+        "sop_id": "unnatural_death_suicide_v1",
+        "crime_type": "Unnatural Death / Suicide Investigation (Inquest)",
+        "title": "Standard Operating Procedure for Investigation of Unnatural Deaths and Suicides",
+        "source": "Synthesized from BNSS Section 194 (Inquest), BPR&D Guidelines, and Medico-Legal Protocols",
+        "steps": [
+            {
+                "step_id": "ud_step_01_gd_scene",
+                "order": 1,
+                "title": "General Diary Entry & Scene Protection",
+                "description": "Upon receiving information of suicide or unnatural death, make an immediate General Diary (GD) entry. Rush to the spot, preserve the scene, and ensure the body is not moved until inquest proceedings begin.",
+                "required_evidence": [
+                    "Copy of GD Entry / Unnatural Death (UD) Report",
+                    "Photographs of the body in the exact position found"
+                ],
+                "legal_basis": "BNSS Section 194",
+                "department_entity_id": null,
+                "condition_to_start": "Report of death by suicide, accident, or suspicious circumstances.",
+                "condition_to_complete": "UD case registered and scene secured.",
+                "on_complete_trigger": [
+                    "ud_step_02_inquest"
+                ],
+                "if_blocked": [
+                    "If relatives have already brought the body down (in hanging cases), secure the ligature material and photograph the knot."
+                ]
+            },
+            {
+                "step_id": "ud_step_02_inquest",
+                "order": 2,
+                "title": "Police Inquest Proceedings (Panchnama)",
+                "description": "Conduct the inquest under BNSS Section 194 in the presence of two independent witnesses. Document apparent cause of death, marks of violence, ligature marks, and the state of clothing/surroundings.",
+                "required_evidence": [
+                    "Inquest Report (Panchnama) signed by IO and witnesses",
+                    "Inventory of personal effects found on the body"
+                ],
+                "legal_basis": "BNSS Section 194",
+                "department_entity_id": null,
+                "condition_to_start": "Scene secured and witnesses present.",
+                "condition_to_complete": "Inquest documented and body prepared for dispatch.",
+                "on_complete_trigger": [
+                    "ud_step_03_autopsy"
+                ],
+                "if_blocked": [
+                    "If the death involves a woman within 7 years of marriage, jurisdiction transfers to the Executive Magistrate under BNSS Section 196."
+                ]
+            },
+            {
+                "step_id": "ud_step_03_autopsy",
+                "order": 3,
+                "title": "Post-Mortem Autopsy Requisition",
+                "description": "Dispatch the body with the Dead Body Challan to the government hospital for post-mortem. Request the medical officer to determine exact cause, time of death, and preserve viscera for chemical analysis if poisoning is suspected.",
+                "required_evidence": [
+                    "Certified Post-Mortem Autopsy Report",
+                    "Dead Body Challan and Forwarding Memo",
+                    "Sealed viscera/blood samples (if required)"
+                ],
+                "legal_basis": "BNSS Section 194",
+                "department_entity_id": "hospital_forensic_medical",
+                "condition_to_start": "Inquest complete.",
+                "condition_to_complete": "Autopsy concluded and cause of death medically opined.",
+                "on_complete_trigger": [
+                    "ud_step_04_fsl_scene"
+                ],
+                "if_blocked": [
+                    "If the family opposes autopsy due to religious reasons, inform them that post-mortem is legally mandatory in unnatural deaths under BNSS."
+                ]
+            },
+            {
+                "step_id": "ud_step_04_fsl_scene",
+                "order": 4,
+                "title": "Scene Forensics & Suicide Note Seizure",
+                "description": "Search the premises thoroughly for a suicide note, diaries, or poison bottles. Seize these under a proper memo. If a note is found, send it to FSL for handwriting comparison with the deceased's admitted handwriting.",
+                "required_evidence": [
+                    "Seizure memo of suicide note or poison containers",
+                    "Admitted handwriting samples of the deceased",
+                    "FSL Handwriting Expert Report"
+                ],
+                "legal_basis": "BNSS Section 176",
+                "department_entity_id": "forensic_science_lab",
+                "condition_to_start": "Body removed for autopsy.",
+                "condition_to_complete": "Physical evidence of suicide and motive secured.",
+                "on_complete_trigger": [
+                    "ud_step_05_telecom"
+                ],
+                "if_blocked": [
+                    "If no physical note is found, examine the deceased's digital devices (draft emails, notes app) for digital suicide notes."
+                ]
+            },
+            {
+                "step_id": "ud_step_05_telecom",
+                "order": 5,
+                "title": "Telecom & Digital Footprint Analysis",
+                "description": "Requisition the deceased's CDRs and WhatsApp logs to determine the last contacted persons, which is crucial for establishing potential 'Abetment to Suicide' (BNS Section 108).",
+                "required_evidence": [
+                    "CDRs of the deceased",
+                    "Screenshots of final chat conversations or call recordings",
+                    "Section 63 BSA electronic admissibility certificates"
+                ],
+                "legal_basis": "BNSS Section 94",
+                "department_entity_id": "telecom_operator",
+                "condition_to_start": "Deceased's mobile phone recovered.",
+                "condition_to_complete": "Digital communications analyzed for abetment or motive.",
+                "on_complete_trigger": [
+                    "ud_step_06_statements"
+                ],
+                "if_blocked": [
+                    "If the phone is locked, submit it to State Cyber Cell / FSL for password bypass and data extraction."
+                ]
+            },
+            {
+                "step_id": "ud_step_06_statements",
+                "order": 6,
+                "title": "Witness Statements & Motive Establishment",
+                "description": "Record statements of family members, friends, and employers to establish the state of mind, financial distress, or harassment prior to the incident.",
+                "required_evidence": [
+                    "Written statements of family and associates under BNSS Section 180"
+                ],
+                "legal_basis": "BNSS Section 180",
+                "department_entity_id": null,
+                "condition_to_start": "Autopsy and scene inspection complete.",
+                "condition_to_complete": "Background and motive comprehensively documented.",
+                "on_complete_trigger": [
+                    "ud_step_07_closure_or_fir"
+                ],
+                "if_blocked": [
+                    "If family members suspect murder, ensure the post-mortem surgeon explicitly addresses their specific concerns (e.g., distinguishing suicidal hanging from homicidal strangulation)."
+                ]
+            },
+            {
+                "step_id": "ud_step_07_closure_or_fir",
+                "order": 7,
+                "title": "Final Report or FIR for Abetment/Murder",
+                "description": "If evidence indicates pure suicide without foul play, file the final UD closure report before the Magistrate. If evidence reveals abetment (BNS 108) or disguised murder, register a formal criminal FIR and commence a homicide investigation.",
+                "required_evidence": [
+                    "Final UD Report closing the inquiry; OR",
+                    "Formal FIR for Abetment to Suicide / Murder",
+                    "Magistrate's acceptance order"
+                ],
+                "legal_basis": "BNSS Section 194",
+                "department_entity_id": "court_magistrate_office",
+                "condition_to_start": "All forensic, medical, and testimonial evidence compiled.",
+                "condition_to_complete": "Case legally disposed of or escalated to criminal prosecution.",
+                "on_complete_trigger": [],
+                "if_blocked": [
+                    "If viscera reports are pending for months, keep the UD file open until the FSL chemical analysis conclusively rules out covert poisoning."
+                ]
+            }
+        ],
+        "dead_end_strategies": [
+            {
+                "condition": "Body found hanging in a locked room, no note, no known distress, and autopsy confirms suicidal hanging.",
+                "suggested_actions": [
+                    "Examine the financial background via bank statements for sudden severe losses in stock trading or illegal betting apps.",
+                    "Check search history on seized laptops/phones for queries related to painless death, depression, or suicide methods.",
+                    "Interview colleagues and check workplace emails for signs of severe professional harassment or extortion."
+                ]
+            }
+        ]
+    },
+    {
+        "act": "sop",
+        "sop_id": "unidentified_dead_body_v1",
+        "crime_type": "Unidentified Dead Body",
+        "title": "Standard Operating Procedure for Investigation of Unidentified Dead Bodies",
+        "source": "Synthesized from NCRB Unidentified Body Guidelines and BNSS Section 194",
+        "steps": [
+            {
+                "step_id": "uid_body_step_01_inquest_preservation",
+                "order": 1,
+                "title": "Inquest, Body Preservation & Photography",
+                "description": "Conduct the inquest under BNSS Section 194. Photograph the face, full body, identifying marks (tattoos, scars), and clothing. Shift the body to a government mortuary for mandatory 72-hour preservation (to allow time for identification).",
+                "required_evidence": [
+                    "Inquest Report (Panchnama)",
+                    "High-resolution photographs of face and identifying marks",
+                    "Mortuary preservation receipt"
+                ],
+                "legal_basis": "BNSS Section 194",
+                "department_entity_id": "hospital_forensic_medical",
+                "condition_to_start": "Recovery of an unidentified corpse.",
+                "condition_to_complete": "Inquest done, photographs taken, and body preserved in cold storage.",
+                "on_complete_trigger": [
+                    "uid_body_step_02_fsl_dna",
+                    "uid_body_step_03_broadcast"
+                ],
+                "if_blocked": [
+                    "If the body is highly decomposed, request the forensic surgeon to clean the face as much as possible for photographs and rely heavily on clothing/jewelry."
+                ]
+            },
+            {
+                "step_id": "uid_body_step_02_fsl_dna",
+                "order": 2,
+                "title": "DNA Sampling & Fingerprint Extraction",
+                "description": "Requisition the forensic medical officer to extract blood, hair, or deep bone tissue for DNA profiling. If the fingers are intact, call the fingerprint bureau to lift all 10 digit prints for NAFIS comparison.",
+                "required_evidence": [
+                    "Sealed DNA samples (teeth/femur/blood)",
+                    "10-digit fingerprint slip",
+                    "NAFIS database query report"
+                ],
+                "legal_basis": "BNSS Section 176",
+                "department_entity_id": "forensic_science_lab",
+                "condition_to_start": "Body at mortuary prior to post-mortem.",
+                "condition_to_complete": "Biometric and genetic identifiers preserved for future matching.",
+                "on_complete_trigger": [
+                    "uid_body_step_04_uidai"
+                ],
+                "if_blocked": [
+                    "If skin is macerated (e.g., drowned bodies), use epidermal degloving techniques at FSL to recover ridge detail for fingerprinting."
+                ]
+            },
+            {
+                "step_id": "uid_body_step_03_broadcast",
+                "order": 3,
+                "title": "CCTNS Upload & Hue and Cry Broadcast",
+                "description": "Upload the photographs, clothing descriptions, and location of recovery to the NCRB CCTNS 'Unidentified Dead Bodies' portal. Broadcast Hue and Cry notices to all police stations, local media, and neighboring districts.",
+                "required_evidence": [
+                    "CCTNS entry acknowledgment",
+                    "Copies of published Hue and Cry notices",
+                    "Wireless broadcast logs"
+                ],
+                "legal_basis": null,
+                "department_entity_id": null,
+                "condition_to_start": "Photographs and physical descriptors logged.",
+                "condition_to_complete": "National database updated and public alerts issued.",
+                "on_complete_trigger": [
+                    "uid_body_step_05_transit_check"
+                ],
+                "if_blocked": [
+                    "If the face is unidentifiable, broadcast descriptions of unique tattoos, implants, or specific tailor marks on clothing."
+                ]
+            },
+            {
+                "step_id": "uid_body_step_04_uidai",
+                "order": 4,
+                "title": "Aadhaar / UIDAI Biometric Check",
+                "description": "If readable fingerprints are recovered, obtain a High Court order under the Aadhaar Act to compel UIDAI to run a 1:N biometric match against the national Aadhaar database to identify the deceased.",
+                "required_evidence": [
+                    "High Court order u/s 33 of Aadhaar Act",
+                    "UIDAI matching report identifying demographic details"
+                ],
+                "legal_basis": "Aadhaar Act Section 33",
+                "department_entity_id": "uidai_aadhaar",
+                "condition_to_start": "Usable fingerprints extracted from the corpse.",
+                "condition_to_complete": "UIDAI confirms or rejects a biometric match.",
+                "on_complete_trigger": [
+                    "uid_body_step_06_autopsy_disposal"
+                ],
+                "if_blocked": [
+                    "If UIDAI route is administratively delayed, cross-check the fingerprints against the State Prison database and NAFIS for prior criminal records."
+                ]
+            },
+            {
+                "step_id": "uid_body_step_05_transit_check",
+                "order": 5,
+                "title": "Missing Persons & Transit Node Verification",
+                "description": "Cross-check the description against all missing person FIRs registered in the state over the last 30 days. If the body was found near railway tracks or highways, check with GRP/RPF or toll plazas for missing passenger reports.",
+                "required_evidence": [
+                    "Verification reports from District Missing Persons Unit",
+                    "GRP/RPF inquiry logs"
+                ],
+                "legal_basis": "BNSS Section 94",
+                "department_entity_id": "railway_police",
+                "condition_to_start": "Body descriptors broadcasted.",
+                "condition_to_complete": "Missing person records exhausted.",
+                "on_complete_trigger": [
+                    "uid_body_step_06_autopsy_disposal"
+                ],
+                "if_blocked": [
+                    "If clothing suggests out-of-state origin (e.g., regional attire), expand the CCTNS search to neighboring states."
+                ]
+            },
+            {
+                "step_id": "uid_body_step_06_autopsy_disposal",
+                "order": 6,
+                "title": "Post-Mortem & Lawful Disposal",
+                "description": "After the mandatory 72-hour waiting period expires without identification, conduct the post-mortem autopsy to rule out homicide. Hand over the body to the Municipal Corporation or authorized NGO for respectful last rites, preserving clothes and DNA.",
+                "required_evidence": [
+                    "Certified Post-Mortem Autopsy Report",
+                    "Municipal/NGO cremation/burial receipt",
+                    "Preserved clothing and belongings in Malkhana"
+                ],
+                "legal_basis": "BNSS Section 194",
+                "department_entity_id": "municipal_corporation",
+                "condition_to_start": "72-hour preservation period expires.",
+                "condition_to_complete": "Cause of death determined and body respectfully disposed of.",
+                "on_complete_trigger": [
+                    "uid_body_step_07_court_report"
+                ],
+                "if_blocked": [
+                    "If autopsy reveals homicide, immediately register an FIR under BNS 103 (Murder) and transition to homicide protocols before disposing of the body."
+                ]
+            },
+            {
+                "step_id": "uid_body_step_07_court_report",
+                "order": 7,
+                "title": "Final Court Report",
+                "description": "File the final UD (Unnatural Death) inquiry report before the Magistrate, attaching photographs, DNA preservation memos, and the autopsy report, keeping the file open for future matching if relatives appear later.",
+                "required_evidence": [
+                    "Final UD Investigation Report",
+                    "Magistrate's acceptance order"
+                ],
+                "legal_basis": "BNSS Section 194",
+                "department_entity_id": "court_magistrate_office",
+                "condition_to_start": "Autopsy and disposal complete.",
+                "condition_to_complete": "Judicial record of the unidentified body sealed and preserved.",
+                "on_complete_trigger": [],
+                "if_blocked": [
+                    "If relatives appear years later, request court permission to conduct a DNA match between the relatives and the FSL-preserved bone sample."
+                ]
+            }
+        ],
+        "dead_end_strategies": [
+            {
+                "condition": "Skeletonized remains found in a forest, no clothing, no ID, and fingerprints impossible to recover.",
+                "suggested_actions": [
+                    "Send the skull to CFSL for 3D Forensic Facial Reconstruction to generate an approximation of the deceased's face for public broadcast.",
+                    "Examine dental records: chart the teeth (fillings, extractions) and circulate to local dental clinics, as dental records are highly unique.",
+                    "Conduct isotopic analysis on bone fragments at specialized labs to determine the geographical region the deceased grew up in, narrowing the search radius."
+                ]
+            }
+        ]
+    },
+    {
+        "act": "sop",
+        "sop_id": "surat_textile_diamond_fraud_v1",
+        "crime_type": "Trade/Business Fraud in the Textile & Diamond Trade",
+        "title": "Standard Operating Procedure for Investigation of Textile and Diamond Trade Frauds",
+        "source": "Synthesized from EOW Guidelines, Surat Police SOPs on Trade Frauds, and Negotiable Instruments Act",
+        "steps": [
+            {
+                "step_id": "surat_step_01_fir_contracts",
+                "order": 1,
+                "title": "FIR Registration & Chitti (Broker Note) Analysis",
+                "description": "Register FIR under BNS Sections 318 (Cheating) and 316 (CBT). In Surat markets, transactions often rely on informal broker slips ('Chittis') or Jangad (approval memos) rather than formal contracts. Seize all original Chittis, WhatsApp negotiation chats, and unpaid invoices.",
+                "required_evidence": [
+                    "Copy of FIR",
+                    "Original Broker Notes (Chittis) / Jangad receipts",
+                    "WhatsApp chats confirming delivery and payment promises"
+                ],
+                "legal_basis": "BNSS Section 173",
+                "department_entity_id": null,
+                "condition_to_start": "Trader reports non-payment after delivery of textile bales or diamond parcels, or broker absconds with goods.",
+                "condition_to_complete": "FIR registered and primary informal trade documents secured.",
+                "on_complete_trigger": [
+                    "surat_step_02_bank_cheque"
+                ],
+                "if_blocked": [
+                    "If the transaction was entirely verbal, secure the statements of the Dalal (broker) and neighboring shop owners who witnessed the handover."
+                ]
+            },
+            {
+                "step_id": "surat_step_02_bank_cheque",
+                "order": 2,
+                "title": "Bank Trail & Cheque Bounce Verification",
+                "description": "If post-dated cheques were given and bounced, issue notices to the bank to secure the cheque return memos (insufficient funds/account closed). Obtain bank statements to prove the accused's account lacked funds when the purchase was made, establishing intent to cheat.",
+                "required_evidence": [
+                    "Original bounced cheques and bank return memos",
+                    "Accused's bank account statements",
+                    "Confirmation of account freeze under BNSS Section 106"
+                ],
+                "legal_basis": "BNSS Section 94",
+                "department_entity_id": "bank_generic",
+                "condition_to_start": "Payment involved banking channels or post-dated cheques.",
+                "condition_to_complete": "Financial deception documented and accounts frozen.",
+                "on_complete_trigger": [
+                    "surat_step_03_mca_gst"
+                ],
+                "if_blocked": [
+                    "If the accused stopped payment, prove through courier/transport receipts that goods were indeed delivered."
+                ]
+            },
+            {
+                "step_id": "surat_step_03_mca_gst",
+                "order": 3,
+                "title": "Corporate, GST & Sub-Registrar Verification",
+                "description": "Fly-by-night operators rent shops, buy goods on credit, and abscond. Verify the accused's GST registration and MCA21 company filings to see if the entity was a shell. Check with the Sub-Registrar or shop owner regarding the rent agreement to trace genuine identity.",
+                "required_evidence": [
+                    "GST registration details and E-way bill logs",
+                    "MCA21 Incorporation and Director KYC",
+                    "Shop rent agreement from Sub-Registrar / Owner"
+                ],
+                "legal_basis": "BNSS Section 94",
+                "department_entity_id": "mca21_roc",
+                "condition_to_start": "Accused operated through a trading firm or rented shop.",
+                "condition_to_complete": "Shell company status verified and true identities tracked.",
+                "on_complete_trigger": [
+                    "surat_step_04_telecom_dalal"
+                ],
+                "if_blocked": [
+                    "If the GST number is fake, query the IP address used to file the GST returns to locate the facilitating chartered accountant."
+                ]
+            },
+            {
+                "step_id": "surat_step_04_telecom_dalal",
+                "order": 4,
+                "title": "Telecom Tracing of Absconding Brokers (Dalals)",
+                "description": "Brokers often facilitate the fraud and abscond. Issue notices to TSPs for CDRs and Cell ID locations of the buyer and broker. Map their communications to prove conspiracy.",
+                "required_evidence": [
+                    "CDRs and Cell ID tracking logs of the accused buyer and broker",
+                    "Section 63 BSA certificates for telecom logs"
+                ],
+                "legal_basis": "BNSS Section 94",
+                "department_entity_id": "telecom_operator",
+                "condition_to_start": "Accused traders or brokers are absconding.",
+                "condition_to_complete": "Location of absconders tracked.",
+                "on_complete_trigger": [
+                    "surat_step_05_transport_angadia"
+                ],
+                "if_blocked": [
+                    "If phones are switched off, track the IMEI or contact their native village relatives."
+                ]
+            },
+            {
+                "step_id": "surat_step_05_transport_angadia",
+                "order": 5,
+                "title": "Tracing Goods via Transporters & Angadias",
+                "description": "Trace the movement of stolen textile bales or diamonds. Issue notices to transport/courier companies and local Angadias (traditional couriers) to retrieve LR (Lorry Receipt) copies, delivery proofs, and destination addresses where goods were diverted.",
+                "required_evidence": [
+                    "Lorry Receipts (LR) and E-way bills",
+                    "Courier/Angadia delivery logs and CCTV",
+                    "Seizure memo of goods intercepted in transit"
+                ],
+                "legal_basis": "BNSS Section 94",
+                "department_entity_id": "postal_courier_services",
+                "condition_to_start": "Goods dispatched but payment defaulted.",
+                "condition_to_complete": "Physical location of diverted goods identified.",
+                "on_complete_trigger": [
+                    "surat_step_06_raid_seizure"
+                ],
+                "if_blocked": [
+                    "If goods were shipped out of state, coordinate with the destination state's police to raid the receiving warehouse."
+                ]
+            },
+            {
+                "step_id": "surat_step_06_raid_seizure",
+                "order": 6,
+                "title": "Search, Seizure of Goods & Arrest",
+                "description": "Raid the godowns or processing mills where the stolen grey cloth or diamonds were sent for processing. Arrest the fraudsters. Seize the inventory. Note: Diamonds require specialized valuers for identification.",
+                "required_evidence": [
+                    "Arrest memos of fraudulent buyers/brokers",
+                    "Seizure memo of recovered textiles/diamonds",
+                    "Expert valuation report (for diamonds)"
+                ],
+                "legal_basis": "BNSS Section 96",
+                "department_entity_id": "forensic_science_lab",
+                "condition_to_start": "Location of suspects and diverted goods confirmed.",
+                "condition_to_complete": "Accused arrested and assets recovered.",
+                "on_complete_trigger": [
+                    "surat_step_07_chargesheet"
+                ],
+                "if_blocked": [
+                    "If the textiles have been dyed/printed, use the unique mill weaving patterns or thread counts to prove they are the complainant's goods."
+                ]
+            },
+            {
+                "step_id": "surat_step_07_chargesheet",
+                "order": 7,
+                "title": "Forensic Audit & Charge-Sheet",
+                "description": "Compile the trade documents, bank trails, transporter logs, and WhatsApp chats. Prove the pre-planned conspiracy to cheat. File the final chargesheet and facilitate the return of seized goods to the complainant via court orders.",
+                "required_evidence": [
+                    "Final Charge-Sheet under BNSS Section 193",
+                    "Court order u/s 503 BNSS releasing seized goods to complainant"
+                ],
+                "legal_basis": "BNSS Section 193",
+                "department_entity_id": "court_magistrate_office",
+                "condition_to_start": "Investigation complete and evidence secured.",
+                "condition_to_complete": "Accused charged and business assets restored.",
+                "on_complete_trigger": [],
+                "if_blocked": [
+                    "If the accused files for insolvency, present the police charge-sheet to the NCLT to prove the bankruptcy was fraudulent and criminal."
+                ]
+            }
+        ],
+        "dead_end_strategies": [
+            {
+                "condition": "Accused shut the rented shop overnight, disconnected all phones, and goods were shipped using fake E-way bills with untraceable truck numbers.",
+                "suggested_actions": [
+                    "Analyse the CCTV of the transport hub/market when the goods were loaded to get the actual truck license plate, then track via highway toll ANPR under entity_id rto_parivahan.",
+                    "Examine the bank account KYC of the broker who introduced the buyer; hold the broker criminally liable for conspiracy if they provided fake guarantees.",
+                    "Check local Angadia networks; fraudsters usually transfer their liquidated cash back to their native states (often Rajasthan, UP, or Delhi) via Angadias within 24 hours of the scam."
+                ]
+            }
+        ]
+    },
+    {
+        "act": "sop",
+        "sop_id": "molestation_public_v1",
+        "crime_type": "Molestation / Outraging Modesty in Public Space",
+        "title": "Standard Operating Procedure for Investigation of Outraging Modesty and Public Harassment",
+        "source": "Synthesized from BNS Section 74, BPR&D Crimes Against Women SOP, and Safe City Guidelines",
+        "steps": [
+            {
+                "step_id": "molest_step_01_fir_counseling",
+                "order": 1,
+                "title": "Victim Intake, FIR by Woman Officer & Support",
+                "description": "Immediately register FIR under BNS Section 74 (Assault or criminal force with intent to outrage modesty) or Section 75 (Sexual harassment). The FIR MUST be recorded by a woman police officer. Provide an unedited copy free of cost. Connect the victim to the One Stop Centre for counseling.",
+                "required_evidence": [
+                    "Copy of FIR recorded by Woman Officer",
+                    "Victim's initial written statement",
+                    "Referral log to One Stop Centre"
+                ],
+                "legal_basis": "BNSS Section 173",
+                "department_entity_id": "one_stop_centre_helpline",
+                "condition_to_start": "Woman reports physical harassment, stalking, or inappropriate touching in public.",
+                "condition_to_complete": "FIR registered securely and victim emotionally supported.",
+                "on_complete_trigger": [
+                    "molest_step_02_cctv"
+                ],
+                "if_blocked": [
+                    "If a woman officer is unavailable, dispatch one from a neighboring station; do not delay or force the victim to narrate details to male officers."
+                ]
+            },
+            {
+                "step_id": "molest_step_02_cctv",
+                "order": 2,
+                "title": "CCTV Requisition & Suspect Identification",
+                "description": "Immediately deploy officers to the public space (street, mall, station). Issue BNSS Section 94 notices to secure private, municipal, or transit CCTV footage covering the incident and the suspect's escape route.",
+                "required_evidence": [
+                    "CCTV video footage of the incident",
+                    "Section 63 BSA electronic admissibility certificates",
+                    "Photographs/Stills of the suspect for identification"
+                ],
+                "legal_basis": "BNSS Section 94",
+                "department_entity_id": "private_cctv_sources",
+                "condition_to_start": "Location and time of incident identified.",
+                "condition_to_complete": "Visual evidence secured and suspect face/vehicle identified.",
+                "on_complete_trigger": [
+                    "molest_step_03_transit_telecom"
+                ],
+                "if_blocked": [
+                    "If CCTV is overwritten quickly, execute immediate Section 106 BNSS seizure of the DVR."
+                ]
+            },
+            {
+                "step_id": "molest_step_03_transit_telecom",
+                "order": 3,
+                "title": "Transit & Ride-Hailing Tracing (If Applicable)",
+                "description": "If the incident occurred in a cab, bus, or train, issue notices to ride-hailing apps or railway police to identify the driver/passenger. If the suspect used a vehicle, query RTO databases.",
+                "required_evidence": [
+                    "Ride-hailing GPS trip logs and driver KYC",
+                    "RTO VAHAN ownership details of the suspect vehicle"
+                ],
+                "legal_basis": "BNSS Section 94",
+                "department_entity_id": "ridehailing_delivery_apps",
+                "condition_to_start": "Suspect fled in a vehicle or incident occurred in transit.",
+                "condition_to_complete": "Vehicle owner or driver identified.",
+                "on_complete_trigger": [
+                    "molest_step_04_magistrate_statement"
+                ],
+                "if_blocked": [
+                    "If the suspect is an unknown pedestrian, utilize facial recognition via state crime databases against the CCTV stills."
+                ]
+            },
+            {
+                "step_id": "molest_step_04_magistrate_statement",
+                "order": 4,
+                "title": "Judicial Statement u/s 183 BNSS",
+                "description": "Sponsor an application before the Magistrate to record the victim's statement under BNSS Section 183 (formerly 164 CrPC) in a private, secure environment, preferably by a female Magistrate.",
+                "required_evidence": [
+                    "Certified copy of Section 183 BNSS judicial statement",
+                    "Audio-visual recording (optional but recommended)"
+                ],
+                "legal_basis": "BNSS Section 183",
+                "department_entity_id": "court_magistrate_office",
+                "condition_to_start": "Victim ready and willing to depose.",
+                "condition_to_complete": "Legally admissible judicial statement secured.",
+                "on_complete_trigger": [
+                    "molest_step_05_arrest_chargesheet"
+                ],
+                "if_blocked": [
+                    "If the victim fears retaliation at court, request in-camera recording or video-conferencing from the One Stop Centre."
+                ]
+            },
+            {
+                "step_id": "molest_step_05_arrest_chargesheet",
+                "order": 5,
+                "title": "Arrest, Witness Statements & Charge-Sheet",
+                "description": "Arrest the identified suspect. Record statements of public bystanders or transit staff who witnessed the event. Compile the CCTV, Section 183 statements, and file the final chargesheet.",
+                "required_evidence": [
+                    "Arrest memo",
+                    "BNSS Section 180 statements of eyewitnesses",
+                    "Final Charge-Sheet under BNSS Section 193 specifying BNS 74/75"
+                ],
+                "legal_basis": "BNSS Section 193",
+                "department_entity_id": "court_magistrate_office",
+                "condition_to_start": "Suspect identified and evidence compiled.",
+                "condition_to_complete": "Accused charged and submitted for trial.",
+                "on_complete_trigger": [],
+                "if_blocked": [
+                    "If public witnesses refuse to testify out of apathy, rely heavily on CCTV and the victim's Section 183 statement, which holds strong evidentiary weight."
+                ]
+            }
+        ],
+        "dead_end_strategies": [
+            {
+                "condition": "Incident occurred in a crowded unmonitored area (e.g., a festival or dark alley), suspect fled, and victim only has a vague description.",
+                "suggested_actions": [
+                    "Conduct a 'dump analysis' of cell towers in the area under entity_id telecom_operator to identify numbers that were active at the exact time and correlate with known sex offenders.",
+                    "Deploy plainclothes female decoy officers (anti-Romeo squads) in the same area at the same time on subsequent days, as offenders often return to familiar hunting grounds.",
+                    "Check social media platforms; bystanders occasionally record public incidents on their phones and post them online."
+                ]
+            }
+        ]
+    },
+    {
+        "act": "sop",
+        "sop_id": "extortion_trade_business_v1",
+        "crime_type": "Extortion in Business/Trade Context",
+        "title": "Standard Operating Procedure for Investigation of Extortion and Protection Rackets in Business",
+        "source": "Synthesized from BNS Section 308, Anti-Extortion Cell SOPs, and Organized Crime Guidelines",
+        "steps": [
+            {
+                "step_id": "trade_extort_01_fir_security",
+                "order": 1,
+                "title": "FIR Registration & Victim Security",
+                "description": "Register FIR under BNS Section 308 (Extortion). Business owners are highly susceptible to retaliation. Maintain strict case secrecy. Advise the victim on call-recording protocols and provide plainclothes perimeter security if threats to life are imminent.",
+                "required_evidence": [
+                    "Copy of FIR under BNS Section 308",
+                    "Initial audio recordings or threat letters",
+                    "Victim's statement detailing the demands (Hafta/Protection money)"
+                ],
+                "legal_basis": "BNSS Section 173",
+                "department_entity_id": null,
+                "condition_to_start": "Business owner reports demands for money under threat of violence or disruption.",
+                "condition_to_complete": "FIR registered and victim protected.",
+                "on_complete_trigger": [
+                    "trade_extort_02_telecom_intercept"
+                ],
+                "if_blocked": [
+                    "If the victim fears written complaints, register a suo-moto FIR based on police intelligence."
+                ]
+            },
+            {
+                "step_id": "trade_extort_02_telecom_intercept",
+                "order": 2,
+                "title": "Telecom Interception & Social Media Tracing",
+                "description": "Issue notices to TSPs for CDRs and Cell ID locations of the extortionist. Obtain statutory authorization for Lawful Interception (live tapping). If threats are via WhatsApp/VOIP, issue notices to Meta/ISPs to trace IP access logs.",
+                "required_evidence": [
+                    "CDRs and cell tower location logs",
+                    "Live audio surveillance logs of extortion calls",
+                    "WhatsApp/VOIP login IP addresses and subscriber KYC"
+                ],
+                "legal_basis": "BNSS Section 94",
+                "department_entity_id": "telecom_operator",
+                "condition_to_start": "Threats delivered via phone or digital channels.",
+                "condition_to_complete": "Extortionist tracked and communications monitored.",
+                "on_complete_trigger": [
+                    "trade_extort_03_financial_trap"
+                ],
+                "if_blocked": [
+                    "If callers use spoofed international numbers, trace the local spotters who supply the victim's business details to the overseas gang."
+                ]
+            },
+            {
+                "step_id": "trade_extort_03_financial_trap",
+                "order": 3,
+                "title": "Financial Tracing or Physical Trap",
+                "description": "If payment is demanded via bank/UPI, issue Section 106 BNSS freeze notices and procure KYC of the mule accounts. If cash is demanded, organize a tactical trap using phenolphthalein-marked currency.",
+                "required_evidence": [
+                    "Bank KYC and frozen account statements; OR",
+                    "Pre-trap and post-trap recovery memos of marked currency",
+                    "FSL report of positive hand-wash test"
+                ],
+                "legal_basis": "BNSS Section 96",
+                "department_entity_id": "bank_generic",
+                "condition_to_start": "Payment mechanism established.",
+                "condition_to_complete": "Financial trail blocked or ground operatives caught red-handed.",
+                "on_complete_trigger": [
+                    "trade_extort_04_prison_check"
+                ],
+                "if_blocked": [
+                    "If the gang demands crypto, route tracing through entity_id vasp_crypto_exchange."
+                ]
+            },
+            {
+                "step_id": "trade_extort_04_prison_check",
+                "order": 4,
+                "title": "Prison Database Check & Syndicate Mapping",
+                "description": "Check the arrested operatives and intercepted numbers against the Prisons Department database. Extortion rackets are frequently orchestrated by incarcerated gang leaders using smuggled phones.",
+                "required_evidence": [
+                    "Prison visitor logs",
+                    "Jail cell search reports (if phones recovered)",
+                    "Criminal dossiers of syndicate masterminds"
+                ],
+                "legal_basis": "BNSS Section 94",
+                "department_entity_id": "prisons_department",
+                "condition_to_start": "Operatives arrested or numbers identified.",
+                "condition_to_complete": "Mastermind identified inside or outside prison.",
+                "on_complete_trigger": [
+                    "trade_extort_05_voice_fsl"
+                ],
+                "if_blocked": [
+                    "If the mastermind is abroad, initiate Interpol Red Notice protocols."
+                ]
+            },
+            {
+                "step_id": "trade_extort_05_voice_fsl",
+                "order": 5,
+                "title": "Voice Spectrography & Charge-Sheet",
+                "description": "Obtain Magistrate orders to collect voice samples of the arrested callers. Send to FSL for spectrographic comparison with the recorded threat calls. File the final chargesheet.",
+                "required_evidence": [
+                    "Magistrate order u/s 349 BNSS",
+                    "FSL Voice Spectrography report",
+                    "Final Charge-Sheet under BNSS Section 193"
+                ],
+                "legal_basis": "BNSS Section 193",
+                "department_entity_id": "court_magistrate_office",
+                "condition_to_start": "Suspects in custody.",
+                "condition_to_complete": "Accused charged with objective forensic evidence.",
+                "on_complete_trigger": [],
+                "if_blocked": [
+                    "If the accused refuses voice samples, request the court to draw an adverse presumption under Section 119 BSA."
+                ]
+            }
+        ],
+        "dead_end_strategies": [
+            {
+                "condition": "Extortion demands come via untraceable Darknet emails threatening DDoS attacks or data leaks against the business.",
+                "suggested_actions": [
+                    "Engage entity_id cert_in to mitigate the technical attack on the business servers.",
+                    "Examine disgruntled ex-employees who have the technical know-how and inside knowledge of the company's vulnerabilities.",
+                    "Monitor the demanded cryptocurrency wallet for eventual cash-outs at centralized exchanges."
+                ]
+            }
+        ]
+    },
+    {
+        "act": "sop",
+        "sop_id": "cheque_bounce_nia_v1",
+        "crime_type": "Cheque Bounce / Financial Instrument Fraud (Negotiable Instruments Act)",
+        "title": "Standard Operating Procedure for Investigation of Cheque Bounce and Financial Fraud",
+        "source": "Synthesized from Negotiable Instruments Act (Section 138) and BNS Cheating Provisions",
+        "steps": [
+            {
+                "step_id": "ni_step_01_complaint_verification",
+                "order": 1,
+                "title": "Complaint & Legal Notice Verification",
+                "description": "Cheque bounce is primarily a quasi-criminal offense under Section 138 NI Act, directly filed in court. However, if there is criminal intent to deceive (cheating/forgery), register FIR under BNS 318/336. Verify the foundational documents: original bounced cheque, bank return memo, and the mandatory 15-day statutory legal notice sent to the drawer.",
+                "required_evidence": [
+                    "Original bounced cheque",
+                    "Bank return memo (insufficient funds, signature mismatch, account closed)",
+                    "Copy of statutory legal notice and postal delivery receipt"
+                ],
+                "legal_basis": "BNSS Section 173",
+                "department_entity_id": null,
+                "condition_to_start": "Complainant reports fraudulent issuance of a cheque knowing it would bounce.",
+                "condition_to_complete": "Documents verified and criminal intent (FIR) established.",
+                "on_complete_trigger": [
+                    "ni_step_02_bank_requisition"
+                ],
+                "if_blocked": [
+                    "If the complainant missed the 30-day window to file the NI Act case, evaluate the case strictly under BNS Cheating provisions."
+                ]
+            },
+            {
+                "step_id": "ni_step_02_bank_requisition",
+                "order": 2,
+                "title": "Bank Account & KYC Requisition",
+                "description": "Issue Section 94 BNSS notices to the drawer's bank. Procure account opening forms, signature specimen cards, and statement of accounts to prove the accused knew the account lacked funds or was already closed when the cheque was issued.",
+                "required_evidence": [
+                    "Certified bank statement of the accused's account",
+                    "Account opening KYC and specimen signature card",
+                    "Bank manager's statement regarding account status"
+                ],
+                "legal_basis": "BNSS Section 94",
+                "department_entity_id": "bank_generic",
+                "condition_to_start": "Bounced cheque and return memo secured.",
+                "condition_to_complete": "Bank records proving financial deception procured.",
+                "on_complete_trigger": [
+                    "ni_step_03_fsl_signature"
+                ],
+                "if_blocked": [
+                    "If the bank refuses citing customer privacy, explicitly invoke the BNSS Section 94 powers of a police officer investigating a cognizable BNS crime."
+                ]
+            },
+            {
+                "step_id": "ni_step_03_fsl_signature",
+                "order": 3,
+                "title": "FSL Handwriting & Signature Verification",
+                "description": "If the bank return memo cites 'Signature Mismatch', the accused may have deliberately signed falsely. Forward the original cheque and the accused's admitted specimen signatures (from bank KYC) to FSL Questioned Documents division.",
+                "required_evidence": [
+                    "Original disputed cheque",
+                    "Admitted genuine signatures",
+                    "FSL Handwriting Expert Report"
+                ],
+                "legal_basis": "BNSS Section 329",
+                "department_entity_id": "forensic_science_lab",
+                "condition_to_start": "Return memo cites signature mismatch or accused claims forgery.",
+                "condition_to_complete": "Forensic proof of deliberate signature manipulation received.",
+                "on_complete_trigger": [
+                    "ni_step_04_mca_corporate"
+                ],
+                "if_blocked": [
+                    "If the accused claims the cheque was stolen and forged by the complainant, demand the accused produce the FIR they filed for the 'stolen' cheque."
+                ]
+            },
+            {
+                "step_id": "ni_step_04_mca_corporate",
+                "order": 4,
+                "title": "Corporate Liability Verification (MCA21)",
+                "description": "If the cheque was issued by a company, Section 141 of the NI Act holds directors liable. Query MCA21 to obtain the company's incorporation details, MOA, and list of active directors at the time the cheque was drawn.",
+                "required_evidence": [
+                    "Company Incorporation Certificate",
+                    "List of Directors and DIN details",
+                    "Board resolution authorizing cheque signatories"
+                ],
+                "legal_basis": "BNSS Section 94",
+                "department_entity_id": "mca21_roc",
+                "condition_to_start": "Cheque drawn on a corporate bank account.",
+                "condition_to_complete": "Responsible directors and authorized signatories identified.",
+                "on_complete_trigger": [
+                    "ni_step_05_telecom_trace"
+                ],
+                "if_blocked": [
+                    "If a director claims they resigned prior to issuance, verify the Form DIR-11/DIR-12 filing dates on the MCA portal."
+                ]
+            },
+            {
+                "step_id": "ni_step_05_telecom_trace",
+                "order": 5,
+                "title": "Tracing Absconding Accused",
+                "description": "Fraudsters often issue blank cheques and abscond. Issue notices to TSPs for CDRs and Cell ID locations to trace the physical whereabouts of the absconding drawer.",
+                "required_evidence": [
+                    "CDRs and cell tower location tracking logs",
+                    "Subscriber KYC of alternative phone numbers"
+                ],
+                "legal_basis": "BNSS Section 94",
+                "department_entity_id": "telecom_operator",
+                "condition_to_start": "Accused is absconding or untraceable at registered address.",
+                "condition_to_complete": "Location of the accused tracked.",
+                "on_complete_trigger": [
+                    "ni_step_06_magistrate_summon"
+                ],
+                "if_blocked": [
+                    "If telecom traces fail, coordinate with local informants or business rivals in their native trade hubs."
+                ]
+            },
+            {
+                "step_id": "ni_step_06_magistrate_summon",
+                "order": 6,
+                "title": "Charge-Sheet & Magistrate Summons",
+                "description": "Compile the bank records, FSL reports, corporate details, and evidence of underlying debt/liability. File the chargesheet under BNS (for cheating/forgery). The Magistrate will issue summons or warrants against the accused.",
+                "required_evidence": [
+                    "Final Charge-Sheet under BNSS Section 193",
+                    "Original bounced cheques and legal notices placed in court file",
+                    "Magistrate cognizance order"
+                ],
+                "legal_basis": "BNSS Section 193",
+                "department_entity_id": "court_magistrate_office",
+                "condition_to_start": "Investigation complete and intent to cheat proven.",
+                "condition_to_complete": "Case formally submitted to the court for trial.",
+                "on_complete_trigger": [],
+                "if_blocked": [
+                    "If the court issues NBWs (Non-Bailable Warrants) and the accused remains absconding, initiate proclamation and attachment of property under BNSS Sections 84/85."
+                ]
+            }
+        ],
+        "dead_end_strategies": [
+            {
+                "condition": "Accused claims the cheque was given merely as a blank 'security' cheque years ago and was misused by the complainant for a fabricated debt.",
+                "suggested_actions": [
+                    "Demand the complainant produce ledgers, invoices, or GST returns proving the actual supply of goods or underlying legally enforceable debt.",
+                    "Check the serial number of the cheque with the bank to establish when that specific cheque book was issued to the accused.",
+                    "Send the cheque to FSL to analyze ink age and handwriting differences between the signature (accused) and the filled amount/date (complainant)."
+                ]
+            }
+        ]
+    }
+]

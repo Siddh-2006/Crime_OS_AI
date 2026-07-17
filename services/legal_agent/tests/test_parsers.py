@@ -52,16 +52,12 @@ class ParserTests(unittest.TestCase):
             records[1].chapter_tag,
             ["OFFENCES RELATING TO COIN", "CURRENCY-NOTES", "BANK-NOTES", "AND GOVERNMENT STAMPS"],
         )
-        self.assertEqual(len(records[0].subsections), 2)
-        self.assertEqual(records[0].subsections[0].id, "(1)")
-        self.assertEqual(len(records[0].subsections[0].clauses), 2)
-        self.assertEqual(records[0].subsections[0].clauses[0].id, "(a)")
-        self.assertEqual(records[0].subsections[0].clauses[0].references, [])
         self.assertEqual(records[1].serial_number, "29")
         self.assertEqual(records[1].references, ["25", "26", "27"])
-        self.assertEqual(records[0].source_page, 1)
-        self.assertIn(1, records[0].source_pages)
-        self.assertEqual(records[0].page, 1)
+        self.assertEqual(records[0].page_numbers, [1])
+        self.assertEqual(records[1].page_numbers, [1])
+        self.assertNotIn("clauses", records[0].model_dump(exclude_none=True))
+        self.assertNotIn("subsections", records[0].model_dump(exclude_none=True))
 
     def test_legal_parser_supports_direct_clauses_without_subsections(self):
         pages = [
@@ -78,10 +74,8 @@ class ParserTests(unittest.TestCase):
         ]
         records = parse_bns_pdf("sample_bns.pdf", pages)
         self.assertEqual(len(records), 1)
-        self.assertEqual(records[0].subsections, [])
-        self.assertEqual(len(records[0].clauses), 2)
-        self.assertEqual(records[0].clauses[1].references, ["10", "11"])
         self.assertEqual(records[0].references, ["10", "11"])
+        self.assertEqual(records[0].page_numbers, [1])
 
     def test_bnss_and_bsa_use_the_same_legal_parser_shape(self):
         pages = [make_page(1, ["CHAPTER I", "GENERAL", "1. Short title and commencement."])]
