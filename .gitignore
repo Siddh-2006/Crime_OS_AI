@@ -1,23 +1,84 @@
-# write gitignore to ignore vscode files, nodemodules, and other common files
-# Visual Studio Code
+# Dependency directories
+node_modules/
+jspm_packages/
+web_modules/
+
+# Next.js build output
+.next/
+out/
+
+# Production build outputs
+dist/
+build/
+bin/
+obj/
+
+# Python / Virtual Environments
+.venv/
+venv/
+env/
+ENV/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ipynb_checkpoints/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Local Environment Variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+*.env
+# Ensure .env.example files are tracked
+!*.env.example
+!.env.example
+
+# IDEs / Editors
 .vscode/
-# Node modules
-node_modules/   
-# Logs
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+tempCodeRunnerFile.py
+
+# Logs and databases
 logs/
 *.log
 npm-debug.log*
-# Runtime data
+yarn-debug.log*
+yarn-error.log*
 pids/
 *.pid
 *.seed
-# env
-.env
-# OS generated files
+*.ports
+
+# Operating System files
 .DS_Store
-# package-lock.json
-package-lock.json
-# .venv
-.venv/
-#_pycache__
-__pycache__/
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Testing and coverage
+coverage/
+.nyc_output/
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+nosetests.xml
+coverage.xml
+*.cover
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
