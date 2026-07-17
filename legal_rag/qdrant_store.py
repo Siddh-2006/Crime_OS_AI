@@ -32,7 +32,7 @@ class LegalQdrantConfig:
     url: str = "http://localhost:6333"
     collection_name: str = "final"
     prefer_grpc: bool = False
-    timeout: float | None = None
+    timeout: float | None = 60.0
 
 
 class LegalQdrantStore:
