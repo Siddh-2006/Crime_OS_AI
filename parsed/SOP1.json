@@ -1,0 +1,2008 @@
+[
+  {
+    "act": "sop",
+    "sop_id": "upi_digital_payment_v1",
+    "crime_type": "UPI/Digital Payment Fraud",
+    "title": "Standard Operating Procedure for Investigating UPI & Digital Payment Cyber Frauds",
+    "source": "Synthesized from I4C NCRP-CFCFRMS SOP and RBI Master Directions on Digital Payments Security",
+    "steps": [
+      {
+        "step_id": "upi_step_01_ncrp_triage",
+        "order": 1,
+        "title": "NCRP Ticket Verification & Emergency Fund Freezing",
+        "description": "Verify the complaint details on the National Cybercrime Reporting Portal (NCRP) / CFCFRMS dashboard. Ensure that the 12-digit Retrieval Reference Number (RRN), transaction timestamp, and Virtual Payment Address (VPA) are accurately logged to initiate an immediate debit freeze on the beneficiary account or merchant wallet.",
+        "required_evidence": [
+          "Complainant's bank account statement showing debit",
+          "NCRP / CFCFRMS Ticket Acknowledgement Number",
+          "12-digit RRN / Transaction ID and UPI VPA screenshot"
+        ],
+        "legal_basis": "BNSS Section 106",
+        "department_entity_id": "upi_npci",
+        "condition_to_start": "Receipt of cyber fraud complaint via Helpline 1930 or online portal within the golden hour / investigation window.",
+        "condition_to_complete": "NPCI and beneficiary banks acknowledge the ticket and confirm the status of funds (frozen, partially frozen, or withdrawn).",
+        "on_complete_trigger": [
+          "upi_step_02_bank_kyc"
+        ],
+        "if_blocked": [
+          "Issue a direct emergency Section 106 BNSS notice via official email to the Nodal Officer of the beneficiary bank if the automated NCRP API integration fails."
+        ]
+      },
+      {
+        "step_id": "upi_step_02_bank_kyc",
+        "order": 2,
+        "title": "Beneficiary Bank Account KYC & Statement Requisition",
+        "description": "Issue formal notices to the beneficiary bank(s) identified in the UPI routing logs to obtain comprehensive KYC details, account opening forms, linked mobile numbers, IP login logs, and certified bank statements of the suspect account(s).",
+        "required_evidence": [
+          "Certified bank ledger statement of the suspect account",
+          "Account KYC documents (Aadhaar, PAN, photograph, physical address)",
+          "Net/Mobile banking login IP addresses and device identifiers"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "bank_generic",
+        "condition_to_start": "Beneficiary bank account number and IFSC identified from NPCI/NCRP routing logs.",
+        "condition_to_complete": "Receipt of certified bank statements, full KYC dossier, and login IP logs from the bank.",
+        "on_complete_trigger": [
+          "upi_step_03_telecom_cdr",
+          "upi_step_04_isp_ipdr"
+        ],
+        "if_blocked": [
+          "Escalate to the bank's Principal Nodal Officer (PNO); issue a summons under BNSS Section 94 for personal appearance of the Branch Manager."
+        ]
+      },
+      {
+        "step_id": "upi_step_03_telecom_cdr",
+        "order": 3,
+        "title": "Telecom Subscriber Analysis & CDR/Tower Dump Requisition",
+        "description": "Analyse the mobile numbers linked to the suspect VPA and bank KYC. Issue notices to the respective Telecom Service Providers for Customer Application Forms (CAF), Call Detail Records (CDR) with Cell ID timestamps, and IMEI histories to trace the physical location of the fraudster or mule handler.",
+        "required_evidence": [
+          "Subscriber CAF with ID proof and photograph",
+          "CDR for the relevant period with Cell ID tower locations",
+          "IMEI search history / handset tracking logs"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Mobile numbers identified from UPI VPA mapping or bank account KYC.",
+        "condition_to_complete": "Receipt of CAF, CDR, and IMEI logs from the TSP with Section 63 BSA electronic certificate.",
+        "on_complete_trigger": [
+          "upi_step_05_atm_cctv"
+        ],
+        "if_blocked": [
+          "Escalate to the Chief Nodal Officer of the telecom operator or route prioritization through SP/DCP Cyber Crime."
+        ]
+      },
+      {
+        "step_id": "upi_step_04_isp_ipdr",
+        "order": 4,
+        "title": "ISP Resolution of Banking Login IP Addresses",
+        "description": "Analyse the public IP addresses and timestamps obtained from the bank's login logs or NPCI transaction initiation logs. Send requisition notices to the relevant Internet Service Provider to obtain IPDR and NAT port binding logs to identify the real physical installation address and subscriber.",
+        "required_evidence": [
+          "IPDR / NAT port binding logs with exact UTC/IST timestamps",
+          "ISP subscriber KYC (billing name, installation address, MAC address binding)"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "isp_non_telecom",
+        "condition_to_start": "Public IP address, exact timestamp (down to seconds), and NAT source port identified from bank/NPCI server logs.",
+        "condition_to_complete": "ISP provides positive identification of the subscriber and physical premises address.",
+        "on_complete_trigger": [
+          "upi_step_06_search_seizure"
+        ],
+        "if_blocked": [
+          "If CGNAT port was not logged by the bank, request mobile data session logs (GPRS/4G IPDR) directly from the telecom operator under entity_id telecom_operator."
+        ]
+      },
+      {
+        "step_id": "upi_step_05_atm_cctv",
+        "order": 5,
+        "title": "ATM / Branch CCTV Footage Procurement",
+        "description": "If the defrauded funds were withdrawn via ATM cash withdrawals or branch cheques, immediately issue a notice to the acquiring bank for CCTV footage of the ATM kiosk or branch counter corresponding to the exact transaction timestamps.",
+        "required_evidence": [
+          "Video footage of the ATM kiosk or branch counter covering the withdrawal window",
+          "ATM Electronic Journal (EJ) transaction logs"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "bank_generic",
+        "condition_to_start": "Bank statement confirms cash withdrawal via ATM or physical branch encashment.",
+        "condition_to_complete": "Procurement of clear CCTV video clips and EJ logs showing the physical withdrawal.",
+        "on_complete_trigger": [
+          "upi_step_06_search_seizure"
+        ],
+        "if_blocked": [
+          "If footage is stored on a local branch DVR about to be overwritten, execute an immediate physical inspection and seizure under BNSS Section 106."
+        ]
+      },
+      {
+        "step_id": "upi_step_06_search_seizure",
+        "order": 6,
+        "title": "Search, Seizure, and Arrest of Accused / Mule Handlers",
+        "description": "Conduct a coordinated raid at the physical locations identified via CDR cell towers, ISP installation addresses, and ATM CCTV identification. Arrest the accused, seize mobile handsets, SIM cards, ATM cards, and passbooks, and ensure forensic imaging of digital devices.",
+        "required_evidence": [
+          "Seizure memo / Panchnama of mobile phones, SIM cards, debit cards, and computing devices",
+          "Arrest memo and medical examination report",
+          "Hash values / forensic mirror images of seized digital media"
+        ],
+        "legal_basis": "BNSS Section 96",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Actionable physical location and identity established through CDR, IPDR, or CCTV evidence.",
+        "condition_to_complete": "Successful execution of search warrant, seizure of digital exhibits, and forwarding of exhibits to FSL.",
+        "on_complete_trigger": [
+          "upi_step_07_court_restoration"
+        ],
+        "if_blocked": [
+          "If the accused has fled to another state, coordinate with the State Cyber Cell / CID for interstate transit remand and operational support."
+        ]
+      },
+      {
+        "step_id": "upi_step_07_court_restoration",
+        "order": 7,
+        "title": "Judicial Application for Release of Frozen Funds",
+        "description": "File a formal memorandum and supporting evidence before the jurisdictional Magistrate to assist the victim in obtaining a judicial order for the release and restoration of the frozen funds back to the complainant's bank account.",
+        "required_evidence": [
+          "Certified copy of NCRP fund freeze confirmation / Bank lien order",
+          "Indemnity bond from the complainant",
+          "Investigating Officer's report endorsing fund restoration"
+        ],
+        "legal_basis": "BNSS Section 503",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Defrauded funds are confirmed frozen in the suspect bank account or wallet.",
+        "condition_to_complete": "Magistrate passes an order directing the bank to transfer the frozen funds to the victim's account.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If multiple victims are claiming the same frozen pool, file a consolidated distribution plan before the Chief Judicial Magistrate."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Funds were withdrawn via ATM by masked individuals with no clear facial recognition and SIM cards/bank accounts were procured using forged identity documents (mule accounts).",
+        "suggested_actions": [
+          "Perform IMEI clustering on the handset used to access the UPI app to identify other SIM cards used in the same physical device.",
+          "Check the biometric authentication history of the account opening KYC via the bank or Business Correspondent (BC) point to identify the actual individual who provided fingerprints.",
+          "Request NPCI to globally blacklist the IMEI and linked mobile numbers across all UPI PSP ecosystems."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "card_skimming_fraud_v1",
+    "crime_type": "Credit/Debit Card Fraud & Skimming",
+    "title": "Standard Operating Procedure for Investigating Card Skimming, Cloning & CNP Frauds",
+    "source": "Synthesized from general police cyber investigation manuals and RBI guidelines on card security",
+    "steps": [
+      {
+        "step_id": "card_step_01_victim_interview",
+        "order": 1,
+        "title": "Victim Triage & Card Transaction History Profiling",
+        "description": "Interview the victim to establish whether the fraud was Card-Present (skimming/cloning at ATM/PoS) or Card-Not-Present (international e-commerce/phishing). Obtain the card statement, identify the exact compromised merchant/ATM locations, and confirm immediate card blocking.",
+        "required_evidence": [
+          "Victim's written statement detailing recent physical card usage",
+          "Bank/Credit Card account statement showing unauthorized charges",
+          "Card blocking SMS/confirmation email from the issuer bank"
+        ],
+        "legal_basis": null,
+        "department_entity_id": "bank_generic",
+        "condition_to_start": "Complainant reports unauthorized credit or debit card transactions.",
+        "condition_to_complete": "Categorization of fraud as physical skimming vs. online CNP, and identification of Point of Compromise (PoC).",
+        "on_complete_trigger": [
+          "card_step_02_pos_atm_data"
+        ],
+        "if_blocked": [
+          "If the issuer bank delays providing the transaction ledger, instruct the victim to download the unbilled transaction logs via official mobile banking apps."
+        ]
+      },
+      {
+        "step_id": "card_step_02_pos_atm_data",
+        "order": 2,
+        "title": "Point of Sale (PoS) / ATM Terminal Data Requisition",
+        "description": "Issue notices to the merchant bank (acquirer) and ATM operator where the card was last physically used (suspected skimming site) and where the fraudulent withdrawals/swipes occurred. Request Electronic Journal (EJ) logs, terminal IDs, and CCTV footage.",
+        "required_evidence": [
+          "ATM Electronic Journal (EJ) / PoS transaction logs",
+          "Terminal ID and merchant establishment details",
+          "CCTV footage of the suspected skimming installation window and fraudulent withdrawal window"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "bank_generic",
+        "condition_to_start": "Identification of physical ATM kiosks or merchant PoS terminals used before and during the fraud.",
+        "condition_to_complete": "Receipt of EJ logs and clear CCTV footage from the acquiring bank/ATM operator.",
+        "on_complete_trigger": [
+          "card_step_03_gateway_ecommerce"
+        ],
+        "if_blocked": [
+          "If the ATM is operated by a White Label ATM (WLA) entity, serve notice directly to the WLA nodal officer via RBI regional portal."
+        ]
+      },
+      {
+        "step_id": "card_step_03_gateway_ecommerce",
+        "order": 3,
+        "title": "E-Commerce & Payment Gateway Traceability (For CNP Fraud)",
+        "description": "If transactions were online (CNP), issue notices to the e-commerce merchants or payment aggregators (e.g., Razorpay, PayU, Amazon) identified in the card descriptor. Demand order details, delivery addresses, buyer KYC, and IP access logs.",
+        "required_evidence": [
+          "Order invoice, item description, and shipping/delivery address",
+          "Buyer account KYC (email, mobile number, billing details)",
+          "Payment gateway logs showing IP address, device fingerprint, and OTP verification status"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "ecommerce_platform",
+        "condition_to_start": "Card statement shows unauthorized online purchases or digital wallet top-ups.",
+        "condition_to_complete": "E-commerce platform provides complete order logs, delivery address, and buyer login IP.",
+        "on_complete_trigger": [
+          "card_step_04_logistics_trace",
+          "card_step_05_ipdr_trace"
+        ],
+        "if_blocked": [
+          "If the transaction was an international CNP charge without 2FA, notify the card network (Visa/Mastercard) through the issuer bank for chargeback and fraud tagging."
+        ]
+      },
+      {
+        "step_id": "card_step_04_logistics_trace",
+        "order": 4,
+        "title": "Courier & Logistics Delivery Interception / Tracing",
+        "description": "If physical goods were ordered using the stolen card data, issue notices to the courier company handling the shipment. Obtain Proof of Delivery (PoD), delivery agent contact details, and recipient phone numbers, or instruct an active intercept if the parcel is in transit.",
+        "required_evidence": [
+          "Courier consignment tracking sheet and delivery run-sheet",
+          "Proof of Delivery (PoD) signature / OTP verification logs",
+          "Delivery executive's statement and GPS drop-off coordinates"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "postal_courier_services",
+        "condition_to_start": "E-commerce records confirm physical merchandise was shipped to a specific address.",
+        "condition_to_complete": "Identification of the physical recipient or successful interception of the parcel.",
+        "on_complete_trigger": [
+          "card_step_06_raid_seizure"
+        ],
+        "if_blocked": [
+          "If the delivery address is a fake or open landmark (e.g., 'near bus stand'), subpoena the delivery executive's call logs to identify the phone number used to call the receiver."
+        ]
+      },
+      {
+        "step_id": "card_step_05_ipdr_trace",
+        "order": 5,
+        "title": "ISP / Telecom Tracing of Online Transactions",
+        "description": "Analyse the login and checkout IP addresses provided by the e-commerce platform or payment gateway. Issue notices to the ISP or TSP to resolve the public IP and NAT source port to a specific subscriber premises or mobile device.",
+        "required_evidence": [
+          "IPDR logs resolving public IP and NAT port to private subscriber IP",
+          "Subscriber KYC and physical installation address"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "isp_non_telecom",
+        "condition_to_start": "Valid IP address and timestamp obtained from e-commerce or gateway checkout logs.",
+        "condition_to_complete": "Positive identification of the ISP subscriber name and physical location.",
+        "on_complete_trigger": [
+          "card_step_06_raid_seizure"
+        ],
+        "if_blocked": [
+          "If the IP resolves to a commercial VPN or proxy service, issue a preservation request to the VPN provider while focusing investigation on physical delivery trails."
+        ]
+      },
+      {
+        "step_id": "card_step_06_raid_seizure",
+        "order": 6,
+        "title": "Physical Raid, Seizure of Skimming Hardware & Arrest",
+        "description": "Conduct a raid at the identified physical address (from delivery tracking, IPDR, or ATM CCTV surveillance). Seize skimming hardware (MSR writers, deep-insert skimmers, micro-cameras), cloned plastic cards, laptops, and arrest the suspects.",
+        "required_evidence": [
+          "Seizure memo of magnetic stripe readers/writers, blank plastic cards, and skimmer bezels",
+          "Forensic mirror image of laptops and storage media containing compromised card dumps",
+          "Arrest memo and disclosure statements"
+        ],
+        "legal_basis": "BNSS Section 96",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Suspect identity and physical location established via CCTV, courier tracking, or IPDR.",
+        "condition_to_complete": "Seizure of card cloning paraphernalia and submission of hardware to FSL for technical examination.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If suspects are operating across district/state borders, request assistance from the State Cyber Cell / CID for specialized surveillance."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Card data was stolen via an international data breach or darkweb dump, and fraudulent transactions were executed on overseas payment gateways utilizing cryptocurrency or digital gift cards.",
+        "suggested_actions": [
+          "Obtain the merchant descriptors and transaction BINs from the issuer bank and report the compromised card batch to CERT-In for systemic mitigation.",
+          "Analyse email addresses or phone numbers associated with the gift card redemptions by serving process on the respective online platforms via I4C international coordination.",
+          "Instruct the complainant to file a formal dispute with the card issuing bank under RBI Zero Liability Circular (DBR.No.Leg.BC.78/09.07.005/2017-18) for unauthorized CNP transactions without OTP."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "net_banking_phishing_v1",
+    "crime_type": "Internet/Net Banking Fraud",
+    "title": "Standard Operating Procedure for Investigating Net Banking Phishing & Malware Account Takeovers",
+    "source": "Synthesized from I4C Cyber Crime Investigation Guidelines and general LEA net banking SOPs",
+    "steps": [
+      {
+        "step_id": "netbank_step_01_complainant_logs",
+        "order": 1,
+        "title": "Victim Session Profiling & Credential Compromise Assessment",
+        "description": "Examine the victim's device and communication history to determine the vector of compromise (phishing SMS/email, remote access RAT app like AnyDesk/TeamViewer, or malware APK). Secure screenshots of phishing links and SMS headers.",
+        "required_evidence": [
+          "Screenshots of phishing SMS/WhatsApp messages with Sender ID and URL link [1.1.2]",
+          "Victim's bank statement showing unauthorized net banking transfers",
+          "List of recently installed applications or remote desktop tools on victim's phone/PC"
+        ],
+        "legal_basis": null,
+        "department_entity_id": null,
+        "condition_to_start": "Complainant reports unauthorized net banking login and fund transfer.",
+        "condition_to_complete": "Identification of the specific phishing domain, malicious APK, or remote access vector used to compromise credentials.",
+        "on_complete_trigger": [
+          "netbank_step_02_url_takedown",
+          "netbank_step_03_bank_ip_logs"
+        ],
+        "if_blocked": [
+          "If the victim deleted the phishing SMS, instruct them to request SMS delivery logs from their telecom operator or examine the browser history."
+        ]
+      },
+      {
+        "step_id": "netbank_step_02_url_takedown",
+        "order": 2,
+        "title": "Phishing URL / Malicious Domain Takedown & Analysis",
+        "description": "Send formal requests to I4C and CERT-In to block the fraudulent phishing website URL or domain. Conduct WHOIS, DNS resolution, and hosting server IP analysis to identify the infrastructure provider housing the phishing site.",
+        "required_evidence": [
+          "WHOIS registration details and domain registrar KYC",
+          "Hosting server IP address and DNS routing records",
+          "Acknowledgement from I4C/CERT-In regarding URL blocking"
+        ],
+        "legal_basis": "Information Technology Act Section 69A",
+        "department_entity_id": "cert_in",
+        "condition_to_start": "Active phishing URL or fraudulent banking web link identified from victim's device.",
+        "condition_to_complete": "Phishing domain is blocked nationally and hosting server IP details are procured.",
+        "on_complete_trigger": [
+          "netbank_step_05_isp_trace"
+        ],
+        "if_blocked": [
+          "If the domain is hosted on an offshore bulletproof host, report the phishing URLs directly to major browser phishing registries (Google Safe Browsing, Microsoft SmartScreen)."
+        ]
+      },
+      {
+        "step_id": "netbank_step_03_bank_ip_logs",
+        "order": 3,
+        "title": "Bank Server Login IP & Beneficiary Tracking Requisition",
+        "description": "Issue notices under BNSS Section 94 to the victim's bank to obtain internet banking access logs showing the IP addresses, timestamps, device fingerprints, and user-agents used for the unauthorized login and payee addition. Request immediate freezing of transferred funds at beneficiary banks.",
+        "required_evidence": [
+          "Internet Banking login and transaction IP address logs with exact UTC/IST timestamps and port numbers",
+          "Beneficiary account numbers, IFSCs, and amount distribution tree",
+          "Confirmation of debit freeze / lien marking on beneficiary accounts under BNSS Section 106"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "bank_generic",
+        "condition_to_start": "Unauthorized net banking transaction confirmed.",
+        "condition_to_complete": "Receipt of detailed login IP logs and confirmation of fund freezing in destination bank accounts.",
+        "on_complete_trigger": [
+          "netbank_step_04_mule_kyc",
+          "netbank_step_05_isp_trace"
+        ],
+        "if_blocked": [
+          "If the bank provides only public IPs without source ports, immediately re-issue notice demanding NAT source ports and session IDs."
+        ]
+      },
+      {
+        "step_id": "netbank_step_04_mule_kyc",
+        "order": 4,
+        "title": "Mule Account Investigation & ATM Withdrawal Tracing",
+        "description": "Investigate the first and second-layer beneficiary (mule) bank accounts where the stolen funds were transferred. Obtain full KYC, account opening photographs, mobile numbers, and ATM CCTV footage if funds were encashed.",
+        "required_evidence": [
+          "Certified KYC dossiers of all recipient mule accounts",
+          "Bank statements showing subsequent fund dispersion or ATM encashment",
+          "ATM CCTV footage showing the physical withdrawer"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "bank_generic",
+        "condition_to_start": "Beneficiary bank account numbers identified from victim bank's transfer logs.",
+        "condition_to_complete": "Complete identification of mule account holders and extraction of withdrawal CCTV footage.",
+        "on_complete_trigger": [
+          "netbank_step_06_arrest_seizure"
+        ],
+        "if_blocked": [
+          "If funds were moved from bank accounts into crypto wallets, immediately transition tracking to entity_id vasp_crypto_exchange."
+        ]
+      },
+      {
+        "step_id": "netbank_step_05_isp_trace",
+        "order": 5,
+        "title": "ISP IPDR Tracing of Phishing Operators & Unauthorized Logins",
+        "description": "Issue notices to the respective ISPs or TSPs owning the public IP addresses logged during the phishing domain administration and the unauthorized net banking logins. Request IPDR and NAT port binding records.",
+        "required_evidence": [
+          "IPDR logs mapping public IP and port to private subscriber IP",
+          "ISP subscriber KYC and physical installation address of the attacker"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "isp_non_telecom",
+        "condition_to_start": "Attacker IP addresses obtained from bank server login logs or domain hosting logs.",
+        "condition_to_complete": "ISP confirms the physical location and identity of the internet subscriber.",
+        "on_complete_trigger": [
+          "netbank_step_06_arrest_seizure"
+        ],
+        "if_blocked": [
+          "If IP addresses resolve to mobile data networks (Jio/Airtel), route IPDR requisition through entity_id telecom_operator."
+        ]
+      },
+      {
+        "step_id": "netbank_step_06_arrest_seizure",
+        "order": 6,
+        "title": "Raid, Forensic Device Seizure & Arrest of Phishing Syndicate",
+        "description": "Execute search warrants at the physical locations identified via IPDR, telecom cell towers, and mule KYC. Arrest the phishing operators, SIM box operators, and mule handlers. Seize computers, mobile phones, and SIM cards.",
+        "required_evidence": [
+          "Seizure memo / Panchnama of computing devices, SIM cards, and financial instruments",
+          "Forensic mirror images of hard drives and mobile handsets showing phishing scripts or banking credentials",
+          "Arrest memos and interrogation disclosures"
+        ],
+        "legal_basis": "BNSS Section 96",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Actionable physical location established from IPDR, telecom CDR, or ATM surveillance.",
+        "condition_to_complete": "Arrest of syndicate members, seizure of hardware, and submission of digital exhibits to FSL.",
+        "on_complete_trigger": [
+          "netbank_step_07_court_refund"
+        ],
+        "if_blocked": [
+          "If the primary phishing syndicate operates from a known cybercrime hotspot outside the state (e.g., Jamtara, Mewat), coordinate raid execution with State Cyber Cell / CID."
+        ]
+      },
+      {
+        "step_id": "netbank_step_07_court_refund",
+        "order": 7,
+        "title": "Judicial Application for Restitution of Defrauded Funds",
+        "description": "Submit a formal judicial report and application under BNSS Section 503 before the jurisdictional Magistrate to release any frozen funds held in beneficiary bank accounts back to the victim.",
+        "required_evidence": [
+          "Bank confirmation letters of frozen balances under Section 106 BNSS",
+          "Victim's indemnity bond and application for release of property",
+          "Investigating Officer's formal no-objection / endorsement report"
+        ],
+        "legal_basis": "BNSS Section 503",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Defrauded funds are successfully secured/frozen in destination bank accounts.",
+        "condition_to_complete": "Court order directing the banks to release the frozen money to the complainant.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the bank demands an indemnity bond before complying with the court order, facilitate the drafting and notarization of the bond for the victim."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Attacker utilized anonymizing Tor networks or multi-hop foreign VPNs for net banking login, and stolen funds were immediately dispersed across dozens of temporary digital wallets.",
+        "suggested_actions": [
+          "Shift investigative focus from digital IP tracing to financial follow-the-money tracing by requesting NPCI and wallet aggregators for end-destination bank accounts.",
+          "Analyse the Call Detail Records (CDR) of the victim's phone around the time of compromise to identify incoming phishing/vishing phone numbers.",
+          "Check if the victim's mobile number experienced an unauthorized SIM swap or eSIM upgrade by serving notice on the telecom operator."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "investment_trading_scam_v1",
+    "crime_type": "Investment & Trading (Stock/Forex) Scam",
+    "title": "Standard Operating Procedure for Investigating Fake Trading Apps & Stock/Forex Investment Scams",
+    "source": "Synthesized from general practice, MHA cyber fraud guidelines, and SEBI/RBI advisories on illegal trading platforms",
+    "steps": [
+      {
+        "step_id": "invest_step_01_platform_profiling",
+        "order": 1,
+        "title": "Scam Platform Profiling & Evidence Preservation",
+        "description": "Collect complete details of the fraudulent investment scheme: social media advertisements, WhatsApp/Telegram group links, APK files, website URLs, and screenshots of fake trading dashboards showing inflated profits.",
+        "required_evidence": [
+          "Screenshots of WhatsApp/Telegram group chats, admin numbers, and trade recommendations",
+          "APK file or website URL of the fake trading platform",
+          "Complainant's bank statements showing all outbound transfers to scam accounts"
+        ],
+        "legal_basis": null,
+        "department_entity_id": null,
+        "condition_to_start": "Victim reports financial loss to an unregulated or fake stock/forex/crypto trading application.",
+        "condition_to_complete": "Compilation of all communication links, APK samples, and a verified schedule of defrauded financial transactions.",
+        "on_complete_trigger": [
+          "invest_step_02_social_media_tracing",
+          "invest_step_03_bank_money_trail"
+        ],
+        "if_blocked": [
+          "If the fraudulent application has been deleted or taken offline, extract the cached APK or web artifacts from the victim's smartphone using forensic extraction tools."
+        ]
+      },
+      {
+        "step_id": "invest_step_02_social_media_tracing",
+        "order": 2,
+        "title": "Social Media & Messaging Platform Tracing",
+        "description": "Issue notices under BNSS Section 94 to Meta (WhatsApp/Facebook/Instagram) and Telegram (via official LEA channels) to obtain group admin KYC, subscriber IP logs, and linked phone numbers for the accounts that lured the victim.",
+        "required_evidence": [
+          "Subscriber registration details, verified phone numbers, and email IDs of group admins",
+          "IP address logs with timestamps for group creation and message posting [1.1.1]",
+          "Account preservation confirmation from social media platforms"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "meta_platforms",
+        "condition_to_start": "Social media profiles, WhatsApp group links, or Telegram channels identified from victim's phone.",
+        "condition_to_complete": "Receipt of basic subscriber info and IP access logs from the messaging/social media platforms.",
+        "on_complete_trigger": [
+          "invest_step_05_telecom_isp_trace"
+        ],
+        "if_blocked": [
+          "If Telegram or offshore platforms delay response, extract the admin phone numbers and invite links directly from the victim's chat history and run OSINT / telecom queries."
+        ]
+      },
+      {
+        "step_id": "invest_step_03_bank_money_trail",
+        "order": 3,
+        "title": "Layered Financial Tracing & Freezing of Shell Company Accounts",
+        "description": "Analyse the beneficiary bank accounts (often registered under fake current accounts or shell companies). Issue immediate Section 106 BNSS notices to freeze funds across Level-1, Level-2, and Level-3 recipient accounts, and obtain complete bank KYC and transaction statements.",
+        "required_evidence": [
+          "Certified bank statements and KYC dossiers of Level-1, Level-2, and Level-3 accounts [1.1.1]",
+          "Bank confirmations of debit freeze / lien placement under BNSS Section 106",
+          "Cheque leaf copies, NEFT/RTGS vouchers, and IP login logs of the shell accounts"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "bank_generic",
+        "condition_to_start": "Schedule of victim's outbound bank transfers established.",
+        "condition_to_complete": "Mapping of the multi-layered financial dispersion tree and freezing of available balances.",
+        "on_complete_trigger": [
+          "invest_step_04_mca_shell_investigation",
+          "invest_step_06_crypto_exchange_trace"
+        ],
+        "if_blocked": [
+          "If funds are moving rapidly across dozens of banks, coordinate with the state I4C / CFCFRMS desk for automated multi-bank debit freezing."
+        ]
+      },
+      {
+        "step_id": "invest_step_04_mca_shell_investigation",
+        "order": 4,
+        "title": "Corporate & Shell Company Verification (MCA21)",
+        "description": "If beneficiary bank accounts belong to Private Limited Companies, LLPs, or firms, access the Ministry of Corporate Affairs (MCA21) database. Download incorporation documents, MOA/AOA, verify Director Identification Numbers (DIN), and trace registered office addresses.",
+        "required_evidence": [
+          "Certificate of Incorporation, MOA, and AOA of suspect companies",
+          "DIN master details, KYC, and personal addresses of directors/signatories",
+          "Form INC-22 (registered office address) and bank account resolution documents"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "mca21_roc",
+        "condition_to_start": "Beneficiary bank account KYC reveals a corporate entity or LLP name.",
+        "condition_to_complete": "Identification of real or dummy directors and physical verification status of the corporate registered address.",
+        "on_complete_trigger": [
+          "invest_step_07_search_seizure"
+        ],
+        "if_blocked": [
+          "If the company is a shell entity with dummy directors (e.g., daily wage laborers), subpoena the bank's account introduction records to identify the professional intermediary (CA/CS) who opened the account."
+        ]
+      },
+      {
+        "step_id": "invest_step_05_telecom_isp_trace",
+        "order": 5,
+        "title": "Telecom & ISP Tracing of Operators and Handlers",
+        "description": "Issue notices to TSPs and ISPs to trace the mobile numbers used by group admins, calling agents, and bank account operators. Obtain CAF, CDR with tower locations, and IPDR logs for bank account internet banking logins.",
+        "required_evidence": [
+          "CAF and CDR with Cell ID locations for scam operator phone numbers",
+          "IPDR / NAT port logs for internet banking logins of shell accounts",
+          "IMEI tracking logs showing device clustering"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Phone numbers and login IP addresses identified from social media logs and bank KYC.",
+        "condition_to_complete": "Positive identification of the operational physical locations and handsets of the syndicate members.",
+        "on_complete_trigger": [
+          "invest_step_07_search_seizure"
+        ],
+        "if_blocked": [
+          "If telecom numbers are registered on fake IDs across multiple states, request analysis of frequent calling contacts (family/associates) from the CDR to establish true identity."
+        ]
+      },
+      {
+        "step_id": "invest_step_06_crypto_exchange_trace",
+        "order": 6,
+        "title": "Tracing Conversion of Funds to Cryptocurrency (VASPs)",
+        "description": "In investment scams, fiat funds in shell bank accounts are frequently transferred to crypto exchanges (e.g., CoinDCX, WazirX, Binance) to buy USDT. Issue notices under BNSS Section 94/106 to VASPs to freeze crypto wallets, obtain user KYC, and retrieve blockchain transaction ledgers.",
+        "required_evidence": [
+          "VASP user KYC (PAN, Aadhaar, bank accounts linked, selfie verification)",
+          "Complete fiat deposit and crypto withdrawal ledgers with Transaction Hashes (TxIDs)",
+          "Confirmation of crypto wallet freezing under BNSS Section 106",
+          "Destination wallet addresses and external exchange clustering data"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "vasp_crypto_exchange",
+        "condition_to_start": "Bank statements of shell accounts show outbound transfers to known crypto exchange nodal accounts or P2P traders.",
+        "condition_to_complete": "Identification of crypto buyer KYC, freezing of available crypto assets, and mapping of outbound TxIDs.",
+        "on_complete_trigger": [
+          "invest_step_07_search_seizure"
+        ],
+        "if_blocked": [
+          "If funds were moved via unregulated P2P crypto traders, issue Section 106 freeze notices to the P2P traders' Indian bank accounts to force their cooperation."
+        ]
+      },
+      {
+        "step_id": "invest_step_07_search_seizure",
+        "order": 7,
+        "title": "Raid, Takedown of Call Centers & Arrest of Syndicate",
+        "description": "Conduct coordinated physical raids on identified call centers, shell company offices, or operational hubs. Arrest syndicate managers, tech developers, and finance handlers. Seize server hardware, mobile phones, forged rubber stamps, and cheque books.",
+        "required_evidence": [
+          "Seizure memos of laptops, mobile phones, SIM boxes, company stamps, and banking kits",
+          "Forensic imaging of server storage and computers hosting fake trading dashboards",
+          "Arrest memos and voluntary disclosure statements"
+        ],
+        "legal_basis": "BNSS Section 96",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Actionable physical intelligence established from telecom CDR, ISP logs, MCA addresses, or VASP KYC.",
+        "condition_to_complete": "Arrest of key syndicate operatives, seizure of infrastructure, and submission of digital evidence to FSL.",
+        "on_complete_trigger": [
+          "invest_step_08_court_restitution"
+        ],
+        "if_blocked": [
+          "If the core masterminds are operating from overseas jurisdictions (e.g., Southeast Asia), coordinate with State Cyber CID and CBI/Interpol for Look Out Circulars (LOCs) and MLAT requests."
+        ]
+      },
+      {
+        "step_id": "invest_step_08_court_restitution",
+        "order": 8,
+        "title": "Judicial Restoration of Frozen Bank and Crypto Assets",
+        "description": "File a comprehensive investigation report and application under BNSS Section 503 / Section 107 before the jurisdictional court to attach proceeds of crime and restore frozen fiat balances and liquidated crypto assets to the victims.",
+        "required_evidence": [
+          "Schedule of frozen bank balances and seized crypto assets",
+          "Victims' verification reports and indemnity bonds",
+          "Court order directing restitution of proceeds of crime"
+        ],
+        "legal_basis": "BNSS Section 503",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Investigating team has successfully frozen fiat funds in bank accounts or crypto assets at VASPs.",
+        "condition_to_complete": "Magistrate issues a formal restitution order transferring recovered funds to the complainants.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If multiple victims across India are claiming the same frozen accounts, request the court to establish an equitable pro-rata distribution formula."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "The trading platform was hosted on offshore cloud servers with privacy-guard domain registration, and all stolen funds were converted to privacy coins or run through blockchain mixers (e.g., Tornado Cash) by overseas syndicates.",
+        "suggested_actions": [
+          "Focus enforcement on the domestic Indian infrastructure: identify and arrest the local 'account aggregators' and CA/CS professionals who incorporated the Indian shell companies and provided bank accounts.",
+          "Request CERT-In and DoT to systematically block all associated web domains, IP addresses, and Telegram channels across Indian networks to prevent further victimization.",
+          "Submit the blockchain wallet clusters and scam IOCs to I4C and international blockchain intelligence databases (e.g., Chainalysis, TRM Labs) for global exchange blacklisting."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "cryptocurrency_fraud_v1",
+    "crime_type": "Cryptocurrency Fraud",
+    "title": "Standard Operating Procedure for Investigating Cryptocurrency Thefts, Bogus ICOs & Wallet Hacks",
+    "source": "Synthesized from general cyber forensic practices, MHA crypto investigation guidelines, and FIU-IND VASP frameworks",
+    "steps": [
+      {
+        "step_id": "crypto_step_01_transaction_triage",
+        "order": 1,
+        "title": "Victim Wallet Profiling & Blockchain Transaction Triage",
+        "description": "Interview the victim to record exact details of the crypto loss: victim's public wallet address, destination/attacker wallet address, blockchain network (Bitcoin, Ethereum, Tron, etc.), exact UTC/IST timestamps, and Transaction Hashes (TxIDs).",
+        "required_evidence": [
+          "Victim's written statement and signed screenshot of wallet transaction history",
+          "Exact alphanumeric Transaction Hashes (TxIDs) / Block explorer URLs",
+          "Complainant's bank statement (if fiat money was used to purchase crypto initially)"
+        ],
+        "legal_basis": null,
+        "department_entity_id": null,
+        "condition_to_start": "Victim reports theft of cryptocurrency or fraudulent transfer to a bogus crypto investment/ICO scheme.",
+        "condition_to_complete": "Verification of TxIDs on public block explorers and establishment of the initial on-chain movement of stolen assets.",
+        "on_complete_trigger": [
+          "crypto_step_02_blockchain_tracing"
+        ],
+        "if_blocked": [
+          "If the victim does not understand blockchain transaction hashes, assist them in opening their wallet app (e.g., MetaMask, Trust Wallet, exchange app) and exporting the transaction log."
+        ]
+      },
+      {
+        "step_id": "crypto_step_02_blockchain_tracing",
+        "order": 2,
+        "title": "On-Chain Forensic Tracing & Clustering",
+        "description": "Utilize specialized blockchain forensic analytical tools (or coordinate with State Cyber Cell / I4C) to trace the flow of stolen tokens across blockchain hops. Identify if funds move into centralized exchanges (CEXs), decentralized exchanges (DEXs), bridges, or mixing services.",
+        "required_evidence": [
+          "Blockchain forensic flow diagram / tracing report showing wallet hops",
+          "Identification of destination deposit wallets belonging to Virtual Asset Service Providers (VASPs)",
+          "Cluster analysis linking suspect addresses to known entity tags or fraud campaigns"
+        ],
+        "legal_basis": null,
+        "department_entity_id": "state_cyber_cell_cid",
+        "condition_to_start": "Verified initial TxIDs and attacker wallet addresses documented.",
+        "condition_to_complete": "Tracing report successfully identifies destination deposit addresses hosted at centralized crypto exchanges or fiat off-ramps.",
+        "on_complete_trigger": [
+          "crypto_step_03_vasp_freeze_kyc"
+        ],
+        "if_blocked": [
+          "If local police station lacks blockchain tracing software, immediately escalate the TxID list to the State Cyber Cell / CID or I4C technical desk for forensic graph generation."
+        ]
+      },
+      {
+        "step_id": "crypto_step_03_vasp_freeze_kyc",
+        "order": 3,
+        "title": "VASP Emergency Freeze & KYC Requisition",
+        "description": "Issue urgent notices under BNSS Section 94 and Section 106 to the domestic or FIU-registered offshore crypto exchanges (e.g., Binance, CoinDCX, WazirX) where stolen funds were deposited. Demand immediate wallet freeze, user KYC dossiers, login IP logs, and withdrawal histories.",
+        "required_evidence": [
+          "Confirmation of emergency wallet/account freeze under BNSS Section 106",
+          "VASP customer KYC records (PAN, Aadhaar, bank account mapping, government ID, selfie photo)",
+          "Account login IP addresses, timestamps, device fingerprints, and API key logs",
+          "Fiat withdrawal history showing bank accounts where crypto was liquidated into INR"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "vasp_crypto_exchange",
+        "condition_to_start": "Blockchain tracing confirms stolen crypto tokens landed in a specific exchange deposit address.",
+        "condition_to_complete": "Exchange freezes the remaining balance and provides full KYC and IP logs of the account holder.",
+        "on_complete_trigger": [
+          "crypto_step_04_bank_fiat_trace",
+          "crypto_step_05_telecom_isp_trace"
+        ],
+        "if_blocked": [
+          "If the exchange is an non-compliant offshore entity without Indian LEA portals, route an emergency freeze request through INTERPOL / I4C international channels or issue public warning flags."
+        ]
+      },
+      {
+        "step_id": "crypto_step_04_bank_fiat_trace",
+        "order": 4,
+        "title": "Bank Fiat Off-Ramp Investigation & Freezing",
+        "description": "If the VASP records reveal that the suspect sold the stolen cryptocurrency for fiat currency (INR) via P2P trading or direct exchange withdrawals, immediately issue notices to the recipient bank accounts under BNSS Section 94/106 to freeze balances and procure bank KYC.",
+        "required_evidence": [
+          "Certified bank statements of the fiat off-ramp accounts",
+          "Bank KYC dossiers of P2P traders or cash-out account holders",
+          "Confirmation of debit freeze / lien marking under BNSS Section 106"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "bank_generic",
+        "condition_to_start": "VASP withdrawal ledgers identify specific Indian bank account numbers used to cash out crypto into fiat INR.",
+        "condition_to_complete": "Freezing of fiat balances in destination bank accounts and complete identification of account holders.",
+        "on_complete_trigger": [
+          "crypto_step_06_search_seizure"
+        ],
+        "if_blocked": [
+          "If P2P traders claim they were innocent third parties who bought crypto unknowingly, summon them with their complete chat logs and bank ledgers to verify trade authenticity."
+        ]
+      },
+      {
+        "step_id": "crypto_step_05_telecom_isp_trace",
+        "order": 5,
+        "title": "Telecom & ISP Tracing of Wallet Operators",
+        "description": "Analyse the login IP addresses provided by the crypto exchange or the mobile numbers linked to the VASP KYC and P2P bank accounts. Issue notices to TSPs and ISPs for CAF, CDR with tower locations, and IPDR port resolution.",
+        "required_evidence": [
+          "CAF and CDR with Cell ID locations for suspect mobile numbers",
+          "IPDR logs resolving exchange login public IPs to specific subscriber installation addresses",
+          "IMEI tracking history of devices used for exchange app access"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Mobile numbers or login IP addresses identified from VASP KYC and bank records.",
+        "condition_to_complete": "Positive physical location and subscriber identification of the individual operating the crypto accounts.",
+        "on_complete_trigger": [
+          "crypto_step_06_search_seizure"
+        ],
+        "if_blocked": [
+          "If IP addresses resolve to non-telecom ISPs, serve notices directly under entity_id isp_non_telecom."
+        ]
+      },
+      {
+        "step_id": "crypto_step_06_search_seizure",
+        "order": 6,
+        "title": "Raid, Hardware Wallet Seizure & Private Key Extraction",
+        "description": "Conduct search and seizure operations at the physical premises identified via telecom, ISP, and bank KYC tracing. Secure hardware wallets (Ledger, Trezor), laptops, mobile phones, and physical seed phrase backups (paper/metal plates). Ensure strict digital forensic protocols.",
+        "required_evidence": [
+          "Seizure memo of hardware wallets, computers, mobile phones, and written seed phrase notes",
+          "Forensic bit-stream images of seized storage media and live memory capture (if devices found unlocked)",
+          "Arrest memos and interrogation statements detailing wallet passwords and pins"
+        ],
+        "legal_basis": "BNSS Section 96",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Actionable physical address and suspect identity established from VASP, bank, and telecom tracing.",
+        "condition_to_complete": "Arrest of suspects, physical seizure of crypto storage hardware, and safe transfer of digital evidence to FSL.",
+        "on_complete_trigger": [
+          "crypto_step_07_court_custody_transfer"
+        ],
+        "if_blocked": [
+          "If encrypted hardware wallets or devices are seized without PINs, submit them immediately to FSL / State Cyber CID for advanced cryptographic brute-force or side-channel extraction."
+        ]
+      },
+      {
+        "step_id": "crypto_step_07_court_custody_transfer",
+        "order": 7,
+        "title": "Judicial Transfer and Restitution of Seized Crypto Assets",
+        "description": "Move an application before the jurisdictional Magistrate under BNSS Section 503 / Section 107 to transfer recovered cryptocurrency from suspect wallets/exchanges into an official LEA cold wallet or treasury account, and obtain orders for restitution to the victim.",
+        "required_evidence": [
+          "VASP confirmation of frozen tokens or inventory of seized hardware wallets",
+          "Investigating Officer's report detailing the valuation and blockchain chain of custody",
+          "Judicial order authorizing transfer to LEA custody wallet or liquidation and refund to victim"
+        ],
+        "legal_basis": "BNSS Section 503",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Crypto tokens are frozen at an exchange or accessible via seized private keys/seed phrases.",
+        "condition_to_complete": "Legal transfer of recovered crypto assets to law enforcement control and subsequent court-ordered release to the complainant.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the court is unfamiliar with crypto asset custody, submit an expert memorandum from FSL/I4C explaining the procedure for establishing a secure government hardware wallet."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Stolen cryptocurrency was passed through decentralized cross-chain bridges (e.g., Thorchain) or privacy mixers (e.g., Tornado Cash) and dispersed into unhosted non-custodial wallets with no known exchange deposit leads.",
+        "suggested_actions": [
+          "Maintain continuous automated monitoring on the destination unhosted wallet addresses using blockchain tracking tools; set alert triggers for whenever funds eventually move to a centralized exchange (VASP) off-ramp.",
+          "Analyse the initial gas fee funding sources of the attacker's wallet (e.g., tracing where the ETH/BNB used to pay transaction fees originally came from), which often uncovers an older KYC-verified exchange account.",
+          "Circulate the attacker wallet addresses and transaction hashes to international cybercrime liaison desks (I4C / INTERPOL) to check for overlaps with global ransomware or APT syndicates."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "loan_app_harassment_v1",
+    "crime_type": "Loan App Harassment & Fraud",
+    "title": "Standard Operating Procedure for Investigating Illegal Instant Loan App Harassment & Extortion",
+    "source": "Synthesized from I4C/MHA Loan App Investigation SOPs, RBI Digital Lending Guidelines, and state police manuals",
+    "steps": [
+      {
+        "step_id": "loan_step_01_evidence_preservation",
+        "order": 1,
+        "title": "Victim Triage, Evidence Preservation & Emergency Stop",
+        "description": "Instruct the victim to immediately cease all payments. Preserve digital evidence: download the APK file, secure screenshots of threatening messages, WhatsApp chats, call logs, morphed photographs sent to contacts, and bank statements showing loan disbursal and extortion payments.",
+        "required_evidence": [
+          "Screenshots of abusive WhatsApp/SMS messages, call logs, and morphed photographs [1.4.1]",
+          "APK file of the instant loan application or Google Play Store link",
+          "Bank statement showing initial credit from the app and subsequent extortion payments",
+          "Copy of NCRP / cybercrime.gov.in complaint acknowledgement"
+        ],
+        "legal_basis": "Information Technology Act Section 67",
+        "department_entity_id": null,
+        "condition_to_start": "Victim reports harassment, extortion, or distribution of morphed photos by an instant loan application.",
+        "condition_to_complete": "Comprehensive dossier of digital evidence compiled and victim instructed on securing social media/phone permissions.",
+        "on_complete_trigger": [
+          "loan_step_02_app_takedown",
+          "loan_step_03_telecom_tracing"
+        ],
+        "if_blocked": [
+          "If the app has already been uninstalled from the victim's phone, extract app installation metadata and APK files from system backups or download repositories."
+        ]
+      },
+      {
+        "step_id": "loan_step_02_app_takedown",
+        "order": 2,
+        "title": "App Store Takedown & Server Infrastructure Analysis",
+        "description": "Submit urgent requests to Google (if listed on Play Store), CERT-In, and I4C to ban and remove the fraudulent loan application and block associated website domains/APKs. Conduct reverse engineering of the APK to identify command-and-control (C2) servers and data exfiltration IPs.",
+        "required_evidence": [
+          "Developer account details, APK package name, and upload IP from app store",
+          "C2 server IP addresses, domain names, and cloud hosting details obtained from APK analysis",
+          "Confirmation of app takedown and URL blocking from I4C/MeitY/Google"
+        ],
+        "legal_basis": "Information Technology Act Section 69A",
+        "department_entity_id": "google_llc",
+        "condition_to_start": "APK file or app store link of the fraudulent loan application identified.",
+        "condition_to_complete": "App is removed from public repositories and backend server infrastructure details are identified.",
+        "on_complete_trigger": [
+          "loan_step_05_isp_server_trace"
+        ],
+        "if_blocked": [
+          "If the app is distributed via third-party websites or Telegram APK sharing, issue Section 69A blocking requests to CERT-In for the specific download URLs."
+        ]
+      },
+      {
+        "step_id": "loan_step_03_telecom_tracing",
+        "order": 3,
+        "title": "Telecom Tracing of Extortion Callers & WhatsApp Numbers",
+        "description": "Issue notices under BNSS Section 94 to TSPs and Meta (WhatsApp) to trace the mobile numbers and virtual numbers used to make abusive calls and send morphed images. Obtain CAF, CDR with tower locations, and WhatsApp registration IP/device logs.",
+        "required_evidence": [
+          "CAF and CDR with Cell ID locations for extortion phone numbers",
+          "WhatsApp subscriber registration logs, IP addresses, and linked device IMEI [1.1.1]",
+          "IMEI clustering logs showing physical devices used by recovery agents"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "List of harassing phone numbers and WhatsApp sender IDs compiled from victim's phone.",
+        "condition_to_complete": "Receipt of CAF, CDR, and IMEI tracking data revealing the physical locations of call center agents.",
+        "on_complete_trigger": [
+          "loan_step_06_call_center_raid"
+        ],
+        "if_blocked": [
+          "If callers utilize virtual cloud telephony numbers (SIP/VoIP), issue notices to the DoT-licensed Virtual Network Operators (VNOs) to obtain the underlying destination IP and subscriber KYC."
+        ]
+      },
+      {
+        "step_id": "loan_step_04_bank_payment_gateway",
+        "order": 4,
+        "title": "Financial Tracing of Lender Banks, NBFCs & Payment Gateways",
+        "description": "Analyse the bank accounts and UPI VPAs used to disburse loans and receive extortion repayments. Issue notices to beneficiary banks, payment aggregators (e.g., Razorpay, Cashfree), and RBI (via Sachet portal check) to freeze accounts, obtain KYC, and identify partner NBFCs.",
+        "required_evidence": [
+          "Certified bank statements and KYC of disbursement and collection accounts",
+          "Payment gateway merchant onboarding KYC, settlement bank accounts, and agreement copies",
+          "Confirmation of account freezing under BNSS Section 106",
+          "Identification of NBFC license details (if app claimed tie-up with a registered NBFC)"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "bank_generic",
+        "condition_to_start": "Bank statements and UPI transaction receipts of the victim analyzed.",
+        "condition_to_complete": "Complete mapping of the financial collection network, freezing of available balances, and identification of corporate entities/NBFCs.",
+        "on_complete_trigger": [
+          "loan_step_06_call_center_raid",
+          "loan_step_07_mca_director_trace"
+        ],
+        "if_blocked": [
+          "If an RBI-registered NBFC allowed its name to be used by an illegal app without oversight, report the NBFC to RBI Department of Supervision for regulatory cancellation while prosecuting directors criminally."
+        ]
+      },
+      {
+        "step_id": "loan_step_05_isp_server_trace",
+        "order": 5,
+        "title": "ISP Tracing of C2 Servers and Extortion Call Centers",
+        "description": "Issue notices to ISPs housing the C2 servers or providing internet connectivity to the IP addresses logged by WhatsApp, payment gateways, and app admin panels. Obtain IPDR and subscriber physical installation addresses.",
+        "required_evidence": [
+          "IPDR logs resolving public server/login IPs to specific private installation addresses",
+          "ISP subscriber KYC showing physical premises of call centers or server administrators"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "isp_non_telecom",
+        "condition_to_start": "Actionable IP addresses identified from APK reverse engineering, WhatsApp logs, or payment gateways.",
+        "condition_to_complete": "Positive identification of the physical premises hosting the extortion call center or server management team.",
+        "on_complete_trigger": [
+          "loan_step_06_call_center_raid"
+        ],
+        "if_blocked": [
+          "If cloud servers are hosted with foreign providers (e.g., AWS, Alibaba Cloud), issue preservation requests via I4C while focusing immediate tactical action on telecom and payment gateway leads."
+        ]
+      },
+      {
+        "step_id": "loan_step_06_call_center_raid",
+        "order": 6,
+        "title": "Coordinated Raid on Extortion Call Centers & Arrests",
+        "description": "Conduct physical search and seizure operations at the identified call centers, recovery agency offices, or residential hubs. Arrest telecallers, team leaders, agency owners, and technical administrators. Seize computers, mobile phones, SIM boxes, and server scripts.",
+        "required_evidence": [
+          "Seizure memos of laptops, mobile handsets, SIM cards, telecalling scripts, and employee registers",
+          "Forensic imaging of computers showing victim databases, contact lists, and morphed photographs",
+          "Arrest memos, employee muster rolls, and interrogation disclosures"
+        ],
+        "legal_basis": "BNSS Section 96",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Physical location of call centers established via telecom CDR tower dumps, ISP installation addresses, or payment gateway KYC.",
+        "condition_to_complete": "Dismantling of the extortion call center, arrest of operatives, and submission of seized digital media to FSL.",
+        "on_complete_trigger": [
+          "loan_step_07_mca_director_trace",
+          "loan_step_08_court_restitution"
+        ],
+        "if_blocked": [
+          "If call centers are outsourced to third-party telemarketing agencies across different states, coordinate multi-state raids through State Cyber CID and I4C."
+        ]
+      },
+      {
+        "step_id": "loan_step_07_mca_director_trace",
+        "order": 7,
+        "title": "Investigation of Shell Companies & Chinese/Foreign Masterminds",
+        "description": "Access MCA21 database to investigate the corporate entities operating the collection accounts and payment gateway merchant IDs. Examine MOA/AOA, trace Indian dummy directors, and check for foreign national directors (often Chinese/Southeast Asian nationals) or holding structures.",
+        "required_evidence": [
+          "Incorporation documents, annual returns, and DIN details of suspect companies",
+          "Identification of dummy Indian directors and foreign beneficial owners",
+          "Bank account opening resolutions and chartered accountant / company secretary facilitation records"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "mca21_roc",
+        "condition_to_start": "Corporate names identified from bank accounts, payment gateways, or call center raids.",
+        "condition_to_complete": "Complete corporate mapping linking Indian shell entities and dummy directors to foreign syndicates.",
+        "on_complete_trigger": [
+          "loan_step_08_court_restitution"
+        ],
+        "if_blocked": [
+          "If foreign masterminds have fled India, coordinate with Bureau of Immigration under entity_id immigration_border to issue Look Out Circulars (LOCs) or check historical travel logs."
+        ]
+      },
+      {
+        "step_id": "loan_step_08_court_restitution",
+        "order": 8,
+        "title": "Judicial Application for Restitution and Defamation Relief",
+        "description": "Submit a comprehensive chargesheet and application under BNSS Section 503 before the jurisdictional court to release frozen extortion funds back to victims, and obtain judicial orders certifying the loan demands as illegal/extortionate to protect victims from credit score (CIBIL) harassment.",
+        "required_evidence": [
+          "Schedule of frozen bank balances and seized assets",
+          "Investigating Officer's report detailing the illegal nature of the unregulated lending app",
+          "Court order directing restitution of extorted money and quashing illegal loan liabilities"
+        ],
+        "legal_basis": "BNSS Section 503",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Extortion funds frozen in bank accounts and investigation establishes the unregulated/illegal nature of the app.",
+        "condition_to_complete": "Court issues restitution orders and formal findings of illegal extortion.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If credit bureaus (CIBIL/Experian) have marked victim defaults based on illegal NBFC reporting, forward the certified court order and FIR to RBI Department of Supervision to mandate credit score restoration."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "The loan app is entirely unregulated, hosted on offshore servers, telecallers operate via VOIP from neighboring countries, and collection bank accounts are temporary UPI mule accounts drained daily.",
+        "suggested_actions": [
+          "Execute an immediate technical containment strategy: submit the APK hash, C2 domains, and collection VPAs to I4C and MeitY for nationwide ISP blocking and NPCI VPA blacklisting [1.4.1].",
+          "Focus investigation on the domestic payment aggregators and fintech intermediaries that provided merchant onboarding to the unregulated app without physical office verification.",
+          "Provide the victim with an official police advisory/certificate stating the app is a cyber extortion fraud, enabling the victim to share it with their contacts to neutralize the defamation/harassment campaign."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "digital_arrest_impersonation_v1",
+    "crime_type": "Digital Arrest / Impersonation-as-Authority Scam",
+    "title": "Standard Operating Procedure for Investigating Digital Arrest & Law Enforcement Impersonation Scams",
+    "source": "Synthesized from MHA/I4C advisories on Digital Arrest, Supreme Court/CBI guidelines, and state cyber SOPs",
+    "steps": [
+      {
+        "step_id": "digiarrest_step_01_triage_evidence",
+        "order": 1,
+        "title": "Victim Triage, Evidence Collection & Emergency 1930 Reporting",
+        "description": "Verify the complaint on NCRP / 1930 [1.3.1]. Interview the victim to record details of the fake 'Digital Arrest': automated IVR calls (claiming FedEx/DoT/Customs/TRAI), video call interrogation platforms (Skype/WhatsApp), fake arrest warrants/Supreme Court orders, and RTGS/NEFT transfer receipts to 'secret government verification accounts'.",
+        "required_evidence": [
+          "Screenshots/recordings of video calls showing scammers in fake police/CBI uniforms or virtual courtrooms [1.3.2]",
+          "Copies of forged arrest warrants, CBI/ED notices, or RBI asset seizure orders",
+          "Complainant's bank statements and RTGS/NEFT/IMPS transaction reference numbers",
+          "NCRP / CFCFRMS Ticket Acknowledgement Number"
+        ],
+        "legal_basis": "BNSS Section 106",
+        "department_entity_id": "upi_npci",
+        "condition_to_start": "Victim reports extortion and fund transfer under threat of 'Digital Arrest' by impersonators of police/CBI/ED/Customs.",
+        "condition_to_complete": "Emergency debit freeze initiated via NCRP and complete dossier of forged documents and transaction reference numbers compiled.",
+        "on_complete_trigger": [
+          "digiarrest_step_02_bank_layering"
+        ],
+        "if_blocked": [
+          "If the victim is still under active psychological intimidation or video monitoring by scammers, immediately intervene, sever the video link, and provide physical police reassurance [1.3.2]."
+        ]
+      },
+      {
+        "step_id": "digiarrest_step_02_bank_layering",
+        "order": 2,
+        "title": "Multi-Layered Bank Account Tracing & Freezing",
+        "description": "In Digital Arrest scams, large sums (lakhs to crores) are transferred via RTGS/NEFT into corporate or individual mule accounts. Issue immediate Section 106 BNSS notices to freeze funds across Level-1, Level-2, and Level-3 beneficiary banks, and obtain full KYC, account opening forms, and IP login logs.",
+        "required_evidence": [
+          "Certified bank statements and KYC dossiers of all recipient accounts [1.3.2]",
+          "Bank confirmations of debit freeze / lien placement under BNSS Section 106",
+          "RTGS/NEFT routing vouchers and cheque encashment details",
+          "Internet banking login IP addresses and device fingerprints of the recipient accounts"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "bank_generic",
+        "condition_to_start": "Destination bank account numbers and IFSCs identified from victim's transfer receipts.",
+        "condition_to_complete": "Freezing of available funds across the banking chain and receipt of complete KYC/IP logs of account holders.",
+        "on_complete_trigger": [
+          "digiarrest_step_03_telecom_voip_trace",
+          "digiarrest_step_04_mca_corporate_trace"
+        ],
+        "if_blocked": [
+          "If funds were split into dozens of accounts across multiple states, coordinate with I4C / MHA CFCFRMS desk for emergency centralized freezing [1.3.1]."
+        ]
+      },
+      {
+        "step_id": "digiarrest_step_03_telecom_voip_trace",
+        "order": 3,
+        "title": "Telecom & VOIP Tracing of Initial Callers & Video Interrogators",
+        "description": "Issue notices under BNSS Section 94 to TSPs and Meta (WhatsApp) / Microsoft (Skype) to trace the phone numbers, IVR lines, and video calling profiles used to contact the victim. Obtain CAF, CDR with tower locations, and IP access logs for the Skype/WhatsApp accounts.",
+        "required_evidence": [
+          "CAF and CDR with Cell ID locations for phone numbers used in the initial scam call",
+          "Skype / WhatsApp subscriber KYC, profile IDs, and IP address login logs with timestamps [1.3.2]",
+          "IMEI tracking history and handset clustering data"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Phone numbers, Skype IDs, or WhatsApp numbers identified from victim's call logs.",
+        "condition_to_complete": "Receipt of CAF, CDR, and video platform IP logs revealing the physical infrastructure or SIP trunking providers used.",
+        "on_complete_trigger": [
+          "digiarrest_step_05_isp_ipdr_trace"
+        ],
+        "if_blocked": [
+          "If initial calls originated from spoofed international numbers or illegal SIM boxes, coordinate with DoT TERM cell to trace the gateway switch [1.3.1]."
+        ]
+      },
+      {
+        "step_id": "digiarrest_step_04_mca_corporate_trace",
+        "order": 4,
+        "title": "Corporate & Mule Account Verification (MCA21)",
+        "description": "If the 'secret government verification accounts' belong to Private Limited Companies or LLPs, query the MCA21 database. Download incorporation records, MOA/AOA, check DIN details, and verify the physical registered office addresses of these shell entities.",
+        "required_evidence": [
+          "Certificate of Incorporation, MOA, and AOA of recipient shell companies",
+          "DIN master details, KYC, and physical addresses of directors",
+          "Bank account opening resolutions and introductory CA/CS documentation"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "mca21_roc",
+        "condition_to_start": "Beneficiary bank account KYC reveals a corporate entity or firm name.",
+        "condition_to_complete": "Identification of company directors and verification of whether the business address is genuine or a fake shell address.",
+        "on_complete_trigger": [
+          "digiarrest_step_06_raid_seizure"
+        ],
+        "if_blocked": [
+          "If directors are untraceable dummy individuals, subpoena the bank's KYC verification officer who conducted the physical pre-opening site visit."
+        ]
+      },
+      {
+        "step_id": "digiarrest_step_05_isp_ipdr_trace",
+        "order": 5,
+        "title": "ISP Tracing of Video Call Studios and Account Handlers",
+        "description": "Analyse the IP addresses obtained from Skype/WhatsApp video interrogation logs and bank internet banking login logs. Issue notices to ISPs to obtain IPDR, NAT port binding records, and physical installation addresses.",
+        "required_evidence": [
+          "IPDR logs resolving public video/login IPs and NAT ports to specific subscriber private IPs",
+          "ISP subscriber KYC showing physical premises of the fake video studio or money handler"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "isp_non_telecom",
+        "condition_to_start": "Actionable IP addresses and timestamps obtained from video calling platforms or bank servers.",
+        "condition_to_complete": "Positive identification of the ISP subscriber name and physical address where the video call center or banking operations are located.",
+        "on_complete_trigger": [
+          "digiarrest_step_06_raid_seizure"
+        ],
+        "if_blocked": [
+          "If video calls originated from foreign IP space (e.g., Southeast Asian scam compounds), route intelligence through I4C and CBI (as lead agency for Digital Arrest cases) [1.3.2]."
+        ]
+      },
+      {
+        "step_id": "digiarrest_step_06_raid_seizure",
+        "order": 6,
+        "title": "Coordinated Raid on Fake Police Studios & Syndicate Arrests",
+        "description": "Conduct search and seizure operations at the identified physical premises (from ISP logs, telecom CDR, or MCA addresses). Arrest impersonators, telecallers, and mule handlers. Seize fake police/CBI uniforms, studio backdrops, laptops, routers, mobile phones, and forged seals.",
+        "required_evidence": [
+          "Seizure memos of fake uniforms, banners, government seals, computing devices, and SIM boxes [1.3.2]",
+          "Forensic imaging of computers and mobile phones showing green screens, video scripts, and victim dossiers",
+          "Arrest memos and interrogation statements detailing syndicate hierarchy"
+        ],
+        "legal_basis": "BNSS Section 96",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Actionable physical address established within Indian jurisdiction via ISP, telecom, or bank tracing.",
+        "condition_to_complete": "Dismantling of the fake interrogation studio, arrest of operatives, and submission of digital/physical exhibits to FSL.",
+        "on_complete_trigger": [
+          "digiarrest_step_07_court_restitution"
+        ],
+        "if_blocked": [
+          "If the raid involves interstate jurisdiction or transnational syndicates, coordinate with CBI / State Cyber CID under established national protocols [1.3.2]."
+        ]
+      },
+      {
+        "step_id": "digiarrest_step_07_court_restitution",
+        "order": 7,
+        "title": "Judicial Application for Refund of Extorted Funds",
+        "description": "File a detailed report and application under BNSS Section 503 / Section 457 before the jurisdictional Magistrate to release the frozen money held in shell company or mule bank accounts back to the victim's account.",
+        "required_evidence": [
+          "Certified schedule of frozen balances in beneficiary bank accounts [1.3.2]",
+          "Complainant's application under BNSS Section 503 / Section 457 supported by indemnity bond",
+          "Investigating Officer's official report confirming the money as proceeds of cyber extortion"
+        ],
+        "legal_basis": "BNSS Section 503",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Extorted funds are successfully frozen in recipient bank accounts.",
+        "condition_to_complete": "Magistrate passes a formal judicial order directing the banks to transfer the frozen funds back to the victim.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If bank accounts are contested by third-parties claiming legitimate trade, present the forensic chain of custody linking the deposit directly to the victim's RTGS transfer timestamp."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "The video interrogation call center operates from an overseas scam compound (e.g., Cambodia, Myanmar, Laos), local bank accounts were drained via crypto ATMs within minutes, and callers used untraceable spoofed VoIP numbers.",
+        "suggested_actions": [
+          "Transfer investigative focus to the domestic Indian money laundering and logistics network: identify, raid, and arrest the local 'mule account arrangators', SIM box operators, and crypto P2P cash-out agents.",
+          "Compile complete technical indicators (spoofed IPs, VoIP trunk providers, destination crypto wallets) and forward them to CBI (Nodal Agency for Digital Arrest) and I4C for Interpol/MLAT action.",
+          "Request DoT and telecom operators to block the international SIP trunking gateways and short-codes being utilized by the syndicate to spoof Indian government telephone numbers."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "bec_vendor_fraud_v1",
+    "crime_type": "Business Email Compromise / Vendor Payment Fraud",
+    "title": "Standard Operating Procedure for Investigating Business Email Compromise (BEC) & Invoice Manipulation Frauds",
+    "source": "Synthesized from I4C Corporate Cyber Fraud guidelines, CERT-In advisories, and international LEA BEC SOPs",
+    "steps": [
+      {
+        "step_id": "bec_step_01_email_header_analysis",
+        "order": 1,
+        "title": "Victim Triage & Email Header / Domain Spoofing Analysis",
+        "description": "Collect the complete raw email headers (.eml / .msg files) of the fraudulent emails requesting payment redirection or invoice modification. Analyse SPF, DKIM, and DMARC authentication results, routing hops, originating IP addresses, and lookalike domain variations (typosquatting).",
+        "required_evidence": [
+          "Raw email files (.eml/.msg) with complete header metadata",
+          "Original genuine vendor invoice vs. manipulated fraudulent invoice showing altered bank account details",
+          "Complainant company's bank payment advice / SWIFT/RTGS transfer confirmation"
+        ],
+        "legal_basis": null,
+        "department_entity_id": null,
+        "condition_to_start": "Company reports unauthorized fund transfer due to email spoofing, executive impersonation (CEO fraud), or vendor invoice manipulation.",
+        "condition_to_complete": "Identification of the exact spoofing mechanism (lookalike domain vs. compromised email account) and originating sender IP address.",
+        "on_complete_trigger": [
+          "bec_step_02_emergency_bank_freeze",
+          "bec_step_03_email_provider_logs"
+        ],
+        "if_blocked": [
+          "If internal IT staff cannot extract raw headers, deploy a cyber forensic specialist to export the email server logs or Office 365 / Google Workspace audit logs directly."
+        ]
+      },
+      {
+        "step_id": "bec_step_02_emergency_bank_freeze",
+        "order": 2,
+        "title": "Emergency Bank Freezing & SWIFT / RTGS Recall",
+        "description": "Immediately issue notices under BNSS Section 106 to the beneficiary bank where the funds were wired. If funds were transferred domestically via RTGS/NEFT, freeze the recipient account. If wired internationally via SWIFT, instruct the remitting bank to send an urgent SWIFT MT192 / recall indemnification message.",
+        "required_evidence": [
+          "Certified bank ledger statement of the recipient account (for domestic transfers)",
+          "Bank confirmation of debit freeze under BNSS Section 106",
+          "Copy of SWIFT recall message (MT192) and foreign correspondent bank communication (for cross-border wires)"
+        ],
+        "legal_basis": "BNSS Section 106",
+        "department_entity_id": "bank_generic",
+        "condition_to_start": "Beneficiary bank account number, IFSC, or SWIFT BIC identified from the fraudulent invoice or wire receipt.",
+        "condition_to_complete": "Confirmation of fund freezing in the domestic bank account or formal acknowledgment of SWIFT recall from the destination bank.",
+        "on_complete_trigger": [
+          "bec_step_04_mca_recipient_trace"
+        ],
+        "if_blocked": [
+          "If the transfer is cross-border and the foreign bank is non-responsive, immediately engage I4C / CBI Interpol Nodal Desk to trigger international financial intelligence channel freezing."
+        ]
+      },
+      {
+        "step_id": "bec_step_03_email_provider_logs",
+        "order": 3,
+        "title": "Email Service Provider (ESP) & Domain Registrar Requisition",
+        "description": "Issue notices under BNSS Section 94 to the domain registrar of the lookalike typosquatting domain, or to the Email Service Provider (Google Workspace, Microsoft 365, GoDaddy) if a corporate email account was compromised. Demand WHOIS KYC, account login IP logs, mailbox forwarding rules, and access timestamps.",
+        "required_evidence": [
+          "WHOIS registration KYC and payment method used to purchase the lookalike domain",
+          "Email account login IP addresses, timestamps, and device user-agents",
+          "Audit logs showing unauthorized email forwarding rules or inbox manipulation"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "google_llc",
+        "condition_to_start": "Lookalike domain name or compromised email infrastructure identified during header analysis.",
+        "condition_to_complete": "Receipt of domain registrar KYC, login IP logs, and proof of unauthorized mailbox forwarding rules.",
+        "on_complete_trigger": [
+          "bec_step_05_isp_ipdr_trace"
+        ],
+        "if_blocked": [
+          "If the domain registrar is an offshore entity (e.g., Namecheap, Cloudflare), submit a formal abuse report and legal preservation request while pursuing domestic bank trails."
+        ]
+      },
+      {
+        "step_id": "bec_step_04_mca_recipient_trace",
+        "order": 4,
+        "title": "Corporate & Beneficiary Account Investigation (MCA21)",
+        "description": "In domestic BEC cases, fraudulent invoices often direct funds to newly incorporated Indian companies with names similar to the genuine vendor. Query MCA21 to obtain incorporation documents, verify DIN details, and check physical registered office addresses.",
+        "required_evidence": [
+          "Certificate of Incorporation, MOA, and AOA of the recipient corporate entity",
+          "DIN master details, KYC, and physical addresses of directors/signatories",
+          "Bank account opening resolutions and introductory CA/CS documentation"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "mca21_roc",
+        "condition_to_start": "Domestic beneficiary bank account belongs to a corporate entity, LLP, or registered firm.",
+        "condition_to_complete": "Identification of company directors and determination of whether the entity is a genuine business or a purpose-built BEC shell company.",
+        "on_complete_trigger": [
+          "bec_step_06_search_seizure"
+        ],
+        "if_blocked": [
+          "If the company is a shell entity with untraceable directors, subpoena the bank's account onboarding branch manager and introductory references under BNSS Section 94."
+        ]
+      },
+      {
+        "step_id": "bec_step_05_isp_ipdr_trace",
+        "order": 5,
+        "title": "ISP Tracing of Email Attackers and Bank Account Operators",
+        "description": "Analyse the IP addresses obtained from email server login logs, domain registration records, and recipient bank internet banking logs. Issue notices to ISPs to obtain IPDR, NAT port binding records, and subscriber installation addresses.",
+        "required_evidence": [
+          "IPDR logs resolving public attacker/login IPs and NAT ports to private subscriber IPs",
+          "ISP subscriber KYC showing physical premises of the email attacker or finance handler"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "isp_non_telecom",
+        "condition_to_start": "Actionable IP addresses and timestamps obtained from ESPs, registrars, or bank logs.",
+        "condition_to_complete": "ISP confirms the physical location and identity of the internet subscriber operating the compromised accounts.",
+        "on_complete_trigger": [
+          "bec_step_06_search_seizure"
+        ],
+        "if_blocked": [
+          "If IP addresses resolve to mobile data networks, route IPDR and tower dump requisitions through entity_id telecom_operator."
+        ]
+      },
+      {
+        "step_id": "bec_step_06_search_seizure",
+        "order": 6,
+        "title": "Raid, Forensic Server Seizure & Arrest of BEC Syndicate",
+        "description": "Execute search warrants at the physical locations identified via ISP, telecom, and MCA tracing. Arrest syndicate members, money mules, and corporate facilitators. Seize laptops, servers, mobile phones, forged invoices, and company rubber stamps.",
+        "required_evidence": [
+          "Seizure memos of computing devices, mobile phones, company seals, and financial ledgers",
+          "Forensic mirror images of hard drives showing email spoofing software, compromised credentials, and altered invoices",
+          "Arrest memos and interrogation disclosures"
+        ],
+        "legal_basis": "BNSS Section 96",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Actionable physical address established from ISP, telecom, or MCA corporate records.",
+        "condition_to_complete": "Arrest of BEC operatives, physical seizure of hardware and documents, and submission of digital evidence to FSL.",
+        "on_complete_trigger": [
+          "bec_step_07_court_restitution"
+        ],
+        "if_blocked": [
+          "If the core email intrusion occurred from overseas while domestic actors handled money laundering, coordinate with State Cyber CID / CBI for international MLAT processing."
+        ]
+      },
+      {
+        "step_id": "bec_step_07_court_restitution",
+        "order": 7,
+        "title": "Judicial Application for Restitution of Corporate Funds",
+        "description": "Submit a formal investigation report and application under BNSS Section 503 before the jurisdictional Magistrate or High Court to release frozen funds held in recipient bank accounts back to the victimized company.",
+        "required_evidence": [
+          "Certified schedule of frozen balances in recipient bank accounts",
+          "Company's board resolution, authorization letter, and indemnity bond for property release",
+          "Investigating Officer's official report endorsing the return of defrauded funds"
+        ],
+        "legal_basis": "BNSS Section 503",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Defrauded corporate funds are successfully frozen in domestic recipient bank accounts.",
+        "condition_to_complete": "Court order directing the banks to release and wire the frozen funds back to the complainant company's account.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the recipient bank account is involved in insolvency or NCLT proceedings due to shell company fraud, file an urgent application before NCLT establishing that the funds are proceeds of crime under BNSS/PMLA."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Funds were wired internationally to an offshore jurisdiction (e.g., Hong Kong, UAE, Nigeria) via SWIFT, the destination account was cleared immediately upon landing, and email intrusion was executed via anonymized proxies.",
+        "suggested_actions": [
+          "File an immediate international fraud report through CBI (Interpol National Central Bureau India) for issuance of a Purple/Blue Notice against the offshore bank account holders.",
+          "Conduct a thorough forensic audit of the complainant company's internal IT systems and employees to rule out an insider threat or negligent credential leakage that enabled the BEC.",
+          "Advise the complainant company to notify its cyber insurance carrier and implement mandatory out-of-band two-factor communication verification (e.g., verbal phone confirmation on pre-known numbers) for all future vendor bank account changes."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "insurance_claim_fraud_v1",
+    "crime_type": "Insurance Claim Cyber Fraud",
+    "title": "Standard Operating Procedure for Investigating Cyber Insurance Fraud & Staged Policy Scams",
+    "source": "Synthesized from IRDAI fraud guidelines, insurance company LEA manuals, and general police economic offense SOPs",
+    "steps": [
+      {
+        "step_id": "insure_step_01_dossier_requisition",
+        "order": 1,
+        "title": "Insurance Policy & Claim Dossier Requisition",
+        "description": "Issue notices under BNSS Section 94 to the insurance company (Life, Health, or Motor) to obtain the complete policy inception file, proposal forms, KYC documents, medical declarations, nominee details, claim settlement records, and internal field surveyor investigation reports.",
+        "required_evidence": [
+          "Certified copy of insurance policy, proposal form, and KYC submitted at inception",
+          "Nominee change history and premium payment ledger (bank routing details)",
+          "Claim settlement dossier, discharge vouchers, and payout bank account details",
+          "Internal insurance fraud investigation report and field surveyor findings"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "insurance_company",
+        "condition_to_start": "Complainant or insurance company reports fraudulent claim settlement, policy takeover, or staged accident/death claim.",
+        "condition_to_complete": "Receipt of complete policy and claim dossier from the insurance company.",
+        "on_complete_trigger": [
+          "insure_step_02_payout_bank_freeze",
+          "insure_step_03_digital_portal_trace"
+        ],
+        "if_blocked": [
+          "If the insurance branch delays providing internal surveyor reports, escalate to the Chief Grievance Officer or Zonal Manager of the insurance company."
+        ]
+      },
+      {
+        "step_id": "insure_step_02_payout_bank_freeze",
+        "order": 2,
+        "title": "Freezing of Claim Payout Bank Accounts & KYC Retrieval",
+        "description": "Analyse the bank account where the insurance claim payout was disbursed or attempted to be disbursed. Issue immediate notices under BNSS Section 106/94 to the beneficiary bank to freeze remaining funds and procure complete account holder KYC and statement ledgers.",
+        "required_evidence": [
+          "Certified bank statement of the claim payout recipient account",
+          "Account opening KYC, photograph, and linked mobile number of the recipient",
+          "Confirmation of debit freeze / lien marking under BNSS Section 106"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "bank_generic",
+        "condition_to_start": "Claim payout bank account number and IFSC identified from insurance settlement records.",
+        "condition_to_complete": "Freezing of claim funds in the recipient bank account and receipt of bank KYC dossier.",
+        "on_complete_trigger": [
+          "insure_step_04_hospital_doc_verification",
+          "insure_step_05_municipal_verification"
+        ],
+        "if_blocked": [
+          "If the claim payout was withdrawn via cash or cheque immediately upon deposit, summon the branch manager and obtain counter CCTV footage of the encashment under BNSS Section 94."
+        ]
+      },
+      {
+        "step_id": "insure_step_03_digital_portal_trace",
+        "order": 3,
+        "title": "Tracing Online Policy Manipulation & Nominee Changes",
+        "description": "If the fraud involved online policy takeover or unauthorized change of nominee via customer portals/apps, issue notices to the insurance company's IT desk for web server login logs, IP addresses, OTP generation logs, and device identifiers.",
+        "required_evidence": [
+          "Web portal / app login IP addresses with exact timestamps and port numbers",
+          "OTP dispatch logs showing which mobile number received the authorization OTP",
+          "Audit logs of nominee modification or bank account update requests"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "insurance_company",
+        "condition_to_start": "Insurance records indicate policy terms, nominee, or bank details were modified online prior to claim submission.",
+        "condition_to_complete": "Receipt of server login IP logs and OTP dispatch records from the insurance company.",
+        "on_complete_trigger": [
+          "insure_step_06_telecom_isp_trace"
+        ],
+        "if_blocked": [
+          "If policy changes were executed via aggregator apps (e.g., PolicyBazaar), serve Section 94 BNSS notice directly on the digital aggregator platform."
+        ]
+      },
+      {
+        "step_id": "insure_step_04_hospital_doc_verification",
+        "order": 4,
+        "title": "Hospital & Medical Record Forensic Verification (For Life/Health Claims)",
+        "description": "In suspected fake death or fraudulent hospitalization claims, issue notices under BNSS Section 94 to the hospital or medical examiner that issued the MLC, admission summaries, or post-mortem reports. Verify whether the patient was genuinely admitted or if records were forged.",
+        "required_evidence": [
+          "Certified copies of patient admission/discharge registers and treatment case sheets",
+          "Medico-Legal Case (MLC) or Post-Mortem autopsy report certification",
+          "Written statement of the treating doctor / Chief Medical Officer (CMO) confirming or denying record authenticity"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "hospital_forensic_medical",
+        "condition_to_start": "Insurance claim relies on hospital treatment bills, MLCs, or death/autopsy certificates.",
+        "condition_to_complete": "Definitive verification from hospital authorities regarding whether medical records are genuine or fabricated.",
+        "on_complete_trigger": [
+          "insure_step_07_search_seizure"
+        ],
+        "if_blocked": [
+          "If the hospital is an unregistered nursing home that has shut down, seize physical registers from municipal health department archives or verify doctor registration with the State Medical Council."
+        ]
+      },
+      {
+        "step_id": "insure_step_05_municipal_verification",
+        "order": 5,
+        "title": "Municipal Birth / Death Certificate Verification",
+        "description": "If a death certificate was submitted to claim life insurance, issue a requisition to the Municipal Corporation / Registrar of Births and Deaths to verify the authenticity of the death registration certificate and inspect backend declaration records.",
+        "required_evidence": [
+          "Written verification report from Municipal Registrar confirming if Death Certificate is genuine or fake",
+          "Copy of original death declaration form, crematorium/burial receipt, and applicant KYC from municipal archives"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "municipal_corporation",
+        "condition_to_start": "Death certificate submitted as primary evidence for life insurance claim settlement.",
+        "condition_to_complete": "Official confirmation from municipal authorities regarding the validity of the death certificate.",
+        "on_complete_trigger": [
+          "insure_step_07_search_seizure"
+        ],
+        "if_blocked": [
+          "If rural Panchayat records are disorganized, summon the Gram Panchayat Secretary with original registers to the police station for inspection."
+        ]
+      },
+      {
+        "step_id": "insure_step_06_telecom_isp_trace",
+        "order": 6,
+        "title": "Telecom & ISP Tracing of Fraudulent Claimants and Agents",
+        "description": "Analyse mobile numbers linked to the insurance policy, bank KYC, and hospital admission forms, as well as IP addresses from portal logins. Issue notices to TSPs and ISPs for CAF, CDR with tower locations, and IPDR port resolution.",
+        "required_evidence": [
+          "CAF and CDR with Cell ID locations for claimant and intermediary phone numbers",
+          "IPDR logs resolving insurance portal login public IPs to specific installation addresses",
+          "Call analysis showing communication frequency between policyholder, nominee, hospital staff, and insurance agents"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Phone numbers and login IP addresses identified from insurance dossiers and bank KYC.",
+        "condition_to_complete": "Positive physical location and subscriber identification of the syndicate members.",
+        "on_complete_trigger": [
+          "insure_step_07_search_seizure"
+        ],
+        "if_blocked": [
+          "If IP addresses resolve to non-telecom ISPs, route IPDR requisitions through entity_id isp_non_telecom."
+        ]
+      },
+      {
+        "step_id": "insure_step_07_search_seizure",
+        "order": 7,
+        "title": "Raid, Seizure of Forged Medical/Municipal Documents & Arrest",
+        "description": "Conduct search and seizure operations at the premises of the fraudulent claimants, rogue insurance agents, or corrupt medical practitioners. Seize forged rubber stamps of hospitals/municipalities, fake death certificates, computers, and financial records. Arrest the conspirators.",
+        "required_evidence": [
+          "Seizure memos of blank hospital letterheads, fake municipal seals, forged certificates, and computing devices",
+          "Forensic imaging of computers and mobile phones showing templates of fabricated medical/death records",
+          "Arrest memos and interrogation disclosures detailing the conspiracy"
+        ],
+        "legal_basis": "BNSS Section 96",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Actionable evidence of forgery and physical location established from hospital, municipal, telecom, or ISP verification.",
+        "condition_to_complete": "Arrest of syndicate operatives, physical seizure of forgery tools, and submission of documentary/digital exhibits to FSL.",
+        "on_complete_trigger": [
+          "insure_step_08_court_restitution"
+        ],
+        "if_blocked": [
+          "If the 'deceased' policyholder is suspected to be alive and hiding, utilize CDR tower tracking and facial recognition across local CCTV/e-Challan databases under entity_id rto_parivahan to apprehend them."
+        ]
+      },
+      {
+        "step_id": "insure_step_08_court_restitution",
+        "order": 8,
+        "title": "Judicial Cancellation of Fraudulent Claims and Fund Restitution",
+        "description": "Submit a comprehensive chargesheet and application under BNSS Section 503 before the jurisdictional court to return frozen claim payouts to the insurance company (or genuine rightful nominee), and obtain judicial cancellation of fabricated public certificates.",
+        "required_evidence": [
+          "Schedule of frozen bank balances and seized property",
+          "Investigating Officer's report establishing the staged/fraudulent nature of the claim",
+          "Court order directing restitution of funds and directing municipal/hospital authorities to expunge fake records"
+        ],
+        "legal_basis": "BNSS Section 503",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Fraudulent claim funds frozen in bank accounts and forgery established via investigation.",
+        "condition_to_complete": "Court issues restitution orders and directs cancellation of forged statutory certificates.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the fraud involved motor accident claims (MACT), file an urgent intervention application before the Motor Accident Claims Tribunal to stay pending compensation awards based on police findings."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "A terminally ill individual was insured using fake health declarations by an organized gang, who subsequently claimed insurance after natural death, leaving no obvious signs of document forgery.",
+        "suggested_actions": [
+          "Subpoena the historical prescription logs, diagnostic lab reports, and pharmacy billing records of the deceased prior to policy inception using Section 94 BNSS notices on local healthcare providers.",
+          "Analyse the financial trail of who actually paid the initial policy premiums (often wired by the syndicate leader rather than the insured individual) via bank ledger scrutiny.",
+          "Examine the Call Detail Records (CDR) of the insurance sales agent and medical examiner who approved the proposal form to establish unlawful collusion with the claimant gang."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "ecommerce_refund_fraud_v1",
+    "crime_type": "E-commerce Purchase/Refund Fraud",
+    "title": "Standard Operating Procedure for Investigating E-commerce Purchase, Fake Seller & Refund Frauds",
+    "source": "Synthesized from Consumer Protection (E-Commerce) Rules 2020, I4C guidelines, and cyber police marketplace SOPs",
+    "steps": [
+      {
+        "step_id": "ecom_step_01_platform_data",
+        "order": 1,
+        "title": "E-Commerce Platform Requisition (Order, KYC & Payment Logs)",
+        "description": "Issue notices under BNSS Section 94 to the e-commerce platform (Amazon, Flipkart, Meesho, OLX) via their designated 24x7 LEA Nodal Officer. Obtain buyer/seller KYC, order history, invoice copies, payment gateway reference IDs, IP login logs, and device identifiers.",
+        "required_evidence": [
+          "Buyer and Seller KYC (mobile number, email, registered address, PAN, GSTIN, bank account mapping)",
+          "Order invoice, item description, transaction timestamps, and payment gateway logs",
+          "Account login and order placement IP addresses with timestamps and device IMEI/MAC logs"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "ecommerce_platform",
+        "condition_to_start": "Victim reports non-delivery of purchased goods, receipt of fake/counterfeit products, or platform reports systematic refund/return fraud.",
+        "condition_to_complete": "Receipt of complete transaction dossier, seller/buyer KYC, and IP logs within statutorily mandated 72 hours.",
+        "on_complete_trigger": [
+          "ecom_step_02_bank_payout_freeze",
+          "ecom_step_03_logistics_tracing"
+        ],
+        "if_blocked": [
+          "If the e-commerce entity delays response beyond 72 hours, issue a show-cause notice under Consumer Protection (E-Commerce) Rules 2020 and IT Act Section 79."
+        ]
+      },
+      {
+        "step_id": "ecom_step_02_bank_payout_freeze",
+        "order": 2,
+        "title": "Freezing of Seller Payouts / Refund Bank Accounts",
+        "description": "Analyse the bank account where seller disbursements or fraudulent refunds were routed. Issue immediate notices under BNSS Section 106/94 to the merchant bank or payment aggregator to freeze available balances and procure complete account KYC and ledgers.",
+        "required_evidence": [
+          "Certified bank ledger statement of the seller payout or refund recipient account",
+          "Account opening KYC documents (Aadhaar, PAN, photograph, physical address)",
+          "Confirmation of debit freeze / lien marking under BNSS Section 106"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "bank_generic",
+        "condition_to_start": "Bank account number and IFSC identified from e-commerce seller payout logs or refund destination records.",
+        "condition_to_complete": "Freezing of funds in the target bank account and receipt of complete bank KYC dossier.",
+        "on_complete_trigger": [
+          "ecom_step_04_telecom_isp_trace"
+        ],
+        "if_blocked": [
+          "If the seller account is a nodal wallet or fintech aggregator account, serve notice directly on the underlying PSP under entity_id upi_npci."
+        ]
+      },
+      {
+        "step_id": "ecom_step_03_logistics_tracing",
+        "order": 3,
+        "title": "Courier & Logistics Verification (Delivery & Return Tracking)",
+        "description": "Issue notices to the courier/logistics partner (Blue Dart, Delhivery, India Post) handling the delivery or reverse-pickup return. Obtain delivery run-sheets, Proof of Delivery (PoD) OTP logs, GPS drop-off coordinates, weight/dimension scanning logs, and delivery agent statements.",
+        "required_evidence": [
+          "Courier tracking run-sheet, delivery timestamp, and recipient OTP / signature log",
+          "Warehouse automated scanning logs showing package weight and X-ray dimensions at dispatch vs. return",
+          "Written statement of delivery / pickup executive and GPS location coordinates"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "postal_courier_services",
+        "condition_to_start": "Order tracking ID identified from e-commerce platform records.",
+        "condition_to_complete": "Reconstruction of physical package movement, verification of weight discrepancies (in return fraud), and identification of physical handler.",
+        "on_complete_trigger": [
+          "ecom_step_05_search_seizure"
+        ],
+        "if_blocked": [
+          "If delivery agents are suspected of colluding with refund fraudsters by logging fake returns, subpoena the agent's personal mobile CDR and bank statements."
+        ]
+      },
+      {
+        "step_id": "ecom_step_04_telecom_isp_trace",
+        "order": 4,
+        "title": "Telecom & ISP Tracing of Online Fraudsters and Sellers",
+        "description": "Analyse mobile numbers linked to buyer/seller accounts, delivery contact numbers, and IP addresses from platform login logs. Issue notices to TSPs and ISPs for CAF, CDR with tower locations, and IPDR port resolution.",
+        "required_evidence": [
+          "CAF and CDR with Cell ID locations for seller, buyer, and intermediary phone numbers",
+          "IPDR logs resolving e-commerce login public IPs and NAT ports to private subscriber installation addresses",
+          "IMEI tracking logs showing device clustering across multiple fake buyer/seller accounts"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Phone numbers and login IP addresses identified from e-commerce KYC and payment logs.",
+        "condition_to_complete": "Positive physical location and subscriber identification of the fraud syndicate.",
+        "on_complete_trigger": [
+          "ecom_step_05_search_seizure"
+        ],
+        "if_blocked": [
+          "If IP addresses resolve to non-telecom ISPs, route IPDR requisitions through entity_id isp_non_telecom."
+        ]
+      },
+      {
+        "step_id": "ecom_step_05_search_seizure",
+        "order": 5,
+        "title": "Raid, Seizure of Counterfeit Goods / Warehouses & Arrest",
+        "description": "Conduct search and seizure operations at the identified seller warehouses, residential premises of refund fraudsters, or illicit call centers. Seize counterfeit merchandise, stolen electronics, laptops, mobile phones, packaging machines, and SIM cards. Arrest the culprits.",
+        "required_evidence": [
+          "Seizure memos of counterfeit inventory, returned merchandise, computers, mobile phones, and packaging material",
+          "Forensic mirror images of computers showing multi-account management scripts or fake invoice generators",
+          "Arrest memos and interrogation disclosures"
+        ],
+        "legal_basis": "BNSS Section 96",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Actionable physical premises established from logistics tracking, ISP installation addresses, or bank KYC.",
+        "condition_to_complete": "Arrest of operatives, physical seizure of goods/hardware, and submission of digital exhibits to FSL.",
+        "on_complete_trigger": [
+          "ecom_step_06_court_restitution"
+        ],
+        "if_blocked": [
+          "If stolen electronics (mobiles/laptops) were resold to local pawn shops or grey-market dealers, execute immediate recovery under BNSS Section 106 via entity_id pawn_shops_jewelers."
+        ]
+      },
+      {
+        "step_id": "ecom_step_06_court_restitution",
+        "order": 6,
+        "title": "Judicial Application for Restitution of Funds and Property",
+        "description": "Submit a formal investigation report and application under BNSS Section 503 before the jurisdictional Magistrate to release frozen seller payouts or refund balances back to the victim (or e-commerce platform), and return seized genuine merchandise to rightful owners.",
+        "required_evidence": [
+          "Schedule of frozen bank balances and seized physical inventory",
+          "Complainant's verification report and indemnity bond for property release",
+          "Court order directing restitution of funds and release of recovered property"
+        ],
+        "legal_basis": "BNSS Section 503",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Fraudulent funds frozen in bank accounts or physical merchandise recovered during raids.",
+        "condition_to_complete": "Court issues formal restitution orders transferring money/property to complainants.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If counterfeit branded goods are seized, obtain an order from the Magistrate under Trademark Act / BNSS for supervised destruction of the infringing inventory after evidentiary logging."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "The e-commerce fraud was conducted on peer-to-peer (P2P) classified platforms (e.g., OLX, Facebook Marketplace) using fake army/police identification, prepaid burner SIMs, and cash withdrawals via CSP/mule points.",
+        "suggested_actions": [
+          "Examine the IMEI number of the phone used to upload the classified advertisement by requesting platform backend logs and running IMEI clustering across nationwide telecom operators.",
+          "Analyse the UPI VPA transaction history to identify other victims who transferred money to the same collection account, consolidating multiple complaints to map patterns.",
+          "Request the platform to immediately blacklist the advertiser ID, device fingerprint, and bank account mapping across their ecosystem."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "sim_swap_fraud_v1",
+    "crime_type": "SIM Swap Fraud",
+    "title": "Standard Operating Procedure for Investigating SIM Swap & eSIM Hijacking Bank Account Takeovers",
+    "source": "Synthesized from DoT/TRAI SIM replacement regulations, I4C cyber fraud SOPs, and police telecom investigation guides",
+    "steps": [
+      {
+        "step_id": "simswap_step_01_victim_triage",
+        "order": 1,
+        "title": "Victim Triage & SIM Deactivation Timeline Profiling",
+        "description": "Interview the victim to establish the exact timestamp when their mobile network signal suddenly disconnected. Secure screenshots of any preceding phishing SMS, missed calls from unknown numbers (used to keep line busy), and subsequent bank debit alerts received via email.",
+        "required_evidence": [
+          "Victim's written statement detailing exact date and time of network loss",
+          "Complainant's bank account statement showing unauthorized withdrawals occurring after SIM deactivation",
+          "Copy of email alerts received from bank or telecom operator regarding SIM change"
+        ],
+        "legal_basis": null,
+        "department_entity_id": null,
+        "condition_to_start": "Victim reports sudden loss of mobile network connectivity followed by unauthorized bank account draining.",
+        "condition_to_complete": "Establishment of a precise chronological timeline linking SIM deactivation to unauthorized banking transactions.",
+        "on_complete_trigger": [
+          "simswap_step_02_tsp_sim_requisition",
+          "simswap_step_03_bank_ip_logs"
+        ],
+        "if_blocked": [
+          "If the victim's email account was also compromised to suppress SIM swap notification alerts, instruct them to recover email access and check the trash/deleted folder."
+        ]
+      },
+      {
+        "step_id": "simswap_step_02_tsp_sim_requisition",
+        "order": 2,
+        "title": "Telecom Requisition of SIM Swap / eSIM Upgrade Dossier",
+        "description": "Issue urgent notices under BNSS Section 94 to the victim's Telecom Service Provider (Jio, Airtel, Vi). Demand the complete SIM replacement / eSIM upgrade dossier: Point of Sale (PoS) agent details, store location, application form, forged ID proofs submitted, and CDR/IMEI logs of the new SIM.",
+        "required_evidence": [
+          "SIM replacement / eSIM upgrade application form and forged KYC documents submitted",
+          "Point of Sale (PoS) agent name, agency ID, store address, and employee details who processed the swap",
+          "IMEI number and CDR of the device where the newly issued SIM/eSIM was activated",
+          "IP address and OTP verification logs (if eSIM upgrade was initiated via online portal/SMS)"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Mobile number confirmed to have undergone unauthorized SIM replacement or eSIM porting.",
+        "condition_to_complete": "Receipt of complete SIM swap diagnostic dossier, PoS agent identity, and new handset IMEI from TSP.",
+        "on_complete_trigger": [
+          "simswap_step_04_pos_investigation",
+          "simswap_step_05_isp_ipdr_trace"
+        ],
+        "if_blocked": [
+          "If the TSP claims the swap was automated via SMS/IVR without human intervention, subpoena the SMS logs and IPDR session logs of the device that sent the porting request."
+        ]
+      },
+      {
+        "step_id": "simswap_step_03_bank_ip_logs",
+        "order": 3,
+        "title": "Bank Server Login IP & Beneficiary Tracing Requisition",
+        "description": "Issue notices to the victim's bank to obtain internet/mobile banking access logs during the fraud window. Request IP addresses, timestamps, device fingerprints, and immediate freezing of transferred funds across beneficiary accounts under BNSS Section 106.",
+        "required_evidence": [
+          "Banking login and fund transfer IP address logs with exact UTC/IST timestamps and NAT ports",
+          "Beneficiary account numbers, IFSCs, and fund distribution ledgers",
+          "Confirmation of debit freeze / lien marking on recipient accounts under BNSS Section 106"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "bank_generic",
+        "condition_to_start": "Unauthorized bank transfers occurred concurrently with SIM deactivation.",
+        "condition_to_complete": "Receipt of detailed banking login IP logs and confirmation of fund freezing in destination accounts.",
+        "on_complete_trigger": [
+          "simswap_step_05_isp_ipdr_trace"
+        ],
+        "if_blocked": [
+          "If funds were moved into cryptocurrency exchanges, immediately route freeze notices to entity_id vasp_crypto_exchange."
+        ]
+      },
+      {
+        "step_id": "simswap_step_04_pos_investigation",
+        "order": 4,
+        "title": "Investigation & Interrogation of Point of Sale (PoS) Agent",
+        "description": "Summon and interrogate the telecom PoS retailer or store employee who processed the fraudulent SIM replacement. Examine store CCTV footage, verify if statutory biometric verification / photo matching rules were violated, and check for criminal collusion.",
+        "required_evidence": [
+          "CCTV footage of the telecom retail store / PoS counter showing the individual who collected the SIM card",
+          "Original physical application form and thumbprint/signature registers from the PoS store",
+          "Written interrogation statement of the PoS agent explaining verification failures"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "PoS agent ID and store location identified from TSP SIM replacement dossier.",
+        "condition_to_complete": "Procurement of store CCTV footage and determination of whether the PoS agent was a co-conspirator or deceived by forged documents.",
+        "on_complete_trigger": [
+          "simswap_step_06_search_seizure"
+        ],
+        "if_blocked": [
+          "If the PoS store CCTV is overwritten or malfunctioning, seize the agent's personal mobile phone and CDR to check for communication with known cybercrime syndicates."
+        ]
+      },
+      {
+        "step_id": "simswap_step_05_isp_ipdr_trace",
+        "order": 5,
+        "title": "ISP IPDR Tracing of Bank Attackers and eSIM Hijackers",
+        "description": "Analyse the IP addresses obtained from bank login logs and online eSIM portal requests. Issue notices to ISPs to obtain IPDR, NAT port binding records, and subscriber installation addresses.",
+        "required_evidence": [
+          "IPDR logs resolving public attacker IPs and NAT ports to specific subscriber private IPs",
+          "ISP subscriber KYC showing physical premises of the bank account hacker"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "isp_non_telecom",
+        "condition_to_start": "Actionable IP addresses identified from bank servers or TSP online eSIM portal logs.",
+        "condition_to_complete": "Positive identification of the ISP subscriber name and physical location of the attacker.",
+        "on_complete_trigger": [
+          "simswap_step_06_search_seizure"
+        ],
+        "if_blocked": [
+          "If IP addresses resolve to mobile data networks, route IPDR requisitions through entity_id telecom_operator."
+        ]
+      },
+      {
+        "step_id": "simswap_step_06_search_seizure",
+        "order": 6,
+        "title": "Raid, Seizure of SIM Cloning / Swapping Hardware & Arrest",
+        "description": "Execute search warrants at the physical locations identified via store CCTV, IMEI tracking, telecom CDR, and ISP logs. Arrest the SIM swap gang, corrupt PoS agents, and bank hackers. Seize mobile phones, stolen SIM cards, fake ID manufacturing setups, and laptops.",
+        "required_evidence": [
+          "Seizure memos of mobile handsets, blank SIM cards, forged Aadhaar/PAN cards, printers, and computing devices",
+          "Forensic mirror images of computers and phones showing banking credentials and victim databases",
+          "Arrest memos and interrogation disclosures"
+        ],
+        "legal_basis": "BNSS Section 96",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Actionable physical address and suspect identity established from PoS CCTV, IMEI clustering, or ISP logs.",
+        "condition_to_complete": "Dismantling of the SIM swap syndicate, arrest of operatives, and submission of digital/physical exhibits to FSL.",
+        "on_complete_trigger": [
+          "simswap_step_07_court_restitution"
+        ],
+        "if_blocked": [
+          "If the syndicate operates across interstate borders, coordinate raid execution with State Cyber Cell / CID."
+        ]
+      },
+      {
+        "step_id": "simswap_step_07_court_restitution",
+        "order": 7,
+        "title": "Judicial Application for Restitution of Defrauded Funds",
+        "description": "Submit a formal investigation report and application under BNSS Section 503 before the jurisdictional Magistrate to release frozen funds held in beneficiary bank accounts back to the victim.",
+        "required_evidence": [
+          "Certified schedule of frozen balances in recipient bank accounts",
+          "Complainant's verification report and indemnity bond for property release",
+          "Investigating Officer's official report endorsing fund restoration"
+        ],
+        "legal_basis": "BNSS Section 503",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Defrauded funds successfully frozen in destination bank accounts.",
+        "condition_to_complete": "Court order directing the banks to release and wire the frozen money to the complainant's account.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If funds were fully withdrawn but police seized cash or vehicles during the raid, move an application before the court to disburse compensation to the victim out of the forfeited assets under BNSS."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "The SIM swap was executed using highly sophisticated forged identity documents that bypassed PoS scrutiny, stolen funds were immediately converted to cryptocurrency via P2P traders, and attackers used burner devices.",
+        "suggested_actions": [
+          "Examine the biometric authentication logs at the PoS terminal: if fingerprint authentication was bypassed or faked using silicon clones, report the security breach to UIDAI under entity_id uidai_aadhaar (via High Court order) and DoT for systemic investigation.",
+          "Analyse the Call Detail Records (CDR) of the newly activated SIM card during its brief operational window to identify calls made to bank OTP servers, co-conspirators, or test numbers.",
+          "File a formal complaint with DoT TERM cell against the telecom operator for violation of mandatory statutory SIM replacement verification guidelines, establishing grounds for civil compensation for the victim."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "otp_phishing_takeover_v1",
+    "crime_type": "OTP/Phishing-based Account Takeover",
+    "title": "Standard Operating Procedure for Investigating OTP Phishing, Vishing & Social Engineering Account Takeovers",
+    "source": "Synthesized from I4C investigation checklists, RBI customer protection circulars, and police cyber cell manuals",
+    "steps": [
+      {
+        "step_id": "otp_step_01_victim_interview",
+        "order": 1,
+        "title": "Victim Triage & Social Engineering Vector Profiling",
+        "description": "Interview the victim to document the exact social engineering modality: vishing phone call (impersonating bank executive/KYC officer/rewards agent), phishing SMS/email link, or screen-sharing malware (AnyDesk, TeamViewer, Screen Share). Collect call logs, SMS headers, and screenshots.",
+        "required_evidence": [
+          "Screenshots of phishing SMS / WhatsApp messages showing sender ID and link [1.1.2]",
+          "Victim's phone call logs showing incoming vishing phone numbers and call durations",
+          "Bank account / wallet statement showing unauthorized transactions",
+          "NCRP / CFCFRMS Ticket Acknowledgement Number"
+        ],
+        "legal_basis": null,
+        "department_entity_id": null,
+        "condition_to_start": "Victim reports unauthorized account takeover and fund transfer after sharing an OTP, clicking a link, or downloading a remote access app.",
+        "condition_to_complete": "Establishment of the exact compromise vector and compilation of initial communication and banking evidence.",
+        "on_complete_trigger": [
+          "otp_step_02_emergency_freeze",
+          "otp_step_03_telecom_vishing_trace"
+        ],
+        "if_blocked": [
+          "If the victim's phone is currently locked or controlled by remote access malware, immediately power off the device, remove the SIM card, and transfer the handset to FSL for safe forensic triage."
+        ]
+      },
+      {
+        "step_id": "otp_step_02_emergency_freeze",
+        "order": 2,
+        "title": "Emergency Bank Account & Wallet Freezing",
+        "description": "Verify the complaint on NCRP / 1930. Issue immediate Section 106 BNSS notices to the beneficiary banks, wallets, or payment aggregators where the stolen funds were transferred. Request debit freeze, account holder KYC, and transaction ledgers.",
+        "required_evidence": [
+          "Certified bank statements and KYC dossiers of Level-1 and Level-2 recipient accounts [1.1.1]",
+          "Bank confirmations of debit freeze / lien placement under BNSS Section 106",
+          "Internet banking login IP addresses and device fingerprints of recipient accounts"
+        ],
+        "legal_basis": "BNSS Section 106",
+        "department_entity_id": "bank_generic",
+        "condition_to_start": "Beneficiary account numbers, IFSCs, or VPAs identified from victim's transaction alerts or NCRP portal.",
+        "condition_to_complete": "Freezing of available funds across recipient bank accounts and receipt of account holder KYC.",
+        "on_complete_trigger": [
+          "otp_step_04_isp_ipdr_trace",
+          "otp_step_05_atm_cctv_trace"
+        ],
+        "if_blocked": [
+          "If funds were routed into merchant e-commerce wallets (e.g., Amazon Pay, Paytm), serve Section 106 freeze notices directly on the e-commerce entities under entity_id ecommerce_platform."
+        ]
+      },
+      {
+        "step_id": "otp_step_03_telecom_vishing_trace",
+        "order": 3,
+        "title": "Telecom Tracing of Vishing Callers and Phishing SMS Senders",
+        "description": "Issue notices under BNSS Section 94 to TSPs to trace the phone numbers used to make vishing calls or send phishing SMS. Obtain CAF, CDR with tower locations, and IMEI histories. For bulk SMS phishing, request DLT (Distributed Ledger Technology) header registration KYC.",
+        "required_evidence": [
+          "CAF and CDR with Cell ID locations for vishing phone numbers",
+          "IMEI tracking history showing handset clustering of telecallers",
+          "TRAI DLT registration KYC for bulk SMS sender headers (e.g., VK-SBIBNK, AD-KYCFIL)"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Vishing phone numbers or SMS sender IDs identified from victim's phone logs.",
+        "condition_to_complete": "Receipt of CAF, CDR, IMEI data, and bulk SMS telemarketer KYC from the telecom operator.",
+        "on_complete_trigger": [
+          "otp_step_06_raid_seizure"
+        ],
+        "if_blocked": [
+          "If bulk SMS was dispatched via an illegal proxy telemarketer, coordinate with DoT TERM cell to suspend the telemarketer's SIP/SMSC interconnect license."
+        ]
+      },
+      {
+        "step_id": "otp_step_04_isp_ipdr_trace",
+        "order": 4,
+        "title": "ISP IPDR Tracing of Unauthorized Logins and Phishing Sites",
+        "description": "Analyse IP addresses obtained from bank internet banking login logs or phishing URL hosting logs. Issue notices to ISPs to obtain IPDR, NAT port binding records, and physical installation addresses of the hackers.",
+        "required_evidence": [
+          "IPDR logs resolving public attacker/login IPs and NAT ports to private subscriber IPs",
+          "ISP subscriber KYC showing physical premises of the account takeover hacker"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "isp_non_telecom",
+        "condition_to_start": "Actionable IP addresses identified from bank server login logs or CERT-In phishing domain reports.",
+        "condition_to_complete": "Positive identification of the ISP subscriber name and physical location of the hacker.",
+        "on_complete_trigger": [
+          "otp_step_06_raid_seizure"
+        ],
+        "if_blocked": [
+          "If IP addresses resolve to mobile data networks, route IPDR requisitions through entity_id telecom_operator."
+        ]
+      },
+      {
+        "step_id": "otp_step_05_atm_cctv_trace",
+        "order": 5,
+        "title": "ATM / PoS CCTV Requisition for Cash Withdrawals",
+        "description": "If the stolen funds were withdrawn via ATM cash encashment or spent at physical retail PoS stores by mule account holders, immediately issue notices to the acquiring bank for ATM Electronic Journal (EJ) logs and CCTV footage.",
+        "required_evidence": [
+          "Video footage of the ATM kiosk or retail PoS counter covering the exact withdrawal window",
+          "ATM Electronic Journal (EJ) transaction logs"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "bank_generic",
+        "condition_to_start": "Mule bank account statement confirms physical cash withdrawal via ATM or PoS swipe.",
+        "condition_to_complete": "Procurement of clear CCTV video clips showing the physical withdrawer.",
+        "on_complete_trigger": [
+          "otp_step_06_raid_seizure"
+        ],
+        "if_blocked": [
+          "If ATM CCTV is unavailable, check municipal smart city traffic cameras or nearby commercial establishment cameras under entity_id private_cctv_sources covering the ATM exit routes."
+        ]
+      },
+      {
+        "step_id": "otp_step_06_raid_seizure",
+        "order": 6,
+        "title": "Raid, Seizure of Phishing / Vishing Call Centers & Arrest",
+        "description": "Conduct search and seizure operations at the physical locations identified via telecom CDR, ISP logs, and ATM CCTV. Arrest telecallers, phishing script developers, and money mules. Seize mobile phones, SIM boxes, laptops, registers, and ATM cards.",
+        "required_evidence": [
+          "Seizure memos of computing devices, mobile phones, SIM cards, ATM cards, and telecalling scripts",
+          "Forensic mirror images of hard drives showing victim databases, OTP interception scripts, and banking logs",
+          "Arrest memos and interrogation disclosures"
+        ],
+        "legal_basis": "BNSS Section 96",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Actionable physical address and suspect identity established from telecom, ISP, or CCTV tracing.",
+        "condition_to_complete": "Dismantling of the phishing/vishing syndicate, arrest of operatives, and submission of digital/physical exhibits to FSL.",
+        "on_complete_trigger": [
+          "otp_step_07_court_restitution"
+        ],
+        "if_blocked": [
+          "If the primary call center operates from an inter-state cybercrime hub (e.g., Jamtara, Mewat, Bharatpur), coordinate raid execution with State Cyber Cell / CID."
+        ]
+      },
+      {
+        "step_id": "otp_step_07_court_restitution",
+        "order": 7,
+        "title": "Judicial Application for Restitution of Defrauded Funds",
+        "description": "Submit a formal investigation report and application under BNSS Section 503 before the jurisdictional Magistrate to release frozen funds held in beneficiary bank accounts back to the victim.",
+        "required_evidence": [
+          "Certified schedule of frozen balances in recipient bank accounts",
+          "Complainant's verification report and indemnity bond for property release",
+          "Investigating Officer's official report endorsing fund restoration"
+        ],
+        "legal_basis": "BNSS Section 503",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Defrauded funds successfully frozen in destination bank accounts.",
+        "condition_to_complete": "Court order directing the banks to release and wire the frozen money to the complainant's account.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the bank refuses to restore funds citing customer negligence (sharing OTP), provide the court with RBI Zero Liability Circular analysis proving systemic banking security lapses or prompt 1930 reporting mitigation."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "The vishing call center operated from untraceable pre-activated burner SIM cards, stolen funds were rapidly withdrawn from remote ATMs by masked mules, and digital login IPs were masked behind public Wi-Fi networks.",
+        "suggested_actions": [
+          "Perform IMEI clustering on the mobile handsets used to insert the burner SIM cards; track the historical SIM cards previously used in those same IMEI slots to identify genuine personal numbers of the culprits.",
+          "Analyse the point-of-sale (PoS) retailer or Business Correspondent (BC) who activated the cluster of burner SIMs and mule bank accounts; prosecute the fraudulent facilitator under Section 94/96 BNSS.",
+          "Check if the victim reported the fraud to 1930 within the 'Golden Hour'; if so, assist the victim in filing a formal claim against the bank before the RBI Banking Ombudsman for failure to implement real-time fraud monitoring."
+        ]
+      }
+    ]
+  }
+]

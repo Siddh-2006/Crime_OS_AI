@@ -1,0 +1,1872 @@
+[
+  {
+    "act": "sop",
+    "sop_id": "phishing_credential_theft_v1",
+    "crime_type": "Phishing / Credential Theft",
+    "title": "Standard Operating Procedure for Investigating Phishing Campaigns & Credential Harvesting",
+    "source": "Synthesized from I4C Cyber Crime Investigation Guidelines, MeitY advisories, and general police practice",
+    "steps": [
+      {
+        "step_id": "phish_step_01_triage_evidence",
+        "order": 1,
+        "title": "Victim Intake, Evidence Preservation & URL Profiling",
+        "description": "Collect exact details of the phishing vector: deceptive SMS (smishing), email, or social media link. Preserve full raw email headers, SMS sender IDs, screenshots of the deceptive interface, and exact phishing website URLs. Instruct the victim to immediately change compromised account passwords and enable two-factor authentication.",
+        "required_evidence": [
+          "Screenshots of phishing SMS/WhatsApp messages with Sender ID and URL link",
+          "Raw email files (.eml/.msg) containing complete header routing metadata",
+          "Victim's written statement detailing compromised accounts and stolen credentials"
+        ],
+        "legal_basis": null,
+        "department_entity_id": null,
+        "condition_to_start": "Victim reports unauthorized credential harvesting or deceptive phishing communication.",
+        "condition_to_complete": "Comprehensive collection of deceptive messages, raw headers, and target phishing URLs.",
+        "on_complete_trigger": [
+          "phish_step_02_url_takedown",
+          "phish_step_03_telecom_tracing"
+        ],
+        "if_blocked": [
+          "If the phishing link is expired or dynamic, use forensic web archiving tools or browser cache analysis to reconstruct the original landing page."
+        ]
+      },
+      {
+        "step_id": "phish_step_02_url_takedown",
+        "order": 2,
+        "title": "Phishing Domain Takedown & Infrastructure Requisition",
+        "description": "Send formal emergency takedown requests to CERT-In and I4C to block the phishing website across Indian ISPs. Conduct WHOIS, DNS resolution, and hosting server IP analysis, and issue Section 94 BNSS notices to the domain registrar and hosting provider for server administrator KYC.",
+        "required_evidence": [
+          "WHOIS domain registration KYC and payment transaction reference",
+          "Hosting server IP address, DNS routing tables, and server access logs",
+          "Confirmation of nationwide URL blocking from CERT-In/I4C"
+        ],
+        "legal_basis": "Information Technology Act Section 69A",
+        "department_entity_id": "cert_in",
+        "condition_to_start": "Active phishing URL or deceptive domain identified from victim's device.",
+        "condition_to_complete": "Phishing domain is blocked nationally and hosting provider KYC is procured.",
+        "on_complete_trigger": [
+          "phish_step_05_isp_ipdr_trace"
+        ],
+        "if_blocked": [
+          "If the domain is hosted on an offshore bulletproof server, report the URLs to major browser anti-phishing registries (Google Safe Browsing, Microsoft SmartScreen) for immediate red-flagging."
+        ]
+      },
+      {
+        "step_id": "phish_step_03_telecom_tracing",
+        "order": 3,
+        "title": "Telecom Tracing of SMS Sender IDs & Smishing Numbers",
+        "description": "Issue notices under BNSS Section 94 to Telecom Service Providers to trace phone numbers or bulk SMS gateways used to dispatch phishing links. Request CAF, CDR with tower locations, IMEI histories, and TRAI DLT header registration records.",
+        "required_evidence": [
+          "CAF and CDR with Cell ID locations for smishing phone numbers",
+          "IMEI tracking logs showing device clustering of telemarketers/scammers",
+          "TRAI DLT registration KYC for bulk SMS sender headers"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Phishing phone numbers or SMS sender IDs identified from victim logs.",
+        "condition_to_complete": "Receipt of CAF, CDR, IMEI data, and bulk SMS aggregator KYC from the telecom operator.",
+        "on_complete_trigger": [
+          "phish_step_06_search_seizure"
+        ],
+        "if_blocked": [
+          "If bulk SMS was routed via illegal proxy gateways, coordinate with DoT TERM cell to suspend the telemarketer's interconnect license."
+        ]
+      },
+      {
+        "step_id": "phish_step_04_email_provider_logs",
+        "order": 4,
+        "title": "Email Service Provider (ESP) Access Log Requisition",
+        "description": "If phishing emails were sent from public ESPs (Google, Microsoft, Yahoo) or if the victim's email/cloud account was compromised using stolen credentials, issue Section 94 BNSS notices to the ESPs. Demand account creation KYC, login IP addresses, timestamps, and device user-agents.",
+        "required_evidence": [
+          "Email account registration KYC and recovery phone numbers",
+          "Login IP addresses, exact timestamps (UTC/IST), and port numbers for unauthorized access",
+          "Mailbox audit logs showing forwarding rules or data exfiltration"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "google_llc",
+        "condition_to_start": "Phishing sender email address or victim's compromised email account identified.",
+        "condition_to_complete": "Receipt of ESP registration KYC and detailed login IP logs.",
+        "on_complete_trigger": [
+          "phish_step_05_isp_ipdr_trace"
+        ],
+        "if_blocked": [
+          "If foreign ESPs require MLAT for content, restrict immediate domestic requisition strictly to non-content basic subscriber info and IP access logs."
+        ]
+      },
+      {
+        "step_id": "phish_step_05_isp_ipdr_trace",
+        "order": 5,
+        "title": "ISP IPDR Tracing of Phishing Administrators & Intruders",
+        "description": "Analyse IP addresses obtained from hosting servers, email login logs, and domain registration records. Issue notices to ISPs to obtain IPDR, NAT port binding records, and physical installation addresses of the syndicate operators.",
+        "required_evidence": [
+          "IPDR logs resolving public attacker IPs and NAT ports to private subscriber IPs",
+          "ISP subscriber KYC showing physical premises of the phishing administrator"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "isp_non_telecom",
+        "condition_to_start": "Actionable IP addresses and timestamps obtained from hosting providers or ESPs.",
+        "condition_to_complete": "Positive identification of the ISP subscriber name and physical location of the attacker.",
+        "on_complete_trigger": [
+          "phish_step_06_search_seizure"
+        ],
+        "if_blocked": [
+          "If IP addresses resolve to mobile data networks, route IPDR requisitions through entity_id telecom_operator."
+        ]
+      },
+      {
+        "step_id": "phish_step_06_search_seizure",
+        "order": 6,
+        "title": "Raid, Seizure of Phishing Infrastructure & Syndicate Arrest",
+        "description": "Execute search warrants at the physical locations identified via ISP, telecom, and hosting tracing. Arrest phishing kit developers, telecallers, and SMS gateway operators. Seize laptops, servers, SIM boxes, mobile phones, and storage media.",
+        "required_evidence": [
+          "Seizure memos of computing devices, mobile phones, SIM cards, and server hardware",
+          "Forensic mirror images of hard drives showing phishing kits, harvested credential databases, and mailing scripts",
+          "Arrest memos and interrogation disclosures"
+        ],
+        "legal_basis": "BNSS Section 96",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Actionable physical address and suspect identity established from telecom or ISP tracing.",
+        "condition_to_complete": "Dismantling of the phishing syndicate, arrest of operatives, and submission of digital exhibits to FSL.",
+        "on_complete_trigger": [
+          "phish_step_07_court_prosecution"
+        ],
+        "if_blocked": [
+          "If the gang operates from inter-state cybercrime hubs, coordinate raid execution with State Cyber Cell / CID."
+        ]
+      },
+      {
+        "step_id": "phish_step_07_court_prosecution",
+        "order": 7,
+        "title": "Judicial Filing & Evidence Admissibility Certification",
+        "description": "Compile the forensic reports, server logs, and electronic certificates under Section 63 BSA into a detailed charge-sheet. File the prosecution report before the jurisdictional Magistrate under relevant IT Act and BNS provisions.",
+        "required_evidence": [
+          "Certified FSL scientific analysis report of seized phishing kits and credential databases",
+          "Section 63 Bharatiya Sakshya Adhiniyam (BSA) electronic certificates for all digital logs",
+          "Final police charge-sheet detailing individual roles in the phishing conspiracy"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Investigation completed, accused arrested, and FSL forensic examination reports received.",
+        "condition_to_complete": "Formal acceptance of the charge-sheet by the jurisdictional Magistrate.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If FSL reports are delayed, file a preliminary charge-sheet within statutory timelines and submit the scientific report later under BNSS Section 193(9)."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Phishing campaign was automated using offshore infrastructure, anonymized VPNs, and bulletproof domain registrars with no actionable domestic IP footprint.",
+        "suggested_actions": [
+          "Submit complete IOCs (domains, IP hashes, SMS headers) to CERT-In and I4C for national threat intelligence syndication and permanent ISP blocking.",
+          "Analyse the destination of harvested credentials: if used to access financial accounts or e-commerce wallets, pivot the investigation to follow the money trail or delivery addresses.",
+          "Coordinate with DoT to trace and blacklist the international SMSC gateways responsible for routing the smishing messages into Indian telecom networks."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "sextortion_v1",
+    "crime_type": "Sextortion",
+    "title": "Standard Operating Procedure for Investigating Online Sextortion & Nude Video Blackmail",
+    "source": "Synthesized from MHA/I4C Sextortion Investigation Advisories, NCRP guidelines, and state police SOPs",
+    "steps": [
+      {
+        "step_id": "sext_step_01_victim_intake",
+        "order": 1,
+        "title": "Victim Intake, Emergency Counseling & Evidence Containment",
+        "description": "Provide immediate reassurance to prevent self-harm; refer victim to One Stop Centre or psychological support if distressed. Instruct victim to cease all communication and payments. Preserve screenshots of extortion chats, video call numbers, social media profiles, and bank transfer receipts.",
+        "required_evidence": [
+          "Screenshots of extortion messages, threatening chat transcripts, and profile URLs",
+          "Call logs showing video calling numbers (WhatsApp, Skype, Instagram)",
+          "Bank account / UPI transaction statements showing extortion payments made",
+          "Copy of NCRP complaint acknowledgement"
+        ],
+        "legal_basis": "Information Technology Act Section 67A",
+        "department_entity_id": "one_stop_centre_helpline",
+        "condition_to_start": "Victim reports online extortion under threat of publishing intimate or morphed video recordings.",
+        "condition_to_complete": "Victim psychologically stabilized, communication severed, and complete initial digital evidence preserved.",
+        "on_complete_trigger": [
+          "sext_step_02_content_takedown",
+          "sext_step_03_financial_freeze"
+        ],
+        "if_blocked": [
+          "If the victim is experiencing acute suicidal ideation, immediately involve family members and arrange emergency counseling via helpline 181 or local mental health professionals before formal questioning."
+        ]
+      },
+      {
+        "step_id": "sext_step_02_content_takedown",
+        "order": 2,
+        "title": "Emergency Content Takedown & Profile Blocking",
+        "description": "Issue urgent emergency notices to Meta, Google (YouTube), or other platforms under IT Rules 2021 (Rule 3(2)(b) mandating removal of non-consensual intimate imagery within 24 hours). Submit content hashes to preventing re-uploading.",
+        "required_evidence": [
+          "Exact URLs of uploaded videos or extortionist social media profiles",
+          "Digital hash values (SHA-256) of intimate video files for platform blacklist databases",
+          "Written confirmation of content removal and account suspension from intermediaries"
+        ],
+        "legal_basis": "Information Technology Act Section 79",
+        "department_entity_id": "meta_platforms",
+        "condition_to_start": "Extortionist uploads or threatens to share intimate videos on social media platforms.",
+        "condition_to_complete": "Removal of intimate content within 24 hours and suspension of perpetrator profiles.",
+        "on_complete_trigger": [
+          "sext_step_04_telecom_tracing"
+        ],
+        "if_blocked": [
+          "If content is hosted on independent adult websites or cloud storage, route urgent takedown orders through I4C and CERT-In."
+        ]
+      },
+      {
+        "step_id": "sext_step_03_financial_freeze",
+        "order": 3,
+        "title": "Financial Tracing & Freezing of Extortion Collection Accounts",
+        "description": "Analyse UPI VPAs, bank accounts, or e-wallets where the victim transferred extortion money. Issue immediate Section 106 BNSS notices to beneficiary banks/NPCI to freeze funds, obtain account holder KYC, and retrieve transaction ledgers.",
+        "required_evidence": [
+          "Certified bank ledger statement of the extortion recipient accounts",
+          "Account opening KYC, photograph, and linked mobile numbers of money mules",
+          "Confirmation of debit freeze under BNSS Section 106",
+          "ATM CCTV footage if extorted funds were encashed locally"
+        ],
+        "legal_basis": "BNSS Section 106",
+        "department_entity_id": "bank_generic",
+        "condition_to_start": "Victim bank statement confirms transfer of funds to extortionist accounts.",
+        "condition_to_complete": "Freezing of recipient bank balances and identification of money mule account holders.",
+        "on_complete_trigger": [
+          "sext_step_04_telecom_tracing",
+          "sext_step_05_isp_ipdr_trace"
+        ],
+        "if_blocked": [
+          "If money was transferred via UPI wallets, serve notices directly on the underlying PSP under entity_id upi_npci."
+        ]
+      },
+      {
+        "step_id": "sext_step_04_telecom_tracing",
+        "order": 4,
+        "title": "Telecom & Messaging Platform Tracing of Extortionists",
+        "description": "Issue Section 94 BNSS notices to TSPs and Meta (WhatsApp) to trace phone numbers and virtual numbers used for video calls and extortion chats. Demand CAF, CDR with tower locations, IMEI clustering, and WhatsApp login IP logs.",
+        "required_evidence": [
+          "CAF and CDR with Cell ID locations for extortion phone numbers",
+          "WhatsApp / Instagram subscriber KYC, registration IPs, and device identifiers",
+          "IMEI tracking history revealing physical handsets used by telecallers"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Phone numbers or social media handles identified from victim chats and bank KYC.",
+        "condition_to_complete": "Receipt of CAF, CDR, IMEI data, and platform IP logs revealing suspect locations.",
+        "on_complete_trigger": [
+          "sext_step_06_search_seizure"
+        ],
+        "if_blocked": [
+          "If callers utilized VOIP/cloud telephony numbers, subpoena the licensed Virtual Network Operator (VNO) for underlying destination IP and subscriber KYC."
+        ]
+      },
+      {
+        "step_id": "sext_step_05_isp_ipdr_trace",
+        "order": 5,
+        "title": "ISP IPDR Tracing of Extortion Call Centers",
+        "description": "Analyse IP addresses obtained from social media platform logs, WhatsApp registration logs, and bank internet banking access logs. Issue notices to ISPs to obtain IPDR, NAT port binding records, and physical installation addresses.",
+        "required_evidence": [
+          "IPDR logs resolving public attacker IPs and NAT ports to private subscriber IPs",
+          "ISP subscriber KYC showing physical premises of the extortion gang"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "isp_non_telecom",
+        "condition_to_start": "Actionable IP addresses and timestamps obtained from Meta, banks, or online platforms.",
+        "condition_to_complete": "Positive identification of the ISP subscriber name and physical location of the extortionists.",
+        "on_complete_trigger": [
+          "sext_step_06_search_seizure"
+        ],
+        "if_blocked": [
+          "If IP addresses resolve to mobile data networks, route IPDR requisitions through entity_id telecom_operator."
+        ]
+      },
+      {
+        "step_id": "sext_step_06_search_seizure",
+        "order": 6,
+        "title": "Raid, Seizure of Extortion Infrastructure & Syndicate Arrest",
+        "description": "Conduct search and seizure operations at the physical locations identified via telecom, ISP, and bank tracing. Arrest gang operatives, telecallers, and video morphers. Seize mobile phones, computers, SIM cards, and storage media containing victim videos.",
+        "required_evidence": [
+          "Seizure memos of mobile phones, computing devices, SIM boxes, and financial ledgers",
+          "Forensic bit-stream images of seized devices containing recorded victim videos, morphing software, and extortion scripts",
+          "Arrest memos and voluntary disclosure statements"
+        ],
+        "legal_basis": "BNSS Section 96",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Actionable physical address established from telecom, ISP, or bank tracing.",
+        "condition_to_complete": "Dismantling of the sextortion gang, arrest of operatives, and secure submission of digital exhibits to FSL.",
+        "on_complete_trigger": [
+          "sext_step_07_court_custody_protection"
+        ],
+        "if_blocked": [
+          "If the syndicate operates from known interstate sextortion hubs (e.g., Mewat, Bharatpur, Alwar), coordinate multi-state raids through State Cyber Cell / CID."
+        ]
+      },
+      {
+        "step_id": "sext_step_07_court_custody_protection",
+        "order": 7,
+        "title": "Judicial Filing, Bail Opposition & Victim Protection Orders",
+        "description": "Produce arrested accused before the Magistrate, file for police remand, and strongly oppose bail citing repeat victimization risks. Move applications under BNSS to seal sensitive electronic records and ensure permanent deletion of seized intimate media under judicial supervision.",
+        "required_evidence": [
+          "Police remand application detailing interstate conspiracy and digital evidence recovery needs",
+          "Certified FSL reports confirming presence of victim's intimate videos on accused devices",
+          "Judicial order directing sealed custody of intimate evidence and permanent deletion of illicit files"
+        ],
+        "legal_basis": "BNSS Section 187",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Accused arrested and initial forensic imaging completed.",
+        "condition_to_complete": "Judicial custody secured, bail opposed successfully, and victim privacy orders passed by court.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the defense seeks copies of the electronic charge-sheet, apply to the court under BNSS to redact/withhold the actual intimate video files to prevent secondary re-victimization."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Extortion gang operates from across international borders (e.g., Southeast Asian compound or West Africa), utilizing untraceable burner VOIP numbers and cryptocurrency cash-outs.",
+        "suggested_actions": [
+          "Execute immediate containment: submit video hashes to I4C and NCMEC (National Center for Missing & Exploited Children) to block global dissemination across major tech platforms.",
+          "Focus enforcement on domestic money laundering facilitators: identify, raid, and arrest local mule account providers and P2P crypto cash-out agents.",
+          "Provide the victim with official police confirmation that the video is part of an organized cyber scam, aiding them in managing social fallout without giving in to financial demands."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "cyberstalking_v1",
+    "crime_type": "Cyberstalking",
+    "title": "Standard Operating Procedure for Investigating Cyberstalking & Online Harassment",
+    "source": "Synthesized from BNS Section 78 (Stalking) guidelines, IT Act Section 67 advisories, and women safety police manuals",
+    "steps": [
+      {
+        "step_id": "stalk_step_01_victim_intake",
+        "order": 1,
+        "title": "Victim Intake, Threat Assessment & Support Referral",
+        "description": "Record detailed statement regarding the stalking pattern: persistent unwanted communication, monitoring of digital footprint, or physical tracking threats. Refer victim to One Stop Centre for emotional support. Preserve screenshots, URLs, chat logs, and emails with timestamps.",
+        "required_evidence": [
+          "Screenshots of unwanted messages, emails, comments, and direct messages with timestamps",
+          "URLs of stalking social media profiles or defamatory blogs",
+          "Call logs showing frequency of unwanted phone calls or silent calls",
+          "Victim's written statement detailing psychological distress and behavioral impact"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": "one_stop_centre_helpline",
+        "condition_to_start": "Victim reports persistent online monitoring, harassment, or cyberstalking.",
+        "condition_to_complete": "Comprehensive dossier of stalking evidence compiled and threat triage completed.",
+        "on_complete_trigger": [
+          "stalk_step_02_platform_preservation",
+          "stalk_step_03_telecom_tracing"
+        ],
+        "if_blocked": [
+          "If the victim is facing imminent physical danger from an identified stalker, immediately dispatch local police patrol for physical protection and register an FIR under BNS Section 78."
+        ]
+      },
+      {
+        "step_id": "stalk_step_02_platform_preservation",
+        "order": 2,
+        "title": "Social Media & Intermediary Data Preservation & Requisition",
+        "description": "Issue Section 94 BNSS notices and account preservation requests to social media platforms (Meta, Google, X) hosting the stalking accounts. Demand basic subscriber KYC, registration email/phone, IP access logs, and timestamps of harassing posts.",
+        "required_evidence": [
+          "Subscriber registration details, verified phone numbers, and linked email IDs of stalking accounts",
+          "Login and posting IP addresses with exact timestamps (UTC/IST) and device user-agents",
+          "Platform confirmation of account data preservation and suspension of abusive handles"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "meta_platforms",
+        "condition_to_start": "Stalker's social media handles or email addresses identified from victim logs.",
+        "condition_to_complete": "Receipt of platform subscriber KYC, IP access logs, and confirmation of account suspension.",
+        "on_complete_trigger": [
+          "stalk_step_04_isp_ipdr_trace"
+        ],
+        "if_blocked": [
+          "If platforms delay formal response, utilize OSINT tools to examine account metadata, public interaction graphs, and profile creation history."
+        ]
+      },
+      {
+        "step_id": "stalk_step_03_telecom_tracing",
+        "order": 3,
+        "title": "Telecom Tracing of Harassing Phone Numbers",
+        "description": "Issue notices under BNSS Section 94 to TSPs to trace phone numbers used for stalking calls, SMS, or WhatsApp messaging. Obtain CAF, CDR with tower locations, and IMEI histories to check if the stalker is in physical proximity to the victim.",
+        "required_evidence": [
+          "CAF and CDR with Cell ID locations for harassing phone numbers",
+          "Cell tower analysis establishing physical proximity between stalker and victim residences/workplaces",
+          "IMEI tracking history revealing device sharing or multiple SIM cards used"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Phone numbers used for harassment or linked to social media accounts identified.",
+        "condition_to_complete": "Receipt of CAF, CDR, and IMEI data confirming suspect identity and physical movement patterns.",
+        "on_complete_trigger": [
+          "stalk_step_05_search_seizure"
+        ],
+        "if_blocked": [
+          "If calls originate from private numbers or caller-ID blocking apps, request the TSP switch engineers to perform incoming line identification (CLI unmasking)."
+        ]
+      },
+      {
+        "step_id": "stalk_step_04_isp_ipdr_trace",
+        "order": 4,
+        "title": "ISP IPDR Tracing of Stalker Login IP Addresses",
+        "description": "Analyse IP addresses obtained from social media or email provider access logs. Issue notices to ISPs to obtain IPDR, NAT port binding records, and physical installation addresses of the cyberstalker.",
+        "required_evidence": [
+          "IPDR logs resolving public posting IPs and NAT ports to specific subscriber private IPs",
+          "ISP subscriber KYC showing physical premises of the cyberstalker"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "isp_non_telecom",
+        "condition_to_start": "Actionable IP addresses and timestamps obtained from intermediary platform logs.",
+        "condition_to_complete": "Positive identification of the ISP subscriber name and physical address of the stalker.",
+        "on_complete_trigger": [
+          "stalk_step_05_search_seizure"
+        ],
+        "if_blocked": [
+          "If IP addresses resolve to mobile data networks, route IPDR requisitions through entity_id telecom_operator."
+        ]
+      },
+      {
+        "step_id": "stalk_step_05_search_seizure",
+        "order": 5,
+        "title": "Physical Search, Seizure of Stalking Devices & Arrest",
+        "description": "Execute search warrants at the physical residence or workplace of the identified suspect. Arrest the stalker and seize electronic devices (mobile phones, laptops, hard drives, cameras). Ensure forensic imaging to recover deleted stalking chats, spyware, or tracking logs.",
+        "required_evidence": [
+          "Seizure memos of mobile phones, computers, storage media, and physical tracking notes",
+          "Forensic bit-stream images of seized devices containing chat histories, saved photos of victim, and location monitoring logs",
+          "Arrest memos and interrogation disclosures"
+        ],
+        "legal_basis": "BNSS Section 96",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Suspect identity and physical location established via telecom, ISP, or platform KYC.",
+        "condition_to_complete": "Arrest of cyberstalker, seizure of electronic hardware, and submission of exhibits to FSL.",
+        "on_complete_trigger": [
+          "stalk_step_06_court_restraining_order"
+        ],
+        "if_blocked": [
+          "If the suspect has installed stalkerware/spyware on the victim's phone, submit the victim's device to FSL for specialized malware removal and forensic attribution."
+        ]
+      },
+      {
+        "step_id": "stalk_step_06_court_restraining_order",
+        "order": 6,
+        "title": "Judicial Filing, Bail Opposition & Protective Orders",
+        "description": "Produce the accused before the Magistrate, file the forensic chargesheet, and move an application for judicial restraining orders prohibiting the accused from contacting, monitoring, or approaching the victim online or offline.",
+        "required_evidence": [
+          "Certified FSL scientific analysis report linking accused devices to stalking communications",
+          "Section 63 BSA electronic certificates for platform and telecom records",
+          "Judicial order granting bail conditions with strict anti-stalking restraining directives"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Investigation finalized, accused arrested, and digital evidence analyzed.",
+        "condition_to_complete": "Charge-sheet accepted by court and formal protective restraining orders issued.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the stalker breaches court-ordered bail conditions by resuming online harassment, immediately file an application before the Magistrate for bail cancellation and re-arrest."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Stalker utilizes anonymous TOR networks, disposable burner accounts, and public Wi-Fi networks without leaving a persistent domestic IP or telecom trail.",
+        "suggested_actions": [
+          "Conduct behavioral and linguistic profiling of the messages to identify unique phrasing, spelling errors, or personal references that point to an offline acquaintance, ex-partner, or colleague.",
+          "Examine the victim's immediate physical environment and personal devices for hidden Bluetooth trackers (e.g., AirTags) or Wi-Fi eavesdropping devices.",
+          "Coordinate with private CCTV sources under entity_id private_cctv_sources around public Wi-Fi hotspots during the exact timestamps when stalking messages were dispatched."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "hacking_data_theft_v1",
+    "crime_type": "Hacking / Unauthorized Data Access (Data Theft)",
+    "title": "Standard Operating Procedure for Investigating Corporate Hacking, Database Breach & Data Theft",
+    "source": "Synthesized from CERT-In Cyber Security Directions 2022, IT Act Sections 43/66, and cyber forensic manuals",
+    "steps": [
+      {
+        "step_id": "hack_step_01_incident_triage",
+        "order": 1,
+        "title": "Incident Reporting, Log Preservation & CERT-In Notification",
+        "description": "Verify mandatory 6-hour incident reporting to CERT-In. Instruct the victim organization to freeze affected servers, isolate compromised networks, and preserve firewall logs, system audit logs, database query logs, and VPN access histories without altering timestamps.",
+        "required_evidence": [
+          "Copy of mandatory cyber incident report submitted to CERT-In",
+          "Raw firewall, IDS/IPS, VPN, and database access logs covering the intrusion window",
+          "Complainant organization's technical statement detailing breached servers and stolen data volume"
+        ],
+        "legal_basis": "Information Technology Act Section 70B",
+        "department_entity_id": "cert_in",
+        "condition_to_start": "Organization or individual reports unauthorized network intrusion, server hacking, or database theft.",
+        "condition_to_complete": "Mandatory regulatory reporting confirmed and raw server access logs secured under strict chain of custody.",
+        "on_complete_trigger": [
+          "hack_step_02_forensic_imaging",
+          "hack_step_03_cloud_provider_logs"
+        ],
+        "if_blocked": [
+          "If internal IT staff lack forensic expertise, immediately deploy a state cyber cell forensic team to execute live memory capture before systems are rebooted."
+        ]
+      },
+      {
+        "step_id": "hack_step_02_forensic_imaging",
+        "order": 2,
+        "title": "Forensic Bit-Stream Imaging of Breached Infrastructure",
+        "description": "Deploy forensic specialists to generate write-blocked bit-stream images of compromised servers, domain controllers, and employee workstations. Perform root-cause analysis to identify attack vectors (SQL injection, brute force, zero-day exploit, compromised credentials).",
+        "required_evidence": [
+          "Forensic bit-stream mirror images (E01/DD format) of compromised storage media with SHA-256 hash verification",
+          "Volatile RAM memory captures showing running malicious processes or web shells",
+          "FSL / Cyber Cell preliminary forensic report identifying the exact vulnerability and intrusion timestamp"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Compromised servers and endpoints isolated by victim organization.",
+        "condition_to_complete": "Successful forensic imaging of breached hardware and identification of the initial compromise vector.",
+        "on_complete_trigger": [
+          "hack_step_04_isp_ipdr_trace"
+        ],
+        "if_blocked": [
+          "If virtual servers are hosted in public clouds, request snapshot exports directly from the cloud administration console under forensic supervision."
+        ]
+      },
+      {
+        "step_id": "hack_step_03_cloud_provider_logs",
+        "order": 3,
+        "title": "Cloud & Hosting Service Provider Requisition",
+        "description": "Issue Section 94 BNSS notices to cloud providers (AWS, Google Cloud, Microsoft Azure) or web hosting services. Demand cloud trail audit logs, administrative console access IPs, API key usage logs, and data exfiltration bandwidth records.",
+        "required_evidence": [
+          "Cloud administrative login IP addresses, timestamps, and IAM user profiles",
+          "Data exfiltration logs showing volume of outbound transfer and destination IP addresses",
+          "WHOIS and subscriber KYC of external storage buckets where stolen data was uploaded"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "google_llc",
+        "condition_to_start": "Breach involved cloud-hosted databases, SaaS platforms, or cloud infrastructure management consoles.",
+        "condition_to_complete": "Receipt of cloud audit logs and exfiltration destination IP details.",
+        "on_complete_trigger": [
+          "hack_step_04_isp_ipdr_trace"
+        ],
+        "if_blocked": [
+          "If foreign cloud providers delay response, extract local cached administrative tokens and connection logs from the company's internal IT administrator laptops."
+        ]
+      },
+      {
+        "step_id": "hack_step_04_isp_ipdr_trace",
+        "order": 4,
+        "title": "ISP IPDR Tracing of Attacker Intrusion IPs",
+        "description": "Analyse external IP addresses logged during the firewall breach, database exfiltration, or cloud admin access. Issue notices to ISPs to obtain IPDR, NAT port binding records, and physical installation addresses of the hackers.",
+        "required_evidence": [
+          "IPDR logs resolving public attacker IPs and NAT ports to private subscriber IPs",
+          "ISP subscriber KYC showing physical premises of the hacker or command-and-control operator"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "isp_non_telecom",
+        "condition_to_start": "Actionable attacker IP addresses identified from server forensic imaging or cloud logs.",
+        "condition_to_complete": "Positive identification of the ISP subscriber name and physical location of the intrusion source.",
+        "on_complete_trigger": [
+          "hack_step_06_search_seizure"
+        ],
+        "if_blocked": [
+          "If IP addresses resolve to mobile data networks, route IPDR and tower dump requisitions through entity_id telecom_operator."
+        ]
+      },
+      {
+        "step_id": "hack_step_05_corporate_espionage_check",
+        "order": 5,
+        "title": "Corporate Espionage & Competitor Investigation (MCA21)",
+        "description": "If data theft involves proprietary source code, customer databases, or trade secrets, investigate potential corporate espionage by disgruntled ex-employees or rival firms. Query MCA21 to check director linkages, new company incorporations, and competitor ownership structures.",
+        "required_evidence": [
+          "MCA21 incorporation documents, director DIN details, and ownership profiles of suspected competitor firms",
+          "Employment contracts, non-disclosure agreements (NDAs), and resignation timelines of suspected insider employees",
+          "Forensic comparison report showing overlap between stolen proprietary data and competitor product releases"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "mca21_roc",
+        "condition_to_start": "Forensic evidence or insider intelligence indicates corporate espionage or employee data theft.",
+        "condition_to_complete": "Establishment of corporate or financial linkages between the data thief and rival commercial entities.",
+        "on_complete_trigger": [
+          "hack_step_06_search_seizure"
+        ],
+        "if_blocked": [
+          "If suspect ex-employees have joined offshore competitors, examine their professional networking profiles and travel records via entity_id immigration_border."
+        ]
+      },
+      {
+        "step_id": "hack_step_06_search_seizure",
+        "order": 6,
+        "title": "Raid, Seizure of Hacking Hardware & Arrest of Perpetrators",
+        "description": "Execute search warrants at the physical premises of identified hackers, rogue employees, or competitor offices. Arrest suspects and seize computers, laptops, hard drives, external servers, and mobile devices. Perform on-site live triage to secure encrypted containers.",
+        "required_evidence": [
+          "Seizure memos of servers, computers, storage drives, and penetration testing hardware",
+          "Forensic bit-stream images of seized drives containing stolen corporate databases, source code, or hacking tools",
+          "Arrest memos and interrogation disclosures detailing intrusion methodology"
+        ],
+        "legal_basis": "BNSS Section 96",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Actionable physical address established via ISP tracing, telecom logs, or corporate espionage analysis.",
+        "condition_to_complete": "Arrest of perpetrators, seizure of hardware, and submission of digital evidence to FSL.",
+        "on_complete_trigger": [
+          "hack_step_07_court_prosecution"
+        ],
+        "if_blocked": [
+          "If seized hardware involves advanced full-disk encryption (BitLocker/FileVault), compel the accused to provide decryption keys under judicial order or utilize FSL hardware extraction tools."
+        ]
+      },
+      {
+        "step_id": "hack_step_07_court_prosecution",
+        "order": 7,
+        "title": "Judicial Filing, Data Injunction & Prosecution",
+        "description": "File the comprehensive scientific forensic charge-sheet before the jurisdictional court. Move urgent applications for judicial injunctions restraining the defendants or third parties from publishing, selling, or utilizing the stolen corporate database or trade secrets.",
+        "required_evidence": [
+          "Certified FSL scientific report confirming presence of victim company's proprietary data on accused hardware",
+          "Section 63 BSA electronic certificates for all cloud, server, and ISP logs",
+          "Judicial injunction order barring commercial exploitation or dissemination of stolen data"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Investigation finalized, digital evidence matched by FSL, and accused charged.",
+        "condition_to_complete": "Charge-sheet accepted by court and data protection injunction orders issued.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If stolen data was already leaked onto public hacker forums, coordinate with CERT-In and international search engines for emergency de-indexing and repository takedown."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Data breach was executed by an advanced persistent threat (APT) group using multi-hop foreign VPNs and zero-day exploits, with stolen data listed for sale on darknet marketplaces for cryptocurrency.",
+        "suggested_actions": [
+          "Engage entity_id vasp_crypto_exchange and international blockchain tracking tools to monitor the cryptocurrency wallet addresses listed on the darknet auction for data purchase ransoms.",
+          "Share technical Indicators of Compromise (IOCs, malware signatures, attacker IPs) with CERT-In and I4C for global syndication and infrastructure mitigation.",
+          "Conduct a rigorous internal insider-threat investigation, examining employee access logs and financial backgrounds to rule out an internal employee who facilitated access for the external APT."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "social_media_impersonation_v1",
+    "crime_type": "Social Media Account Impersonation",
+    "title": "Standard Operating Procedure for Investigating Social Media Impersonation & Profile Cloning",
+    "source": "Synthesized from IT Act Section 66C (Identity Theft) guidelines, I4C SOPs, and intermediary compliance rules",
+    "steps": [
+      {
+        "step_id": "imper_step_01_triage_evidence",
+        "order": 1,
+        "title": "Victim Intake, Profile Profiling & Evidence Preservation",
+        "description": "Collect exact profile URLs of the genuine account and the impersonating/cloned account. Preserve screenshots showing unauthorized use of victim's name, photograph, bio, and any fraudulent solicitation messages (e.g., asking contacts for emergency money or medical help).",
+        "required_evidence": [
+          "Screenshots of the impersonating profile showing cloned profile photo, username, and bio",
+          "Exact profile URLs / Unique numeric account IDs of both genuine and fake profiles",
+          "Screenshots of direct messages sent by the impersonator soliciting money or defamatory content",
+          "Copy of NCRP / cybercrime.gov.in complaint acknowledgement"
+        ],
+        "legal_basis": null,
+        "department_entity_id": null,
+        "condition_to_start": "Victim reports creation of a fake social media profile using their identity, photos, or name.",
+        "condition_to_complete": "Complete visual and URL documentation of the impersonating profile secured.",
+        "on_complete_trigger": [
+          "imper_step_02_profile_takedown",
+          "imper_step_03_financial_trace"
+        ],
+        "if_blocked": [
+          "If the impersonating profile blocks the victim to prevent viewing, instruct a neutral third-party witness or police investigator account to capture the profile screenshots and URLs."
+        ]
+      },
+      {
+        "step_id": "imper_step_02_profile_takedown",
+        "order": 2,
+        "title": "Emergency Profile Suspension & Log Requisition",
+        "description": "Issue urgent notices under Section 94 BNSS and IT Rules 2021 to social media intermediaries (Meta, X, Instagram, LinkedIn) to immediately suspend/takedown the impersonating profile. Demand subscriber registration KYC, linked email/phone, and creation/login IP logs.",
+        "required_evidence": [
+          "Platform confirmation of fake profile deletion / account suspension",
+          "Subscriber registration details, verified mobile numbers, and recovery emails of the fake handle",
+          "Account creation and login IP addresses with exact timestamps (UTC/IST) and device user-agents"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "meta_platforms",
+        "condition_to_start": "Impersonating profile URL and screenshots documented.",
+        "condition_to_complete": "Fake profile removed by intermediary and backend subscriber KYC/IP logs provided to police.",
+        "on_complete_trigger": [
+          "imper_step_04_telecom_tracing",
+          "imper_step_05_isp_ipdr_trace"
+        ],
+        "if_blocked": [
+          "If platform compliance is delayed, submit an emergency takedown ticket through the I4C Law Enforcement portal which maintains direct escalation channels with major intermediaries."
+        ]
+      },
+      {
+        "step_id": "imper_step_03_financial_trace",
+        "order": 3,
+        "title": "Financial Tracing of Fraudulent Solicitation Accounts",
+        "description": "If the impersonator solicited money from the victim's friends/relatives (e.g., 'I am in hospital, send UPI'), analyse the recipient UPI VPAs and bank accounts. Issue Section 106 BNSS notices to beneficiary banks/NPCI to freeze funds and procure account holder KYC.",
+        "required_evidence": [
+          "Certified bank statements and KYC dossiers of recipient bank accounts",
+          "UPI routing logs identifying the merchant or P2P wallet destination",
+          "Confirmation of debit freeze under BNSS Section 106"
+        ],
+        "legal_basis": "BNSS Section 106",
+        "department_entity_id": "bank_generic",
+        "condition_to_start": "Impersonator sent financial solicitation messages containing bank account numbers or UPI IDs.",
+        "condition_to_complete": "Freezing of money in recipient accounts and complete identification of account holders.",
+        "on_complete_trigger": [
+          "imper_step_04_telecom_tracing"
+        ],
+        "if_blocked": [
+          "If funds were collected via fintech wallets, route Section 106 freeze notices directly through entity_id upi_npci."
+        ]
+      },
+      {
+        "step_id": "imper_step_04_telecom_tracing",
+        "order": 4,
+        "title": "Telecom Tracing of Linked Phone Numbers & WhatsApp Handles",
+        "description": "Issue Section 94 BNSS notices to TSPs to trace mobile numbers linked to the fake social media profile KYC, recovery settings, or WhatsApp numbers used for follow-up extortion/solicitation. Demand CAF, CDR with tower locations, and IMEI histories.",
+        "required_evidence": [
+          "CAF and CDR with Cell ID locations for mobile numbers linked to the fake account",
+          "IMEI tracking history revealing handsets used to operate the impersonating profile",
+          "Call analysis identifying frequent contacts or co-conspirators"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Phone numbers identified from platform registration KYC or victim communication logs.",
+        "condition_to_complete": "Receipt of CAF, CDR, and IMEI data confirming suspect identity and location.",
+        "on_complete_trigger": [
+          "imper_step_06_search_seizure"
+        ],
+        "if_blocked": [
+          "If phone numbers are registered on forged IDs, perform IMEI clustering to find other legitimate SIM cards used in the same handset."
+        ]
+      },
+      {
+        "step_id": "imper_step_05_isp_ipdr_trace",
+        "order": 5,
+        "title": "ISP IPDR Tracing of Account Creation & Login IPs",
+        "description": "Analyse IP addresses obtained from social media account creation and login logs. Issue notices to ISPs to obtain IPDR, NAT port binding records, and physical installation addresses of the impersonator.",
+        "required_evidence": [
+          "IPDR logs resolving public creation/login IPs and NAT ports to private subscriber IPs",
+          "ISP subscriber KYC showing physical premises of the impersonator"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "isp_non_telecom",
+        "condition_to_start": "Actionable IP addresses and timestamps obtained from social media intermediaries.",
+        "condition_to_complete": "Positive identification of the ISP subscriber name and physical location of the culprit.",
+        "on_complete_trigger": [
+          "imper_step_06_search_seizure"
+        ],
+        "if_blocked": [
+          "If IP addresses resolve to mobile data networks, route IPDR requisitions through entity_id telecom_operator."
+        ]
+      },
+      {
+        "step_id": "imper_step_06_search_seizure",
+        "order": 6,
+        "title": "Search, Seizure of Electronic Devices & Arrest of Impersonator",
+        "description": "Execute search warrants at the physical premises identified via telecom, ISP, or bank tracing. Arrest the suspect and seize mobile phones, computers, and storage media. Perform forensic imaging to recover saved victim photos, profile creation scripts, and chat logs.",
+        "required_evidence": [
+          "Seizure memos of mobile phones, computers, SIM cards, and storage media",
+          "Forensic bit-stream images of seized devices containing victim photos, profile credentials, and solicitation chats",
+          "Arrest memos and interrogation disclosures"
+        ],
+        "legal_basis": "BNSS Section 96",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Actionable physical address established from telecom, ISP, or bank tracing.",
+        "condition_to_complete": "Arrest of impersonator, physical seizure of hardware, and submission of digital exhibits to FSL.",
+        "on_complete_trigger": [
+          "imper_step_07_court_prosecution"
+        ],
+        "if_blocked": [
+          "If the impersonator is an offline acquaintance or rival operating locally, cross-reference handset IMEI histories with known local suspects."
+        ]
+      },
+      {
+        "step_id": "imper_step_07_court_prosecution",
+        "order": 7,
+        "title": "Judicial Filing & Permanent Account Deletion Orders",
+        "description": "File the comprehensive forensic chargesheet before the jurisdictional Magistrate under IT Act Section 66C (Identity Theft) and relevant BNS sections. Obtain a formal judicial order certifying permanent deletion of the impersonating profile and restitution of any extorted funds.",
+        "required_evidence": [
+          "Certified FSL scientific analysis report linking seized devices to the impersonating profile",
+          "Section 63 BSA electronic certificates for intermediary, ISP, and telecom logs",
+          "Judicial order confirming permanent removal of cloned profiles and restitution of victims' money"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Investigation finalized, accused arrested, and FSL reports received.",
+        "condition_to_complete": "Charge-sheet accepted by court and permanent profile deletion orders issued.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If multiple fake profiles continue to spring up from automated botnets, request the court to issue a dynamic injunction ordering intermediaries to block all derivative profiles matching the victim's image hash."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Impersonation was executed by organized syndicates operating from inter-state cyber fraud hubs using untraceable VPNs and burner SIMs solely to solicit financial aid from the victim's contact list.",
+        "suggested_actions": [
+          "Focus investigation entirely on the financial collection chain: freeze, trace, and raid the holders of the recipient bank accounts and UPI mule wallets.",
+          "Broadcast an immediate public advisory via the victim's genuine social media accounts and local police channels warning contacts not to transfer funds to the fraudulent handles.",
+          "Submit the fraudulent bank accounts and mobile numbers to I4C and NPCI for permanent cross-platform financial blacklisting."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "cyberbullying_minors_v1",
+    "crime_type": "Cyberbullying / Online Harassment of Minors",
+    "title": "Standard Operating Procedure for Investigating Cyberbullying, Trolling & Online Harassment of Minors",
+    "source": "Synthesized from POCSO Act guidelines, JJ Act child protection rules, IT Rules 2021, and NCRP child safety SOPs",
+    "steps": [
+      {
+        "step_id": "bully_step_01_child_intake",
+        "order": 1,
+        "title": "Child-Friendly Intake, CWC Notification & Counseling Referral",
+        "description": "Conduct intake in a child-friendly environment via a Child Welfare Police Officer (CWPO) or female officer without uniform, ensuring parents/guardians are present. Notify the Child Welfare Committee (CWC) under JJ Act Section 31. Refer child to psychological counseling and preserve harassment screenshots.",
+        "required_evidence": [
+          "Screenshots of bullying messages, comments, memes, morphed photos, or threatening group chats with timestamps",
+          "URLs of abusive social media profiles, online gaming IDs, or school chat groups",
+          "Formal notification letter sent to the Child Welfare Committee (CWC)",
+          "Statement of child recorded under POCSO / child-protective guidelines without intimidation"
+        ],
+        "legal_basis": "Juvenile Justice Act Section 31",
+        "department_entity_id": "cwc_jjb_authority",
+        "condition_to_start": "Parent, school, or child reports severe online harassment, cyberbullying, or trolling targeting a minor.",
+        "condition_to_complete": "Child protected and counseled, CWC notified, and complete initial digital evidence preserved.",
+        "on_complete_trigger": [
+          "bully_step_02_content_takedown",
+          "bully_step_03_school_coordination"
+        ],
+        "if_blocked": [
+          "If the child is refusing to speak due to trauma or fear of parents, arrange sessions with a specialized child psychologist at the One Stop Centre before proceeding with evidence logging."
+        ]
+      },
+      {
+        "step_id": "bully_step_02_content_takedown",
+        "order": 2,
+        "title": "Urgent Content Takedown & Intermediary Requisition",
+        "description": "Issue urgent emergency notices under IT Rules 2021 to social media platforms (Instagram, Snapchat, Discord, YouTube) to immediately remove harassing content, memes, or abusive groups targeting the minor. Demand subscriber KYC, linked email/phone, and posting IP logs.",
+        "required_evidence": [
+          "Platform confirmation of harassing content removal and account/group suspension",
+          "Subscriber registration details, verified mobile numbers, and email IDs of perpetrators",
+          "Posting and login IP addresses with exact timestamps (UTC/IST) and device user-agents"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "meta_platforms",
+        "condition_to_start": "Harassing content URLs, group invites, or perpetrator handles documented.",
+        "condition_to_complete": "Abusive content removed by intermediaries and backend perpetrator KYC/IP logs provided to police.",
+        "on_complete_trigger": [
+          "bully_step_04_telecom_isp_trace"
+        ],
+        "if_blocked": [
+          "If bullying occurs on encrypted messaging apps (WhatsApp/Signal groups), subpoena group admin details and use reported metadata to identify members."
+        ]
+      },
+      {
+        "step_id": "bully_step_03_school_coordination",
+        "order": 3,
+        "title": "School / Institutional Coordination & Peer Group Inquiry",
+        "description": "If cyberbullying stems from a school or college peer group, coordinate discreetly with school authorities, principal, or anti-bullying counselors. Check school attendance records, IP logs of school Wi-Fi networks, and identify students associated with specific gaming handles or chat aliases.",
+        "required_evidence": [
+          "School administration inquiry report and roster of students matching online handles",
+          "School Wi-Fi / computer lab access logs showing device MAC addresses or student logins",
+          "Statements of school counselors or teachers regarding peer conflict dynamics"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": null,
+        "condition_to_start": "Evidence indicates perpetrators are classmates, schoolmates, or institutional peers of the minor.",
+        "condition_to_complete": "Identification of peer group perpetrators within the educational institution without causing public humiliation.",
+        "on_complete_trigger": [
+          "bully_step_05_perpetrator_triage"
+        ],
+        "if_blocked": [
+          "If school authorities refuse cooperation citing institutional reputation, issue a formal statutory summons under Section 94 BNSS to the Principal."
+        ]
+      },
+      {
+        "step_id": "bully_step_04_telecom_isp_trace",
+        "order": 4,
+        "title": "Telecom & ISP Tracing of Harassment Accounts",
+        "description": "Analyse phone numbers linked to social media KYC or IP addresses from posting logs. Issue notices to TSPs and ISPs to obtain CAF, CDR with tower locations, and IPDR port binding records to locate the physical residence of the bullies.",
+        "required_evidence": [
+          "CAF and CDR with Cell ID locations for mobile numbers linked to bullying accounts",
+          "IPDR logs resolving platform public IPs and NAT ports to specific subscriber private installation addresses",
+          "IMEI tracking history establishing device ownership"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Phone numbers or IP addresses identified from intermediary platform logs or school Wi-Fi data.",
+        "condition_to_complete": "Positive physical location and subscriber identification of the individuals operating the harassing accounts.",
+        "on_complete_trigger": [
+          "bully_step_05_perpetrator_triage"
+        ],
+        "if_blocked": [
+          "If IP addresses resolve to non-telecom ISPs, route IPDR requisitions through entity_id isp_non_telecom."
+        ]
+      },
+      {
+        "step_id": "bully_step_05_perpetrator_triage",
+        "order": 5,
+        "title": "Perpetrator Triage: Juvenile vs. Adult Determination",
+        "description": "Verify the age of the identified perpetrators via municipal birth records, school certificates, or Aadhaar demographic checks. Separate procedural pathways: if perpetrators are minors (CICL - Children in Conflict with Law), apply Juvenile Justice Act protocols; if adults, apply standard BNSS/IT Act arrest procedures.",
+        "required_evidence": [
+          "Age verification documents (Birth certificate, school matriculation certificate, or municipal registry copy)",
+          "Formal investigative determination classifying accused as Juvenile (CICL) or Adult",
+          "Social Investigation Report (SIR) initiated via Child Welfare Police Officer for juvenile suspects"
+        ],
+        "legal_basis": "Juvenile Justice Act Section 94",
+        "department_entity_id": "cwc_jjb_authority",
+        "condition_to_start": "Physical identity and residence of perpetrators established via telecom, ISP, or school inquiry.",
+        "condition_to_complete": "Definitive classification of perpetrators as juveniles or adults, dictating subsequent legal enforcement steps.",
+        "on_complete_trigger": [
+          "bully_step_06_search_seizure"
+        ],
+        "if_blocked": [
+          "If age is disputed and no documentary proof exists, refer the suspect to a government medical board under entity_id hospital_forensic_medical for ossification age estimation."
+        ]
+      },
+      {
+        "step_id": "bully_step_06_search_seizure",
+        "order": 6,
+        "title": "Search, Device Seizure & Forensic Examination",
+        "description": "Execute search operations at the residence of the accused. For juvenile suspects, ensure police are in plain clothes without handcuffs, accompanied by parents/guardians. Seize mobile phones, computers, and gaming consoles. Submit devices to FSL for extraction of deleted chats, memes, and bullying logs.",
+        "required_evidence": [
+          "Seizure memos of mobile phones, computers, tablets, and gaming consoles executed under appropriate JJ Act / BNSS safeguards",
+          "Forensic bit-stream images of seized hardware showing bullying chat histories, group creations, and harassing posts",
+          "Inquiry statements recorded in the presence of parents/guardians for juvenile suspects"
+        ],
+        "legal_basis": "BNSS Section 96",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Perpetrator residence identified and age categorization finalized.",
+        "condition_to_complete": "Seizure of electronic devices without violating juvenile rights and submission of hardware to FSL.",
+        "on_complete_trigger": [
+          "bully_step_07_jjb_court_disposal"
+        ],
+        "if_blocked": [
+          "If parents attempt to hide or destroy the child's mobile phone upon police arrival, issue immediate legal warning for destruction of evidence under BNS Section 238."
+        ]
+      },
+      {
+        "step_id": "bully_step_07_jjb_court_disposal",
+        "order": 7,
+        "title": "JJB Production, Counseling & Judicial Disposal",
+        "description": "For juvenile perpetrators (CICL), file the inquiry report and Social Investigation Report before the Juvenile Justice Board (JJB). Seek rehabilitative measures, mandatory psychological counseling, and parental supervision orders rather than incarceration. For adult perpetrators, file standard chargesheet before the Magistrate.",
+        "required_evidence": [
+          "Certified FSL scientific analysis report linking seized hardware to online bullying campaigns",
+          "Social Investigation Report (SIR) compiled by Probation Officer / CWPO",
+          "JJB judicial order directing counseling, community service, or rehabilitative supervision for juvenile offenders"
+        ],
+        "legal_basis": "Juvenile Justice Act Section 18",
+        "department_entity_id": "cwc_jjb_authority",
+        "condition_to_start": "Forensic reports received and police investigation / SIR finalized.",
+        "condition_to_complete": "Formal disposal of the case by Juvenile Justice Board or Magistrate with protective orders for the victim.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If adult perpetrators colluded with juveniles to harass the minor, move an application before the Sessions Court to try adult handlers with maximum statutory stringency under POCSO/IT Act."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Bullying occurred on anonymous online gaming servers (e.g., Discord voice channels, Roblox, multiplayer lobbies) using ephemeral voice chats and unregistered VPN IPs with no persistent chat logs.",
+        "suggested_actions": [
+          "Subpoena the gaming platform for server connection logs, friend-request graphs, and in-game transaction histories (skins/in-app purchases) which often link to parental credit cards or bank accounts.",
+          "Implement technical protective measures: assist the minor and parents in changing gaming handles, restricting communication settings to known friends, and enabling platform moderation filters.",
+          "Conduct peer-group counseling sessions at the child's school in coordination with CWC and school authorities to address the behavioral root causes without relying solely on criminal prosecution."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "ransomware_attack_v1",
+    "crime_type": "Ransomware Attack",
+    "title": "Standard Operating Procedure for Investigating Corporate & Institutional Ransomware Attacks",
+    "source": "Synthesized from CERT-In Ransomware Mitigation Guidelines, MHA Cyber SOPs, and international LEA frameworks",
+    "steps": [
+      {
+        "step_id": "ransom_step_01_incident_triage",
+        "order": 1,
+        "title": "Emergency Containment, CERT-In Notification & Triage",
+        "description": "Ensure immediate containment: instruct victim organization to disconnect infected servers from network/Internet, disable network shares, and DO NOT reboot or power off machines (to preserve volatile RAM). Verify mandatory 6-hour incident reporting to CERT-In. Collect ransom notes (.txt/.html files) and encrypted file sample extensions.",
+        "required_evidence": [
+          "Copy of mandatory ransomware incident report submitted to CERT-In [1.1.1]",
+          "Copy of digital ransom note showing extortion demands, Tor/.onion communication links, and crypto wallet addresses [1.1.1]",
+          "Samples of encrypted files and exact file extensions (e.g., .locked, .lockbit, .blackcat)",
+          "Network architecture diagram and preliminary IT statement of affected systems"
+        ],
+        "legal_basis": "Information Technology Act Section 70B",
+        "department_entity_id": "cert_in",
+        "condition_to_start": "Organization or critical infrastructure entity reports ransomware infection and data encryption.",
+        "condition_to_complete": "Network isolated, CERT-In notified within 6 hours, and ransom notes/encrypted samples secured.",
+        "on_complete_trigger": [
+          "ransom_step_02_forensic_imaging",
+          "ransom_step_03_crypto_tracking"
+        ],
+        "if_blocked": [
+          "If the victim organization is considering paying the ransom, issue an immediate official advisory warning against payment, as it funds organized crime and offers no guarantee of data restoration."
+        ]
+      },
+      {
+        "step_id": "ransom_step_02_forensic_imaging",
+        "order": 2,
+        "title": "Volatile Memory Capture & Bit-Stream Server Imaging",
+        "description": "Deploy specialized cyber forensic teams to perform live volatile RAM memory capture on infected servers before shutting down. Generate write-blocked bit-stream images (E01/DD) of patient-zero endpoints, domain controllers, and firewall/VPN storage drives.",
+        "required_evidence": [
+          "Live RAM memory dumps containing running ransomware processes, encryption keys in memory, or Cobalt Strike beacons",
+          "Write-blocked bit-stream mirror images of compromised servers with SHA-256 hash verification [1.1.1]",
+          "Raw firewall, VPN, RDP, and Active Directory authentication logs covering the weeks prior to encryption"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Infected servers isolated and forensic team deployed on-site.",
+        "condition_to_complete": "Successful capture of volatile RAM and complete bit-stream imaging of core infrastructure.",
+        "on_complete_trigger": [
+          "ransom_step_04_malware_ioc_analysis"
+        ],
+        "if_blocked": [
+          "If servers are hosted in remote offshore data centers, coordinate with cloud administrators to snapshot virtual machines and export disk volumes over secure encrypted channels."
+        ]
+      },
+      {
+        "step_id": "ransom_step_03_crypto_tracking",
+        "order": 3,
+        "title": "Cryptocurrency Ransom Tracking & VASP Notification",
+        "description": "Analyse the Bitcoin, Monero, or USDT wallet addresses provided in the ransom note or attacker chat portal. Engage specialized blockchain tracing tools to monitor the wallets. Issue Section 94/106 BNSS notices to VASPs and crypto exchanges to flag addresses and freeze any deposited ransom proceeds.",
+        "required_evidence": [
+          "Blockchain analysis graph showing wallet clusters, historical transactions, and exchange deposit off-ramps",
+          "Section 106 BNSS freeze confirmations from Virtual Asset Service Providers (VASPs) for flagged attacker wallets",
+          "VASP KYC dossiers of any accounts associated with historical cash-outs from the suspect wallet cluster"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "vasp_crypto_exchange",
+        "condition_to_start": "Cryptocurrency wallet addresses identified from ransom note or negotiation portal.",
+        "condition_to_complete": "Attacker wallets flagged across global block explorers and freeze notices served on major VASPs.",
+        "on_complete_trigger": [
+          "ransom_step_06_state_cid_escalation"
+        ],
+        "if_blocked": [
+          "If attackers demand privacy coins (Monero/Zcash), monitor intermediate exchange swaps where BTC/ETH is converted into privacy tokens."
+        ]
+      },
+      {
+        "step_id": "ransom_step_04_malware_ioc_analysis",
+        "order": 4,
+        "title": "Technical Malware Analysis, IOC Profiling & Decryption Check",
+        "description": "Submit ransomware binary executables, RAM dumps, and encrypted file samples to CERT-In and State FSL for reverse engineering. Identify the exact ransomware strain (e.g., LockBit, Akira, Phobos). Check international repositories (NoMoreRansom.org) for existing free decryption keys or tools.",
+        "required_evidence": [
+          "FSL / CERT-In technical malware reverse-engineering report detailing ransomware strain and encryption algorithm [1.1.1]",
+          "List of actionable Indicators of Compromise (IOCs): command-and-control (C2) IPs, file hashes, Mutex names, and registry keys [1.1.1]",
+          "Verification report confirming availability or non-availability of public decryption tools"
+        ],
+        "legal_basis": null,
+        "department_entity_id": "cert_in",
+        "condition_to_start": "Forensic imaging completed and binary malware samples/RAM dumps isolated.",
+        "condition_to_complete": "Ransomware strain identified, IOCs extracted, and decryption feasibility determined.",
+        "on_complete_trigger": [
+          "ransom_step_05_isp_c2_tracing"
+        ],
+        "if_blocked": [
+          "If the strain is a novel zero-day ransomware without known decryptors, focus efforts on infrastructure tracing and network restoration from clean offline backups."
+        ]
+      },
+      {
+        "step_id": "ransom_step_05_isp_c2_tracing",
+        "order": 5,
+        "title": "ISP & Hosting Provider Tracing of C2 & Exfiltration Servers",
+        "description": "Analyse C2 IP addresses, data exfiltration endpoints, and VPN intrusion IPs identified during malware reverse engineering and firewall log audit. Issue Section 94 BNSS notices to ISPs and cloud hosting providers for IPDR logs, server registration KYC, and traffic routing histories.",
+        "required_evidence": [
+          "IPDR logs resolving public C2 and intrusion IPs to specific domestic or international hosting servers [1.1.1]",
+          "Hosting provider subscriber KYC, billing details, and payment methods used to lease attacking servers",
+          "Data exfiltration logs confirming whether sensitive corporate data was stolen prior to encryption (double extortion)"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "isp_non_telecom",
+        "condition_to_start": "Actionable C2 IP addresses and intrusion endpoints identified from forensic malware analysis.",
+        "condition_to_complete": "Identification of hosting infrastructure hosting the C2 servers or data exfiltration repositories.",
+        "on_complete_trigger": [
+          "ransom_step_06_state_cid_escalation"
+        ],
+        "if_blocked": [
+          "If C2 servers are hosted on offshore bulletproof hosting networks, issue urgent international preservation requests via I4C and Interpol channels."
+        ]
+      },
+      {
+        "step_id": "ransom_step_06_state_cid_escalation",
+        "order": 6,
+        "title": "Escalation to State Cyber CID & Specialized Taskforce",
+        "description": "Due to the transnational and highly complex nature of ransomware syndicates (Ransomware-as-a-Service - RaaS), formally escalate and transfer the investigation from local police / district cyber cell to the State Cyber CID or specialized state cyber crime command.",
+        "required_evidence": [
+          "Formal administrative transfer order moving the case diary and forensic exhibits to State Cyber CID [1.1.1]",
+          "Comprehensive intelligence dossier compiling all IOCs, blockchain tracking graphs, and forensic imaging reports [1.1.1]",
+          "Joint coordination memo between State Cyber CID, I4C, and CERT-In"
+        ],
+        "legal_basis": "BNSS Section 192",
+        "department_entity_id": "state_cyber_cell_cid",
+        "condition_to_start": "Initial forensic triage completed and transnational/organized RaaS syndicate involvement confirmed.",
+        "condition_to_complete": "State Cyber CID formally takes over investigative jurisdiction and operational command of the case.",
+        "on_complete_trigger": [
+          "ransom_step_07_search_seizure_mlat"
+        ],
+        "if_blocked": [
+          "If the attack targets critical national infrastructure (power grid, banking switch, healthcare), immediately notify the National Critical Information Infrastructure Protection Centre (NCIIPC) alongside CID."
+        ]
+      },
+      {
+        "step_id": "ransom_step_07_search_seizure_mlat",
+        "order": 7,
+        "title": "Domestic Raids (For Local Affiliates) & International MLAT Coordination",
+        "description": "If infrastructure tracing or crypto cash-out tracking identifies local Indian affiliates, money mules, or access brokers, execute immediate physical search and seizure operations under BNSS Section 96. For offshore masterminds, prepare Letters Rogatory (LR) / MLAT requests through court and CBI.",
+        "required_evidence": [
+          "Seizure memos and arrest records for domestic ransomware affiliates, access brokers, or crypto cash-out mules",
+          "Letters Rogatory (LR) / MLAT judicial applications drafted for foreign court execution to seize offshore servers and exchange accounts",
+          "Final comprehensive forensic charge-sheet filed before the competent court"
+        ],
+        "legal_basis": "BNSS Section 96",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Actionable domestic affiliate locations identified OR foreign server/wallet jurisdiction confirmed.",
+        "condition_to_complete": "Arrest of domestic accomplices and formal judicial dispatch of international MLAT/LR requisitions.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If foreign jurisdictions do not extradite cyber criminals, collaborate with Interpol to publish Red Notices against identified RaaS masterminds to restrict international travel."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Ransomware attack was conducted by a state-sponsored or safe-haven offshore RaaS cartel using untraceable darkweb infrastructure, and the victim organization has no clean backups to restore operations.",
+        "suggested_actions": [
+          "Facilitate high-level technical coordination between the victim organization, CERT-In, and international cyber incident response specialists to attempt manual cryptographic reconstruction or partial database repair.",
+          "Submit all identified attacker crypto wallets, C2 servers, and extortion communication logs to global ransomware task forces (via I4C/CBI) to support international server takedown operations (e.g., Operation Cronos).",
+          "Assist the organization in conducting a comprehensive post-incident security overhaul and compliance audit under CERT-In 2022 guidelines to prevent secondary re-infection by persistent backdoors."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "gaming_betting_fraud_v1",
+    "crime_type": "Online Gaming / Betting App Fraud",
+    "title": "Standard Operating Procedure for Investigating Illegal Betting Apps, Rigged Gaming & Financial Scams",
+    "source": "Synthesized from MHA advisories on illegal betting apps, MeitY blocking orders, SEBI/RBI guidelines, and state SOPs",
+    "steps": [
+      {
+        "step_id": "game_step_01_triage_evidence",
+        "order": 1,
+        "title": "Victim Intake, App Preservation & Financial Loss Schedule",
+        "description": "Record complainant's statement detailing the fraud: manipulation of game algorithms, freezing of withdrawal wallets after large wins, or fraudulent betting predictions. Preserve the game APK file, website URL, Telegram/WhatsApp VIP group links, screenshots of wallet balances, and bank statements.",
+        "required_evidence": [
+          "Screenshots of gaming/betting app dashboards showing frozen balances, rigged results, or withdrawal refusal",
+          "APK file of the gaming application or website domain URL",
+          "Screenshots of Telegram/WhatsApp promotional channels and agent contact numbers",
+          "Complainant's bank account statements showing all deposit transfers to gaming wallets"
+        ],
+        "legal_basis": null,
+        "department_entity_id": null,
+        "condition_to_start": "Victim reports financial loss or withdrawal refusal by an illegal online gambling, betting, or gaming app.",
+        "condition_to_complete": "Compilation of all app APKs, communication links, and a verified financial loss ledger.",
+        "on_complete_trigger": [
+          "game_step_02_app_blocking",
+          "game_step_03_bank_money_trail"
+        ],
+        "if_blocked": [
+          "If the betting app has changed its domain name or shut down, extract cached APK installers and server URLs from the victim's device using forensic extraction tools."
+        ]
+      },
+      {
+        "step_id": "game_step_02_app_blocking",
+        "order": 2,
+        "title": "Emergency App Takedown & Domain Blocking Requisition",
+        "description": "Submit urgent requests to MeitY, CERT-In, and Google Play Store to ban and de-list the illegal betting app and block associated website domains across Indian ISPs under Section 69A IT Act. Conduct reverse engineering of the APK to locate C2 servers and payment gateway integrations.",
+        "required_evidence": [
+          "Confirmation of app removal from app stores and domain blocking from MeitY/CERT-In",
+          "Technical APK reverse-engineering report identifying backend server IP addresses and integrated payment gateways",
+          "WHOIS registration KYC of betting domain names"
+        ],
+        "legal_basis": "Information Technology Act Section 69A",
+        "department_entity_id": "cert_in",
+        "condition_to_start": "Illegal betting app APK or website domain identified.",
+        "condition_to_complete": "App de-listed nationally, domains blocked, and backend server IPs extracted.",
+        "on_complete_trigger": [
+          "game_step_05_isp_server_trace"
+        ],
+        "if_blocked": [
+          "If betting operators deploy mirror domains immediately after blocking, set up a dynamic reporting channel with I4C for real-time continuous domain blacklisting."
+        ]
+      },
+      {
+        "step_id": "game_step_03_bank_money_trail",
+        "order": 3,
+        "title": "Multi-Layered Financial Tracing & Freezing of Collection Accounts",
+        "description": "Analyse the beneficiary bank accounts, UPI VPAs, and payment aggregator merchant IDs used to collect gaming deposits. Issue immediate Section 106 BNSS notices to freeze funds across Level-1, Level-2, and Level-3 collection accounts, and obtain complete bank KYC and transaction ledgers.",
+        "required_evidence": [
+          "Certified bank statements and KYC dossiers of deposit collection and dispersion accounts [1.1.1]",
+          "Bank confirmations of debit freeze / lien placement under BNSS Section 106",
+          "Payment gateway merchant onboarding documents, settlement accounts, and agreements",
+          "Internet banking login IP addresses and device fingerprints of collection accounts"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "bank_generic",
+        "condition_to_start": "Schedule of victim deposit transfers established from bank statements.",
+        "condition_to_complete": "Freezing of available funds across the banking network and receipt of account holder KYC.",
+        "on_complete_trigger": [
+          "game_step_04_mca_shell_trace",
+          "game_step_06_crypto_offramp_trace"
+        ],
+        "if_blocked": [
+          "If payment aggregators allowed merchant onboarding without physical verification, issue show-cause notices for regulatory non-compliance under RBI payment aggregator directions."
+        ]
+      },
+      {
+        "step_id": "game_step_04_mca_shell_trace",
+        "order": 4,
+        "title": "Corporate & Shell Company Verification (MCA21)",
+        "description": "In online betting scams, collection bank accounts are frequently opened in the names of shell companies, LLPs, or dummy firms. Query MCA21 to download incorporation documents, verify Director Identification Numbers (DIN), trace registered office addresses, and identify chartered accountants who facilitated incorporation.",
+        "required_evidence": [
+          "Certificate of Incorporation, MOA, and AOA of recipient shell companies",
+          "DIN master details, KYC, and physical addresses of directors/partners",
+          "Form INC-22 (registered office) and bank account opening resolutions",
+          "Identification of professional intermediaries (CA/CS) who incorporated the dummy entities"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "mca21_roc",
+        "condition_to_start": "Beneficiary bank account KYC reveals a corporate entity or registered firm name.",
+        "condition_to_complete": "Identification of real or dummy directors and verification of physical registered office addresses.",
+        "on_complete_trigger": [
+          "game_step_07_search_seizure"
+        ],
+        "if_blocked": [
+          "If company directors are untraceable daily wage laborers (dummy directors), subpoena the introductory bank branch manager and incorporating CA under Section 94 BNSS."
+        ]
+      },
+      {
+        "step_id": "game_step_05_isp_server_trace",
+        "order": 5,
+        "title": "Telecom & ISP Tracing of Promoters, Agents & Servers",
+        "description": "Issue Section 94 BNSS notices to TSPs and ISPs to trace mobile numbers used by Telegram VIP group promoters, WhatsApp support agents, and IP addresses logged by bank internet banking servers and app hosting panels. Obtain CAF, CDR with tower locations, and IPDR records.",
+        "required_evidence": [
+          "CAF and CDR with Cell ID locations for betting promoter and support phone numbers",
+          "IPDR logs resolving server administration and banking login public IPs to private subscriber addresses",
+          "IMEI tracking logs showing device clustering across multiple betting agent numbers"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Phone numbers and IP addresses identified from promotional chats, APK analysis, and bank KYC.",
+        "condition_to_complete": "Positive physical location and subscriber identification of the betting syndicate operators.",
+        "on_complete_trigger": [
+          "game_step_07_search_seizure"
+        ],
+        "if_blocked": [
+          "If IP addresses resolve to non-telecom ISPs, route IPDR requisitions through entity_id isp_non_telecom."
+        ]
+      },
+      {
+        "step_id": "game_step_06_crypto_offramp_trace",
+        "order": 6,
+        "title": "Tracing Conversion of Betting Proceeds to Cryptocurrency (VASPs)",
+        "description": "Betting syndicates routinely launder fiat deposits by purchasing USDT/cryptocurrency via P2P traders or exchanges to transfer wealth offshore. Issue Section 94/106 BNSS notices to VASPs and crypto exchanges to freeze wallets, obtain user KYC, and retrieve blockchain transaction ledgers.",
+        "required_evidence": [
+          "VASP user KYC (PAN, Aadhaar, bank accounts linked, selfie verification) for crypto buyers",
+          "Complete fiat deposit and crypto withdrawal ledgers with Transaction Hashes (TxIDs)",
+          "Confirmation of crypto wallet freezing under BNSS Section 106",
+          "Destination wallet addresses and external exchange clustering data"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "vasp_crypto_exchange",
+        "condition_to_start": "Bank statements of shell collection accounts show outbound transfers to known crypto exchange nodal accounts or P2P traders.",
+        "condition_to_complete": "Identification of crypto buyer KYC, freezing of available crypto assets, and mapping of outbound TxIDs.",
+        "on_complete_trigger": [
+          "game_step_07_search_seizure"
+        ],
+        "if_blocked": [
+          "If funds were moved via unregulated P2P crypto traders, issue Section 106 freeze notices to the P2P traders' Indian bank accounts to force their disclosure of transaction details."
+        ]
+      },
+      {
+        "step_id": "game_step_07_search_seizure",
+        "order": 7,
+        "title": "Raid, Takedown of Gaming Operations Hubs & Syndicate Arrest",
+        "description": "Conduct coordinated physical search and seizure operations at identified office premises, call centers, or residential hubs of betting promoters, shell company directors, and tech administrators. Seize servers, laptops, mobile phones, company seals, and cheque books. Arrest the culprits.",
+        "required_evidence": [
+          "Seizure memos of computing devices, mobile phones, SIM boxes, company rubber stamps, and banking kits",
+          "Forensic imaging of server storage and computers hosting betting management dashboards and user databases",
+          "Arrest memos and voluntary disclosure statements detailing offshore syndicate links"
+        ],
+        "legal_basis": "BNSS Section 96",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Actionable physical intelligence established from telecom CDR, ISP logs, MCA addresses, or VASP KYC.",
+        "condition_to_complete": "Arrest of key syndicate operatives, physical seizure of hardware, and submission of digital evidence to FSL.",
+        "on_complete_trigger": [
+          "game_step_08_court_restitution"
+        ],
+        "if_blocked": [
+          "If core masterminds are foreign nationals operating from offshore jurisdictions (e.g., Dubai, Southeast Asia), coordinate with Bureau of Immigration under entity_id immigration_border for Look Out Circulars (LOCs)."
+        ]
+      },
+      {
+        "step_id": "game_step_08_court_restitution",
+        "order": 8,
+        "title": "Judicial Application for Restitution of Frozen Funds",
+        "description": "Submit a comprehensive investigation report and application under BNSS Section 503 / Section 107 before the jurisdictional court to attach proceeds of crime and restore frozen fiat balances in bank accounts and liquidated crypto assets to the defrauded victims.",
+        "required_evidence": [
+          "Schedule of frozen bank balances and seized cryptocurrency assets",
+          "Victims' verification reports and indemnity bonds",
+          "Court order directing attachment and restitution of proceeds of crime to complainants"
+        ],
+        "legal_basis": "BNSS Section 503",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Investigating team has successfully frozen fiat funds in bank accounts or crypto assets at VASPs.",
+        "condition_to_complete": "Magistrate issues a formal restitution order transferring recovered funds to the complainants.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the total frozen amount is less than the aggregate claims of thousands of victims nationwide, request the court to establish an equitable pro-rata distribution formula."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "The betting app is operated entirely from an offshore safe-haven jurisdiction, collection bank accounts are temporary UPI mule accounts drained daily via crypto ATMs, and promotional channels use untraceable Telegram bots.",
+        "suggested_actions": [
+          "Execute an immediate technical containment strategy: submit all associated APK hashes, domains, and payment gateways to MeitY and I4C for nationwide blocking and financial blacklisting.",
+          "Focus enforcement on the domestic Indian infrastructure: identify, raid, and arrest the local 'mule account aggregators', CA/CS professionals who incorporated shell companies, and social media influencers promoting the app.",
+          "Coordinate with the Enforcement Directorate (ED) under PMLA provisions to investigate major financial promoters and attach properties acquired through illegal betting proceeds."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "deepfake_blackmail_v1",
+    "crime_type": "Deepfake / Morphed Image Blackmail",
+    "title": "Standard Operating Procedure for Investigating Deepfake, AI-Morphed Image & Video Extortion",
+    "source": "Synthesized from MeitY Deepfake Advisories, IT Rules 2021 (Rule 3(2)(b)), I4C SOPs, and women safety manuals",
+    "steps": [
+      {
+        "step_id": "deep_step_01_victim_intake",
+        "order": 1,
+        "title": "Victim Intake, Sensitive Support & Evidence Profiling",
+        "description": "Provide empathetic, non-judgmental intake; refer victim to One Stop Centre for psychological counseling. Instruct victim to cease communication and payments. Preserve original genuine photographs/videos alongside the AI-generated deepfake/morphed files, screenshots of extortion chats, and profile URLs.",
+        "required_evidence": [
+          "Screenshots of extortion messages, threatening chats, and profile URLs of the blackmailer [1.1.1]",
+          "Digital copies of the AI-morphed / deepfake images or videos alongside original baseline photos used for synthesis",
+          "Call logs showing calling numbers or video chat IDs used by the extortionist",
+          "Bank account / UPI transaction statements showing any extortion payments made",
+          "Copy of NCRP / cybercrime.gov.in complaint acknowledgement"
+        ],
+        "legal_basis": "Information Technology Act Section 67A",
+        "department_entity_id": "one_stop_centre_helpline",
+        "condition_to_start": "Victim reports extortion, defamation, or harassment using deepfake or AI-morphed intimate imagery.",
+        "condition_to_complete": "Victim psychologically supported, communication severed, and complete comparative visual evidence preserved.",
+        "on_complete_trigger": [
+          "deep_step_02_urgent_takedown",
+          "deep_step_03_financial_trace"
+        ],
+        "if_blocked": [
+          "If the victim deleted the threatening messages out of panic, utilize forensic mobile data recovery tools to restore deleted WhatsApp/Telegram chat databases and media cache."
+        ]
+      },
+      {
+        "step_id": "deep_step_02_urgent_takedown",
+        "order": 2,
+        "title": "Mandatory 24-Hour Content Takedown & Hash Blocking Requisition",
+        "description": "Issue statutory emergency notices under IT Rules 2021 (Rule 3(2)(b)) to social media intermediaries (Meta, Google, X, Telegram) mandating removal of non-consensual artificial/morphed intimate imagery within 24 hours. Submit file hashes (SHA-256) for cross-platform blacklist databases.",
+        "required_evidence": [
+          "Exact URLs of uploaded deepfake videos or images across social media platforms",
+          "Digital hash values (SHA-256 / PhotoDNA) of morphed media submitted for automated filtering",
+          "Written confirmation from intermediaries confirming content deletion within 24 hours and account suspension"
+        ],
+        "legal_basis": "Information Technology Act Section 79",
+        "department_entity_id": "meta_platforms",
+        "condition_to_start": "Deepfake or morphed imagery is uploaded or threatened to be disseminated on online platforms.",
+        "condition_to_complete": "Complete removal of deepfake content within statutory 24-hour window and suspension of uploader handles.",
+        "on_complete_trigger": [
+          "deep_step_04_platform_log_requisition"
+        ],
+        "if_blocked": [
+          "If content is uploaded to independent adult sites or overseas forums, route emergency blocking orders through I4C and CERT-In."
+        ]
+      },
+      {
+        "step_id": "deep_step_03_financial_trace",
+        "order": 3,
+        "title": "Financial Tracing & Freezing of Extortion Collection Accounts",
+        "description": "If the victim paid money under blackmail threat, analyse recipient UPI VPAs, bank accounts, or e-wallets. Issue immediate Section 106 BNSS notices to beneficiary banks/NPCI to freeze funds, obtain account holder KYC, and retrieve transaction ledgers.",
+        "required_evidence": [
+          "Certified bank ledger statement of the extortion recipient accounts",
+          "Account opening KYC, photograph, and linked mobile numbers of money mules",
+          "Confirmation of debit freeze under BNSS Section 106"
+        ],
+        "legal_basis": "BNSS Section 106",
+        "department_entity_id": "bank_generic",
+        "condition_to_start": "Victim bank statement confirms transfer of funds to extortionist accounts.",
+        "condition_to_complete": "Freezing of recipient bank balances and identification of money mule account holders.",
+        "on_complete_trigger": [
+          "deep_step_05_telecom_tracing"
+        ],
+        "if_blocked": [
+          "If money was transferred via UPI wallets, serve notices directly on the underlying PSP under entity_id upi_npci."
+        ]
+      },
+      {
+        "step_id": "deep_step_04_platform_log_requisition",
+        "order": 4,
+        "title": "Social Media & Messaging Platform Log Requisition",
+        "description": "Issue Section 94 BNSS notices to social media and messaging platforms (Meta, Google, Telegram) where deepfakes were shared or where the extortion chat occurred. Demand basic subscriber KYC, linked phone/email, and creation/upload IP logs.",
+        "required_evidence": [
+          "Subscriber registration KYC, verified mobile numbers, and recovery emails of the extortionist handle",
+          "Content upload and login IP addresses with exact timestamps (UTC/IST) and device user-agents",
+          "Platform audit logs showing sharing history or direct messaging dissemination"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "meta_platforms",
+        "condition_to_start": "Extortionist social media handles or messaging profiles identified.",
+        "condition_to_complete": "Receipt of platform subscriber KYC and IP access logs revealing suspect digital footprint.",
+        "on_complete_trigger": [
+          "deep_step_06_isp_ipdr_trace"
+        ],
+        "if_blocked": [
+          "If platforms delay response, utilize OSINT tools and public profile interaction graphs to trace associated accounts and online identities."
+        ]
+      },
+      {
+        "step_id": "deep_step_05_telecom_tracing",
+        "order": 5,
+        "title": "Telecom Tracing of Extortionists & Distribution Numbers",
+        "description": "Issue Section 94 BNSS notices to TSPs to trace mobile numbers linked to social media KYC, bank collection accounts, or WhatsApp numbers used for blackmail. Demand CAF, CDR with tower locations, and IMEI histories.",
+        "required_evidence": [
+          "CAF and CDR with Cell ID locations for extortion phone numbers [1.1.1]",
+          "IMEI tracking history revealing physical handsets used by extortionists [1.1.1]",
+          "Call analysis identifying frequent contacts, accomplices, or local linkages"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Phone numbers identified from platform registration KYC, victim chats, or bank records.",
+        "condition_to_complete": "Receipt of CAF, CDR, and IMEI data confirming suspect identity and location.",
+        "on_complete_trigger": [
+          "deep_step_07_search_seizure"
+        ],
+        "if_blocked": [
+          "If callers utilized VOIP or virtual numbers, subpoena the licensed Virtual Network Operator (VNO) for underlying destination IP and subscriber KYC."
+        ]
+      },
+      {
+        "step_id": "deep_step_06_isp_ipdr_trace",
+        "order": 6,
+        "title": "ISP IPDR Tracing of Deepfake Upload & Creation IPs",
+        "description": "Analyse IP addresses obtained from platform upload logs, messaging registration logs, and bank internet banking access logs. Issue notices to ISPs to obtain IPDR, NAT port binding records, and physical installation addresses.",
+        "required_evidence": [
+          "IPDR logs resolving public upload/login IPs and NAT ports to private subscriber IPs",
+          "ISP subscriber KYC showing physical premises of the deepfake creator/extortionist"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "isp_non_telecom",
+        "condition_to_start": "Actionable IP addresses and timestamps obtained from intermediary platform or bank logs.",
+        "condition_to_complete": "Positive identification of the ISP subscriber name and physical location of the culprit.",
+        "on_complete_trigger": [
+          "deep_step_07_search_seizure"
+        ],
+        "if_blocked": [
+          "If IP addresses resolve to mobile data networks, route IPDR requisitions through entity_id telecom_operator."
+        ]
+      },
+      {
+        "step_id": "deep_step_07_search_seizure",
+        "order": 7,
+        "title": "Search, Seizure of AI Rendering Hardware & Suspect Arrest",
+        "description": "Execute search warrants at the physical premises identified via telecom, ISP, or bank tracing. Arrest suspects and seize high-performance computers, GPUs, laptops, and mobile phones. Ensure forensic imaging to recover AI rendering software (e.g., DeepFaceLab, Stable Diffusion), source images, and generated deepfakes.",
+        "required_evidence": [
+          "Seizure memos of computers, GPU rendering rigs, mobile phones, and storage media [1.1.1]",
+          "Forensic bit-stream images of seized hardware containing AI face-swapping software, training datasets, baseline victim photos, and rendered deepfakes [1.1.1]",
+          "Arrest memos and voluntary disclosure statements"
+        ],
+        "legal_basis": "BNSS Section 96",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Actionable physical address established from telecom, ISP, or bank tracing.",
+        "condition_to_complete": "Arrest of deepfake creator/blackmailer, physical seizure of rendering hardware, and submission of digital exhibits to FSL.",
+        "on_complete_trigger": [
+          "deep_step_08_court_prosecution_destruction"
+        ],
+        "if_blocked": [
+          "If the blackmailer is an offline acquaintance or rejected suitor operating locally, cross-reference handset IMEI histories and cell tower dumps with known local suspects."
+        ]
+      },
+      {
+        "step_id": "deep_step_08_court_prosecution_destruction",
+        "order": 8,
+        "title": "Judicial Filing, Scientific Certification & Media Destruction Order",
+        "description": "File the comprehensive chargesheet before the jurisdictional Magistrate incorporating FSL scientific reports proving synthetic manipulation. Move applications under BNSS to seal sensitive exhibits and obtain judicial orders mandating permanent destruction of all seized deepfake media after trial.",
+        "required_evidence": [
+          "Certified FSL scientific analysis report confirming synthetic AI manipulation (facial artifacts, metadata analysis) of the imagery",
+          "Section 63 BSA electronic certificates for all platform, ISP, and telecom records",
+          "Judicial order directing sealed custody during trial and permanent destruction of all deepfake files upon disposal"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Investigation finalized, accused arrested, and FSL scientific manipulation reports received.",
+        "condition_to_complete": "Charge-sheet accepted by court, synthetic nature legally established, and media privacy/destruction orders issued.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If defense argues the imagery is genuine to humiliate the victim, move an immediate application before the court under Section 151 Indian Evidence Act / BSA to bar scandalous and vexatious questioning based on conclusive FSL synthetic analysis."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Deepfakes were generated using decentralized AI generation bots on Telegram or Discord by anonymous overseas syndicates, with no direct domestic IP footprint or financial transfer leads.",
+        "suggested_actions": [
+          "Submit the deepfake file hashes and uploader bot IDs to I4C and international cybercrime liaison channels for global platform blacklisting and botnet takedown.",
+          "Provide the victim with an official police certificate confirming the imagery is an AI-generated synthetic forgery (deepfake), assisting the victim in clearing their reputation with employers, family, and peers.",
+          "Assist the victim in setting up continuous automated image monitoring tools (e.g., StopNCII.org) to automatically detect and block any future re-uploads across participating tech platforms."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "doxxing_privacy_violation_v1",
+    "crime_type": "Doxxing / Online Privacy Violation",
+    "title": "Standard Operating Procedure for Investigating Doxxing, Malicious Data Publishing & Privacy Violations",
+    "source": "Synthesized from IT Act Section 66E (Privacy Violation) guidelines, BNS defamation rules, and I4C SOPs",
+    "steps": [
+      {
+        "step_id": "doxx_step_01_triage_evidence",
+        "order": 1,
+        "title": "Victim Intake, Evidence Logging & URL Profiling",
+        "description": "Record complainant's statement detailing the published private information: home address, phone numbers, identity documents, private photographs, or workplace details published without consent to incite harassment. Preserve exact URLs, screenshots, forum posts, and archive links.",
+        "required_evidence": [
+          "Screenshots of doxxing posts, forum threads, or social media pages displaying private personal data with timestamps",
+          "Exact URLs and web archive links (e.g., Wayback Machine) of the offending pages",
+          "Call logs or message screenshots showing secondary harassment/threats resulting from the doxxing",
+          "Victim's written statement detailing security risks and psychological distress"
+        ],
+        "legal_basis": null,
+        "department_entity_id": null,
+        "condition_to_start": "Victim reports malicious online publication of private personal identification data (doxxing) leading to harassment.",
+        "condition_to_complete": "Complete visual and URL documentation of the doxxed data and resulting harassment secured.",
+        "on_complete_trigger": [
+          "doxx_step_02_urgent_takedown",
+          "doxx_step_03_platform_log_requisition"
+        ],
+        "if_blocked": [
+          "If the doxxing post is deleted by the author before police logging, utilize browser cache inspection or subpoena platform historical edit logs."
+        ]
+      },
+      {
+        "step_id": "doxx_step_02_urgent_takedown",
+        "order": 2,
+        "title": "Urgent Takedown & Search Engine De-Indexing Requisition",
+        "description": "Issue emergency notices under IT Rules 2021 and IT Act Section 79 to hosting platforms (Meta, X, Reddit, Pastebin) to remove the doxxed information immediately. Submit de-indexing requests to Google and Bing to remove the URLs from public search engine results.",
+        "required_evidence": [
+          "Exact URLs of doxxing pages submitted for intermediary removal",
+          "Search engine de-indexing request acknowledgements from Google / Microsoft",
+          "Written confirmation from intermediaries confirming content removal and account suspension"
+        ],
+        "legal_basis": "Information Technology Act Section 79",
+        "department_entity_id": "google_llc",
+        "condition_to_start": "Doxxing URLs and search engine indexing confirmed.",
+        "condition_to_complete": "Removal of doxxed content from host platforms and de-indexing from major search engines.",
+        "on_complete_trigger": [
+          "doxx_step_04_isp_ipdr_trace"
+        ],
+        "if_blocked": [
+          "If doxxed data is posted on anonymous text-sharing sites (e.g., Pastebin, Telegraph), issue Section 69A blocking requests to CERT-In if platform moderators are non-responsive."
+        ]
+      },
+      {
+        "step_id": "doxx_step_03_platform_log_requisition",
+        "order": 3,
+        "title": "Publisher / Poster Account Log Requisition",
+        "description": "Issue Section 94 BNSS notices to social media platforms, forums, or site administrators where the doxxed data was published. Demand subscriber registration KYC, verified email/phone, and creation/posting IP addresses with exact timestamps.",
+        "required_evidence": [
+          "Subscriber registration KYC, verified mobile numbers, and recovery emails of the publisher handle",
+          "Content posting and account login IP addresses with exact timestamps (UTC/IST) and device user-agents",
+          "Platform audit logs showing post editing history and administrative actions"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "meta_platforms",
+        "condition_to_start": "Publisher handles or forum usernames identified from doxxing posts.",
+        "condition_to_complete": "Receipt of platform subscriber KYC and posting IP access logs.",
+        "on_complete_trigger": [
+          "doxx_step_04_isp_ipdr_trace"
+        ],
+        "if_blocked": [
+          "If anonymous forum posters utilize disposable emails, focus analysis on posting IP addresses and linguistic comparisons with known online rivals."
+        ]
+      },
+      {
+        "step_id": "doxx_step_04_isp_ipdr_trace",
+        "order": 4,
+        "title": "ISP IPDR Tracing of Doxxing Publisher IPs",
+        "description": "Analyse IP addresses obtained from platform posting logs and account registration records. Issue notices to ISPs to obtain IPDR, NAT port binding records, and physical installation addresses of the doxxing culprit.",
+        "required_evidence": [
+          "IPDR logs resolving public posting IPs and NAT ports to private subscriber IPs",
+          "ISP subscriber KYC showing physical premises of the individual who published the doxxed data"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "isp_non_telecom",
+        "condition_to_start": "Actionable IP addresses and timestamps obtained from intermediary platforms.",
+        "condition_to_complete": "Positive identification of the ISP subscriber name and physical location of the doxxer.",
+        "on_complete_trigger": [
+          "doxx_step_06_search_seizure"
+        ],
+        "if_blocked": [
+          "If IP addresses resolve to mobile data networks, route IPDR requisitions through entity_id telecom_operator."
+        ]
+      },
+      {
+        "step_id": "doxx_step_05_telecom_tracing",
+        "order": 5,
+        "title": "Telecom Tracing of Linked Phone Numbers & Secondary Harassers",
+        "description": "Issue Section 94 BNSS notices to TSPs to trace mobile numbers linked to the publisher account KYC or numbers used by individuals conducting secondary phone harassment/threats against the victim. Demand CAF, CDR with tower locations, and IMEI histories.",
+        "required_evidence": [
+          "CAF and CDR with Cell ID locations for phone numbers linked to the publisher handle or secondary harassers",
+          "IMEI tracking history establishing device ownership and physical movement patterns",
+          "Call analysis establishing links between online publishers and offline stalking/harassment suspects"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Phone numbers identified from platform KYC or victim's incoming harassment call logs.",
+        "condition_to_complete": "Receipt of CAF, CDR, and IMEI data confirming suspect identities and physical locations.",
+        "on_complete_trigger": [
+          "doxx_step_06_search_seizure"
+        ],
+        "if_blocked": [
+          "If secondary harassment calls originate from bulk VOIP numbers, coordinate with DoT TERM cell to trace the gateway switch and block the trunk line."
+        ]
+      },
+      {
+        "step_id": "doxx_step_06_search_seizure",
+        "order": 6,
+        "title": "Search, Seizure of Electronic Devices & Arrest of Doxxer",
+        "description": "Execute search warrants at the physical residence or workplace of the identified doxxer. Arrest the suspect and seize computers, laptops, mobile phones, and storage media. Perform forensic imaging to recover local copies of the victim's private data, compiling logs, and publishing scripts.",
+        "required_evidence": [
+          "Seizure memos of computing devices, mobile phones, and storage media",
+          "Forensic bit-stream images of seized hardware containing stored victim private data, forum login tokens, and publishing histories",
+          "Arrest memos and interrogation disclosures detailing motive (revenge, political targeting, extortion)"
+        ],
+        "legal_basis": "BNSS Section 96",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Actionable physical address established from ISP, telecom, or platform tracing.",
+        "condition_to_complete": "Arrest of doxxing culprit, physical seizure of hardware, and submission of digital exhibits to FSL.",
+        "on_complete_trigger": [
+          "doxx_step_07_court_injunction"
+        ],
+        "if_blocked": [
+          "If the doxxer is an offline acquaintance, employee, or rival operating locally, cross-reference handset IMEI histories and Wi-Fi logs with known local suspects."
+        ]
+      },
+      {
+        "step_id": "doxx_step_07_court_injunction",
+        "order": 7,
+        "title": "Judicial Filing, Permanent Injunction & Restraining Orders",
+        "description": "File the comprehensive forensic chargesheet before the jurisdictional Magistrate under IT Act Section 66E (Privacy Violation) and relevant BNS defamation/harassment sections. Obtain a formal judicial injunction restraining the accused from publishing or disseminating any private personal data of the victim permanently.",
+        "required_evidence": [
+          "Certified FSL scientific analysis report linking seized devices to the online publication of doxxed data",
+          "Section 63 BSA electronic certificates for all intermediary, ISP, and telecom records",
+          "Judicial order granting permanent privacy injunctions and ordering destruction of seized copies of victim's personal data"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Investigation finalized, accused arrested, and FSL reports received.",
+        "condition_to_complete": "Charge-sheet accepted by court and formal privacy restraining/injunction orders issued.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If doxxed data continues to circulate on third-party scraper websites, serve the certified judicial injunction order on hosting providers and domain registrars globally to mandate takedown."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Doxxing was executed by anonymous online mobs or activist hacktivists using offshore paste sites and TOR networks with no persistent domestic IP or telecom trail.",
+        "suggested_actions": [
+          "Prioritize victim physical security and digital damage control: assist the victim in changing phone numbers, flagging compromised bank accounts/IDs, and requesting removal from data broker registries.",
+          "Maintain automated monitoring on search engines and major social media platforms; submit continuous de-indexing and takedown requests for any newly appearing URLs hosting the doxxed dossier.",
+          "Examine the offline source of the leaked data (e.g., how the private address or document was originally acquired) to investigate potential physical breaches, stolen mail, or unauthorized database access by institutions."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "csam_reporting_escalation_v1",
+    "crime_type": "Reporting & Escalation of Child Sexual Abuse Material (CSAM) Encountered Online",
+    "title": "Standard Operating Procedure for Procedural Escalation, Reporting & Evidence Preservation of Online CSAM",
+    "source": "Synthesized from POCSO Act Section 19/20 guidelines, IT Rules 2021 (Rule 3(2)(c)), NCRP CSAM SOPs, and MHA directives",
+    "steps": [
+      {
+        "step_id": "csam_step_01_evidentiary_containment",
+        "order": 1,
+        "title": "Strict Evidentiary Containment & Hash Logging (No Copying Rule)",
+        "description": "Upon encountering or receiving reports of online CSAM, strictly adhere to statutory containment protocols: DO NOT download, save, forward, or create local copies of the illicit files on personal or station computers to avoid secondary transmission offenses under POCSO/IT Act. Document ONLY the exact URLs, platform identifiers, timestamps, and generate/record SHA-256 cryptographic hashes of the file streams directly in write-blocked investigative logs.",
+        "required_evidence": [
+          "Exact URLs, web links, or platform container identifiers hosting the illicit material",
+          "SHA-256 / MD5 cryptographic hash values of the offending media files recorded in official case diary",
+          "Investigating Officer's statutory containment certification confirming no unauthorized local copying or transmission occurred",
+          "Screenshot of platform container metadata (excluding descriptive depiction of illicit content)"
+        ],
+        "legal_basis": "Protection of Children from Sexual Offences Act Section 20",
+        "department_entity_id": null,
+        "condition_to_start": "Police officer, complainant, or intermediary identifies or reports online CSAM or child exploitation material.",
+        "condition_to_complete": "Exact URLs, timestamps, and file hashes documented in case diary without creating or transmitting local media copies.",
+        "on_complete_trigger": [
+          "csam_step_02_emergency_reporting",
+          "csam_step_03_platform_preservation"
+        ],
+        "if_blocked": [
+          "If a complainant brings a physical memory card or phone containing CSAM to the police station, immediately seal the device in a tamper-evident forensic bag under seizure memo without viewing or copying, and transfer directly to FSL."
+        ]
+      },
+      {
+        "step_id": "csam_step_02_emergency_reporting",
+        "order": 2,
+        "title": "Emergency Escalation via NCRP CSAM Portal & I4C Notification",
+        "description": "Immediately log and escalate the incident onto the National Cyber Crime Reporting Portal (NCRP / cybercrime.gov.in) under the dedicated 'Child Sexual Abuse Material (CSAM) / Rape / Gang Rape (RGR)' reporting mechanism. Transmit the recorded URLs, timestamps, and hash values directly to the Indian Cyber Crime Coordination Centre (I4C) and the State Cyber Cell / CID for centralized statutory tracking and NCMEC (National Center for Missing & Exploited Children) CyberTipline coordination.",
+        "required_evidence": [
+          "NCRP / CFCFRMS CSAM Ticket Acknowledgement Number",
+          "Official transmission dispatch note forwarding IOCs and hash lists to I4C and State Cyber CID",
+          "Confirmation receipt from State Cyber Crime Nodal Officer"
+        ],
+        "legal_basis": "Information Technology Act Section 79",
+        "department_entity_id": "state_cyber_cell_cid",
+        "condition_to_start": "URLs, container metadata, and file hashes documented in initial containment log.",
+        "condition_to_complete": "Incident successfully registered on NCRP CSAM portal and formally acknowledged by I4C / State Cyber CID.",
+        "on_complete_trigger": [
+          "csam_step_04_cwc_notification"
+        ],
+        "if_blocked": [
+          "If the online reporting portal is temporarily inaccessible, immediately dispatch an emergency encrypted flash message to the Superintendent of Police (Cyber Crime) and Director I4C via official police communication networks."
+        ]
+      },
+      {
+        "step_id": "csam_step_03_platform_preservation",
+        "order": 3,
+        "title": "Mandatory Platform Preservation & Immediate Takedown Requisition",
+        "description": "Issue statutory emergency notices under IT Rules 2021 (Rule 3(2)(c)) and IT Act Section 79 to online intermediaries (Meta, Google, Telegram, X, cloud storage providers) mandating the immediate removal/disabling of access to the CSAM within 24 hours. Concurrently issue binding Section 94 BNSS notices directing the intermediary to preserve all associated backend data (uploader accounts, IP logs, timestamps) for 180 days for evidentiary purposes.",
+        "required_evidence": [
+          "Written statutory preservation order under BNSS Section 94 / IT Rules served on the intermediary",
+          "Intermediary written acknowledgment confirming content removal within 24 hours and preservation of backend logs",
+          "Cryptographic hash submission confirmation for cross-platform PhotoDNA blacklist databases"
+        ],
+        "legal_basis": "Information Technology Act Section 79",
+        "department_entity_id": "meta_platforms",
+        "condition_to_start": "URLs, container IDs, and hosting platforms identified during initial logging.",
+        "condition_to_complete": "Intermediary confirms removal of illicit access within 24 hours and confirms statutory preservation of uploader evidence.",
+        "on_complete_trigger": [
+          "csam_step_05_uploader_kyc_requisition"
+        ],
+        "if_blocked": [
+          "If content is hosted on independent overseas servers or darkweb repositories, route emergency blocking orders through CERT-In under entity_id cert_in for nationwide ISP domain blocking."
+        ]
+      },
+      {
+        "step_id": "csam_step_04_cwc_notification",
+        "order": 4,
+        "title": "Mandatory CWC Notification & Statutory Child Protection Referral",
+        "description": "In strict accordance with POCSO Act Section 19 and JJ Act Section 31, formally notify the local Child Welfare Committee (CWC) and the designated Child Welfare Police Officer (CWPO) within 24 hours of recording the CSAM report. If the child victim depicted in the material is identified or suspected to be within the local jurisdiction, coordinate immediate child-protective intervention, medical examination, and support without compromising victim confidentiality.",
+        "required_evidence": [
+          "Formal written statutory notification dispatched to the Child Welfare Committee (CWC) within 24 hours",
+          "Entry log of case assignment to the designated Child Welfare Police Officer (CWPO)",
+          "CWC proceedings acknowledgment and victim protection directive (if local victim is identified)"
+        ],
+        "legal_basis": "Protection of Children from Sexual Offences Act Section 19",
+        "department_entity_id": "cwc_jjb_authority",
+        "condition_to_start": "CSAM incident logged and initial jurisdictional assessment initiated.",
+        "condition_to_complete": "Statutory 24-hour CWC notification requirement fulfilled and child protection protocols initiated.",
+        "on_complete_trigger": [
+          "csam_step_05_uploader_kyc_requisition"
+        ],
+        "if_blocked": [
+          "If CWC formal sittings are not in session, serve the mandatory statutory notification directly to the Chairperson or Member residing in the district via registered electronic/physical dispatch."
+        ]
+      },
+      {
+        "step_id": "csam_step_05_uploader_kyc_requisition",
+        "order": 5,
+        "title": "Requisition of Uploader Account KYC & Technical Access Logs",
+        "description": "Issue Section 94 BNSS notices to the hosting platforms, social media intermediaries, or cloud storage providers where the CSAM was uploaded or shared. Demand complete subscriber registration KYC, verified mobile numbers, linked email addresses, upload IP addresses with exact UTC/IST timestamps, and account login histories.",
+        "required_evidence": [
+          "Subscriber registration details, verified mobile numbers, and recovery email IDs of the uploader handle",
+          "Exact upload and login IP addresses with synchronized timestamps (down to seconds) and source port numbers",
+          "Platform audit logs showing account sharing history, group dissemination, or associated device user-agents"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "meta_platforms",
+        "condition_to_start": "Intermediary confirms preservation of uploader backend data.",
+        "condition_to_complete": "Receipt of complete subscriber KYC and technical upload IP logs from the intermediary.",
+        "on_complete_trigger": [
+          "csam_step_06_isp_telecom_resolution"
+        ],
+        "if_blocked": [
+          "If uploader accounts utilize foreign web services (e.g., Google Drive, Mega.nz), serve notices under entity_id google_llc for subscriber metadata while routing international preservation through I4C."
+        ]
+      },
+      {
+        "step_id": "csam_step_06_isp_telecom_resolution",
+        "order": 6,
+        "title": "ISP IPDR Resolution & Telecom Subscriber Tracing",
+        "description": "Analyse the upload IP addresses and source ports obtained from platform logs, as well as any mobile numbers linked to uploader KYC. Issue Section 94 BNSS notices to Internet Service Providers and Telecom Service Providers to obtain IPDR NAT port binding records, CAF dossiers, CDRs, and physical installation addresses of the uploading subscriber.",
+        "required_evidence": [
+          "IPDR logs resolving public upload IPs and NAT source ports to specific private subscriber installation addresses",
+          "ISP subscriber KYC showing physical residential/commercial premises of the uploader",
+          "CAF and CDR with Cell ID locations for any telecom mobile numbers linked to the uploading account",
+          "IMEI tracking history establishing hardware device identity"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "isp_non_telecom",
+        "condition_to_start": "Actionable upload IP addresses, source ports, or mobile numbers obtained from intermediary logs.",
+        "condition_to_complete": "Positive identification of the ISP/Telecom subscriber name and exact physical residential/workplace address.",
+        "on_complete_trigger": [
+          "csam_step_07_specialized_raid_seizure"
+        ],
+        "if_blocked": [
+          "If IP addresses resolve to mobile data networks, route IPDR and tower dump requisitions through entity_id telecom_operator."
+        ]
+      },
+      {
+        "step_id": "csam_step_07_specialized_raid_seizure",
+        "order": 7,
+        "title": "Specialized Tactical Raid, Hardware Seizure & Forensic Triage",
+        "description": "Execute coordinated search and seizure warrants at the physical premises identified via ISP and telecom tracing, led by an officer not below the rank of Sub-Inspector (preferably accompanied by CWPO/female officers). Arrest the suspect. Seize all computing devices, mobile phones, routers, storage media, and cameras. Perform on-site live forensic containment to ensure write-protection of storage drives without viewing or copying media locally.",
+        "required_evidence": [
+          "Seizure memos of computers, laptops, mobile phones, hard drives, USB drives, and routers executed under strict chain of custody",
+          "Tamper-evident forensic seal certifications for all seized hardware items",
+          "Arrest memos and statutory interrogation records (strictly avoiding unnecessary verbal description of illicit media)",
+          "Forwarding dispatch letter sending seized sealed hardware directly to State FSL / CFSL for forensic extraction"
+        ],
+        "legal_basis": "BNSS Section 96",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Actionable physical premises and subscriber identity established from ISP or telecom tracing.",
+        "condition_to_complete": "Arrest of suspect, physical seizure of hardware under write-protected seals, and secure transfer of exhibits to FSL.",
+        "on_complete_trigger": [
+          "csam_step_08_judicial_filing_disposal"
+        ],
+        "if_blocked": [
+          "If the suspect attempts to trigger remote wipe or destroy hardware upon police entry, immediately isolate devices in Faraday bags and disconnect power/battery interfaces."
+        ]
+      },
+      {
+        "step_id": "csam_step_08_judicial_filing_disposal",
+        "order": 8,
+        "title": "Sealed Judicial Filing, Statutory Custody & Evidence Disposal Orders",
+        "description": "Compile the FSL scientific analysis report (confirming cryptographic hash matches of CSAM on seized hardware), Section 63 BSA certificates, and procedural logs into a sealed charge-sheet. File the prosecution report before the Special POCSO Court / Magistrate under IT Act Sections 67B and relevant POCSO provisions. Move statutory applications under BNSS to ensure all digital CSAM exhibits remain in sealed judicial custody throughout trial and obtain binding judicial orders mandating permanent forensic destruction of all illicit media upon case conclusion.",
+        "required_evidence": [
+          "Certified FSL scientific analysis report confirming cryptographic hash matches of CSAM on seized accused devices (submitted in sealed cover)",
+          "Section 63 BSA electronic certificates for all intermediary, ISP, and NCRP portal records",
+          "Final sealed police charge-sheet filed before the Special POCSO Court / Magistrate",
+          "Judicial order directing sealed trial proceedings and permanent post-trial forensic destruction of all illicit digital exhibits"
+        ],
+        "legal_basis": "Protection of Children from Sexual Offences Act Section 24",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Investigation finalized, accused arrested, and sealed FSL hash-verification reports received.",
+        "condition_to_complete": "Sealed charge-sheet accepted by Special POCSO Court and mandatory judicial evidence-destruction/privacy orders issued.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If defense counsel seeks physical or digital copies of the CSAM exhibits for inspection, strongly oppose reproduction under POCSO Section 20 / BNSS, requesting the court to permit supervised viewing only within sealed court premises without copying."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "CSAM upload originated from an anonymized foreign IP address or darkweb node (.onion) utilizing offshore bulletproof hosting with no actionable domestic Indian subscriber or telecom footprint.",
+        "suggested_actions": [
+          "Transmit all identified cryptographic file hashes, container URLs, and technical IOCs immediately to I4C, CERT-In, and INTERPOL / NCMEC CyberTipline for global international database syndication and server takedown.",
+          "Ensure permanent domestic containment by verifying that all identified URLs, domains, and hash strings are integrated into national ISP blocking filters and intermediary PhotoDNA rejection lists via MeitY orders.",
+          "Close the domestic procedural log with a formal statutory report to the Child Welfare Committee (CWC) and Special Court documenting that international mitigation protocols have been fully activated."
+        ]
+      }
+    ]
+  }
+]

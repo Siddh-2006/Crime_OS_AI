@@ -1,0 +1,1328 @@
+[
+  {
+    "act": "sop",
+    "sop_id": "theft_general_v1",
+    "crime_type": "Theft (General)",
+    "title": "Standard Operating Procedure for Investigation of General Theft Cases",
+    "source": "Synthesized from BPR&D Property Offenses Investigation Manual and State Police SOPs",
+    "steps": [
+      {
+        "step_id": "theft_step_01_fir_scene",
+        "order": 1,
+        "title": "FIR Registration & Crime Scene Inspection",
+        "description": "Register FIR under BNS Section 303 (formerly IPC 379). Visit the crime scene immediately to document the point of entry/exit and the exact location from where the property was stolen. Prepare a rough spot map and panchnama.",
+        "required_evidence": [
+          "Copy of FIR under BNS Section 303",
+          "Crime scene inspection memo / Panchnama",
+          "List of stolen property with descriptions/serial numbers"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": null,
+        "condition_to_start": "Complainant reports theft of movable property.",
+        "condition_to_complete": "FIR registered and initial scene inspection documented.",
+        "on_complete_trigger": [
+          "theft_step_02_cctv",
+          "theft_step_03_fsl"
+        ],
+        "if_blocked": [
+          "If the complainant cannot immediately provide serial numbers or bills of stolen items, register the FIR with available descriptions and add the specifics later via supplementary statement."
+        ]
+      },
+      {
+        "step_id": "theft_step_02_cctv",
+        "order": 2,
+        "title": "CCTV Requisition & Route Mapping",
+        "description": "Identify and requisition footage from private CCTV cameras in the vicinity of the crime scene and suspected escape routes. Issue BNSS Section 94 notices to property owners.",
+        "required_evidence": [
+          "CCTV video footage of the occurrence or suspects loitering",
+          "Section 63 BSA electronic admissibility certificates"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "private_cctv_sources",
+        "condition_to_start": "Crime scene inspected and perimeter defined.",
+        "condition_to_complete": "CCTV footage procured and analyzed for suspect identification.",
+        "on_complete_trigger": [
+          "theft_step_04_telecom"
+        ],
+        "if_blocked": [
+          "If DVR owners refuse to hand over footage, execute an immediate seizure under BNSS Section 106 to prevent overwriting."
+        ]
+      },
+      {
+        "step_id": "theft_step_03_fsl",
+        "order": 3,
+        "title": "Forensic Evidence Collection (Latent Prints & Trace)",
+        "description": "Summon the FSL Mobile unit or fingerprint expert to lift latent fingerprints, footprints, or tool marks from points of entry, forced locks, or touched surfaces at the crime scene.",
+        "required_evidence": [
+          "Lifted fingerprint chance prints",
+          "Photographs of tool marks or footprints",
+          "FSL Scene Examination Report"
+        ],
+        "legal_basis": "BNSS Section 176(3)",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Crime scene is untouched and secured.",
+        "condition_to_complete": "Forensic evidence successfully lifted and forwarded for comparison.",
+        "on_complete_trigger": [
+          "theft_step_06_arrest_recovery"
+        ],
+        "if_blocked": [
+          "If the FSL team is delayed, IO must carefully dust and lift visible prints using the standard police station investigation kit."
+        ]
+      },
+      {
+        "step_id": "theft_step_04_telecom",
+        "order": 4,
+        "title": "Telecom Tower Dump & Suspect Mobile Tracking",
+        "description": "If the time of theft is narrow, issue Section 94 BNSS notices to telecom operators for a tower dump of the crime scene. Filter active numbers against local history-sheeters. If a mobile phone was stolen, place the IMEI on tracking.",
+        "required_evidence": [
+          "Cell ID Tower dump logs",
+          "IMEI tracking activation report",
+          "Filtered suspect subscriber CAF details"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Time window of theft established or stolen mobile IMEI available.",
+        "condition_to_complete": "Tower dump analyzed and stolen IMEI flagged on operator networks.",
+        "on_complete_trigger": [
+          "theft_step_05_disposal_tracing"
+        ],
+        "if_blocked": [
+          "If the stolen phone is switched off, monitor the IMEI persistently via the CEIR (Central Equipment Identity Register) portal."
+        ]
+      },
+      {
+        "step_id": "theft_step_05_disposal_tracing",
+        "order": 5,
+        "title": "Tracing Stolen Property Disposal (Pawn Shops & E-commerce)",
+        "description": "Circulate descriptions of stolen items (especially jewelry or electronics) to local pawn shops and jewelers. Issue Section 94 BNSS notices to e-commerce platforms (like OLX) if items are suspected to be listed for resale online.",
+        "required_evidence": [
+          "Pawn shop pledge registers or CCTV",
+          "E-commerce listing details, seller KYC, and IP logs",
+          "Seizure memo of recovered stolen property"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "pawn_shops_jewelers",
+        "condition_to_start": "Stolen property uniquely identifiable (IMEI, serial numbers, hallmark).",
+        "condition_to_complete": "Stolen property located at disposal point and seller identity established.",
+        "on_complete_trigger": [
+          "theft_step_06_arrest_recovery"
+        ],
+        "if_blocked": [
+          "If jewelers melted the stolen gold, seize the melting register and CCTV to establish the identity of the seller/thief."
+        ]
+      },
+      {
+        "step_id": "theft_step_06_arrest_recovery",
+        "order": 6,
+        "title": "Arrest, Recovery & Charge-Sheet",
+        "description": "Arrest the identified suspects under BNSS Section 35. Recover the stolen property based on the accused's disclosure statement under Section 23 BSA. Produce the accused in court, restore property to the victim via Section 503 BNSS, and file the final chargesheet.",
+        "required_evidence": [
+          "Arrest and personal search memo",
+          "Disclosure statement leading to recovery (Section 23 BSA)",
+          "Final Charge-Sheet under BNSS Section 193"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Suspect identity established via CCTV, fingerprints, or property tracking.",
+        "condition_to_complete": "Accused charged and property restored via judicial order.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If property is not recovered, focus the chargesheet on circumstantial evidence (CCTV, telecom presence, and fingerprints)."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "No CCTV available, no fingerprints found, and stolen items lack serial numbers.",
+        "suggested_actions": [
+          "Activate local informant networks to check known receivers of stolen goods (scrap dealers, chor bazaars).",
+          "Check recent release registers from the local Prisons Department for known burglars/thieves operating with the same Modus Operandi.",
+          "Profile the victim's domestic help, recent contractors, or delivery personnel for potential insider involvement."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "snatching_v1",
+    "crime_type": "Chain/Mobile Snatching",
+    "title": "Standard Operating Procedure for Investigation of Snatching Cases",
+    "source": "Synthesized from BPR&D Street Crimes Manual and BNS Snatching Provisions",
+    "steps": [
+      {
+        "step_id": "snatch_step_01_fir",
+        "order": 1,
+        "title": "FIR Registration & Victim Debriefing",
+        "description": "Register FIR immediately under BNS Section 304 (Snatching). Interview the victim to obtain physical descriptions of the snatchers, the getaway vehicle (make, model, color, partial license plate), and the exact direction of flight. Broadcast an immediate wireless alert.",
+        "required_evidence": [
+          "Copy of FIR under BNS Section 304",
+          "Victim's statement with suspect and vehicle descriptions",
+          "Wireless control room broadcast log"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": null,
+        "condition_to_start": "Victim reports forcible grabbing of chain, bag, or mobile on the street.",
+        "condition_to_complete": "FIR registered and immediate flash alert transmitted to all patrolling units.",
+        "on_complete_trigger": [
+          "snatch_step_02_cctv_rto"
+        ],
+        "if_blocked": [
+          "If the victim is injured from a fall during the snatching, ensure immediate Medico-Legal Case (MLC) examination and add BNS Section 117 (Grievous Hurt) if applicable."
+        ]
+      },
+      {
+        "step_id": "snatch_step_02_cctv_rto",
+        "order": 2,
+        "title": "CCTV Trajectory Mapping & RTO Vehicle Verification",
+        "description": "Requisition CCTV footage from private establishments and traffic junctions along the escape route. If a license plate is visible, verify the ownership details through the RTO VAHAN database. Snatchers frequently use stolen bikes, so cross-check the plate against recent vehicle theft FIRs.",
+        "required_evidence": [
+          "CCTV footage tracking the getaway vehicle",
+          "RTO VAHAN vehicle ownership extract",
+          "Section 63 BSA electronic admissibility certificates"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "rto_parivahan",
+        "condition_to_start": "Escape route or partial license plate identified.",
+        "condition_to_complete": "Vehicle identified and registered owner located or flagged as stolen.",
+        "on_complete_trigger": [
+          "snatch_step_03_telecom_tracking"
+        ],
+        "if_blocked": [
+          "If the license plate is fake or removed, identify the unique features of the bike (stickers, broken parts) and check municipal smart-city ANPR cameras across the city."
+        ]
+      },
+      {
+        "step_id": "snatch_step_03_telecom_tracking",
+        "order": 3,
+        "title": "Stolen Device Tracking & Telecom Analysis",
+        "description": "If a mobile phone was snatched, immediately issue Section 94 BNSS notices to telecom operators to track the IMEI. If the phone is kept on, obtain live cell site locations. If a chain/bag was snatched, pull a tower dump of the incident spot to identify continuously moving numbers mirroring the escape route.",
+        "required_evidence": [
+          "IMEI tracking logs / CEIR portal alerts",
+          "Cell ID tower dump and CDR analysis",
+          "Suspect subscriber CAF details"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Stolen mobile IMEI available or precise time/location of snatching known.",
+        "condition_to_complete": "Stolen device traced or suspect mobile numbers identified from tower dumps.",
+        "on_complete_trigger": [
+          "snatch_step_04_pawn_shops"
+        ],
+        "if_blocked": [
+          "If the stolen phone is switched off immediately, monitor the victim's linked UPI/bank accounts in case the snatchers attempt SIM bypass fraud."
+        ]
+      },
+      {
+        "step_id": "snatch_step_04_pawn_shops",
+        "order": 4,
+        "title": "Tracing Stolen Jewelry (Pawn Shops & Goldsmiths)",
+        "description": "If a gold chain was snatched, immediately circulate the weight and design to local pawn shops, muthoot finance branches, and neighborhood goldsmiths under Section 94 BNSS to intercept attempts to pledge or melt the gold.",
+        "required_evidence": [
+          "Pawn shop pledge registers or CCTV",
+          "Seizure memo of recovered gold or cash equivalents",
+          "Witness statements of the receiving jewelers"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "pawn_shops_jewelers",
+        "condition_to_start": "Gold chain or jewelry snatched.",
+        "condition_to_complete": "Receiver of stolen property identified and gold/cash seized.",
+        "on_complete_trigger": [
+          "snatch_step_05_arrest_tip"
+        ],
+        "if_blocked": [
+          "If the gold is already melted, seize the melted bullion and the melting register, and arrest the jeweler under BNS Section 317 for receiving stolen property."
+        ]
+      },
+      {
+        "step_id": "snatch_step_05_arrest_tip",
+        "order": 5,
+        "title": "Arrest, Test Identification Parade (TIP) & Charge-Sheet",
+        "description": "Arrest the snatchers. Keep their faces covered upon arrest. Sponsor an application before the Magistrate to conduct a Test Identification Parade (TIP) under BNSS Section 54 so the victim can formally identify them. Recover the stolen property and file the chargesheet.",
+        "required_evidence": [
+          "Arrest memos and disclosure statements",
+          "Magistrate's TIP (Test Identification Parade) proceedings report",
+          "Seizure memos of stolen property and the getaway vehicle",
+          "Final Charge-Sheet under BNSS Section 193 specifying BNS 304"
+        ],
+        "legal_basis": "BNSS Section 54",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Suspects apprehended.",
+        "condition_to_complete": "TIP conducted, evidence secured, and chargesheet filed.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the victim fails to identify the accused in TIP, rely on circumstantial recovery of the snatched property and CCTV facial matching to sustain the charge."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Snatchers wore full-face helmets, used a stolen bike with fake plates, and the snatched item was untraceable cash.",
+        "suggested_actions": [
+          "Query the Prisons Department database for recently released offenders with a known Modus Operandi of high-speed snatching.",
+          "Expand the CCTV search radius to petrol pumps or toll plazas where the suspects might have removed their helmets or refueled before or after the crime.",
+          "Conduct systemic checks on known local gangs and their associates using historical gang mapping."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "burglary_housebreaking_v1",
+    "crime_type": "Burglary / House-breaking",
+    "title": "Standard Operating Procedure for Investigation of Burglary and House-breaking",
+    "source": "Synthesized from BPR&D Investigation Manual on Property Offenses",
+    "steps": [
+      {
+        "step_id": "burg_step_01_fir_scene",
+        "order": 1,
+        "title": "FIR Registration & Modus Operandi (MO) Documentation",
+        "description": "Register FIR under BNS Sections 331-334 (Lurking house-trespass/house-breaking). Secure the premises. Document the specific Modus Operandi (e.g., lock broken, window grilled cut, roof entry) as burglary gangs have highly distinct signature methods.",
+        "required_evidence": [
+          "Copy of FIR",
+          "Detailed spot map and crime scene Panchnama detailing point of entry",
+          "Inventory of stolen cash, jewelry, and valuables"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": null,
+        "condition_to_start": "Complainant reports break-in and theft from a residential or commercial building.",
+        "condition_to_complete": "FIR registered and MO accurately documented in the case diary.",
+        "on_complete_trigger": [
+          "burg_step_02_fsl_prints",
+          "burg_step_03_cctv_telecom"
+        ],
+        "if_blocked": [
+          "If the owners are out of town, seal the premises with official police seals until they return to verify the stolen inventory."
+        ]
+      },
+      {
+        "step_id": "burg_step_02_fsl_prints",
+        "order": 2,
+        "title": "Forensic Fingerprint & Tool Mark Lifting",
+        "description": "Summon the FSL fingerprint bureau. House-breaking invariably involves physical contact with doors, cupboards, or safes. Lift chance prints, DNA swabs from discarded tools, and photograph jimmy/pry-bar marks for forensic comparison.",
+        "required_evidence": [
+          "Lifted latent fingerprints and footprint casts",
+          "Seized burglary tools (crowbars, screwdrivers) left at scene",
+          "FSL Scene Examination Report"
+        ],
+        "legal_basis": "BNSS Section 176(3)",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Crime scene secured.",
+        "condition_to_complete": "Fingerprints and tool marks lifted and sent to the state fingerprint bureau/NAFIS.",
+        "on_complete_trigger": [
+          "burg_step_04_prison_db"
+        ],
+        "if_blocked": [
+          "If the culprits wore gloves, check for biological evidence (sweat, blood from glass cuts) on broken entry points."
+        ]
+      },
+      {
+        "step_id": "burg_step_03_cctv_telecom",
+        "order": 3,
+        "title": "CCTV Requisition & Night-Time Tower Dumps",
+        "description": "Procure CCTV footage from the targeted building, neighbor's properties, and street corners. Issue Section 94 BNSS notices to TSPs for a tower dump covering the specific night hours to isolate active mobile numbers in the residential area.",
+        "required_evidence": [
+          "CCTV footage showing suspects or reconnaissance vehicles",
+          "Cell ID tower dumps and filtered suspect CDRs",
+          "Section 63 BSA electronic admissibility certificates"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Timeframe of the burglary estimated.",
+        "condition_to_complete": "Video and telecom intelligence procured.",
+        "on_complete_trigger": [
+          "burg_step_04_prison_db"
+        ],
+        "if_blocked": [
+          "If the suspects deactivated the house CCTV DVR, check external municipal or neighbor cameras covering the perimeter."
+        ]
+      },
+      {
+        "step_id": "burg_step_04_prison_db",
+        "order": 4,
+        "title": "Prison & MO Database Query",
+        "description": "Cross-reference the specific Modus Operandi and lifted fingerprints with the Prisons Department and NCRB/NAFIS database to identify known burglar gangs currently out on bail or recently released.",
+        "required_evidence": [
+          "Fingerprint match report from NAFIS / State Fingerprint Bureau",
+          "Inmate release registers or parole logs of known MO-matched offenders"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "prisons_department",
+        "condition_to_start": "Fingerprints lifted or distinct MO identified.",
+        "condition_to_complete": "Suspect matches identified from prison or criminal databases.",
+        "on_complete_trigger": [
+          "burg_step_05_arrest_recovery"
+        ],
+        "if_blocked": [
+          "If database queries yield no hits, the gang may be from another state; circulate the MO and prints to neighboring state CIDs."
+        ]
+      },
+      {
+        "step_id": "burg_step_05_arrest_recovery",
+        "order": 5,
+        "title": "Arrest, Stolen Property Recovery & Charge-Sheet",
+        "description": "Raid the suspect hideouts. Arrest the burglars and receivers of stolen property. Seize the stolen goods, cash, and burglary implements. File the final chargesheet detailing the forensic and circumstantial links.",
+        "required_evidence": [
+          "Arrest and personal search memos",
+          "Disclosure statements leading to recovery of stolen safes/valuables",
+          "FSL report matching lifted prints to arrested accused",
+          "Final Charge-Sheet under BNSS Section 193"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Suspects identified and located.",
+        "condition_to_complete": "Accused charged, property recovered, and court cognizance taken.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If stolen goods are untraceable, rely on FSL fingerprint matches and telecom presence at the scene to prove the house-breaking charge."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Burglary occurred in an isolated farmhouse with no CCTV, no cell tower coverage, and thieves wiped down the surfaces.",
+        "suggested_actions": [
+          "Investigate inside contacts: domestic staff, recent painters/carpenters, or security guards who knew the layout and locations of safes.",
+          "Check local toll plazas or RTO ANPR cameras on the main access highways for unfamiliar vehicles moving during the night hours.",
+          "Alert pawn brokers and jewelers in adjoining districts regarding the specific descriptions of the stolen heirlooms."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "robbery_v1",
+    "crime_type": "Robbery",
+    "title": "Standard Operating Procedure for Investigation of Robbery",
+    "source": "Synthesized from BPR&D Investigation Manual on Violent Property Crimes",
+    "steps": [
+      {
+        "step_id": "rob_step_01_fir_medical",
+        "order": 1,
+        "title": "FIR Registration & Medical Evacuation",
+        "description": "Register FIR under BNS Section 309 (Robbery). If the victim was injured during the extortion of property, immediately transport them to a hospital for a Medico-Legal Case (MLC) examination. Record the victim's statement detailing the threat, weapons used, and suspect descriptions.",
+        "required_evidence": [
+          "Copy of FIR under BNS Section 309",
+          "Victim's statement under BNSS Section 180",
+          "Certified MLC report detailing physical injuries sustained"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": "hospital_forensic_medical",
+        "condition_to_start": "Victim reports property stolen via fear of instant hurt or wrongful restraint.",
+        "condition_to_complete": "FIR registered, victim treated, and statements recorded.",
+        "on_complete_trigger": [
+          "rob_step_02_scene_cctv",
+          "rob_step_03_telecom"
+        ],
+        "if_blocked": [
+          "If the victim is in shock, wait for medical clearance to obtain a coherent description of the assailants."
+        ]
+      },
+      {
+        "step_id": "rob_step_02_scene_cctv",
+        "order": 2,
+        "title": "Crime Scene Forensics & CCTV Tracing",
+        "description": "Inspect the crime scene. Summon FSL to lift trace evidence (bloodstains, weapon markings, tire tracks). Issue Section 94 BNSS notices to secure CCTV footage of the robbery and the escape route of the suspects.",
+        "required_evidence": [
+          "FSL Scene Examination Report",
+          "CCTV video footage with Section 63 BSA certificates",
+          "Seizure memos of trace evidence left at the spot"
+        ],
+        "legal_basis": "BNSS Section 176(3)",
+        "department_entity_id": "private_cctv_sources",
+        "condition_to_start": "Crime scene secured.",
+        "condition_to_complete": "Forensic evidence lifted and CCTV procured.",
+        "on_complete_trigger": [
+          "rob_step_04_arms_trace"
+        ],
+        "if_blocked": [
+          "If the robbery occurred in transit (e.g., highway), utilize toll plaza cameras and highway patrol ANPR systems under entity_id rto_parivahan."
+        ]
+      },
+      {
+        "step_id": "rob_step_03_telecom",
+        "order": 3,
+        "title": "Telecom Tracking & Tower Dumps",
+        "description": "Issue notices to TSPs for a tower dump of the incident location. If the victim's mobile phone was taken, place the IMEI on live tracking. Analyze CDRs to find common movement patterns among suspected numbers.",
+        "required_evidence": [
+          "Cell ID tower dump logs",
+          "IMEI tracking activation reports",
+          "Filtered suspect CDR analysis"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Time and location of robbery established.",
+        "condition_to_complete": "Telecom tracking initiated and suspect numbers filtered.",
+        "on_complete_trigger": [
+          "rob_step_05_arrest_tip"
+        ],
+        "if_blocked": [
+          "If suspects use jammers or immediately switch off phones, rely on visual CCTV trajectory mapping."
+        ]
+      },
+      {
+        "step_id": "rob_step_04_arms_trace",
+        "order": 4,
+        "title": "Arms Tracing (If Armed Robbery)",
+        "description": "If firearms or deadly weapons were used, coordinate with the Arms Licensing Authority and FSL ballistics division (if shots were fired) to trace the origin of the weapons.",
+        "required_evidence": [
+          "Ballistic exhibits (cartridges/bullets) if fired",
+          "Statements detailing the specific type of weapon wielded"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "arms_licensing_authority",
+        "condition_to_start": "Victim reports or scene indicates use of firearms/weapons.",
+        "condition_to_complete": "Weapon type identified and ballistic evidence processed.",
+        "on_complete_trigger": [
+          "rob_step_05_arrest_tip"
+        ],
+        "if_blocked": [
+          "If country-made illegal firearms were used, utilize informant networks to trace local illicit gunsmiths."
+        ]
+      },
+      {
+        "step_id": "rob_step_05_arrest_tip",
+        "order": 5,
+        "title": "Arrest, Recovery, TIP & Charge-Sheet",
+        "description": "Arrest the suspects. Seize the stolen property and weapons used. Produce suspects with muffled faces before the Magistrate to conduct a Test Identification Parade (TIP). File the final chargesheet.",
+        "required_evidence": [
+          "Arrest and recovery seizure memos",
+          "Magistrate's TIP proceedings report confirming victim identified the robbers",
+          "Final Charge-Sheet under BNSS Section 193"
+        ],
+        "legal_basis": "BNSS Section 54",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Suspects located and apprehended.",
+        "condition_to_complete": "Accused charged, TIP successful, and stolen property recovered.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If TIP is refused by accused or fails, use CCTV facial matching and forensic links to the recovered stolen goods."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Highway robbery by unidentified gang with no CCTV, no cell tower overlap, and victim could not see faces due to darkness/masks.",
+        "suggested_actions": [
+          "Coordinate with adjoining districts to identify similar highway robbery Modus Operandi (e.g., throwing eggs on windshields, placing spikes on roads).",
+          "Monitor local mechanics and scrap dealers for the victim's stolen vehicle or parts.",
+          "Check prison release logs for specialized highway robbery gangs (e.g., axle gangs)."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "dacoity_v1",
+    "crime_type": "Dacoity",
+    "title": "Standard Operating Procedure for Investigation of Dacoity Cases",
+    "source": "Synthesized from BPR&D Organized Crime and Dacoity Investigation Manuals",
+    "steps": [
+      {
+        "step_id": "dac_step_01_fir_barricade",
+        "order": 1,
+        "title": "FIR Registration, Border Sealing & Medical Triage",
+        "description": "Register FIR under BNS Section 310 (Dacoity - 5 or more persons). Immediately issue a flash alert to all neighboring districts and border checkpoints to set up barricades (Naka-bandi). Transport any injured victims to the hospital for MLCs.",
+        "required_evidence": [
+          "Copy of FIR under BNS Section 310",
+          "Wireless transmission logs for border sealing",
+          "Certified MLC reports for injured victims"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": "hospital_forensic_medical",
+        "condition_to_start": "Report of robbery committed conjointly by five or more persons.",
+        "condition_to_complete": "FIR registered, borders sealed, and victims treated.",
+        "on_complete_trigger": [
+          "dac_step_02_scene_fsl",
+          "dac_step_03_transit_telecom"
+        ],
+        "if_blocked": [
+          "If the gang escapes via a train or public transport, immediately alert GRP/RPF control rooms to intercept the train."
+        ]
+      },
+      {
+        "step_id": "dac_step_02_scene_fsl",
+        "order": 2,
+        "title": "Comprehensive Crime Scene Forensics",
+        "description": "Dacoity scenes are large and chaotic. Secure the perimeter. FSL must lift fingerprints, footprints, ballistic evidence, and DNA from items left behind (e.g., clothing, tools, masks). Requisition any local CCTV footage.",
+        "required_evidence": [
+          "FSL exhaustive Scene Examination Report",
+          "Lifted latent prints, ballistic exhibits, and biological swabs",
+          "Crime scene photography and mapping"
+        ],
+        "legal_basis": "BNSS Section 176(3)",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Crime scene secured.",
+        "condition_to_complete": "All physical and trace evidence scientifically packaged and forwarded.",
+        "on_complete_trigger": [
+          "dac_step_04_gang_profiling"
+        ],
+        "if_blocked": [
+          "If the scene is a moving train (Train Dacoity), halt the train at the nearest major station and secure the affected coaches for FSL inspection."
+        ]
+      },
+      {
+        "step_id": "dac_step_03_transit_telecom",
+        "order": 3,
+        "title": "Telecom Tracing & Transport Node Scrutiny",
+        "description": "Issue notices to TSPs for extensive tower dumps. Check CCTV and ANPR logs from toll plazas, railway stations, and bus stands along escape routes. Dacoit gangs often travel in large groups using stolen multi-utility vehicles.",
+        "required_evidence": [
+          "Cell ID tower dumps",
+          "ANPR logs and toll plaza CCTV footage",
+          "Railway station/Transit CCTV"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Escape routes hypothesized.",
+        "condition_to_complete": "Telecom and transit tracking data procured.",
+        "on_complete_trigger": [
+          "dac_step_04_gang_profiling"
+        ],
+        "if_blocked": [
+          "If telecom dumps are too massive, cross-reference numbers moving in sequence from the crime scene tower to highway towers."
+        ]
+      },
+      {
+        "step_id": "dac_step_04_gang_profiling",
+        "order": 4,
+        "title": "Inter-State Gang Profiling & Prison Intel",
+        "description": "Dacoity is usually committed by specialized inter-state gangs (e.g., Chaddi-Baniyan gang, Pardhi gang). Cross-reference the MO and forensic prints with the Prisons Department, NAFIS, and State Crime Branch databases.",
+        "required_evidence": [
+          "Dossiers of known dacoity gangs matching the MO",
+          "NAFIS fingerprint matching reports",
+          "Prison release registers of organized gang members"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "prisons_department",
+        "condition_to_start": "MO documented and forensic prints lifted.",
+        "condition_to_complete": "Target gang identified from criminal records.",
+        "on_complete_trigger": [
+          "dac_step_05_raid_tip"
+        ],
+        "if_blocked": [
+          "If the gang is a new splinter group, rely on informant networks and monitoring of traditional receivers of mass stolen gold/goods."
+        ]
+      },
+      {
+        "step_id": "dac_step_05_raid_tip",
+        "order": 5,
+        "title": "Coordinated Raid, Recovery, TIP & Charge-Sheet",
+        "description": "Execute heavily armed raids on the gang's hideout (often requiring inter-state coordination). Arrest the dacoits, seize the weapons and mass stolen property. Conduct TIP before a Magistrate and file the chargesheet under BNS Section 310.",
+        "required_evidence": [
+          "Arrest and massive recovery seizure memos",
+          "Magistrate's TIP proceedings report",
+          "FSL ballistic and fingerprint matching reports",
+          "Final Charge-Sheet under BNSS Section 193"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Gang hideout located.",
+        "condition_to_complete": "Gang dismantled, evidence secured, and chargesheet filed.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the gang opens fire during the raid, exercise the right of private defense and register additional Attempt to Murder/Arms Act cases."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Organized dacoity in a remote rural area, communication lines cut prior to attack, and gang vanished into forest terrain.",
+        "suggested_actions": [
+          "Deploy tracker dogs (K9 units) immediately from the crime scene to trace the physical foot-trail into the forest.",
+          "Check local railway stations for sudden bulk ticket purchases or unauthorized train boardings in the hours following the incident.",
+          "Examine the pre-incident reconnaissance: gangs often send spotters disguised as hawkers or beggars days before; check local village CCTV or statements for unfamiliar visitors."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "vehicle_theft_v1",
+    "crime_type": "Vehicle Theft (Two-Wheeler/Car)",
+    "title": "Standard Operating Procedure for Investigation of Motor Vehicle Theft",
+    "source": "Synthesized from Anti-Auto Theft Squad (AATS) Guidelines and NCRB CCTNS SOPs",
+    "steps": [
+      {
+        "step_id": "vtheft_step_01_fir_cctns",
+        "order": 1,
+        "title": "FIR Registration & Immediate CCTNS / VAHAN Alert",
+        "description": "Register FIR under BNS Section 303. Immediately upload the vehicle's Registration Number, Engine Number, and Chassis Number onto the NCRB CCTNS portal to flag it nationally as stolen. Verify ownership via RTO databases.",
+        "required_evidence": [
+          "Copy of FIR and victim's statement",
+          "NCRB CCTNS Stolen Vehicle alert receipt",
+          "RTO VAHAN ownership extract"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": "rto_parivahan",
+        "condition_to_start": "Victim reports theft of a motor vehicle.",
+        "condition_to_complete": "FIR registered and national database flagged.",
+        "on_complete_trigger": [
+          "vtheft_step_02_cctv_anpr"
+        ],
+        "if_blocked": [
+          "If the victim doesn't remember the engine/chassis number, pull it directly from the RTO or insurance company portal using the license plate."
+        ]
+      },
+      {
+        "step_id": "vtheft_step_02_cctv_anpr",
+        "order": 2,
+        "title": "CCTV Requisition & Highway ANPR Tracking",
+        "description": "Procure CCTV footage from the parking location. Track the vehicle's movement through municipal smart-city cameras and highway toll plaza ANPR systems to determine the escape route.",
+        "required_evidence": [
+          "CCTV footage of the theft and escape",
+          "Toll plaza ANPR logs showing the stolen vehicle",
+          "Section 63 BSA electronic admissibility certificates"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "rto_parivahan",
+        "condition_to_start": "Theft location and time identified.",
+        "condition_to_complete": "Vehicle's trajectory mapped via surveillance.",
+        "on_complete_trigger": [
+          "vtheft_step_03_telecom_scrap"
+        ],
+        "if_blocked": [
+          "If thieves changed the license plate immediately, look for distinctive vehicle features (stickers, dents) in the CCTV feeds."
+        ]
+      },
+      {
+        "step_id": "vtheft_step_03_telecom_scrap",
+        "order": 3,
+        "title": "Telecom Dumps & Scrap Dealer Checks",
+        "description": "Analyze cell tower dumps of the theft location. Simultaneously, raid known 'chop shops', scrap dealers, and illicit garages where stolen vehicles are dismantled for parts. Check e-commerce platforms if the vehicle is listed for resale with forged papers.",
+        "required_evidence": [
+          "Cell ID tower dump analysis",
+          "Seizure memos of vehicle parts from scrap dealers (if dismantled)",
+          "E-commerce listing IP logs (if applicable)"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "telecom_operator",
+        "condition_to_start": "Vehicle untraceable on ANPR or suspected to be dismantled.",
+        "condition_to_complete": "Suspect numbers identified or dismantled parts located.",
+        "on_complete_trigger": [
+          "vtheft_step_04_recovery_court"
+        ],
+        "if_blocked": [
+          "If the vehicle is suspected to be smuggled across international borders (e.g., to Nepal), alert border check posts immediately."
+        ]
+      },
+      {
+        "step_id": "vtheft_step_04_recovery_court",
+        "order": 4,
+        "title": "Recovery, Arrest & Superdari (Restoration)",
+        "description": "Arrest the auto-lifters and receivers. Seize the vehicle. If the chassis/engine numbers are tampered/erased, send the vehicle to FSL for chemical etching restoration. File chargesheet and assist the victim in getting the vehicle released via court Superdari u/s 503 BNSS.",
+        "required_evidence": [
+          "Arrest and recovery seizure memos",
+          "FSL Chassis/Engine number restoration report (if tampered)",
+          "Court order u/s 503 BNSS releasing vehicle to the owner",
+          "Final Charge-Sheet under BNSS Section 193"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Vehicle or thieves located.",
+        "condition_to_complete": "Vehicle recovered, accused charged, and property returned to owner.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the vehicle is never recovered, issue an Untraced Report so the victim can claim motor insurance."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Vehicle stolen using high-tech relay attacks (keyless entry hacking), GPS tracker disabled instantly, and ANPR evaded.",
+        "suggested_actions": [
+          "Focus on the sale of specialized electronic key-cloning devices on underground forums and track the buyers.",
+          "Check parking lot access logs and visitor registers for spotters who may have placed physical GPS trackers on the car days before the theft.",
+          "Coordinate with the manufacturer's backend telematics servers to see the exact timestamp the onboard SIM/GPS was disconnected."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "cattle_theft_v1",
+    "crime_type": "Cattle Theft",
+    "title": "Standard Operating Procedure for Investigation of Cattle Theft and Smuggling",
+    "source": "Synthesized from Rural Policing Manuals and Animal Preservation Act SOPs",
+    "steps": [
+      {
+        "step_id": "cattle_step_01_fir_scene",
+        "order": 1,
+        "title": "FIR Registration & Scene Inspection",
+        "description": "Register FIR under BNS Section 303 (and relevant state Animal Preservation / Cow Slaughter Acts if applicable). Inspect the shed/farm. Look for tire tracks of heavy transport vehicles (trucks/pickups) used to load the cattle.",
+        "required_evidence": [
+          "Copy of FIR",
+          "Spot panchnama and victim's statement",
+          "Photographs/Casts of heavy vehicle tire tracks at the scene"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": null,
+        "condition_to_start": "Farmer reports theft of livestock.",
+        "condition_to_complete": "FIR registered and physical scene documented.",
+        "on_complete_trigger": [
+          "cattle_step_02_cctv_rto"
+        ],
+        "if_blocked": [
+          "If the theft occurred in deep fields, track the physical hoof prints to the nearest motorable road to identify the loading point."
+        ]
+      },
+      {
+        "step_id": "cattle_step_02_cctv_rto",
+        "order": 2,
+        "title": "CCTV, Highway Toll Plazas & Transport Tracing",
+        "description": "Cattle thieves rely on mini-trucks or modified containers. Requisition CCTV from village exits, highway toll plazas, and border checkpoints to identify suspicious transport vehicles moving late at night. Verify plates via RTO.",
+        "required_evidence": [
+          "CCTV/ANPR footage of suspected transport vehicles",
+          "RTO VAHAN ownership details of the suspected truck",
+          "Section 63 BSA electronic admissibility certificates"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "rto_parivahan",
+        "condition_to_start": "Loading point or escape route estimated.",
+        "condition_to_complete": "Transport vehicle identified.",
+        "on_complete_trigger": [
+          "cattle_step_03_slaughter_markets"
+        ],
+        "if_blocked": [
+          "If vehicles use fake plates, issue alerts to highway patrols to intercept any trucks smelling of livestock or leaking animal waste."
+        ]
+      },
+      {
+        "step_id": "cattle_step_03_slaughter_markets",
+        "order": 3,
+        "title": "Check Illegal Slaughterhouses & Cattle Markets",
+        "description": "Raid known illegal slaughterhouses, meat processing units, and weekly cattle markets (Pashu Mandis). Coordinate with the Municipal Corporation health department to inspect municipal slaughterhouse registries.",
+        "required_evidence": [
+          "Inspection reports from cattle markets",
+          "Municipal slaughterhouse entry logs",
+          "Seizure memo of stolen cattle (if found alive)"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "municipal_corporation",
+        "condition_to_start": "Escape vehicle traced or regular disposal points known.",
+        "condition_to_complete": "Stolen cattle recovered or disposal point identified.",
+        "on_complete_trigger": [
+          "cattle_step_04_arrest_fsl"
+        ],
+        "if_blocked": [
+          "If the cattle are already slaughtered, seize the hides and remains to perform DNA matching with the mother/offspring left at the victim's farm."
+        ]
+      },
+      {
+        "step_id": "cattle_step_04_arrest_fsl",
+        "order": 4,
+        "title": "Arrest, Veterinary Verification & Charge-Sheet",
+        "description": "Arrest the thieves and butchers. Seize the transport vehicle. Requisition a Government Veterinary Doctor to verify the health, breed, and tagging (ear tags) of the recovered live cattle. Hand over cattle to the owner via court order and file chargesheet.",
+        "required_evidence": [
+          "Arrest and vehicle seizure memos",
+          "Veterinary Doctor's verification report",
+          "Court order u/s 503 BNSS for custody of livestock",
+          "Final Charge-Sheet under BNSS Section 193"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Suspects and cattle located.",
+        "condition_to_complete": "Accused charged and cattle safely restored.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the court process is delayed, ensure live cattle are temporarily housed in a recognized Gaushala / Animal shelter to prevent starvation."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Cattle smuggled across state or international borders in disguised containers with no CCTV coverage.",
+        "suggested_actions": [
+          "Conduct cell tower dumps of the remote farm location; cattle thieves often coordinate via mobile while loading.",
+          "Check records of the local Animal Husbandry department or veterinary checkpoints for forged health transit certificates used by the smugglers.",
+          "Deploy informants in border smuggling syndicates to identify the specific transport handlers."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "forgery_document_v1",
+    "crime_type": "Forgery & Document Fraud",
+    "title": "Standard Operating Procedure for Investigation of Forgery and Fake Documents",
+    "source": "Synthesized from EOW (Economic Offences Wing) Manuals and BNS Forgery provisions",
+    "steps": [
+      {
+        "step_id": "forg_step_01_fir_seizure",
+        "order": 1,
+        "title": "FIR Registration & Seizure of Questioned Document",
+        "description": "Register FIR under BNS Sections 336/338 (Forgery). The paramount step is to immediately seize the original questioned document (fake degree, forged cheque, manipulated agreement) in its physical form. A photocopy has extremely limited forensic value.",
+        "required_evidence": [
+          "Copy of FIR under BNS Section 336/338",
+          "Seizure memo of the original questioned document",
+          "Complainant's detailed statement identifying the forged elements"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": null,
+        "condition_to_start": "Victim or authority reports a fabricated or altered document used to deceive.",
+        "condition_to_complete": "FIR registered and original disputed document securely seized.",
+        "on_complete_trigger": [
+          "forg_step_02_issuer_verification"
+        ],
+        "if_blocked": [
+          "If the accused refuses to produce the original document, obtain a search warrant u/s 96 BNSS to raid their premises and seize it."
+        ]
+      },
+      {
+        "step_id": "forg_step_02_issuer_verification",
+        "order": 2,
+        "title": "Verification from Issuing Authority",
+        "description": "Issue Section 94 BNSS notices to the purported issuing authority to verify authenticity. If it's a government certificate, check DigiLocker/MeitY records or Municipal/University archives. If financial, verify with the issuing bank.",
+        "required_evidence": [
+          "Written verification report from the issuing authority declaring the document fake",
+          "Certified copies of the genuine baseline records (if any exist)",
+          "Verification from DigiLocker / issuer digital databases"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "digilocker_meity",
+        "condition_to_start": "Original disputed document seized.",
+        "condition_to_complete": "Official confirmation received that the document is forged.",
+        "on_complete_trigger": [
+          "forg_step_03_specimen_collection"
+        ],
+        "if_blocked": [
+          "If the issuing authority is a defunct private company, check their MCA21 filings to find the former directors for verification."
+        ]
+      },
+      {
+        "step_id": "forg_step_03_specimen_collection",
+        "order": 3,
+        "title": "Collection of Specimen Signatures & Handwriting",
+        "description": "Obtain permission from the Magistrate under BNSS Section 349 to collect specimen signatures, handwriting, and seal impressions of the accused in open court. Also, collect admitted genuine handwriting (e.g., from old bank forms or employment records) for robust comparison.",
+        "required_evidence": [
+          "Magistrate's order u/s 349 BNSS directing accused to provide samples",
+          "Specimen signature/handwriting sheets taken in the presence of Magistrate/IO",
+          "Admitted genuine handwriting samples obtained via Section 94 BNSS"
+        ],
+        "legal_basis": "BNSS Section 349",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Suspect identified and document confirmed as fake.",
+        "condition_to_complete": "Specimen and admitted handwriting samples legally secured.",
+        "on_complete_trigger": [
+          "forg_step_04_fsl_examination"
+        ],
+        "if_blocked": [
+          "If the accused absconds to avoid giving specimens, rely entirely on their admitted genuine handwriting from known bank/government records."
+        ]
+      },
+      {
+        "step_id": "forg_step_04_fsl_examination",
+        "order": 4,
+        "title": "FSL Questioned Document Examination",
+        "description": "Forward the original questioned document along with the specimen/admitted handwriting and seals to the FSL Questioned Document (QD) division. Request analysis on handwriting matching, ink aging, paper alterations, and stamp forgery.",
+        "required_evidence": [
+          "Forwarding letter with specific QD questionnaire",
+          "Certified FSL Questioned Document Expert Report admissible u/s 329 BNSS"
+        ],
+        "legal_basis": "BNSS Section 329",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Disputed documents and reference samples collected.",
+        "condition_to_complete": "FSL scientific report conclusively matching the forgery to the accused received.",
+        "on_complete_trigger": [
+          "forg_step_05_arrest_chargesheet"
+        ],
+        "if_blocked": [
+          "If ink analysis is inconclusive, focus the prosecution on the behavioral usage of the document (who benefited financially from submitting it)."
+        ]
+      },
+      {
+        "step_id": "forg_step_05_arrest_chargesheet",
+        "order": 5,
+        "title": "Arrest, Raid of Forgery Setup & Charge-Sheet",
+        "description": "Arrest the accused. Raid their premises to seize the forgery apparatus (printers, fake rubber stamps, blank certificates). File the chargesheet incorporating the FSL report and issuing authority's denial.",
+        "required_evidence": [
+          "Arrest memo and search memo",
+          "Seizure memo of fake rubber stamps, printers, and blank paper stock",
+          "Final Charge-Sheet under BNSS Section 193 specifying BNS 336/338"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "FSL report or overwhelming documentary evidence proves forgery by accused.",
+        "condition_to_complete": "Accused charged and manufacturing setup dismantled.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the forgery was purely digital (PDF manipulation), seize the computers and request FSL digital forensics for original file metadata/creation logs."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "The original forged document was destroyed by the accused, and only a WhatsApp photo of it exists.",
+        "suggested_actions": [
+          "Charge the accused with Destruction of Evidence (BNS 238) alongside the forgery/cheating charges.",
+          "Extract the metadata of the WhatsApp image or PDF to show it was created or edited using Photoshop on the accused's device.",
+          "Focus on the financial/benefit trail: prove that the accused obtained an unlawful advantage (e.g., a job or a loan) by leveraging the contents of the document, invoking Cheating (BNS 318)."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "cheating_cbt_v1",
+    "crime_type": "Cheating & Criminal Breach of Trust",
+    "title": "Standard Operating Procedure for Investigation of Cheating and Criminal Breach of Trust (CBT)",
+    "source": "Synthesized from EOW Investigation Manuals for White Collar Crimes",
+    "steps": [
+      {
+        "step_id": "cbt_step_01_fir_contract",
+        "order": 1,
+        "title": "FIR Registration & Contract/Inducement Analysis",
+        "description": "Register FIR under BNS Section 318 (Cheating) or Section 316 (CBT). Collect all foundational documents: contracts, MOUs, email trails, and WhatsApp chats that show initial fraudulent inducement or the formal entrusting of property.",
+        "required_evidence": [
+          "Copy of FIR under BNS 316/318",
+          "Copies of contracts, MOUs, or employment agreements",
+          "Emails and chats showing false promises or acknowledgment of entrusted goods"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": null,
+        "condition_to_start": "Victim reports being duped into parting with money/property, or an entrusted agent misappropriates assets.",
+        "condition_to_complete": "FIR registered and documentary foundation of the business/trust relationship secured.",
+        "on_complete_trigger": [
+          "cbt_step_02_bank_audit"
+        ],
+        "if_blocked": [
+          "If the agreement was purely verbal, secure statements of independent witnesses who were present during the transaction."
+        ]
+      },
+      {
+        "step_id": "cbt_step_02_bank_audit",
+        "order": 2,
+        "title": "Financial Tracing, Bank Ledger Audit & Freezing",
+        "description": "Issue Section 94 BNSS notices to banks to obtain certified ledgers showing the flow of funds from the victim to the accused. If funds are still present, issue Section 106 BNSS notices to freeze the accounts.",
+        "required_evidence": [
+          "Certified bank statements showing money flow",
+          "Confirmation of debit freeze under BNSS Section 106",
+          "Account opening KYC of the accused's bank accounts"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "bank_generic",
+        "condition_to_start": "Financial transactions alleged in the complaint.",
+        "condition_to_complete": "Money trail mapped and available funds frozen.",
+        "on_complete_trigger": [
+          "cbt_step_03_mca_verification"
+        ],
+        "if_blocked": [
+          "If cash was handed over physically, secure ATM withdrawal slips, bank withdrawal CCTV, and witness statements verifying the cash handover."
+        ]
+      },
+      {
+        "step_id": "cbt_step_03_mca_verification",
+        "order": 3,
+        "title": "Corporate Verification & MCA21 Scrutiny",
+        "description": "If the cheating was done under the guise of a company or investment firm, query the MCA21 database. Download incorporation documents, verify the active/strike-off status, and map the Director Identification Numbers (DIN).",
+        "required_evidence": [
+          "Certificate of Incorporation and MOA/AOA",
+          "DIN details and director KYC",
+          "Financial balance sheets filed with RoC"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "mca21_roc",
+        "condition_to_start": "Accused operated through a corporate entity or firm.",
+        "condition_to_complete": "Corporate veil pierced and true controllers identified.",
+        "on_complete_trigger": [
+          "cbt_step_04_search_arrest"
+        ],
+        "if_blocked": [
+          "If the entity is unregistered, utilize local municipal trade licenses and GST registrations to find the proprietor."
+        ]
+      },
+      {
+        "step_id": "cbt_step_04_search_arrest",
+        "order": 4,
+        "title": "Search, Seizure of Books & Arrest",
+        "description": "Raid the corporate office or residence of the accused. Seize account books, hard drives, forged invoices, and misappropriated goods. Arrest the accused and establish criminal mens rea (intention to deceive from the beginning for cheating, or subsequent misappropriation for CBT).",
+        "required_evidence": [
+          "Arrest and search memos",
+          "Seizure memo of account books, computers, and misappropriated inventory",
+          "Forensic imaging of accounting software (Tally/Busy)"
+        ],
+        "legal_basis": "BNSS Section 96",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Documentary and financial evidence establishes fraud.",
+        "condition_to_complete": "Accused arrested and physical/digital ledgers seized.",
+        "on_complete_trigger": [
+          "cbt_step_05_chargesheet"
+        ],
+        "if_blocked": [
+          "If the accused claims it is a purely civil breach of contract, IO must explicitly document evidence of fraudulent intent at the inception to sustain the criminal charge."
+        ]
+      },
+      {
+        "step_id": "cbt_step_05_chargesheet",
+        "order": 5,
+        "title": "Forensic Audit & Charge-Sheet Filing",
+        "description": "Engage a police forensic auditor if the fraud is massive. Compile the bank trails, MCA records, seized ledgers, and auditor's report into a final chargesheet. Assist victims in seeking restitution through court.",
+        "required_evidence": [
+          "Police Forensic Auditor report (if applicable)",
+          "Final Charge-Sheet under BNSS Section 193",
+          "Application for restitution of frozen funds u/s 503 BNSS"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Investigation complete and financial data audited.",
+        "condition_to_complete": "Charge-sheet filed and accepted by Magistrate.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the accused fled abroad with the funds, initiate ED involvement under PMLA and seek Interpol Red Notices via CBI."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Accused declares bankruptcy and claims the inability to return entrusted funds was due to genuine business failure, not criminal intent.",
+        "suggested_actions": [
+          "Conduct a deep forensic audit of the bank accounts to show diversion of entrusted funds to personal assets, family members, or unrelated shell companies (proving misappropriation).",
+          "Check for fabricated invoices or inflated expenses in the seized account books, which proves active deception.",
+          "Interview junior accountants or disgruntled employees who can testify to explicit instructions given by the accused to cook the books."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "counterfeit_currency_goods_v1",
+    "crime_type": "Counterfeit Currency/Goods",
+    "title": "Standard Operating Procedure for Investigation of Counterfeit Currency and Fake Goods",
+    "source": "Synthesized from RBI Master Circulars on FICN (Fake Indian Currency Notes) and Copyright/Trademark Act SOPs",
+    "steps": [
+      {
+        "step_id": "count_step_01_fir_seizure",
+        "order": 1,
+        "title": "FIR Registration & Immediate Seizure",
+        "description": "Register FIR under BNS Sections 178-180 (for Currency) or Copyright/Trademark Act (for goods). Immediately seize the suspected counterfeit currency notes or fake branded goods under a detailed seizure memo.",
+        "required_evidence": [
+          "Copy of FIR",
+          "Seizure memo detailing serial numbers of FICN or descriptions of fake goods",
+          "Initial complainant/bank nodal officer statement"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": null,
+        "condition_to_start": "Bank, brand representative, or citizen reports fake currency or counterfeit goods.",
+        "condition_to_complete": "FIR registered and fake items securely seized.",
+        "on_complete_trigger": [
+          "count_step_02_expert_verification"
+        ],
+        "if_blocked": [
+          "If fake currency is detected in an ATM, immediately secure the ATM EJ logs and CCTV to identify the depositor or cash-loading agency."
+        ]
+      },
+      {
+        "step_id": "count_step_02_expert_verification",
+        "order": 2,
+        "title": "Expert Verification (RBI / Brand Nodal Officer)",
+        "description": "For currency: Send the notes to the designated Bank Nodal Officer or FSL/Currency Note Press for statutory verification of fake security features. For goods: Requisition the authorized brand representative/IPR attorney to certify the products as counterfeit.",
+        "required_evidence": [
+          "Bank/RBI Nodal Officer verification report (for FICN)",
+          "Brand Authorized Representative Certificate (for fake goods)",
+          "FSL report on paper/ink quality"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "bank_generic",
+        "condition_to_start": "Suspected fake items seized.",
+        "condition_to_complete": "Statutory or expert confirmation received that items are counterfeit.",
+        "on_complete_trigger": [
+          "count_step_03_supply_chain"
+        ],
+        "if_blocked": [
+          "If the brand has no Indian office, utilize FSL to compare the seized goods against legally purchased genuine samples."
+        ]
+      },
+      {
+        "step_id": "count_step_03_supply_chain",
+        "order": 3,
+        "title": "Tracing the Supply Chain (Couriers & E-commerce)",
+        "description": "Trace backward from the point of seizure. If bought online, issue notices to the e-commerce platform and courier companies to identify the seller's KYC, dispatch warehouse, and payment routing.",
+        "required_evidence": [
+          "E-commerce seller KYC and IP logs",
+          "Courier consignment tracking and sender address",
+          "Payment gateway settlement bank accounts"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "ecommerce_platform",
+        "condition_to_start": "Counterfeit nature confirmed and point of retail sale identified.",
+        "condition_to_complete": "Upstream supplier or manufacturing origin traced.",
+        "on_complete_trigger": [
+          "count_step_04_raid_manufacturing"
+        ],
+        "if_blocked": [
+          "If FICN was pushed through hawala routes, coordinate with border intelligence and telecom analysis of the local handlers."
+        ]
+      },
+      {
+        "step_id": "count_step_04_raid_manufacturing",
+        "order": 4,
+        "title": "Raid Manufacturing Unit & Seize Apparatus",
+        "description": "Raid the printing press, illegal mint, or counterfeit factory. Arrest the masterminds. Seize specialized printers, high-quality paper, counterfeit security threads, dyes, and stitched labels.",
+        "required_evidence": [
+          "Arrest memos",
+          "Seizure memo of manufacturing apparatus (printers, screens, dyes)",
+          "Huge stockpiles of semi-finished counterfeit inventory"
+        ],
+        "legal_basis": "BNSS Section 96",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Manufacturing or wholesale hub located.",
+        "condition_to_complete": "Factory dismantled, accused arrested, and apparatus seized.",
+        "on_complete_trigger": [
+          "count_step_05_chargesheet"
+        ],
+        "if_blocked": [
+          "If the manufacturing unit is across international borders (e.g., FICN printed overseas), refer the case to NIA/CBI for terror-funding and cross-border investigation."
+        ]
+      },
+      {
+        "step_id": "count_step_05_chargesheet",
+        "order": 5,
+        "title": "FSL Synthesis & Charge-Sheet",
+        "description": "Compile the FSL reports linking the seized printers/dyes to the counterfeit currency/goods. File the chargesheet under BNS (for currency) or Copyright/Trademark Act. Obtain orders for the destruction of the fake inventory.",
+        "required_evidence": [
+          "Certified FSL report matching printing apparatus to fake notes/goods",
+          "Final Charge-Sheet",
+          "Magistrate order for supervised destruction of counterfeit materials"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Investigation complete and forensic links established.",
+        "condition_to_complete": "Accused charged and inventory slated for legal destruction.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the volume of fake goods is too massive to store in Malkhana, apply immediately to the Magistrate for pre-trial destruction after drawing representative samples."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "Retailer claims they received the fake currency unknowingly from a customer and have no connection to the printing syndicate.",
+        "suggested_actions": [
+          "Check the retailer's CCTV to identify the customer who passed the fake notes.",
+          "Examine the quantity: possession of a single fake note may be innocent, but possession of a bundle of sequential fake notes implies active trafficking intent.",
+          "Check local bank branch reports to see if similar notes were deposited in the same geographic area recently."
+        ]
+      }
+    ]
+  },
+  {
+    "act": "sop",
+    "sop_id": "land_property_fraud_v1",
+    "crime_type": "Land / Property Fraud",
+    "title": "Standard Operating Procedure for Investigation of Land Grabbing and Real Estate Fraud",
+    "source": "Synthesized from EOW Land Fraud Manuals and State Registration Act SOPs",
+    "steps": [
+      {
+        "step_id": "land_step_01_fir_document_collection",
+        "order": 1,
+        "title": "FIR Registration & Primary Document Collection",
+        "description": "Register FIR under BNS Sections 318/336 (Cheating and Forgery). Collect the complainant's original title deeds, the disputed fraudulent sale/power-of-attorney documents, and written narratives of the fraud.",
+        "required_evidence": [
+          "Copy of FIR",
+          "Complainant's original property title deeds",
+          "Copies of the disputed/fraudulent registry documents"
+        ],
+        "legal_basis": "BNSS Section 173",
+        "department_entity_id": null,
+        "condition_to_start": "Victim reports illegal sale, double registration, or land grabbing of their property.",
+        "condition_to_complete": "FIR registered and primary claims documented.",
+        "on_complete_trigger": [
+          "land_step_02_sub_registrar"
+        ],
+        "if_blocked": [
+          "If the victim is physically ousted from the property, immediately coordinate with the Executive Magistrate for Section 164 BNSS (formerly 145 CrPC) preventive proceedings to prevent violence."
+        ]
+      },
+      {
+        "step_id": "land_step_02_sub_registrar",
+        "order": 2,
+        "title": "Sub-Registrar & Revenue Record Verification",
+        "description": "Issue Section 94 BNSS notices to the Sub-Registrar Office. Procure certified copies of the fraudulent deeds, the Encumbrance Certificate (EC), and crucially, the Section 32-A biometric records (photos/thumbprints of the buyer, seller, and witnesses taken at the time of registry).",
+        "required_evidence": [
+          "Certified sale deed and Encumbrance Certificate",
+          "Section 32-A biometric photographs and thumbprints from the Sub-Registrar",
+          "Mutation records from the local Tahsildar/Revenue office"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "sub_registrar_property",
+        "condition_to_start": "Disputed property and registration details identified.",
+        "condition_to_complete": "Official registry records and biometric identities of the perpetrators procured.",
+        "on_complete_trigger": [
+          "land_step_03_financial_trace"
+        ],
+        "if_blocked": [
+          "If the local registrar claims the physical volume book is lost, escalate to the District Registrar (IGR) to pull archival backups or digital scans."
+        ]
+      },
+      {
+        "step_id": "land_step_03_financial_trace",
+        "order": 3,
+        "title": "Tracing the Financial Consideration (Money Trail)",
+        "description": "Real estate fraud requires a money trail. Issue notices to the banks mentioned in the fraudulent sale deed (DDs/Cheques/RTGS) to see who actually encashed the sale consideration. Freeze the recipient accounts under BNSS Section 106.",
+        "required_evidence": [
+          "Bank statements of the buyer and fraudulent seller",
+          "Cheque/DD encashment CCTV and KYC details",
+          "Confirmation of account freeze under BNSS Section 106"
+        ],
+        "legal_basis": "BNSS Section 94",
+        "department_entity_id": "bank_generic",
+        "condition_to_start": "Payment details identified from the fraudulent sale deed.",
+        "condition_to_complete": "Financial beneficiaries identified and funds frozen.",
+        "on_complete_trigger": [
+          "land_step_04_fsl_forgery"
+        ],
+        "if_blocked": [
+          "If the deed claims the entire transaction was in cash, document this as a massive red flag for fraud/money laundering and verify the buyer's financial capacity."
+        ]
+      },
+      {
+        "step_id": "land_step_04_fsl_forgery",
+        "order": 4,
+        "title": "FSL Document & Biometric Examination",
+        "description": "Obtain specimen signatures and thumbprints of the genuine owner and the arrested impostors. Forward these to FSL to compare against the signatures and Section 32-A thumb impressions on the fraudulent sale deed.",
+        "required_evidence": [
+          "Specimen signatures/thumbprints obtained via court order",
+          "FSL Handwriting Expert report matching impostor signatures",
+          "FSL Fingerprint Bureau report confirming thumbprint mismatch with genuine owner"
+        ],
+        "legal_basis": "BNSS Section 329",
+        "department_entity_id": "forensic_science_lab",
+        "condition_to_start": "Section 32-A records and suspect specimens collected.",
+        "condition_to_complete": "Scientific proof of forgery established by FSL.",
+        "on_complete_trigger": [
+          "land_step_05_arrest_chargesheet"
+        ],
+        "if_blocked": [
+          "If FSL handwriting analysis is delayed, use the biometric photograph from Section 32-A to visually prove impersonation."
+        ]
+      },
+      {
+        "step_id": "land_step_05_arrest_chargesheet",
+        "order": 5,
+        "title": "Arrest, Interrogation of Witnesses & Charge-Sheet",
+        "description": "Arrest the impostors, the fraudulent buyer, and the attesting witnesses (who falsely identified the impostor). File the chargesheet incorporating FSL reports and Sub-Registrar records. Advise the victim to approach the civil court for formal cancellation of the deed based on the police charge-sheet.",
+        "required_evidence": [
+          "Arrest memos of impostors, buyers, and attesting witnesses",
+          "Final Charge-Sheet under BNSS Section 193",
+          "Formal communication to Sub-Registrar placing a red-flag/alert on the property to prevent further sales"
+        ],
+        "legal_basis": "BNSS Section 193",
+        "department_entity_id": "court_magistrate_office",
+        "condition_to_start": "Forgery and financial trail proven.",
+        "condition_to_complete": "Syndicate charged and property flagged to prevent further alienation.",
+        "on_complete_trigger": [],
+        "if_blocked": [
+          "If the attesting witnesses claim they were also duped by the impostor, prove their complicity through telecom CDRs showing regular contact with the land mafia."
+        ]
+      }
+    ],
+    "dead_end_strategies": [
+      {
+        "condition": "The fraud involves a property that has been re-sold multiple times to innocent third-party buyers after the initial forged sale.",
+        "suggested_actions": [
+          "Focus the criminal investigation strictly on the first layer of forgery (the impostor and first buyer).",
+          "Trace the flow of funds through the subsequent sales to see if the 'innocent' buyers are actually shell entities controlled by the same land mafia.",
+          "Alert the Municipal Corporation under entity_id municipal_corporation to halt any pending mutation (name change) requests for the disputed property until the court decides."
+        ]
+      }
+    ]
+  }
+]

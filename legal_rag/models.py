@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-from ingestion.schemas import LegalSectionRecord
+from ingestion.schemas import LegalSectionRecord, DeptRegistryRecord, SOPRecord
 
 ConfidenceLevel = Literal["LOW", "MEDIUM", "HIGH"]
 
@@ -11,6 +11,38 @@ ConfidenceLevel = Literal["LOW", "MEDIUM", "HIGH"]
 @dataclass(slots=True)
 class EmbeddedLegalRecord:
     record: LegalSectionRecord
+    embedding_text: str
+    embedding: list[float] = field(default_factory=list)
+
+    def to_payload(self) -> dict[str, Any]:
+        return self.record.model_dump(exclude_none=True, mode="json")
+
+    def to_json_dict(self) -> dict[str, Any]:
+        return {
+            "record": self.record.model_dump(exclude_none=True, mode="json"),
+            "embedding_text": self.embedding_text,
+            "embedding": self.embedding,
+        }
+    
+@dataclass(slots=True)
+class EmbeddedDeptRecord:
+    record: DeptRegistryRecord
+    embedding_text: str
+    embedding: list[float] = field(default_factory=list)
+
+    def to_payload(self) -> dict[str, Any]:
+        return self.record.model_dump(exclude_none=True, mode="json")
+
+    def to_json_dict(self) -> dict[str, Any]:
+        return {
+            "record": self.record.model_dump(exclude_none=True, mode="json"),
+            "embedding_text": self.embedding_text,
+            "embedding": self.embedding,
+        }
+    
+@dataclass(slots=True)
+class EmbeddedSOPRecord:
+    record: SOPRecord
     embedding_text: str
     embedding: list[float] = field(default_factory=list)
 

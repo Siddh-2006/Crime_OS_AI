@@ -1,0 +1,842 @@
+[
+  {
+    "act": "department_registry",
+    "entity_id": "bank_generic",
+    "entity_name": "Bank (Public & Private Sector)",
+    "category": "bank",
+    "what_they_can_provide": [
+      "Account KYC details (Aadhaar, PAN, photograph, physical address)",
+      "Bank account transaction statements and certified ledger copies",
+      "ATM / Branch CCTV footage and ATM transaction logs",
+      "IP address logs and device identifiers for Internet/Mobile banking logins",
+      "Debit freeze / lien marking on accounts suspected of holding proceeds of crime",
+      "Cheque leaf copies, deposit slips, and RTGS/NEFT/IMPS routing vouchers",
+      "Reversal of fraudulent funds (subject to court/magistrate orders or indemnity)"
+    ],
+    "legal_basis_typically_cited": [
+      "BNSS Section 94 (formerly CrPC Section 91) for production of documents and KYC",
+      "BNSS Section 106 (formerly CrPC Section 102) for seizure / freezing of bank accounts",
+      "BNSS Section 107 for attachment and forfeiture of property/proceeds of crime",
+      "Information Technology Act, 2000 Section 91 / Section 69 (for digital logs)"
+    ],
+    "request_format_expected": "Written notice under Section 94 / Section 106 BNSS signed by an officer not below the rank of Station House Officer (SHO) or Investigating Officer (IO), bearing the official police station seal and crime/FIR number. For cyber fraud, requests must be routed via the National Cyber Crime Reporting Portal (NCRP / I4C) or submitted to the bank's designated Law Enforcement Agency (LEA) email/portal.",
+    "typical_response_time": "Real-time to 24 hours for emergency debit freeze via NCRP portal; 3 to 7 working days for routine KYC, transaction statements, and CCTV footage (approximate)",
+    "escalation_path_if_no_response": "Escalate to the bank's Principal Nodal Officer (PNO) or Regional/Zonal Head; issue a mandatory summons under Section 94 BNSS requiring personal appearance of the Branch Manager; approach jurisdictional Magistrate for a judicial order or report non-compliance to the RBI Department of Supervision.",
+    "notes_or_caveats": "SOPs vary significantly across major banks: SBI processes requests through designated Law Enforcement Nodal Desks located at its Local Head Offices (LHOs) rather than individual branches. HDFC Bank and ICICI Bank mandate that registered LEA officers upload Section 94/106 notices directly onto their proprietary online LEA web portals (or centralized LEA email desks) rather than serving physical notices at branches. Under Section 106(3) BNSS, any freezing of a bank account must be forthwith reported to the jurisdictional Magistrate, failing which courts may quash the freeze.",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "telecom_operator",
+    "entity_name": "Telecom Service Provider (Jio, Airtel, Vi)",
+    "category": "telecom",
+    "what_they_can_provide": [
+      "Call Detail Records (CDR) with Cell ID (tower location) timestamps",
+      "Subscriber Identity Module (SIM) KYC / Customer Application Form (CAF) with photo and ID proof",
+      "Tower Dump records (all mobile numbers active under a specific cell tower during a given timeframe)",
+      "IP Detail Record (IPDR) showing allocation of public/private IP addresses and timestamps for data usage",
+      "International Mobile Equipment Identity (IMEI) search / handset tracking history",
+      "Lawful interception (live call listening) and real-time location tracking",
+      "Point of Sale (PoS) / agent details who activated the SIM"
+    ],
+    "legal_basis_typically_cited": [
+      "BNSS Section 94 (formerly CrPC Section 91) for CDR, IPDR, and CAF records",
+      "Telecommunications Act, 2023 Section 20 / Indian Telegraph Act, 1885 Section 5(2) (for lawful interception and suspension of telecom services)",
+      "Information Technology Act, 2000 Section 69 (for decryption/interception of digital communications)"
+    ],
+    "request_format_expected": "Formal notice under Section 94 BNSS. Under Ministry of Home Affairs (MHA) and Department of Telecommunications (DoT) SOPs, requests for CDRs and Tower Dumps must be mandated or approved by an officer not below the rank of Superintendent of Police (SP) or Deputy Commissioner of Police (DCP) to prevent unauthorized surveillance. Submitted through dedicated operator LEA portals (e.g., Airtel LEA portal, Jio LEA interface) or official nodal email addresses from a government (.gov.in / .nic.in) email ID.",
+    "typical_response_time": "24 to 72 hours for standard CDR and CAF requests; immediate/real-time for emergency location tracking and lawful interception (approximate)",
+    "escalation_path_if_no_response": "Escalate to the Chief Nodal Officer / Appellate Authority of the respective telecom operator; file a formal complaint with the Department of Telecommunications (DoT) TERM Cell / Licensed Service Area (LSA) field unit; issue show-cause notice under BNSS.",
+    "notes_or_caveats": "Differences exist in backend data retrieval interfaces: Reliance Jio operates a highly automated LEA portal providing rapid IPDR and 4G/5G data session logs, whereas Vi and Airtel may require distinct regional nodal coordination for historical legacy 2G/3G CDRs. As per DoT licensing conditions, TSPs generally retain CDR and IPDR logs for 2 years; requests for data older than 1 year require special justification and strict SP/DCP approval.",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "meta_platforms",
+    "entity_name": "Meta (Facebook, Instagram, WhatsApp)",
+    "category": "social_media",
+    "what_they_can_provide": [
+      "Basic subscriber info (registration date, verified email, phone number, profile details)",
+      "IP logs (sign-up IP, login/logout IP addresses with timestamps and port numbers)",
+      "Account preservation (preserving data for 90 days, extendable by another 90 days while legal process is obtained)",
+      "Content removal / blocking of unlawful accounts, pages, or groups",
+      "WhatsApp specific: Profile photo, 'About' status, group membership lists, and interaction timestamps (Does NOT provide message content due to end-to-end encryption)",
+      "Facebook/Instagram specific: Stored content (posts, photos, videos, direct messages) — provided only under formal mutual legal assistance or emergency life-safety protocols"
+    ],
+    "legal_basis_typically_cited": [
+      "BNSS Section 94 (formerly CrPC Section 91) for non-content subscriber and IP records",
+      "Information Technology Act, 2000 Section 69, 69A, and Section 79(3)(b)",
+      "Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021 (Rule 3 and Rule 4(2) regarding tracing the first originator of information on WhatsApp)"
+    ],
+    "request_format_expected": "Online submission exclusively through the Meta Law Enforcement Online Request System (LERS) at https://www.facebook.com/records using an official law enforcement email address (.gov.in / .nic.in). Emergency Disclosure Requests (EDR) involving imminent risk of death or serious physical injury can be submitted directly via LERS with written justification.",
+    "typical_response_time": "2 to 4 weeks for standard legal process; 2 to 24 hours for Emergency Disclosure Requests (EDRs); within 36 hours for takedown orders under IT Rules 2021 (approximate)",
+    "escalation_path_if_no_response": "Escalate to the Resident Grievance Officer / Nodal Contact Person for LEA in India (appointed under IT Rules 2021); coordinate through the Indian Cyber Crime Coordination Centre (I4C), MHA; issue a legal notice threatening revocation of intermediary safe-harbor immunity under Section 79 of the IT Act.",
+    "notes_or_caveats": "Meta distinguishes strictly between non-content data (IPs, basic KYC) and content data (message bodies, private posts). While non-content data is routinely supplied under Section 94 BNSS notices via LERS, Meta generally requires a Mutual Legal Assistance Treaty (MLAT) request or Letters Rogatory routed through US courts under the Stored Communications Act (SCA) to release private message content, unless an active emergency (EDR) applies. WhatsApp cannot intercept or decrypt end-to-end encrypted message content.",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "google_llc",
+    "entity_name": "Google (YouTube, Gmail, Google Drive, Android)",
+    "category": "other",
+    "what_they_can_provide": [
+      "Subscriber registration information (recovery email, linked phone number, creation date)",
+      "Sign-in / sign-out IP addresses, timestamps, and associated user-agent / device logs",
+      "YouTube channel KYC, upload IP logs, video metadata, and monetization linkage",
+      "Android device information, associated Google accounts, and device location history / timeline logs (if enabled)",
+      "Account data preservation (90 days freeze of account state, extendable)",
+      "Removal or geo-blocking of unlawful content, phishing links, and CSAM",
+      "Stored content data (Gmail body text, Google Drive attachments, Google Photos) via MLAT/LR or emergency disclosure"
+    ],
+    "legal_basis_typically_cited": [
+      "BNSS Section 94 (formerly CrPC Section 91) for basic subscriber info and traffic logs",
+      "Information Technology Act, 2000 Section 69, Section 69A, and Section 79",
+      "Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021"
+    ],
+    "request_format_expected": "Submitted online via the Google Law Enforcement Request System (LERS) at https://leresponder.google.com using a verified government email address (.gov.in / .nic.in). Must attach a scanned copy of the Section 94 BNSS notice or court order bearing the official seal and IO/SHO signature.",
+    "typical_response_time": "15 to 30 days for routine non-content records; 24 to 48 hours for Emergency Disclosure Requests involving life safety or child exploitation (approximate)",
+    "escalation_path_if_no_response": "Escalate to Google India's Resident Grievance Officer / Nodal Officer; channel the requisition through the I4C / Ministry of Home Affairs; approach jurisdictional court to issue notice under Section 79 IT Act.",
+    "notes_or_caveats": "Similar to Meta, Google processes non-content data (subscriber details, IP logs, timestamps) under Indian domestic legal process (BNSS Section 94). However, production of stored electronic communication content (Gmail text, Drive files) legally necessitates US court process (MLAT / Letters Rogatory) under US federal law (ECPA/SCA), except in cases of immediate threat to human life where Google's emergency disclosure process can be invoked.",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "upi_npci",
+    "entity_name": "UPI / National Payments Corporation of India (NPCI)",
+    "category": "other",
+    "what_they_can_provide": [
+      "Virtual Payment Address (VPA) / UPI ID mapping to underlying bank account number and IFSC",
+      "End-to-end UPI transaction routing logs (Payer PSP app, Payee PSP app, Remitter Bank, Beneficiary Bank, NPCI switch reference number / RRN)",
+      "Device metadata and IP address logged at the NPCI central switch during transaction initiation",
+      "Ecosystem-wide blocking / blacklisting of fraudulent VPAs and mobile numbers linked to UPI",
+      "Transaction status verification (success, failure, reversal, pending)"
+    ],
+    "legal_basis_typically_cited": [
+      "BNSS Section 94 (formerly CrPC Section 91) for transaction logs and VPA mapping",
+      "BNSS Section 106 (formerly CrPC Section 102) for blocking/freezing instructions",
+      "Information Technology Act, 2000 Section 91 / Section 69"
+    ],
+    "request_format_expected": "Requisition notice under Section 94 BNSS from IO/SHO sent via official email to NPCI's Risk Management / Law Enforcement Nodal desk, or initiated through the integrated National Cyber Crime Reporting Portal (NCRP) / Citizen Financial Cyber Fraud Reporting and Management System (CFCFRMS). Must include exact 12-digit RRN (Retrieval Reference Number), transaction date, time, and VPA.",
+    "typical_response_time": "24 to 72 hours for manual log requisitions; real-time to 4 hours via automated NCRP API integration for active cyber fraud tracking (approximate)",
+    "escalation_path_if_no_response": "Escalate to the Chief Risk Officer / Principal Nodal Officer at NPCI; coordinate via I4C (MHA) or RBI Payment and Settlement Systems Department; seek judicial magistrate directions.",
+    "notes_or_caveats": "NPCI operates the central payment switch and maintains routing logs and VPA-to-account mapping, but it does NOT hold customer funds or maintain bank account ledger balances. Actual freezing of funds, marking of liens, or retrieval of detailed customer KYC must be directed to the respective beneficiary bank or Third-Party App Provider (TPAP like Google Pay, PhonePe, Paytm) identified from the NPCI routing logs.",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "vasp_crypto_exchange",
+    "entity_name": "Virtual Asset Service Provider (Crypto Exchanges - e.g., CoinDCX, WazirX, CoinSwitch, Binance)",
+    "category": "other",
+    "what_they_can_provide": [
+      "User KYC records (PAN, Aadhaar, bank accounts linked, photograph, selfie verification)",
+      "Crypto wallet addresses generated by or linked to the user account",
+      "Complete deposit and withdrawal history (fiat INR deposits/withdrawals and blockchain crypto transfers with Transaction Hashes / TxIDs)",
+      "Login IP address logs, timestamps, and device fingerprints",
+      "Freezing / restraining of user crypto wallets and fiat balances under investigation",
+      "Inter-exchange transfer destination details and external wallet clustering data"
+    ],
+    "legal_basis_typically_cited": [
+      "BNSS Section 94 (formerly CrPC Section 91) for KYC and transaction logs",
+      "BNSS Section 106 / Section 107 (formerly CrPC Section 102) for freezing crypto assets and fiat balances",
+      "Prevention of Money Laundering Act (PMLA), 2002 (under Ministry of Finance notifications designating VASPs as reporting entities)",
+      "Information Technology Act, 2000 Section 69 / 79"
+    ],
+    "request_format_expected": "Official notice under Section 94 / 106 BNSS signed by IO/SHO/SP sent from a government email address to the exchange's designated Law Enforcement Agency (LEA) email desk or uploaded onto their dedicated LEA portal (most FIU-registered domestic exchanges maintain structured LEA portals). Must include wallet addresses, TxIDs, user email, or linked phone number.",
+    "typical_response_time": "2 to 24 hours for urgent wallet freeze requests; 48 to 72 hours for detailed KYC and blockchain transaction ledgers (approximate)",
+    "escalation_path_if_no_response": "Escalate to the exchange's Nodal / Grievance Officer; report non-compliance to the Financial Intelligence Unit India (FIU-IND) or Directorate of Enforcement (ED), as VASPs are legally bound reporting entities under PMLA; issue court warrant under BNSS.",
+    "notes_or_caveats": "Under 2023 Ministry of Finance regulations, both domestic and offshore crypto exchanges operating in India must register with FIU-IND and comply with Indian LEA notices. For compliant exchanges (e.g., CoinDCX, WazirX, CoinSwitch, and registered foreign entities like Binance), cooperation is prompt via LEA portals. However, for decentralized exchanges (DEXs) or non-registered offshore VASPs without local presence, tracing requires blockchain forensic analytics tools and international cooperation / Interpol assistance.",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "rto_parivahan",
+    "entity_name": "Regional Transport Office (RTO) / Parivahan / VAHAN / SARATHI",
+    "category": "government",
+    "what_they_can_provide": [
+      "Vehicle Registration Certificate (RC) details (owner name, present/permanent address, mobile number)",
+      "Vehicle mechanical details (chassis number, engine number, make, model, color, fuel type)",
+      "Hypothecation / financing bank details and insurance policy validity",
+      "Driving License (DL) holder details, validity, class of vehicle authorized, and biometric photo",
+      "Traffic violation / e-challan history and accident involvement records",
+      "Transfer of ownership history (previous owners) and NOC issuance status",
+      "Blacklisting, impounding, or putting an alert flag on a vehicle's RC across the national database"
+    ],
+    "legal_basis_typically_cited": [
+      "BNSS Section 94 (formerly CrPC Section 91) for vehicle and driver records",
+      "Motor Vehicles Act, 1988 (Sections 133, 134, etc.) regarding duty of owner to give information",
+      "BNSS Section 106 (formerly CrPC Section 102) for seizure / placing alerts on stolen/crime vehicles"
+    ],
+    "request_format_expected": "Written requisition under Section 94 BNSS from IO/SHO addressed to the Regional Transport Officer (RTO) / Registering Authority. In modern practice, police officers can retrieve real-time data directly via authorized LEA credentials on the national VAHAN (vehicle) and SARATHI (DL) databases, mParivahan, or NCRB CCTNS portal without physical notices.",
+    "typical_response_time": "Immediate/real-time via CCTNS / VAHAN LEA online portal integration; 2 to 7 working days for certified physical copies or manual physical files from local RTO archives (approximate)",
+    "escalation_path_if_no_response": "Escalate to the State Transport Commissioner / Joint Transport Commissioner; approach District Magistrate (DM) or jurisdictional court for order to produce records under BNSS.",
+    "notes_or_caveats": "Because VAHAN and SARATHI databases are centralized across almost all Indian states and integrated with CCTNS, physical RTO visits are rarely needed for basic vehicle identification. Physical RTO requisition is generally only required when obtaining certified hard copies of original sale deeds, forms (Form 29/30), or historical paper files for older vehicles not fully updated on digital servers.",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "hospital_forensic_medical",
+    "entity_name": "Hospital / Forensic Medical Examiner (Government & Private)",
+    "category": "forensic",
+    "what_they_can_provide": [
+      "Medico-Legal Case (MLC) examination reports and injury/wound certificates (nature, age, and severity of injuries)",
+      "Post-mortem (autopsy) reports detailing cause, manner, and approximate time of death",
+      "Preservation and handover of biological forensic samples (viscera, blood, semen, vaginal/oral swabs, nail clippings, hair) sealed for FSL analysis",
+      "Blood and urine alcohol/drug examination reports",
+      "Medical examination reports of accused / victim of sexual assault (DNA profiling material collection)",
+      "Age estimation reports (radiological and physical examination)",
+      "Patient admission/discharge summaries, treatment case sheets, and emergency room notes"
+    ],
+    "legal_basis_typically_cited": [
+      "BNSS Section 51, 52, and 53 (formerly CrPC Sections 51, 52, 53, 53A, 54) for medical examination of arrested persons and victims of sexual offences",
+      "BNSS Section 194 (formerly CrPC Section 174) and Section 196 (formerly CrPC Section 176) for inquests and post-mortem examination",
+      "BNSS Section 94 (formerly CrPC Section 91) for medical treatment records and MLC copies"
+    ],
+    "request_format_expected": "Formal police requisition letter / medical examination form signed by an officer not below the rank of Sub-Inspector (or SHO/IO), accompanied by the subject (with police escort) or corpse (accompanied by inquest papers, panch nama, and dead body challan). For sexual assault cases, statutory consent forms and specialized sexual assault forensic evidence collection kits must be utilized.",
+    "typical_response_time": "Immediate for emergency medical examination and MLC initiation; 24 to 72 hours for provisional post-mortem reports and injury certificates; 2 to 8 weeks for final post-mortem opinion where chemical analysis/viscera report from FSL is awaited (approximate)",
+    "escalation_path_if_no_response": "Escalate to the Chief Medical Officer (CMO), Medical Superintendent, or Head of Department of Forensic Medicine; approach District Magistrate or jurisdictional court for judicial directions; notify State Health Department nodal authorities.",
+    "notes_or_caveats": "Government medical officers are statutorily obligated to conduct MLCs and post-mortems for police cases. Private hospitals are legally bound under Supreme Court rulings (e.g., Pt. Parmanand Katara v. Union of India) to provide immediate emergency treatment and generate MLCs for injured victims without waiting for police formalization; however, formal autopsies and forensic sexual assault examinations are generally referred to designated government district hospitals or medical colleges.",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "forensic_science_lab",
+    "entity_name": "Forensic Science Laboratory (State FSL / CFSL)",
+    "category": "forensic",
+    "what_they_can_provide": [
+      "Chemical & Toxicological analysis (viscera, stomach contents, blood/urine poison screening, narcotics/psychotropic substances testing)",
+      "Biological & Serological examination (blood stain matching, semen identification, DNA profiling and paternity/identity matching)",
+      "Ballistic examination (firearm operability, bullet/cartridge comparison, gunshot residue - GSR analysis)",
+      "Questioned Documents & Handwriting analysis (signature verification, forgery detection, paper/ink analysis)",
+      "Digital & Cyber Forensics (mobile phone data extraction, hard drive disk imaging, audio/video authenticity, speaker voice identification)",
+      "Physics & Trace Evidence analysis (tool marks, glass, soil, paint, explosives fragments)"
+    ],
+    "legal_basis_typically_cited": [
+      "BNSS Section 94 (formerly CrPC Section 91) for forwarding exhibits for examination",
+      "BNSS Section 193 (formerly CrPC Section 173) regarding filing of scientific expert reports with the charge-sheet",
+      "BNSS Section 329 (formerly CrPC Section 293) allowing reports of designated Government scientific experts to be used as evidence without routine personal examination in court",
+      "Bharatiya Sakshya Adhiniyam (BSA), 2023 Sections 39/45 (expert opinion)"
+    ],
+    "request_format_expected": "Exhibits must be forwarded through a formal forwarding letter from the court or SP/DCP/IO, accompanied by a specimen seal impression (to verify chain of custody), Road Certificate (RC) / courier forwarding note, copy of FIR, seizure memo / panchnama, and specific questionnaire detailing the exact scientific opinion sought. Exhibits must be packed and sealed strictly as per FSL evidence packaging guidelines.",
+    "typical_response_time": "2 to 4 weeks for routine chemical/narcotics testing; 1 to 6 months for complex DNA profiling, digital forensics, or ballistics depending on laboratory pendency and case priority (approximate)",
+    "escalation_path_if_no_response": "Escalate to the Director / Assistant Director of the respective State FSL or Central Forensic Science Laboratory (CFSL); route prioritization requests through the Superintendent of Police or Director General of Police (Crime); obtain a fast-track direction from the trial court/magistrate.",
+    "notes_or_caveats": "Under BNSS Section 176(3), forensic investigation by scientific experts at the crime scene has been made mandatory for offences punishable with imprisonment of 7 years or more. Under BNSS Section 329 (formerly 293 CrPC), reports under the hand of Chemical Examiners, Chief Controller of Explosives, Fingerprint Directors, and FSL Directors are per se admissible in evidence; however, the court retains discretion to summon the expert if the defense challenges the methodology or chain of custody.",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "railway_police",
+    "entity_name": "Railway Police (GRP - Government Railway Police & RPF - Railway Protection Force)",
+    "category": "government",
+    "what_they_can_provide": [
+      "CCTV footage from railway station platforms, concourses, ticket counters, and trains",
+      "Passenger reservation and ticketing data (IRCTC / PNR details, passenger chart, booking IP/mobile number, payment mode)",
+      "Train running schedules, platform arrival/departure logs, and station master log books",
+      "Investigation and FIR registration for IPC/BNS offences occurring on trains or railway premises (GRP)",
+      "Tracking and recovery of stolen railway property, luggage, and verification of illegal ticket touting (RPF)",
+      "Detention of suspects / absconders traveling on specific trains or boarding/alighting at stations"
+    ],
+    "legal_basis_typically_cited": [
+      "BNSS Section 94 (formerly CrPC Section 91) for ticketing records and CCTV footage",
+      "Railways Act, 1989 (Sections 179, 180, etc. regarding search, seizure, and arrest powers)",
+      "Railway Property (Unlawful Possession) Act, 1966 (for RPF cases)",
+      "BNSS Section 106 (formerly CrPC Section 102) for seizure of property"
+    ],
+    "request_format_expected": "Written notice under Section 94 BNSS from IO/SHO addressed to the Station House Officer (SHO) of GRP, Post Commander of RPF, or the Nodal Officer of IRCTC / CRIS (Centre for Railway Information Systems) for digital backend ticketing records. Urgent intercept requests can be communicated via rail control rooms or emergency police dispatch.",
+    "typical_response_time": "Immediate to 24 hours for station CCTV footage (time-critical due to short 7 to 30 day storage overwriting); 24 to 72 hours for passenger charts and CRIS/IRCTC digital booking logs (approximate)",
+    "escalation_path_if_no_response": "Escalate to Superintendent of Police (SP) Railways / SP GRP of the state, or Senior Divisional Security Commissioner (Sr. DSC) RPF / Chief Security Commissioner; coordinate with IRCTC legal/nodal desk for unresolved digital data.",
+    "notes_or_caveats": "Strict jurisdictional distinction exists: GRP is a wing of the State Police responsible for law and order, investigating crimes (theft, robbery, murder, rape) on trains/stations, and registering FIRs. RPF is a central armed force under the Ministry of Railways empowered to protect railway property, passenger security, and prosecute offenses under the Railways Act and RP(UP) Act. For backend electronic reservation data (PNR KYC), requisitions must be directed to IRCTC / CRIS rather than local station masters.",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "immigration_border",
+    "entity_name": "Immigration / Border Checkpoint (Bureau of Immigration - BoI, ICPs, FRRO)",
+    "category": "government",
+    "what_they_can_provide": [
+      "International travel history (arrival and departure timestamps, flight/vessel numbers, port of embarkation/disembarkation)",
+      "Passenger passport details, visa details, nationality, and scanned travel documents",
+      "Opening, modification, and deletion of Look Out Circulars (LOC) against absconding accused / witnesses",
+      "Real-time interception, detention, and intimation upon arrival or departure of flagged individuals at airports, seaports, and Integrated Check Posts (ICPs)",
+      "Foreigners Registration (FRRO/FRO) residential address tracking and visa extension records for foreign nationals"
+    ],
+    "legal_basis_typically_cited": [
+      "BNSS Section 94 (formerly CrPC Section 91) for travel history and passport logs",
+      "Passports Act, 1967 Section 10(3)(c) (for passport impounding/revocation requests)",
+      "Foreigners Act, 1946 Section 3",
+      "Ministry of Home Affairs (MHA) Consolidated Guidelines for issuance of Look Out Circulars (LOC) (O.M. No. 25016/31/2010-Imm. and subsequent revisions)"
+    ],
+    "request_format_expected": "For travel history/logs: Section 94 BNSS notice from IO/SHO to BoI/FRRO. For opening a Look Out Circular (LOC): Must be submitted in the mandatory MHA Proforma, approved and signed by an authorized Originating Agency officer not below the rank of Superintendent of Police (SP) of a District, SP in CBI/NIA, or Deputy Commissioner of Police (DCP), specifying the FIR details, cognizable offense, and minimum 3 identifying parameters (Name, Passport number, DOB/Parentage).",
+    "typical_response_time": "Real-time to 4 hours for LOC activation across checkposts upon receipt of valid proforma; 24 to 72 hours for formal travel history log requisitions (approximate)",
+    "escalation_path_if_no_response": "Escalate to the Joint Director / Commissioner, Bureau of Immigration (BoI), Ministry of Home Affairs; coordinate through State Intelligence Department (SID) or CBI / Interpol Nodal Officer for international fugitives.",
+    "notes_or_caveats": "The Bureau of Immigration (BoI) is strictly an executing agency; it cannot issue, modify, or delete an LOC without an official order from an authorized originating agency (SP/DCP rank or above) or a competent court. Under MHA guidelines, an LOC is valid for 1 year from the date of issue and is automatically removed unless a renewal request is submitted before expiry. In non-cognizable offenses, BoI generally only informs the originating agency of movement without detaining the passenger.",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "employer_labour_dept",
+    "entity_name": "Employer / Labour Department (for migrant worker & employment cases)",
+    "category": "government",
+    "what_they_can_provide": [
+      "Employment records, appointment letters, and contract terms",
+      "Muster rolls, physical/biometric attendance logs, and shift timing records",
+      "Wage payment registers, payslips, bank account routing details, and PF/ESIC deductions",
+      "Worker KYC, permanent home address, emergency contact details, and ID proofs submitted at joining",
+      "Interstate migrant workman contractor details, labor licenses, and registration certificates under labor codes",
+      "Workplace CCTV footage, entry/exit gate pass logs, and site supervisor details",
+      "Workplace injury / fatal accident reporting logs and compensation disbursement records"
+    ],
+    "legal_basis_typically_cited": [
+      "BNSS Section 94 (formerly CrPC Section 91) for production of employment and wage records",
+      "BNSS Section 96 (formerly CrPC Section 93) for search warrant if employer refuses to produce records",
+      "Occupational Safety, Health and Working Conditions Code, 2020 / Inter-State Migrant Workmen Act, 1979",
+      "Code on Wages, 2019 / Minimum Wages Act, 1948"
+    ],
+    "request_format_expected": "Written notice under Section 94 BNSS issued by IO/SHO addressed to the Employer, HR Head, or Contractor. For regulatory or government records, a written requisition is addressed to the District Assistant Labour Commissioner (ALC) or Labour Enforcement Officer (LEO).",
+    "typical_response_time": "3 to 7 working days for formal corporate/labour department records; immediate for on-site police seizure of physical muster rolls during active investigation of accidents or bonded labour (approximate)",
+    "escalation_path_if_no_response": "Escalate to the District Labour Commissioner or Chief Inspector of Factories; approach jurisdictional Magistrate or Sub-Divisional Magistrate (SDM) for an immediate search and seizure warrant under Section 96 BNSS; invoke penal provisions for obstruction of justice under BNS.",
+    "notes_or_caveats": "In cases involving unorganized sectors, brick kilns, construction sites, or informal migrant labor, contractors frequently maintain cash-based or fabricated muster rolls. In such scenarios, simultaneous coordination with the District Labour Department or SDM for an on-site inspection and immediate seizure of physical attendance and wage registers is more effective than sending a standard Section 94 BNSS notice by post.",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "insurance_company",
+    "entity_name": "Insurance Company (Life, Motor, Health - e.g., LIC, New India, ICICI Lombard)",
+    "category": "other",
+    "what_they_can_provide": [
+      "Policyholder KYC, proposal forms, and medical declaration documents submitted at inception",
+      "Nominee details, relationship declarations, and change-of-nominee history",
+      "Premium payment ledger, bank account routing, and payment mode (cash/cheque/online)",
+      "Claim settlement records, payout bank account details, and discharge vouchers",
+      "Internal insurance fraud investigation reports and field surveyor findings",
+      "Motor accident surveyor reports, vehicle damage assessment, and third-party liability claims (MACT cases)",
+      "Hospitalization bills, discharge summaries, and medical reports submitted for health insurance claims"
+    ],
+    "legal_basis_typically_cited": [
+      "BNSS Section 94 (formerly CrPC Section 91) for policy, nominee, and claim records",
+      "BNSS Section 106 (formerly CrPC Section 102) for directing stoppage/freezing of fraudulent claim payouts",
+      "Motor Vehicles Act, 1988 (regarding accident claims and third-party insurance disclosures)"
+    ],
+    "request_format_expected": "Official notice under Section 94 / 106 BNSS signed by IO/SHO sent via official police email or registered post to the Branch Manager, Claims Nodal Officer, or Legal Department of the insurance company. Must specify policy number, vehicle registration number, or insured person's name and DOB.",
+    "typical_response_time": "5 to 10 working days for policy and claim dossiers; 24 to 48 hours for urgent requests to freeze/withhold claim disbursement in suspected fraud or murder-for-insurance cases (approximate)",
+    "escalation_path_if_no_response": "Escalate to the Regional/Zonal Manager or Chief Grievance Officer of the insurance company; report persistent non-compliance to the Insurance Regulatory and Development Authority of India (IRDAI); summon the Branch Manager under Section 94 BNSS.",
+    "notes_or_caveats": "In cases of suspected murder-for-insurance or staged motor accidents, insurance companies conduct rigorous independent investigations through private investigators or forensic surveyors. Requesting these internal investigation reports under Section 94 BNSS can provide law enforcement with critical corroborative evidence, witness statements, and discrepancy analyses that police might not have uncovered.",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "ecommerce_platform",
+    "entity_name": "E-Commerce Platform (Amazon, Flipkart, Meesho, OLX)",
+    "category": "other",
+    "what_they_can_provide": [
+      "Buyer and Seller KYC details (registered mobile number, email, delivery/billing address, PAN, GSTIN, bank account for seller payouts)",
+      "Order history, item descriptions, invoice copies, and transaction timestamps",
+      "Payment gateway logs, payment method (UPI, credit/debit card, net banking, COD), and transaction reference IDs",
+      "IP address logs and device identifiers for account login and order placement",
+      "Logistics and delivery tracking logs (courier partner, delivery agent name/number, exact delivery timestamp, recipient signature/OTP verification)",
+      "IMEI numbers, serial numbers, or MAC addresses of delivered electronic devices (mobiles, laptops)",
+      "Freezing seller wallet disbursements or suspending fraudulent buyer/seller accounts under Section 106 BNSS"
+    ],
+    "legal_basis_typically_cited": [
+      "BNSS Section 94 (formerly CrPC Section 91) for order, KYC, and payment records",
+      "BNSS Section 106 (formerly CrPC Section 102) for freezing seller payouts or fraudulent accounts",
+      "Information Technology Act, 2000 Section 79 / Section 69",
+      "Consumer Protection (E-Commerce) Rules, 2020 (Rule 4 and Rule 5 regarding 24x7 nodal contact person for law enforcement and mandatory information disclosure within 72 hours)"
+    ],
+    "request_format_expected": "Notice under Section 94 BNSS signed by IO/SHO sent from an official government email address (.gov.in / .nic.in) to the platform's designated 24x7 Law Enforcement Nodal Officer or online LEA portal. Must specify order ID, tracking ID, seller ID, registered phone number, or email address.",
+    "typical_response_time": "48 to 72 hours (statutorily mandated within 72 hours under Consumer Protection E-Commerce Rules, 2020 for authorized investigative agencies); 24 hours for urgent account suspension (approximate)",
+    "escalation_path_if_no_response": "Escalate to the Chief Compliance Officer or Resident Grievance Officer of the e-commerce entity; report non-compliance to the Department of Consumer Affairs or Ministry of Electronics and Information Technology (MeitY); issue show-cause notice under BNSS / IT Act.",
+    "notes_or_caveats": "E-commerce platforms operate either as marketplaces (connecting third-party sellers with buyers, e.g., Amazon, Flipkart) or classifieds (P2P listing, e.g., OLX). For marketplace orders, platforms can provide exact IMEI/serial numbers of delivered electronics and financial routing of seller payments. Under Rule 5 of the Consumer Protection (E-Commerce) Rules, platforms are legally mandated to assist law enforcement agencies within 72 hours of receiving a written order.",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "isp_non_telecom",
+    "entity_name": "Internet Service Provider (Non-Telecom ISPs - e.g., ACT Fibernet, Hathway, Excitel, Local Broadband)",
+    "category": "telecom",
+    "what_they_can_provide": [
+      "IP Detail Record (IPDR) / Network Address Translation (NAT) port binding logs (mapping a shared public IP and source port to a specific private subscriber IP at a precise timestamp)",
+      "Subscriber KYC records (installation address, billing name, photograph, ID proof, registered email/phone)",
+      "Media Access Control (MAC) address binding logs and router/modem serial numbers",
+      "Connection session history (login/logout timestamps, data volume used, session duration)",
+      "Blocking of specific malicious IP addresses, URLs, or domains under lawful directions"
+    ],
+    "legal_basis_typically_cited": [
+      "BNSS Section 94 (formerly CrPC Section 91) for IPDR and subscriber KYC records",
+      "Information Technology Act, 2000 Section 69, Section 69B, and Section 79",
+      "Department of Telecommunications (DoT) ISP License Agreement conditions (mandating retention of IPDR and subscriber logs for 2 years)"
+    ],
+    "request_format_expected": "Notice under Section 94 BNSS signed by IO/SHO or SP/DCP sent via official government email to the ISP's Nodal Officer / Abuse Desk. CRITICAL: To identify a subscriber behind IPv4, the requisition MUST state the exact Public IP address, exact Date, exact Time (down to seconds with IST / UTC timezone), and the Network Source Port number (NAT Port).",
+    "typical_response_time": "24 to 72 hours for IP-to-subscriber resolution; immediate to 24 hours for emergency cyber fraud or life-safety tracking (approximate)",
+    "escalation_path_if_no_response": "Escalate to the ISP's Principal Regulatory / Legal Compliance Officer; report breach of mandatory log retention to the DoT TERM Cell / LSA unit; issue summons under BNSS.",
+    "notes_or_caveats": "Due to IPv4 address exhaustion, almost all ISPs utilize Carrier-Grade NAT (CGNAT), meaning hundreds of subscribers share a single public IP address simultaneously. Without the exact Source Port number (NAT Port) and precise clock-synchronized timestamp (IST), an ISP cannot isolate which specific customer initiated the connection. Police officers must ensure that logging platforms (e.g., bank server logs, social media IPs) capture the source port before sending Section 94 notices to ISPs.",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "court_magistrate_office",
+    "entity_name": "Court / Magistrate Office (District Courts, Chief Judicial Magistrate, Sessions Court)",
+    "category": "government",
+    "what_they_can_provide": [
+      "Certified copies of judicial order sheets, case diaries, charge-sheets, and final judgments",
+      "Bail orders, surety bonds, verification reports, and details of guarantors/sureties",
+      "Issuance of Judicial Warrants: Arrest warrants (bailable/non-bailable), Search warrants under BNSS Section 96 (formerly CrPC 93), and Proclamations for absconding persons under BNSS Section 84 (formerly CrPC 82)",
+      "Orders for attachment of property of absconders under BNSS Section 85 (formerly CrPC 83) or proceeds of crime under BNSS Section 107",
+      "Recording of judicial confessions and statements of witnesses under BNSS Section 183 (formerly CrPC Section 164)",
+      "Police remand / judicial custody authorization orders under BNSS Section 187 (formerly CrPC Section 167)",
+      "Orders for Test Identification Parade (TIP) of accused or property under BNSS Section 54 (formerly CrPC Section 54A / Evidence Act Section 9)"
+    ],
+    "legal_basis_typically_cited": [
+      "BNSS Section 84 & 85 (formerly CrPC Section 82 & 83) for proclamation and attachment of absconder property",
+      "BNSS Section 96 (formerly CrPC Section 93) for search warrants",
+      "BNSS Section 107 for attachment, forfeiture, and restoration of proceeds of crime",
+      "BNSS Section 183 (formerly CrPC Section 164) for recording confessions/statements",
+      "BNSS Section 187 (formerly CrPC Section 167) for remand and custody"
+    ],
+    "request_format_expected": "Formal written judicial application / memorandum submitted by the Investigating Officer (IO) or Public Prosecutor (PP) / Assistant Public Prosecutor (APP) before the jurisdictional Magistrate or Judge during court hours, accompanied by relevant case diary extracts, affidavits, and inspection fees (for certified copies). In urgent post-arrest cases, production and remand applications are presented before the Duty Magistrate at home/court.",
+    "typical_response_time": "Same day / immediate for urgent search warrants, remand orders, and Section 183 BNSS statement authorizations; 3 to 7 working days for certified copies of voluminous judicial records through the Copying Agency (CA) branch (approximate)",
+    "escalation_path_if_no_response": "If an application is delayed or rejected by a Judicial Magistrate, the IO/PP can move an appropriate revision petition or urgent application before the Chief Judicial Magistrate (CJM), Chief Metropolitan Magistrate (CMM), or Sessions Court; administrative delays in copying branches can be escalated to the Judge-in-Charge of Copying Agency or District Judge.",
+    "notes_or_caveats": "Under BNSS, several magisterial procedures have been modernized: Section 183 BNSS explicitly mandates that statements of victims of sexual offences must be recorded by a woman Magistrate as soon as possible and permits audio-video recording. For absconders, Section 84 BNSS requires proclamation publication with an mandatory 30-day notice period before an individual can be formally declared a Proclaimed Offender (for serious crimes punishable with 10+ years imprisonment).",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "uidai_aadhaar",
+    "entity_name": "UIDAI / Aadhaar Authentication Records",
+    "category": "government",
+    "what_they_can_provide": [
+      "Aadhaar Authentication History / transaction logs (Auth Modality such as OTP, biometric, demographic, and timestamps)",
+      "Authentication User Agency (AUA) details and transaction codes associated with specific auth requests",
+      "Biometric lock / unlock status of an Aadhaar number",
+      "Confirmation of Aadhaar suspension or cancellation status in suspected identity fraud cases",
+      "Demographic metadata matching verification (subject to strict statutory restrictions under the Aadhaar Act)"
+    ],
+    "legal_basis_typically_cited": [
+      "Aadhaar (Targeted Delivery of Financial and Other Subsidies, Benefits and Services) Act, 2016 (Section 33 regarding disclosure of information in certain cases)",
+      "BNSS Section 94 (formerly CrPC Section 91) - subject to Aadhaar Act statutory overrides"
+    ],
+    "request_format_expected": "Mandatory statutory route: Under Section 33(1) of the Aadhaar Act, core biometric and detailed authentication records CANNOT be disclosed merely via a routine police Section 94 BNSS notice. Disclosure requires a formal judicial order from a court not inferior to that of a Judge of a High Court, preceded by giving UIDAI an opportunity of hearing. In national security cases, disclosure must be authorized by an order of an officer not below the rank of Joint Secretary to the Government of India under Section 33(2). For basic victim-initiated queries, the Aadhaar holder can self-pull 6-month auth logs via mAadhaar/resident portal and provide them to IO.",
+    "typical_response_time": "2 to 4 weeks upon receipt of a valid High Court order or Joint Secretary authorization; immediate for self-pulled resident history (approximate)",
+    "escalation_path_if_no_response": "Escalate to the Deputy Director General (DDG) Legal / Nodal Officer at UIDAI Regional Office or New Delhi Headquarters; approach the High Court that issued the Section 33 order to file for judicial enforcement.",
+    "notes_or_caveats": "UIDAI strictly protects biometric and core demographic databases. Police officers frequently waste time sending Section 94 BNSS notices directly to UIDAI; UIDAI routinely rejects these citing Section 33 of the Aadhaar Act. To investigate financial fraud where Aadhaar Enabled Payment System (AePS) or OTP was misused, investigators should send notices to the specific Authentication User Agency (AUA) or bank that processed the transaction rather than UIDAI directly, or instruct the complainant to pull their own 50-record authentication history from the UIDAI portal.",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "digilocker_meity",
+    "entity_name": "DigiLocker (National e-Governance Division / MeitY)",
+    "category": "government",
+    "what_they_can_provide": [
+      "User account registration details (linked mobile number, email address, account creation timestamp)",
+      "Activity logs and login session history (IP addresses, device fingerprints, geolocation metadata, date/time of access)",
+      "List of issued / fetched digital documents (Driving License, RC, PAN, educational certificates, Marksheets)",
+      "Revocation of active sessions or temporary freezing/blocking of compromised DigiLocker accounts",
+      "Verification of authenticity of specific digital certificates issued via the platform"
+    ],
+    "legal_basis_typically_cited": [
+      "BNSS Section 94 (formerly CrPC Section 91) for activity logs, IP records, and subscriber data",
+      "Information Technology Act, 2000 Section 69, Section 69A, and Section 79",
+      "BNSS Section 193 (formerly CrPC 173) for forwarding cyber fraud evidence"
+    ],
+    "request_format_expected": "Written notice under Section 94 BNSS signed by an officer not below the rank of SHO/IO, sent via official government email (.gov.in / .nic.in) to the National e-Governance Division (NeGD) / DigiLocker Nodal Officer under MeitY, or routed via the Indian Cyber Crime Coordination Centre (I4C) portal. Must state the target mobile number, DigiLocker ID, or specific document reference.",
+    "typical_response_time": "3 to 7 working days for standard activity logs and KYC; 24 to 48 hours for urgent account freezing or session revocation in active phishing/scam cases (approximate)",
+    "escalation_path_if_no_response": "Escalate to the Director / President & CEO, National e-Governance Division (NeGD), MeitY; route requests through the I4C Nodal Officer at MHA; issue judicial summons under BNSS.",
+    "notes_or_caveats": "DigiLocker is an aggregator and repository; while it logs fetch requests and IP access trails, the substantive verification of whether a document (like a driving license or degree) is originally forged must ultimately be confirmed with the original issuer (e.g., RTO, CBSE, University). In cases of 'DigiLocker OTP scams' where fraudsters hijack accounts to access documents for identity theft, retrieving the IP Activity Log from NeGD is vital to trace the perpetrator's real location.",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "cert_in",
+    "entity_name": "CERT-In (Indian Computer Emergency Response Team)",
+    "category": "government",
+    "what_they_can_provide": [
+      "Technical analysis and threat intelligence on cyber security incidents (ransomware, APTs, zero-day exploits, DDoS)",
+      "Indicators of Compromise (IoCs), malicious IP/domain blacklisting, and command-and-control (C2) server tracing data",
+      "Log preservation coordination across regulated intermediaries, service providers, and data centres",
+      "Forensic advisory and root cause analysis guidelines for critical infrastructure breaches",
+      "National-level coordination with foreign CERTs and international cyber incident response bodies"
+    ],
+    "legal_basis_typically_cited": [
+      "Information Technology Act, 2000 Section 70B (statutory authority and functions of CERT-In)",
+      "Information Technology (The Indian Computer Emergency Response Team and Manner of Performing Functions and Duties) Rules, 2013",
+      "CERT-In Cyber Security Directions, 2022 (mandating 6-hour incident reporting and 180-day ICT log retention by service providers)"
+    ],
+    "request_format_expected": "Requests or incident notifications must be submitted via email to incident@cert-in.org.in or through the official CERT-In web reporting portal / CSIR form by authorized law enforcement nodal officers or reporting entities. Requisitions for technical assistance in criminal investigations should be sent under official letterhead from an SP/DCP rank officer or through I4C channels.",
+    "typical_response_time": "Real-time to 6 hours for critical incident acknowledgment and emergency triage; 1 to 3 weeks for detailed technical threat reports or cross-border IOC analysis (approximate)",
+    "escalation_path_if_no_response": "Escalate to the Director General, CERT-In, Ministry of Electronics and Information Technology (MeitY); coordinate via the Cyber Security Coordinator / MHA I4C desk.",
+    "notes_or_caveats": "CERT-In is an incident response and technical regulatory agency, NOT a dedicated law enforcement investigation station or public prosecution unit. It does not register FIRs or investigate individual citizen financial frauds (which belong to local police/I4C). Under the 2022 CERT-In Directions, all service providers, data centres, and corporates are mandated to retain system logs for 180 days and report major incidents within 6 hours; police can leverage CERT-In findings to establish regulatory non-compliance by breached entities.",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "mca21_roc",
+    "entity_name": "Ministry of Corporate Affairs / Registrar of Companies (MCA21 / RoC)",
+    "category": "government",
+    "what_they_can_provide": [
+      "Company / LLP incorporation documents, Certificate of Incorporation, Memorandum and Articles of Association (MOA/AOA)",
+      "Director Identification Number (DIN) master details, KYC, and personal addresses of Directors / Designated Partners",
+      "Statutory annual filings: Financial statements, balance sheets, profit & loss accounts, and annual returns (Forms AOC-4, MGT-7)",
+      "Registered office address verification reports, Form INC-22 filings, and historical registered office changes",
+      "Details of charges created on company assets, hypothecation, and secured creditors (Form CHG-1/CHG-4)",
+      "Information on strike-off status, shell company flagging, and internal RoC inspection/inquiry reports under Sections 206-207"
+    ],
+    "legal_basis_typically_cited": [
+      "BNSS Section 94 (formerly CrPC Section 91) for corporate records and filings",
+      "Companies Act, 2013 Sections 206, 207, 209 (RoC powers of inspection, inquiry, search and seizure)",
+      "BNSS Section 106 (formerly CrPC Section 102) for requesting freezing of shares/assets or flagging fraudulent entities"
+    ],
+    "request_format_expected": "Most public documents (incorporation certificates, annual returns, director charges) can be independently downloaded by investigators via the online MCA21 portal (www.mca.gov.in) upon payment of nominal statutory inspection fees. For non-public records, physical verification reports under Rule 25B, or certified evidentiary copies, a formal Section 94 BNSS notice signed by IO/SHO must be addressed to the jurisdictional Registrar of Companies (RoC) or Regional Director (RD).",
+    "typical_response_time": "Immediate for online public document downloads via MCA21 portal; 5 to 10 working days for certified hard copies, specific inquiry reports, or backend DIN cell records (approximate)",
+    "escalation_path_if_no_response": "Escalate to the Regional Director (RD) of the respective MCA region or the Joint Secretary (e-Governance/MCA21), Ministry of Corporate Affairs; file a formal administrative grievance via the MCA Corporate Seva Kendra / Helpdesk ticket system.",
+    "notes_or_caveats": "Since 2022, MCA guidelines mandate that all official communications from RoC/RD must bear a mandatory Service Request Number (SRN); investigators should reference exact CIN (Corporate Identity Number) or DIN when communicating. For massive, multi-state corporate frauds or Ponzi schemes, local police can request the Central Government (via MHA/MCA) to transfer investigation to the Serious Fraud Investigation Office (SFIO) under Section 212 of the Companies Act, whose officers possess specialized forensic accounting and arrest powers.",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "sub_registrar_property",
+    "entity_name": "Sub-Registrar Office (Property Registration & Revenue)",
+    "category": "government",
+    "what_they_can_provide": [
+      "Certified copies of registered Sale Deeds, Lease Deeds, Gift Deeds, Wills, and Mortgage documents",
+      "Encumbrance Certificate (EC) showing chronological history of transactions, mortgages, and legal liens on a property",
+      "Section 32-A statutory registration records: Biometric thumb impressions, digital photographs, and KYC ID proofs of executants, claimants, and presentants",
+      "Names, addresses, and ID details of attesting witnesses and document writers/advocates identified on the deed",
+      "Placing an investigative alert / noting on property records to prevent further sale or mutation (subject to court order or strict Section 106 BNSS notice)"
+    ],
+    "legal_basis_typically_cited": [
+      "BNSS Section 94 (formerly CrPC Section 91) for certified deeds, ECs, and biometric identity records",
+      "Registration Act, 1908 Section 32-A (compulsory affixing of photograph and fingerprints) and Section 57 (registering officers to allow inspection and give copies)",
+      "BNSS Section 106 / 107 (formerly CrPC Section 102) for attaching or restraining transfer of real estate acquired via proceeds of crime"
+    ],
+    "request_format_expected": "Written requisition under Section 94 BNSS addressed to the Sub-Registrar / Joint Sub-Registrar having territorial jurisdiction over the property. Must explicitly specify the Document Number, Year of Registration, Book Number, or exact property survey/plot/door number and village/mandal. In many states (e.g., Maharashtra IGVR, Telangana CARD, Karnataka Kaveri), ECs and deeds can also be retrieved online via state land registry web portals.",
+    "typical_response_time": "1 to 3 working days for Encumbrance Certificates and digital document copies; 5 to 10 working days for retrieving old physical thumb impression registers or manual archival volumes (approximate)",
+    "escalation_path_if_no_response": "Escalate to the District Registrar / Inspector General of Registration and Stamps (IGR); approach District Collector / District Magistrate; seek judicial order from the jurisdictional court requiring production of records.",
+    "notes_or_caveats": "In land grab, impersonation, or forgery cases, the most critical piece of evidence is NOT just the deed copy, but the backend Section 32-A records (photographs and thumb impressions taken at the registrar's biometric camera at the time of execution). Police must explicitly demand these biometric logs in their Section 94 notice to match against the real owner or suspected impostors via FSL. Sub-Registrars cannot administratively cancel a fraudulent deed once registered; cancellation requires a civil court decree.",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "passport_seva_kendra",
+    "entity_name": "Passport Seva Kendra (PSK) / Regional Passport Office (RPO)",
+    "category": "government",
+    "what_they_can_provide": [
+      "Passport application records (Form details, present/permanent address, DOB proof, parentage, educational certificates submitted)",
+      "Biometric data captured during application (photograph, digital signature, and fingerprints)",
+      "Police Verification Report (PVR) history and details of the verifying police station/officer",
+      "Impounding, revocation, or suspension of passport of an accused / absconder fleeing justice",
+      "Flagging / placing a system alert on a passport number to notify law enforcement upon attempt to renew or use for travel services"
+    ],
+    "legal_basis_typically_cited": [
+      "BNSS Section 94 (formerly CrPC Section 91) for passport application dossiers and KYC",
+      "Passports Act, 1967 Section 10(3)(c) (impounding/revocation if necessary in the interest of sovereignty, integrity, or public order) and Section 10(3)(e) (if proceedings for an offence are pending before a criminal court)",
+      "BNSS Section 106 (formerly CrPC Section 102) for seizure of physical passport document"
+    ],
+    "request_format_expected": "For documents/KYC: Section 94 BNSS notice from IO/SHO addressed to the Regional Passport Officer (RPO). For passport impounding or revocation: Formal written proposal from an officer of SP/DCP rank or court order addressed to the RPO under Section 10(3) of the Passports Act, detailing the FIR number, pending criminal proceedings, and justification for why flight risk exists.",
+    "typical_response_time": "3 to 7 working days for application dossiers and verification records; 1 to 3 weeks for initiating formal passport impounding proceedings (which requires RPO to issue show-cause notice to holder) (approximate)",
+    "escalation_path_if_no_response": "Escalate to the Chief Passport Officer (CPO) / PSP Division, Ministry of External Affairs (MEA), New Delhi; coordinate via State Home Department or NRI/International Police Nodal Officer.",
+    "notes_or_caveats": "A Passport Seva Kendra (PSK) operated by private facility partners (like TCS) only handles front-end citizen servicing and biometric capture; they cannot process legal requisitions. All police notices and impounding requests MUST be addressed to the statutory Regional Passport Officer (RPO) heading the jurisdiction. While police can seize a physical passport found during a search under BNSS Section 106, legally cancelling or impounding the passport instrument itself is the exclusive statutory domain of the RPO under the Passports Act.",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "state_cyber_cell_cid",
+    "entity_name": "State Cyber Cell / CID (Central Investigation Department)",
+    "category": "government",
+    "what_they_can_provide": [
+      "Advanced digital forensics, mobile handset decryption, and hard drive imaging beyond local police station capabilities",
+      "Statewide or inter-state coordination for tracking organized cyber syndicates, financial mules, and cross-border gangs",
+      "High-level liaison with foreign law enforcement, Interpol (via CBI Nodal Officer), and central agencies (I4C, CERT-In, ED)",
+      "Direct interception, CDR/IPDR analysis, and Tower Dump processing through centralized state LEA telecom server gateways",
+      "Takeover and investigation of complex, high-value cyber frauds, cryptocurrency thefts, or sensitive state crimes transferred from local police stations"
+    ],
+    "legal_basis_typically_cited": [
+      "BNSS Section 192 / 193 (formerly CrPC Section 172 / 173) governing investigation and statutory reporting",
+      "Information Technology Act, 2000 Sections 66, 66C, 66D, 67, 69, 70, 72",
+      "State Police Acts / Police Manuals governing transfer of investigation from local SHO to specialized CID / Crime Branch units"
+    ],
+    "request_format_expected": "Internal departmental escalation: Local police station IO/SHO submits a detailed proposal through the Sub-Divisional Police Officer (SDPO) / ACP and Superintendent of Police (SP) / DCP to the Additional Director General of Police (ADG) or Inspector General (IG) CID / State Cyber Crime Wing, detailing why local resources are insufficient. For technical forensic assistance only, exhibits are forwarded via standard departmental dispatch with case diary extracts.",
+    "typical_response_time": "24 to 48 hours for urgent technical intelligence or telecom interception support; 1 to 2 weeks for formal administrative takeover of case file from local police station (approximate)",
+    "escalation_path_if_no_response": "Escalate to the Director General of Police (DGP) of the State or Home Secretary; approach the High Court or Sessions Court for judicial directions to transfer investigation to CID/Special Investigation Team (SIT).",
+    "notes_or_caveats": "A critical operational distinction exists between a local Police Station (PS) Cyber Cell and the State Cyber CID/Crime Branch. Local PS cells handle routine citizen complaints, initial NCRP portal freezes, and basic FIR registration under Lalita Kumari principles. State Cyber CID is a specialized apex node that rarely registers petty direct complaints; it steps in for multi-crore financial frauds, critical infrastructure attacks, or when specialized technical infrastructure (like automated IPDR analytics engines or blockchain tracing tools) is required.",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "excise_dept_ncb",
+    "entity_name": "State Excise Department / Narcotics Control Bureau (NCB)",
+    "category": "government",
+    "what_they_can_provide": [
+      "Records of licensed liquor manufacturers, distilleries, wholesalers, retail vends, and chemical solvent industries (Excise)",
+      "Permits, transport passes, and import/export quotas for excise/narcotic raw materials and precursors (e.g., Ephedrine, Acetic Anhydride)",
+      "Intelligence and database on known drug traffickers, interstate smuggling syndicates, and historical seizures (NCB / State Excise)",
+      "Joint operations, search, seizure, and sampling of illicit narcotics, psychotropic substances, and illicit liquor",
+      "Forensic chemical analysis coordination and chain-of-custody documentation under NDPS disposal rules"
+    ],
+    "legal_basis_typically_cited": [
+      "Narcotic Drugs and Psychotropic Substances (NDPS) Act, 1985 (Sections 36A, 41, 42, 43, 52, 53 regarding search, seizure, and arrest powers of empowered officers)",
+      "State Excise Acts (e.g., Maharashtra Prohibition Act, UP Excise Act) governing intoxicating liquors and revenues",
+      "BNSS Section 94 (formerly CrPC Section 91) for licensing and transport records"
+    ],
+    "request_format_expected": "For licensing/permit records: Notice under Section 94 BNSS from IO to District Excise Officer or NCB Zonal Director. For joint enforcement or intelligence sharing: Formal inter-agency communication or coordination via State Level NCORD (Narco Coordination Centre) mechanism. Seizure and sampling must strictly adhere to Standing Order 1/89 and Supreme Court guidelines in Union of India v. Mohan Lal (2016).",
+    "typical_response_time": "Immediate for operational intelligence sharing and joint raids; 3 to 7 working days for certified licensing, permit, and transport pass records (approximate)",
+    "escalation_path_if_no_response": "Escalate to the Excise Commissioner of the State (for Excise) or the Deputy Director General (DDG) / Director General of NCB, Ministry of Home Affairs; raise non-cooperation issues at the monthly District or State NCORD committee meetings.",
+    "notes_or_caveats": "Clear jurisdictional distinction: State Excise Departments primarily regulate and tax legal alcohol/liquor, investigate illicit distillation (hooch), and monitor chemical molasses/solvents under State Excise laws. The Narcotics Control Bureau (NCB) is the central apex coordinating agency under MHA responsible for pan-India and international drug trafficking under the NDPS Act. Under NDPS Section 53, both police officers and designated Excise/NCB officers have concurrent powers of investigation, but statutory procedural safeguards (like Section 50 search rights before a Gazetted Officer) must be scrupulously observed to avoid acquittal.",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "arms_licensing_authority",
+    "entity_name": "Arms Licensing Authority (District Magistrate / Commissioner of Police)",
+    "category": "government",
+    "what_they_can_provide": [
+      "Arms License holder master records (name, address, photograph, background verification dossier, area of validity)",
+      "Details of endorsed firearms (weapon type, make, model, caliber, and exact weapon Serial Number)",
+      "Ammunition purchase ledger logs, quota limits, and weapon inspection history",
+      "Records of arms gunsmiths, dealers, and manufacturers (Form VIII/IX registers showing sales and inventory)",
+      "Suspension, revocation, or impounding of an arms license and direction to surrender weapon under investigation",
+      "Ballistic history matching coordination via National Database on Arms and Licenses (NDAL-ALIS)"
+    ],
+    "legal_basis_typically_cited": [
+      "BNSS Section 94 (formerly CrPC Section 91) for license registers and dealer ledgers",
+      "Arms Act, 1959 Sections 17 (variation, suspension, and revocation of licenses), Section 19 (power to demand production of license), and Section 22 (search and seizure by magistrate/police)",
+      "Arms Rules, 2016 (Rule 15 regarding NDAL-ALIS UIN generation and record maintenance)"
+    ],
+    "request_format_expected": "Requisition under Section 94 BNSS addressed to the Arms Licensing Authority — which is the District Magistrate (DM) / Additional District Magistrate (ADM) in districts, or the Commissioner of Police (CP) / Deputy Commissioner of Police (Licensing) in Police Commissionerates. Requisitions should include the Unique Identification Number (UIN) generated under NDAL-ALIS, license number, or weapon serial number.",
+    "typical_response_time": "24 to 72 hours for license verification and weapon serial number tracing via digital NDAL-ALIS database; immediate for emergency suspension orders in heinous crimes (approximate)",
+    "escalation_path_if_no_response": "Escalate to the Home Secretary of the State / Principal Secretary (Home); approach the District Collector / Commissioner of Police directly; seek judicial warrant for seizure of weapon and records under BNSS.",
+    "notes_or_caveats": "Under the Arms Rules 2016, every firearm license in India must be uploaded to the centralized National Database on Arms and Licenses (NDAL) and assigned a Unique Identification Number (UIN); any arms license without a UIN is legally invalid. When investigating shooting incidents or illegal gunrunning, police should not only verify the individual license but also issue Section 94 notices to licensed arms dealers/armouries to inspect their mandatory transaction registers (stock and ammunition sale ledgers) to trace bullet origins.",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "municipal_corporation",
+    "entity_name": "Municipal Corporation (Urban Local Body / Property & Vital Statistics)",
+    "category": "government",
+    "what_they_can_provide": [
+      "Official Birth and Death registration certificates, records, and backend correction logs",
+      "Property Tax assessment records, property mutation history, and registered owner details",
+      "Building plan approvals, structural blueprints, and occupancy certificate (OC) data",
+      "Trade licenses, shop establishment registrations, and commercial occupancy records",
+      "Public CCTV footage (if the municipal body manages smart-city surveillance infrastructure)",
+      "Solid waste management vehicle GPS logs or sanitation attendance sheets (for localized alibi verification)"
+    ],
+    "legal_basis_typically_cited": [
+      "BNSS Section 94 (formerly CrPC Section 91) for production of records and vital statistics",
+      "Registration of Births and Deaths Act, 1969 (Sections 12, 17 regarding accessibility of registers)",
+      "State Municipal Corporation Acts (e.g., MMC Act 1888, DMC Act 1957) governing property and local licensing"
+    ],
+    "request_format_expected": "Written notice under Section 94 BNSS signed by the Investigating Officer (IO) or Station House Officer (SHO), addressed to the Municipal Commissioner, Ward Officer, or the Registrar of Births and Deaths of the respective municipal zone. Most modern birth/death and property tax records can be verified instantly by investigators via the state's municipal web portals (e.g., MCD online, e-Municipality portals) without physical correspondence, unless certified copies are required for court filing.",
+    "typical_response_time": "Immediate for online verification; 3 to 7 working days for manual retrieval of old physical registers, structural layouts, or certified paper deeds (approximate)",
+    "escalation_path_if_no_response": "Escalate to the Deputy Municipal Commissioner (DMC) of the zone, or the Joint Commissioner (Revenue); approach the District Magistrate (who acts as the District Registrar of Births and Deaths) or file a judicial application before the jurisdictional Magistrate.",
+    "notes_or_caveats": "Practice varies by urbanization tier. In major Tier-1 metropolises (Mumbai, Delhi, Bengaluru), data is highly digitized and structured by ward. In smaller municipalities or rural Gram Panchayats, records may remain purely physical, requiring manual inspection of register volumes by a police team. For smart-city CCTV systems operated by municipal corporations, data retention is short (typically 15 to 30 days), necessitating an immediate block/preservation request via the control room.",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "private_cctv_sources",
+    "entity_name": "Private CCTV Sources (Housing Societies, Commercial Establishments, Shops)",
+    "category": "other",
+    "what_they_can_provide": [
+      "Digital Video Recorder (DVR) footage from entry/exit gates, common areas, lobbies, and perimeter walls",
+      "Logbooks, visitor management software exports (e.g., MyGate, NoBrokerHood records, flat entry/exit timestamps)",
+      "Camera orientation layouts, technical specifications, and internal time-synchronization offsets",
+      "Physical custody or forensic mirroring of the DVR hard drive (in case of tampering or critical crime evidence)"
+    ],
+    "legal_basis_typically_cited": [
+      "BNSS Section 94 (formerly CrPC Section 91) ordering the production of the electronic footage/device",
+      "BNSS Section 106 (formerly CrPC Section 102) for the immediate seizure of the DVR or storage media if evidence destruction is feared",
+      "Bharatiya Sakshya Adhiniyam (BSA), 2023 Section 63 (provisions for electronic records admissibility, replacing Section 65B IEAct)"
+    ],
+    "request_format_expected": "Practical process: An IO/SHO visits the location and issues a standard written notice under Section 94 BNSS to the Management Committee / Secretary of the Resident Welfare Association (RWA) or the Owner/Manager of the commercial establishment. If the owner complies voluntarily, the footage is copied onto an external flash drive, and a panchnama (seizure memo) is drawn on-site, accompanied by a certificate under Section 63 BSA signed by the person in lawful command of the DVR system. If resistance is met, an emergency seizure under Section 106 BNSS is executed.",
+    "typical_response_time": "Immediate to 24 hours depending on the availability of the system administrator or building secretary (approximate)",
+    "escalation_path_if_no_response": "Execute an immediate physical search and seizure of the DVR unit under Section 106 BNSS or obtain an emergency search warrant under Section 96 BNSS from a Magistrate; initiate criminal prosecution for causing disappearance of evidence or non-compliance.",
+    "notes_or_caveats": "This is a decentralized, highly time-sensitive process. Unlike corporate entities, small shopkeepers and residential societies often use cheap DVR systems with circular recording tracks that overwrite data within 7 to 15 days. A primary operational hurdle is 'DVR time drift'—the internal clock of private systems is rarely synchronized with standard Indian Standard Time (IST). Investigators must manually record the exact time discrepancy between the DVR clock and the real time during the panchnama to prevent the evidence from being discredited in court.",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "pawn_shops_jewelers",
+    "entity_name": "Pawn Shops / Jewelers (Gold Loans & Precious Metal Dealers)",
+    "category": "other",
+    "what_they_can_provide": [
+      "Pawn tickets, pledge ledgers, and contract agreements showing items pawned or sold",
+      "Detailed descriptive logs, weight parameters, purity certificates, and photographs of received jewelry/metals",
+      "Customer / pledgor KYC documentation (Aadhaar, PAN, photographs, mobile numbers)",
+      "Store CCTV footage showing the suspect making the transaction at the counter",
+      "Financial settlement logs, cash disbursement vouchers, or bank transfer reference numbers"
+    ],
+    "legal_basis_typically_cited": [
+      "BNSS Section 94 (formerly CrPC Section 91) for production of transaction registers and customer KYC",
+      "BNSS Section 106 (formerly CrPC Section 102) for the immediate seizure / recovery of stolen property found on premises",
+      "State Pawn Brokers Acts (e.g., Maharashtra Pawn Brokers Act, Tamil Nadu Pawn Brokers Act, Karnataka Pawn Brokers Act) mandating transaction logging"
+    ],
+    "request_format_expected": "Written notice under Section 94 BNSS or an active spot-recovery process under a disclosure statement. The IO presents the description of stolen ornaments to the pawn broker or jeweler. Upon matching, a formal seizure memo (panchnama) is drawn up, and the physical gold/property is seized into police custody to be produced before the court as case property (muddaemal).",
+    "typical_response_time": "Immediate during physical spot-inspections; 24 to 48 hours for historical ledger searches across multi-branch gold loan NBFCs (approximate)",
+    "escalation_path_if_no_response": "Issue immediate summons under Section 94 BNSS requiring presence; execute a search under Section 106 BNSS; report the establishment to the District Licensing Authority under the local Pawn Brokers Act for license cancellation; charge the broker with receiving stolen property under the BNS if complicity is suspected.",
+    "notes_or_caveats": "Statutory frameworks are state-specific. For example, under the Maharashtra Pawn Brokers Act, licensed pawn brokers are legally mandated to maintain meticulous books of accounts open to police inspection and must report suspicious items to the nearest police station. In modern cases, stolen gold is frequently directed to corporate gold loan Non-Banking Financial Companies (NBFCs like Muthoot Finance, Manappuram Finance). These corporate entities require formal notices sent to their regional compliance heads and will freeze the pledged ornament internally before physical handover.",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "fire_brigade",
+    "entity_name": "Fire Brigade / Fire & Emergency Services",
+    "category": "government",
+    "what_they_can_provide": [
+      "Official Fire Incident Reports (FIRB) detailing the date, exact time, and duration of a fire call",
+      "Preliminary expert opinion on the origin, seat, and probable cause of the fire (e.g., short circuit, arson, gas leak)",
+      "Logbooks showing details of personnel, fire tenders deployed, and rescue operations executed",
+      "Fire Safety Audit reports, No Objection Certificates (NOC), and compliance status of the affected building",
+      "Emergency voice recording logs of the initial 101/112 distress call made to the fire control room"
+    ],
+    "legal_basis_typically_cited": [
+      "BNSS Section 94 (formerly CrPC Section 91) for production of fire inspection and incident reports",
+      "BNSS Section 194 / 196 (formerly CrPC Section 174/176) during inquiries into suspicious accidental deaths or factory disasters",
+      "State Fire Safety Acts (e.g., Delhi Fire Service Act, Maharashtra Fire Prevention and Life Safety Measures Act)"
+    ],
+    "request_format_expected": "Written request letter or Section 94 BNSS notice issued by the IO/SHO, addressed to the Chief Fire Officer (CFO) or Divisional Fire Officer (DFO) of the respective municipal area. The request must mention the exact location, date, and time of the incident.",
+    "typical_response_time": "3 to 7 working days for the preliminary fire cause report; 1 to 2 weeks for detailed structural safety and statutory compliance assessments (approximate)",
+    "escalation_path_if_no_response": "Escalate to the Director General of Fire Services / Municipal Commissioner; route the request through the District Magistrate / District Disaster Management Authority (DDMA).",
+    "notes_or_caveats": "While the Fire Brigade provides a critical preliminary assessment regarding whether a fire was accidental or deliberately set (arson), their opinion is structural and operational. For an legally sustainable criminal prosecution in arson or negligence cases, the fire brigade report must be paired with a comprehensive scientific evaluation from the State Forensic Science Laboratory (FSL) Chemical/Physics division, which analyzes debris samples for accelerants like hydrocarbons or kerosene.",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "postal_courier_companies",
+    "entity_name": "Postal Department & Courier Companies (India Post, Blue Dart, Delhivery)",
+    "category": "other",
+    "what_they_can_provide": [
+      "Consignment booking logs, tracking histories, and dispatch/transit manifests",
+      "Sender and Recipient KYC details (names, verified phone numbers, pickup/delivery addresses, ID proofs)",
+      "Proof of Delivery (PoD) receipts, digital signatures, or OTP authentication tokens logged at delivery",
+      "Weight sheets, dimensions, and commercial invoice copies attached to the parcel",
+      "CCTV footage from sorting hubs, booking counters, or delivery fulfillment centers",
+      "Interception and withholding of a suspicious parcel in transit (contraband, fake currency, illegal arms)"
+    ],
+    "legal_basis_typically_cited": [
+      "BNSS Section 94 (formerly CrPC Section 91) for tracking logs, KYC, and billing history",
+      "Telecommunications Act, 2023 / Post Office Act, 2023 (provisions governing interception of postal articles)",
+      "BNSS Section 106 (formerly CrPC Section 102) for the interception, search, and physical seizure of parcels in transit"
+    ],
+    "request_format_expected": "For historical records: Section 94 BNSS notice sent to the Postmaster of the local head post office (for India Post) or the Law Enforcement Compliance Desk / Nodal Officer of the private courier company (e.g., Blue Dart, Delhivery). For intercepting an active live parcel: An emergency written order under Section 106 BNSS or under the Post Office Act must be served to the hub manager to detain the package prior to delivery.",
+    "typical_response_time": "24 to 48 hours for automated tracking and digital KYC from organized private couriers; 3 to 7 days for manual branch verifications from India Post regional offices (approximate)",
+    "escalation_path_if_no_response": "For India Post: Escalate to the Superintendent of Post Offices / Postmaster General of the circle. For private couriers: Escalate to the Chief Compliance Officer / General Counsel; issue a formal legal summons under the BNSS threatening prosecution for non-compliance.",
+    "notes_or_caveats": "Private courier companies are highly digitized and respond efficiently via centralized LEA desks when provided with an exact tracking or AWB (Air Waybill) number. India Post operations are governed under the Post Office Act, 2023, which allows for interception under specified state security grounds; local postmasters may require explicit authorization from a District Magistrate or designated high-ranking official before opening or diverting a parcel, except when cooperating with standard Section 94 BNSS documents.",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "ridehailing_delivery_apps",
+    "entity_name": "Ride-Hailing & Delivery Apps (Uber, Ola, Swiggy, Zomato)",
+    "category": "other",
+    "what_they_can_provide": [
+      "Complete trip/order logs, GPS route maps, timestamps, and pickup/drop-off coordinates",
+      "Customer profile data (registered name, email, phone number, saved payment profiles)",
+      "Driver / Delivery Partner profile dossiers (Driving License, vehicle RC, background check status, bank routing)",
+      "In-app communication logs (masked phone calls metadata, chat transcripts between user and driver)",
+      "Live trip tracking data (in active kidnapping or emergency missing person tracking cases)",
+      "Payment gateway transaction strings, corporate wallet usage records, and device hardware profiles"
+    ],
+    "legal_basis_typically_cited": [
+      "BNSS Section 94 (formerly CrPC Section 91) for historical trip routes, driver KYC, and transaction sheets",
+      "Information Technology Act, 2000 Section 69 / Section 79",
+      "Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021"
+    ],
+    "request_format_expected": "Notice under Section 94 BNSS signed by the IO/SHO, uploaded directly onto the platform's proprietary global Law Enforcement Portal (e.g., Uber LEA portal) or emailed to their dedicated Indian LEA compliance email address from an official government handle (.gov.in / .nic.in). Emergency requests involving active life-safety threats must be flagged using the platform's EDR (Emergency Disclosure Request) form for immediate bypass.",
+    "typical_response_time": "24 to 72 hours for standard trip/profile historical queries; immediate to 2 hours for active Emergency Disclosure Requests involving life safety (approximate)",
+    "escalation_path_if_no_response": "Escalate to the designated Resident Grievance Officer / Nodal Officer in India appointed under the IT Rules 2021; coordinate through the Ministry of Home Affairs I4C desk; issue a penal notice under the BNS.",
+    "notes_or_caveats": "These platforms act as digital intermediaries. They log highly accurate GPS data that serves as definitive alibi verification or spatial timeline tracking in criminal cases. A common technical constraint is phone number masking: because apps use third-party cloud telephony services to connect customers with drivers, standard operator CDRs will only show a call to a virtual masking switch number. To find out what was actually said or who called whom, investigators must query the app platform directly for their internal chat/call routing logs.",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "dating_matrimonial_platforms",
+    "entity_name": "Dating & Matrimonial Platforms (Shaadi.com, Jeevansathi, Tinder, Bumble)",
+    "category": "social_media",
+    "what_they_can_provide": [
+      "Subscriber registration data (verified mobile, email, account creation metadata)",
+      "Profile photo logs, uploaded ID documents, and self-verification video files",
+      "Account activity logs (login/logout timestamps, device identifiers, registration IP, last active IP addresses)",
+      "In-app interaction trails (match history, profile likes, chat communication transcripts)",
+      "Subscription payment trail, linked bank accounts, or credit card reference records",
+      "Account deletion, suspension, or geoblocking parameters for fraudulent profiles"
+    ],
+    "legal_basis_typically_cited": [
+      "BNSS Section 94 (formerly CrPC Section 91) for user profiles, IP logs, and text communication histories",
+      "Information Technology Act, 2000 Section 79 and Section 69",
+      "Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021"
+    ],
+    "request_format_expected": "Notice under Section 94 BNSS from an official government email ID sent to the platform's Nodal Officer or uploaded to their designated law enforcement request system. Matrimonial sites registered in India (like Shaadi.com) have highly accessible domestic legal desks. Foreign dating apps (like Tinder/Bumble) process queries through their centralized global legal portals, requiring strict compliance with electronic signature norms.",
+    "typical_response_time": "48 hours to 7 days for domestic matrimonial entities; 1 to 3 weeks for international dating applications unless an emergency protocol is triggered (approximate)",
+    "escalation_path_if_no_response": "Escalate directly to the Resident Grievance Officer in India; route the requisition via the I4C / Ministry of Home Affairs; move the jurisdictional court to issue a non-compliance warrant.",
+    "notes_or_caveats": "In romance scams, matrimonial frauds, or honey-trapping cases, perpetrators quickly delete profiles once exposed. Platforms generally preserve deleted profile metadata for a limited window under internal retention policies or IT guidelines. Investigators must immediately send a data preservation notice to the platform to lock the backend logs before sending the formal Section 94 BNSS retrieval documentation.",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "one_stop_centre_181",
+    "entity_name": "One Stop Centre (Sakhi) / Women Helpline (181)",
+    "category": "government",
+    "what_they_can_provide": [
+      "Case intake sheets, registration files, and case history narratives of aggrieved women",
+      "Audio recordings and computer logs of emergency distress calls received at the 181 control panel",
+      "Counseling session summaries, medical assistance referrals, and temporary shelter logs",
+      "Legal aid coordination records and statements documented during institutional shelter stay",
+      "Referral memos and internal communications forwarded to local protection officers or police desks"
+    ],
+    "legal_basis_typically_cited": [
+      "BNSS Section 94 (formerly CrPC Section 91) for production of administrative case profiles",
+      "Protection of Women from Domestic Violence Act, 2005 (Sections 9, 10 regarding duties of service providers)",
+      "BNSS Section 193 (formerly CrPC Section 173) supporting compilation of charge-sheets in gender-based violence"
+    ],
+    "request_format_expected": "Written requisition or Section 94 BNSS notice signed by the IO (preferably the designated female officer investigating the crime) or SHO, addressed to the Center Administrator of the local Sakhi One Stop Centre (OSC) or the Director of the State Women Helpline (181). The letter must explicitly cite the survivor's consent or protect her confidentiality.",
+    "typical_response_time": "24 to 48 hours for call recordings and entry records; 3 to 5 working days for detailed case counseling summaries (approximate)",
+    "escalation_path_if_no_response": "Escalate to the District Programme Officer (DPO) of the Women and Child Development (WCD) department, or the District Magistrate (who acts as the Chairman of the OSC Management Committee).",
+    "notes_or_caveats": "One Stop Centres operate under the Ministry of Women and Child Development to provide integrated support to women affected by violence. Because these records contain highly sensitive, private psychological narratives and survivor vulnerabilities, police must handle the documents with extreme confidentiality. The data obtained from an OSC is heavily leveraged as corroborative evidence to establish historical patterns of cruelty or domestic abuse under the BNS.",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "cwc_jjb_nodes",
+    "entity_name": "Child Welfare Committee (CWC) / Juvenile Justice Board (JJB)",
+    "category": "government",
+    "what_they_can_provide": [
+      "Social Investigation Reports (SIR) compiled by Probation Officers or Child Welfare Officers",
+      "Age determination enquiry orders, ossification test records, and matriculation certificate verifications accepted by the board",
+      "Orders for temporary placement, institutional care, or restoration of a Child in Need of Care and Protection (CNCP)",
+      "Bail, rehabilitation, or institutional custody orders for a Child in Conflict with the Law (CCL)",
+      "Individual Care Plans (ICP) and psychological counseling tracking records"
+    ],
+    "legal_basis_typically_cited": [
+      "Juvenile Justice (Care and Protection of Children) Act, 2015 (Sections 4, 7, 27, 29, 94 regarding powers, procedures, and age determination)",
+      "BNSS Section 94 (formerly CrPC Section 91) - subject to absolute statutory confidentiality overrides under the JJ Act"
+    ],
+    "request_format_expected": "Formal administrative application or compliance report submitted by the Special Juvenile Police Unit (SJPU) or Child Welfare Police Officer (CWPO) directly before the Principal Magistrate of the Juvenile Justice Board (for CCL cases) or the Chairperson of the Child Welfare Committee (for CNCP cases). Requisitions must be filed using the statutory forms prescribed under the Juvenile Justice Model Rules.",
+    "typical_response_time": "24 hours for emergency production and safety placement orders; 3 to 7 working days for processing certified orders or copies of Social Investigation Reports (approximate)",
+    "escalation_path_if_no_response": "Move an application before the Principal Magistrate of the JJB or approach the Children's Court / Court of Sessions; report administrative structural delays to the District Child Protection Unit (DCPU) or State Child Protection Society.",
+    "notes_or_caveats": "The Juvenile Justice framework is an independent, non-adversarial statutory system that overrides regular police powers. Police officers cannot treat the JJB or CWC as subordinate record houses. Under Section 99 of the JJ Act, all records concerning a juvenile are strictly confidential and cannot be published or utilized in standard adult criminal trial procedures except as authorized by the Act. Crucially, any police interaction regarding these records must happen through the designated Child Welfare Police Officer (CWPO) wearing civilian clothes.",
+    "confidence": "high"
+  },
+  {
+    "act": "department_registry",
+    "entity_id": "prisons_department",
+    "entity_name": "Prisons Department (State Jail Administration)",
+    "category": "government",
+    "what_they_can_provide": [
+      "Inmate admission profiles, finger/palm print biometrics, and baseline identification photographs",
+      "Jail entry/exit visitor logs (Mulaqat registers detailing visitor names, addresses, IDs, and relationships)",
+      "Official prisoner health examination charts and medical officer reports",
+      "Internal prison CCTV footage from barracks, corridors, gates, and visitor meeting screens",
+      "Prisoner currency accounts (Jail canteen spending accounts and deposit tracking logs)",
+      "Records of disciplinary infractions, inside-jail offenses, parole/furlough histories, and release orders"
+    ],
+    "legal_basis_typically_cited": [
+      "BNSS Section 94 (formerly CrPC Section 91) for production of jail registers and logs",
+      "Prisons Act, 1894 (provisions governing jail discipline and internal management)",
+      "Prison Manuals of the respective state; Court warrants for production of prisoners (e.g., Section 293 BNSS / formerly 267 CrPC)"
+    ],
+    "request_format_expected": "Written notice under Section 94 BNSS signed by an officer not below the rank of SHO/IO, or a specific production warrant issued by a competent court, addressed directly to the Superintendent of the Central/District Jail where the inmate is or was lodged.",
+    "typical_response_time": "24 to 72 hours for routine visitor logs and admission documents; immediate for active production warrants or emergency safety queries (approximate)",
+    "escalation_path_if_no_response": "Escalate to the Deputy Inspector General (DIG) of Prisons or Director General (DG) of Prisons / Inspector General of Correctional Services of the respective state; notify the jurisdictional trial court.",
+    "notes_or_caveats": "Prison administration is strictly a state subject, meaning prison manuals and digitization depth vary by region. Modern facilities use automated inmate tracking applications (like e-Prisons portal under the Inter-operable Criminal Justice System - ICJS), allowing synchronized cross-matching of inmate data across states. To question a currently jailed inmate or obtain active biometrics, a police investigator must secure a formal interrogation or production order from the jurisdictional magistrate rather than using a standard Section 94 notice alone.",
+    "confidence": "high"
+  }
+]
