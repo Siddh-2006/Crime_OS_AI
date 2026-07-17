@@ -6,47 +6,20 @@ from collections import Counter
 from dataclasses import dataclass
 from typing import Sequence
 
-from ingestion.schemas import LegalSectionRecord
-
 from .embedding import BGEEmbedder
 from .models import LegalRetrievalBundle, LegalRetrievalResult
 from .qdrant_store import LegalQdrantStore
 
 _TOKEN_PATTERN = re.compile(r"[A-Za-z0-9]+")
 _SOURCE_SEARCH_LIMIT = 15
-_BM25_FIELD_WEIGHTS: dict[str, float] = {
-    "chapter_tag": 1.0,
-    "summary": 1.0,
-    "content": 1.0,
-}
 
 
 def _tokenize(text: str) -> list[str]:
-    return _TOKEN_PATTERN.findall(text.lower())
-
-
-def _normalize_chapter_tags(value: object) -> str:
-    if isinstance(value, (list, tuple)):
-        return ", ".join(str(item) for item in value if str(item).strip())
-    if value is None:
-        return ""
-    return str(value)
-
-
-def _field_text(record: LegalSectionRecord, field_name: str) -> str:
-    if field_name == "chapter_tag":
-        return _normalize_chapter_tags(record.chapter_tag)
-    if field_name == "summary":
-        return record.summary or ""
-    if field_name == "content":
-        return record.content or ""
-    raise KeyError(f"Unsupported BM25 field: {field_name}")
+    return _TOKEN_PATTERN.findall((text or "").lower())
 
 
 @dataclass(slots=True)
-class _BM25FieldIndex:
-    field_name: str
-    weight: float
+class BM25Index:
     tokens_by_doc: list[list[str]]
     term_frequencies_by_doc: list[Counter[str]]
     idf: dict[str, float]
@@ -55,27 +28,20 @@ class _BM25FieldIndex:
     b: float = 0.75
 
     @classmethod
-    def build(cls, records: Sequence[LegalSectionRecord], field_name: str, weight: float) -> "_BM25FieldIndex":
-        tokens_by_doc: list[list[str]] = []
-        term_frequencies_by_doc: list[Counter[str]] = []
+    def build(cls, documents: Sequence[str]) -> "BM25Index":
+        tokens_by_doc = [_tokenize(document) for document in documents]
+        term_frequencies_by_doc = [Counter(tokens) for tokens in tokens_by_doc]
         document_frequency: Counter[str] = Counter()
-
-        for record in records:
-            tokens = _tokenize(_field_text(record, field_name))
-            tokens_by_doc.append(tokens)
-            frequencies = Counter(tokens)
-            term_frequencies_by_doc.append(frequencies)
+        for frequencies in term_frequencies_by_doc:
             document_frequency.update(frequencies.keys())
 
-        doc_count = len(records)
+        doc_count = len(tokens_by_doc)
         avg_doc_len = sum(len(tokens) for tokens in tokens_by_doc) / doc_count if doc_count else 0.0
         idf = {
             term: math.log(1.0 + ((doc_count - df + 0.5) / (df + 0.5)))
             for term, df in document_frequency.items()
         }
         return cls(
-            field_name=field_name,
-            weight=weight,
             tokens_by_doc=tokens_by_doc,
             term_frequencies_by_doc=term_frequencies_by_doc,
             idf=idf,
@@ -103,29 +69,25 @@ class _BM25FieldIndex:
             if idf is None:
                 continue
             score += query_frequency * idf * ((term_frequency * (self.k1 + 1.0)) / (term_frequency + normalization))
-        return score * self.weight
+        return score
 
 
-class LegalBM25Retriever:
-    def __init__(self, store: LegalQdrantStore, *, field_weights: dict[str, float] | None = None) -> None:
+class DocumentBM25Retriever:
+    def __init__(self, store: LegalQdrantStore) -> None:
         self.store = store
-        self.field_weights = dict(field_weights or _BM25_FIELD_WEIGHTS)
-        self._records: list[LegalSectionRecord] | None = None
-        self._field_indexes: dict[str, _BM25FieldIndex] | None = None
+        self._documents = None
+        self._index: BM25Index | None = None
 
-    def _load_records(self) -> list[LegalSectionRecord]:
-        if self._records is None:
-            self._records = self.store.list_sections()
-        return self._records
+    def _load_documents(self):
+        if self._documents is None:
+            self._documents = self.store.list_documents()
+        return self._documents
 
-    def _ensure_field_indexes(self) -> dict[str, _BM25FieldIndex]:
-        if self._field_indexes is None:
-            records = self._load_records()
-            self._field_indexes = {
-                field_name: _BM25FieldIndex.build(records, field_name, weight)
-                for field_name, weight in self.field_weights.items()
-            }
-        return self._field_indexes
+    def _load_index(self) -> BM25Index:
+        if self._index is None:
+            documents = self._load_documents()
+            self._index = BM25Index.build([document.bm25_text() for document in documents])
+        return self._index
 
     def search(
         self,
@@ -139,48 +101,45 @@ class LegalBM25Retriever:
             return []
 
         allowed = {item.upper() for item in act_filter} if act_filter else None
-        records = self._load_records()
-        field_indexes = self._ensure_field_indexes()
+        documents = self._load_documents()
+        index = self._load_index()
 
-        scored: list[tuple[LegalSectionRecord, float]] = []
-        for doc_index, record in enumerate(records):
-            if allowed and record.act.upper() not in allowed:
+        scored: list[tuple[int, float]] = []
+        for doc_index, document in enumerate(documents):
+            if allowed and document.act.upper() not in allowed:
                 continue
-
-            total_score = 0.0
-            for field_index in field_indexes.values():
-                total_score += field_index.score_document(query_tokens, doc_index)
-            if total_score > 0.0:
-                scored.append((record, total_score))
+            score = index.score_document(query_tokens, doc_index)
+            if score > 0.0:
+                scored.append((doc_index, score))
 
         scored.sort(key=lambda item: item[1], reverse=True)
         scored = scored[:limit]
         return [
             LegalRetrievalResult(
-                record=record,
+                record=documents[doc_index],
                 retrieval_score=score,
                 rerank_score=score,
                 context_type="bm25_candidate",
             )
-            for record, score in scored
+            for doc_index, score in scored
         ]
 
 
 @dataclass(slots=True)
 class _FusedCandidate:
-    record: LegalSectionRecord
+    record: object
     score: float = 0.0
 
 
 class WeightedRRFFusion:
-    def __init__(self, *, bm25_weight: float = 0.3, vector_weight: float = 0.7, rrf_k: float = 60.0) -> None:
+    def __init__(self, *, bm25_weight: float = 0.6, vector_weight: float = 0.4, rrf_k: float = 60.0) -> None:
         self.bm25_weight = bm25_weight
         self.vector_weight = vector_weight
         self.rrf_k = rrf_k
 
     @staticmethod
     def _section_key(result: LegalRetrievalResult) -> tuple[str, str]:
-        return (result.record.act, result.record.serial_number)
+        return (result.act, result.serial_number)
 
     def _accumulate(
         self,
@@ -220,22 +179,13 @@ class WeightedRRFFusion:
             normalized_score = candidate.score / max_score if max_score else 0.0
             results.append(
                 LegalRetrievalResult(
-                    record=candidate.record,
+                    record=candidate.record,  # type: ignore[arg-type]
                     retrieval_score=normalized_score,
                     rerank_score=0.0,
                     context_type="fused_candidate",
                 )
             )
         return results
-
-
-def _candidate_text(record: LegalSectionRecord) -> str:
-    return (
-        f"Act: {record.act}\n"
-        f"Chapter: {record.chapter or ''}\n"
-        f"Section: {record.serial_number}\n"
-        f"Content: {record.content}"
-    )
 
 
 @dataclass(slots=True)
@@ -266,7 +216,7 @@ class LegalReranker:
         if not candidates:
             return []
         model = self._load_model()
-        pairs = [(query, _candidate_text(candidate.record)) for candidate in candidates]
+        pairs = [(query, candidate.to_section_block()) for candidate in candidates]
         scores = model.predict(pairs, batch_size=self.config.batch_size, show_progress_bar=False)
         scored = list(candidates)
         for candidate, score in zip(scored, scores, strict=False):
@@ -286,7 +236,7 @@ class LegalRetriever:
         self.embedder = embedder or BGEEmbedder()
         self.store = store or LegalQdrantStore()
         self.reranker = reranker or LegalReranker()
-        self.bm25 = LegalBM25Retriever(self.store)
+        self.bm25 = DocumentBM25Retriever(self.store)
         self.fusion = WeightedRRFFusion()
 
     @staticmethod
@@ -294,13 +244,13 @@ class LegalRetriever:
         if not act_filter:
             return list(results)
         allowed = {item.upper() for item in act_filter}
-        return [item for item in results if item.record.act.upper() in allowed]
+        return [item for item in results if item.act.upper() in allowed]
 
     def retrieve(
         self,
         complaint: str,
         *,
-        top_k: int = 20,
+        top_k: int = 15,
         final_k: int = 5,
         act_filter: Sequence[str] | None = None,
     ) -> LegalRetrievalBundle:
@@ -321,10 +271,10 @@ class LegalRetriever:
 
     def _expand_references(self, sections: Sequence[LegalRetrievalResult]) -> list[LegalRetrievalResult]:
         referenced: list[LegalRetrievalResult] = []
-        seen_keys = {(section.record.act, section.record.serial_number) for section in sections}
+        seen_keys = {(section.act, section.serial_number) for section in sections}
 
         for section in sections:
-            refs = self.store.fetch_sections(section.record.act, section.record.references)
+            refs = self.store.fetch_sections(section.act, section.references)
             for ref_record in refs:
                 key = (ref_record.act, ref_record.serial_number)
                 if key in seen_keys:

@@ -8,7 +8,6 @@ from extractors.paddle_ocr_extractor import extract_pdf_pages, iter_pdf_pages
 from ingestion.parse_bsa import parse_bsa_pdf
 from ingestion.parse_bnss import parse_bnss_pdf
 from ingestion.parse_bns import parse_bns_pdf
-from ingestion.parse_sop import parse_sop_pdf
 
 
 LOGGER = logging.getLogger(__name__)
@@ -22,8 +21,6 @@ def _dispatch_parser(path: Path):
         return parse_bnss_pdf
     if "bsa" in name:
         return parse_bsa_pdf
-    if "sop" in name or "ncrp" in name:
-        return parse_sop_pdf
     raise ValueError(f"Could not infer parser from filename: {path.name}")
 
 

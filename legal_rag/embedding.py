@@ -5,204 +5,164 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Sequence
 
-from ingestion.schemas import LegalSectionRecord, DeptRegistryRecord, SOPRecord
+from ingestion.schemas import DeptRegistryRecord, LegalSectionRecord, SOPRecord
 
-from .models import EmbeddedLegalRecord, EmbeddedDeptRecord, EmbeddedSOPRecord
+from .models import EmbeddedDocumentRecord
+
+ParsedRecord = LegalSectionRecord | DeptRegistryRecord | SOPRecord
 
 
-def _normalize_chapter_tags(value: Any) -> str:
-    if isinstance(value, (list, tuple)):
-        return ", ".join(str(item) for item in value if str(item).strip())
+def _normalize_text(value: Any) -> str:
     if value is None:
         return ""
-    return str(value)
+    if isinstance(value, (list, tuple)):
+        return "\n".join(str(item).strip() for item in value if str(item).strip())
+    return str(value).strip()
+
+
+def _normalize_csv(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, (list, tuple)):
+        return ", ".join(str(item).strip() for item in value if str(item).strip())
+    return str(value).strip()
+
+
+def _infer_record_kind(data: dict[str, Any]) -> str:
+    if "serial_number" in data or "chapter_tag" in data:
+        return "legal"
+    if "entity_name" in data and "what_they_can_provide" in data:
+        return "dept"
+    if "sop_id" in data or "crime_type" in data or "steps" in data:
+        return "sop"
+    return "legal"
+
+
+def _coerce_record(data: Any, record_type: str = "auto") -> ParsedRecord:
+    if hasattr(data, "model_dump"):
+        data = data.model_dump(exclude_none=True, mode="json")
+    elif isinstance(data, tuple):
+        data = dict(data)
+    if not isinstance(data, dict):
+        raise TypeError(f"Unsupported record payload: {type(data)!r}")
+
+    kind = record_type if record_type != "auto" else _infer_record_kind(data)
+    if kind == "dept":
+        return DeptRegistryRecord.model_validate(data)
+    if kind == "sop":
+        if isinstance(data, dict):
+            data = dict(data)
+            steps = data.get("steps", [])
+            if isinstance(steps, list):
+                normalized_steps = []
+                for step in steps:
+                    if not isinstance(step, dict):
+                        normalized_steps.append(step)
+                        continue
+                    step = dict(step)
+                    for key in ("required_evidence", "on_complete_trigger", "if_blocked"):
+                        value = step.get(key)
+                        if value in ("", None):
+                            step[key] = []
+                        elif isinstance(value, str):
+                            step[key] = [value]
+                    normalized_steps.append(step)
+                data["steps"] = normalized_steps
+        return SOPRecord.model_validate(data)
+    return LegalSectionRecord.model_validate(data)
+
+
+def load_parsed_records(path: str | Path, *, record_type: str = "auto") -> list[ParsedRecord]:
+    source = Path(path)
+    files = sorted(p for p in source.glob("*.json") if p.is_file()) if source.is_dir() else [source]
+
+    records: list[ParsedRecord] = []
+    for file_path in files:
+        data = json.loads(file_path.read_text(encoding="utf-8"))
+        if isinstance(data, list):
+            items = data
+        elif isinstance(data, dict) and "records" in data:
+            items = data["records"]
+        else:
+            items = [data]
+        for item in items:
+            records.append(_coerce_record(item, record_type=record_type))
+    return records
+
+
+def load_legal_records(path: str | Path) -> list[LegalSectionRecord]:
+    return [record for record in load_parsed_records(path, record_type="legal") if isinstance(record, LegalSectionRecord)]
+
+
+def load_dept_records(path: str | Path) -> list[DeptRegistryRecord]:
+    return [record for record in load_parsed_records(path, record_type="dept") if isinstance(record, DeptRegistryRecord)]
+
+
+def load_sop_records(path: str | Path) -> list[SOPRecord]:
+    return [record for record in load_parsed_records(path, record_type="sop") if isinstance(record, SOPRecord)]
 
 
 def build_legal_embedding_text(record: LegalSectionRecord) -> str:
     return (
         f"ACT:\n{record.act}\n\n"
         f"CHAPTER:\n{record.chapter or ''}\n\n"
-        f"CHAPTER TAGS:\n{_normalize_chapter_tags(record.chapter_tag)}\n\n"
         f"SECTION:\n{record.serial_number}\n\n"
         f"CONTENT:\n{record.content}"
     ).strip()
 
-def build_deptRegistry_embedding_text(record: DeptRegistryRecord) -> str:
+
+def build_dept_embedding_text(record: DeptRegistryRecord) -> str:
     return (
         f"ACT:\n{record.act}\n\n"
-        f"ENTITY ID:\n{record.entity_id}\n\n"
         f"ENTITY NAME:\n{record.entity_name}\n\n"
         f"CATEGORY:\n{record.category}\n\n"
-        f"WHAT THEY CAN PROVIDE:\n"
-        f"{chr(10).join(record.what_they_can_provide)}\n\n"
-        f"LEGAL BASIS:\n"
-        f"{chr(10).join(record.legal_basis_typically_cited)}\n\n"
-        f"REQUEST FORMAT:\n{record.request_format_expected}\n\n"
+        f"WHAT THEY CAN PROVIDE:\n{_normalize_csv(record.what_they_can_provide)}\n\n"
+        f"LEGAL BASIS TYPICALLY CITED:\n{_normalize_csv(record.legal_basis_typically_cited)}\n\n"
+        f"REQUEST FORMAT EXPECTED:\n{record.request_format_expected}\n\n"
         f"TYPICAL RESPONSE TIME:\n{record.typical_response_time}\n\n"
-        f"ESCALATION PATH:\n{record.escalation_path_if_no_response}\n\n"
-        f"NOTES:\n{record.notes_or_caveats}"
+        f"ESCALATION PATH IF NO RESPONSE:\n{record.escalation_path_if_no_response}\n\n"
+        f"NOTES OR CAVEATS:\n{record.notes_or_caveats}"
     ).strip()
+
 
 def build_sop_embedding_text(record: SOPRecord) -> str:
-    steps_text = []
+    parts = [
+        f"ACT:\n{record.act}",
+        f"CRIME TYPE:\n{record.crime_type}",
+        f"TITLE:\n{record.title}",
+    ]
 
-    for step in sorted(record.steps, key=lambda s: s.order):
-        steps_text.append(
-            f"""
-STEP {step.order}: {step.title}
-
-DESCRIPTION:
-{step.description}
-
-LEGAL BASIS:
-{step.legal_basis or ''}
-
-DEPARTMENT:
-{step.department_entity_id}
-
-REQUIRED EVIDENCE:
-{', '.join(step.required_evidence)}
-
-START CONDITION:
-{step.condition_to_start}
-
-COMPLETE CONDITION:
-{step.condition_to_complete}
-
-ON COMPLETE:
-{', '.join(step.on_complete_trigger)}
-
-IF BLOCKED:
-{', '.join(step.if_blocked)}
-""".strip()
+    for step in sorted(record.steps, key=lambda item: item.order):
+        parts.extend(
+            [
+                f"STEP TITLE:\n{step.title}",
+                f"STEP DESCRIPTION:\n{step.description}",
+                f"REQUIRED EVIDENCE:\n{_normalize_csv(step.required_evidence)}",
+                f"LEGAL BASIS:\n{step.legal_basis or ''}",
+                f"DEPARTMENT ENTITY ID:\n{step.department_entity_id}",
+                f"CONDITION TO START:\n{step.condition_to_start}",
+                f"CONDITION TO COMPLETE:\n{step.condition_to_complete}",
+                f"IF BLOCKED:\n{_normalize_csv(step.if_blocked)}",
+            ]
         )
-
-    dead_end_text = []
 
     for strategy in record.dead_end_strategies:
-        dead_end_text.append(
-            f"""
-CONDITION:
-{strategy.condition}
-
-SUGGESTED ACTIONS:
-{', '.join(strategy.suggested_actions)}
-""".strip()
+        parts.extend(
+            [
+                f"DEAD END CONDITION:\n{strategy.condition}",
+                f"SUGGESTED ACTIONS:\n{_normalize_csv(strategy.suggested_actions)}",
+            ]
         )
 
-    return (
-        f"ACT:\n{record.act}\n\n"
-        f"SOP ID:\n{record.sop_id}\n\n"
-        f"CRIME TYPE:\n{record.crime_type}\n\n"
-        f"TITLE:\n{record.title}\n\n"
-        f"SOURCE:\n{record.source}\n\n"
-        f"STEPS:\n\n"
-        f"{'\n\n'.join(steps_text)}\n\n"
-        f"DEAD END STRATEGIES:\n\n"
-        f"{'\n\n'.join(dead_end_text)}"
-    ).strip()
+    return "\n\n".join(part for part in parts if part).strip()
 
 
-# def _coerce_clause(data: Any) -> ClauseRecord:
-#     return ClauseRecord.model_validate(data)
-
-
-# def _coerce_subsection(data: Any) -> SubsectionRecord:
-#     if isinstance(data, dict) and "clauses" in data:
-#         data = dict(data)
-#         data["clauses"] = [_coerce_clause(item) for item in data.get("clauses", [])]
-#     return SubsectionRecord.model_validate(data)
-
-
-def _coerce_record(data: Any) -> LegalSectionRecord:
-    if isinstance(data, dict):
-        data = dict(data)
-        # if "clauses" in data:
-        #     data["clauses"] = [_coerce_clause(item) for item in data.get("clauses", [])]
-        # if "subsections" in data:
-        #     data["subsections"] = [_coerce_subsection(item) for item in data.get("subsections", [])]
-    return LegalSectionRecord.model_validate(data)
-
-
-def load_legal_records(path: str | Path) -> list[LegalSectionRecord]:
-    source = Path(path)
-    if source.is_dir():
-        files = sorted(p for p in source.glob("*.json") if p.is_file())
-    else:
-        files = [source]
-
-    records: list[LegalSectionRecord] = []
-    for file_path in files:
-        data = json.loads(file_path.read_text(encoding="utf-8"))
-        if isinstance(data, list):
-            items = data
-        elif isinstance(data, dict) and "records" in data:
-            items = data["records"]
-        else:
-            items = [data]
-        for item in items:
-            records.append(_coerce_record(item))
-    return records
-
-def _coerce_record(data: Any) -> DeptRegistryRecord:
-    if isinstance(data, dict):
-        data = dict(data)
-        # if "clauses" in data:
-        #     data["clauses"] = [_coerce_clause(item) for item in data.get("clauses", [])]
-        # if "subsections" in data:
-        #     data["subsections"] = [_coerce_subsection(item) for item in data.get("subsections", [])]
-    return DeptRegistryRecord.model_validate(data)
-
-
-def load_dept_records(path: str | Path) -> list[DeptRegistryRecord]:
-    source = Path(path)
-    if source.is_dir():
-        files = sorted(p for p in source.glob("*.json") if p.is_file())
-    else:
-        files = [source]
-
-    records: list[DeptRegistryRecord] = []
-    for file_path in files:
-        data = json.loads(file_path.read_text(encoding="utf-8"))
-        if isinstance(data, list):
-            items = data
-        elif isinstance(data, dict) and "records" in data:
-            items = data["records"]
-        else:
-            items = [data]
-        for item in items:
-            records.append(_coerce_record(item))
-    return records
-
-def _coerce_record(data: Any) -> SOPRecord:
-    if isinstance(data, dict):
-        data = dict(data)
-        # if "clauses" in data:
-        #     data["clauses"] = [_coerce_clause(item) for item in data.get("clauses", [])]
-        # if "subsections" in data:
-        #     data["subsections"] = [_coerce_subsection(item) for item in data.get("subsections", [])]
-    return SOPRecord.model_validate(data)
-
-
-def load_sop_records(path: str | Path) -> list[SOPRecord]:
-    source = Path(path)
-    if source.is_dir():
-        files = sorted(p for p in source.glob("*.json") if p.is_file())
-    else:
-        files = [source]
-
-    records: list[SOPRecord] = []
-    for file_path in files:
-        data = json.loads(file_path.read_text(encoding="utf-8"))
-        if isinstance(data, list):
-            items = data
-        elif isinstance(data, dict) and "records" in data:
-            items = data["records"]
-        else:
-            items = [data]
-        for item in items:
-            records.append(_coerce_record(item))
-    return records
+def build_embedding_text(record: ParsedRecord) -> str:
+    if isinstance(record, DeptRegistryRecord):
+        return build_dept_embedding_text(record)
+    if isinstance(record, SOPRecord):
+        return build_sop_embedding_text(record)
+    return build_legal_embedding_text(record)
 
 
 @dataclass(slots=True)
@@ -246,45 +206,22 @@ class BGEEmbedder:
             return embeddings.tolist()
         return [list(vector) for vector in embeddings]
 
-    # def embed_record(self, record: LegalSectionRecord) -> EmbeddedLegalRecord:
-    #     # embedding_text = build_legal_embedding_text(record)
-    #     embedding_text = build_deptRegistry_embedding_text(record)        
-    #     embedding = self.embed_texts([embedding_text])[0]
-    #     return EmbeddedLegalRecord(record=record, embedding_text=embedding_text, embedding=embedding)
+    def embed_record(self, record: ParsedRecord) -> EmbeddedDocumentRecord:
+        embedding_text = build_embedding_text(record)
+        embedding = self.embed_texts([embedding_text])[0]
+        return EmbeddedDocumentRecord(record=record, embedding_text=embedding_text, embedding=embedding)
 
-    def embed_records_legal(self, records: Iterable[LegalSectionRecord]) -> list[EmbeddedLegalRecord]:
+    def embed_records(self, records: Iterable[ParsedRecord]) -> list[EmbeddedDocumentRecord]:
         materialized = list(records)
-        # texts = [build_legal_embedding_text(record) for record in materialized]
-        texts = [build_legal_embedding_text(record) for record in materialized]
+        texts = [build_embedding_text(record) for record in materialized]
         vectors = self.embed_texts(texts) if materialized else []
         return [
-            EmbeddedLegalRecord(record=record, embedding_text=text, embedding=vector)
-            for record, text, vector in zip(materialized, texts, vectors, strict=False)
-        ]
-    
-    def embed_records_dept(self, records: Iterable[DeptRegistryRecord]) -> list[EmbeddedLegalRecord]:
-        materialized = list(records)
-        # texts = [build_legal_embedding_text(record) for record in materialized]
-        texts = [build_deptRegistry_embedding_text(record) for record in materialized]
-        vectors = self.embed_texts(texts) if materialized else []
-        return [
-            EmbeddedLegalRecord(record=record, embedding_text=text, embedding=vector)
-            for record, text, vector in zip(materialized, texts, vectors, strict=False)
-        ]
-
-    def embed_records_sop(self, records: Iterable[SOPRecord]) -> list[EmbeddedLegalRecord]:
-        materialized = list(records)
-        # texts = [build_legal_embedding_text(record) for record in materialized]
-        texts = [build_sop_embedding_text(record) for record in materialized]
-        vectors = self.embed_texts(texts) if materialized else []
-        return [
-            EmbeddedLegalRecord(record=record, embedding_text=text, embedding=vector)
+            EmbeddedDocumentRecord(record=record, embedding_text=text, embedding=vector)
             for record, text, vector in zip(materialized, texts, vectors, strict=False)
         ]
 
 
-
-def save_embedded_records(records: Iterable[EmbeddedLegalRecord], path: str | Path) -> Path:
+def save_embedded_records(records: Iterable[EmbeddedDocumentRecord], path: str | Path) -> Path:
     output_path = Path(path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", encoding="utf-8") as handle:

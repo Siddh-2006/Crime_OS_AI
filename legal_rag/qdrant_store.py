@@ -3,10 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Iterable, Sequence
 
-from ingestion.schemas import LegalSectionRecord
+from .models import EmbeddedDocumentRecord, LegalRetrievalResult, RetrievedDocumentRecord
 
-from .models import EmbeddedLegalRecord, LegalRetrievalResult
-import uuid
 
 def _load_qdrant():
     try:
@@ -32,17 +30,21 @@ def _extract_scroll_result(result: Any) -> tuple[list[Any], Any | None]:
 @dataclass(slots=True)
 class LegalQdrantConfig:
     url: str = "http://localhost:6333"
-    collection_name: str = "legal"
+    collection_name: str = "final"
     prefer_grpc: bool = False
     timeout: float | None = None
-
 
 
 class LegalQdrantStore:
     def __init__(self, config: LegalQdrantConfig | None = None) -> None:
         self.config = config or LegalQdrantConfig()
         QdrantClient, models = _load_qdrant()
-        self._client = QdrantClient(url=self.config.url, prefer_grpc=self.config.prefer_grpc, timeout=self.config.timeout, check_compatibility=False)
+        self._client = QdrantClient(
+            url=self.config.url,
+            prefer_grpc=self.config.prefer_grpc,
+            timeout=self.config.timeout,
+            check_compatibility=False,
+        )
         self._models = models
 
     @property
@@ -55,6 +57,10 @@ class LegalQdrantStore:
             "Start the local server first, for example: "
             "docker run -p 6333:6333 qdrant/qdrant"
         )
+
+    @staticmethod
+    def _format_qdrant_exception(exc: Exception) -> str:
+        return f"{type(exc).__name__}: {exc}"
 
     def ensure_collection(self, vector_size: int) -> None:
         models = self._models
@@ -80,12 +86,12 @@ class LegalQdrantStore:
             if hasattr(self.client, "search"):
                 return self.client.search(query_vector=list(query_vector), **kwargs)
         except Exception as exc:  # pragma: no cover - network/runtime specific
-            message = self._connection_error_message()
+            message = f"{self._connection_error_message()} ({self._format_qdrant_exception(exc)})"
             raise RuntimeError(message) from exc
 
         raise AttributeError("QdrantClient does not expose query_points or search")
 
-    def upsert_embeddings(self, records: Iterable[EmbeddedLegalRecord]) -> int:
+    def upsert_embeddings(self, records: Iterable[EmbeddedDocumentRecord]) -> int:
         materialized = list(records)
         if not materialized:
             return 0
@@ -94,7 +100,7 @@ class LegalQdrantStore:
         models = self._models
         points = [
             models.PointStruct(
-                id=str(uuid.uuid4()),
+                id=record.uuid,
                 vector=record.embedding,
                 payload=record.to_payload(),
             )
@@ -103,11 +109,12 @@ class LegalQdrantStore:
         try:
             self.client.upsert(collection_name=self.config.collection_name, points=points)
         except Exception as exc:  # pragma: no cover - network/runtime specific
-            raise RuntimeError(self._connection_error_message()) from exc
+            message = f"{self._connection_error_message()} ({self._format_qdrant_exception(exc)})"
+            raise RuntimeError(message) from exc
         return len(points)
 
-    def list_sections(self, *, batch_size: int = 256) -> list[LegalSectionRecord]:
-        records: list[LegalSectionRecord] = []
+    def list_documents(self, *, batch_size: int = 256) -> list[RetrievedDocumentRecord]:
+        documents: list[RetrievedDocumentRecord] = []
         offset = None
         while True:
             try:
@@ -118,18 +125,24 @@ class LegalQdrantStore:
                     with_payload=True,
                 )
             except Exception as exc:  # pragma: no cover - network/runtime specific
-                raise RuntimeError(self._connection_error_message()) from exc
+                message = f"{self._connection_error_message()} ({self._format_qdrant_exception(exc)})"
+                raise RuntimeError(message) from exc
 
             points, next_offset = _extract_scroll_result(result)
             if not points:
                 break
+
             for point in points:
                 payload = point.payload or {}
-                records.append(LegalSectionRecord.model_validate(payload))
+                documents.append(RetrievedDocumentRecord.from_payload(payload))
+
             if next_offset is None:
                 break
             offset = next_offset
-        return records
+        return documents
+
+    def list_sections(self, *, batch_size: int = 256) -> list[RetrievedDocumentRecord]:
+        return self.list_documents(batch_size=batch_size)
 
     def search(self, query_vector: Sequence[float], *, limit: int = 20, query_filter: Any | None = None) -> list[LegalRetrievalResult]:
         hits = self._search_points(query_vector, limit=limit, query_filter=query_filter)
@@ -137,7 +150,7 @@ class LegalQdrantStore:
         results: list[LegalRetrievalResult] = []
         for hit in points:
             payload = hit.payload or {}
-            record = LegalSectionRecord.model_validate(payload)
+            record = RetrievedDocumentRecord.from_payload(payload)
             results.append(
                 LegalRetrievalResult(
                     record=record,
@@ -147,33 +160,22 @@ class LegalQdrantStore:
             )
         return results
 
-    def fetch_sections(self, act: str, serial_numbers: Iterable[str]) -> list[LegalSectionRecord]:
-        models = self._models
-        unique_serials = []
+    def fetch_sections(self, act: str, serial_numbers: Iterable[str]) -> list[RetrievedDocumentRecord]:
+        unique_ids: list[str] = []
         seen: set[str] = set()
         for serial in serial_numbers:
             normalized = str(serial).strip()
             if normalized and normalized not in seen:
                 seen.add(normalized)
-                unique_serials.append(normalized)
+                unique_ids.append(normalized)
 
-        records: list[LegalSectionRecord] = []
-        for serial in unique_serials:
-            result = self.client.scroll(
-                collection_name=self.config.collection_name,
-                scroll_filter=models.Filter(
-                    must=[
-                        models.FieldCondition(key="act", match=models.MatchValue(value=act)),
-                        models.FieldCondition(key="serial_number", match=models.MatchValue(value=serial)),
-                    ]
-                ),
-                limit=1,
-                with_payload=True,
-            )
-            # qdrant-client versions vary in scroll return shape; keep the parsing defensive.
-            points, _ = _extract_scroll_result(result)
-            if not points:
+        if not unique_ids:
+            return []
+
+        records: list[RetrievedDocumentRecord] = []
+        for document in self.list_documents():
+            if document.act != act:
                 continue
-            payload = points[0].payload or {}
-            records.append(LegalSectionRecord.model_validate(payload))
+            if document.identifier in seen:
+                records.append(document)
         return records

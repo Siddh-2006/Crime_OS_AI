@@ -153,9 +153,9 @@ class StepRecord(BaseModel):
     description: str = ""
     required_evidence: list[str] = Field(default_factory=list)
     legal_basis: Optional[str] = None
-    department_entity_id: str = ""
-    condition_to_start: str = ""
-    condition_to_complete: str = ""
+    department_entity_id: Optional[str] = None
+    condition_to_start: Optional[str] = None
+    condition_to_complete: Optional[str] = None
     on_complete_trigger: list[str] = Field(default_factory=list)
     if_blocked: list[str] = Field(default_factory=list)
 

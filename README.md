@@ -1,28 +1,40 @@
 # Legal Copilot Pipeline
 
-This repository provides a production-style legal RAG pipeline for:
+This repository provides a production-style retrieval and reasoning pipeline for:
 
 - BNS
 - BNSS
 - BSA
+- Dept Registry
+- SOP documents
 
 It is built for police-facing legal assistance, not open-ended chatbot use.
 
 ## Pipeline
 
 ```text
-Complaint
-→ OCR / Parsing
-→ Embedding
-→ Qdrant
-→ Retrieval
+Query
+→ BM25 Search
+→ Vector Search
+→ Weighted RRF Fusion
 → Reranking
+→ Top 5 Context
 → Local Qwen reasoning
 ```
 
-## Current Parsing Flow
+## Supported Records
 
-Legal acts now use a streaming OCR-block parser.
+The system now works with a mixed Qdrant collection containing:
+
+- `LegalSectionRecord`
+- `DeptRegistryRecord`
+- `SOPRecord`
+
+The `act` field is used to distinguish document families inside the shared collection.
+
+## Parsing Flow
+
+Legal acts still use the streaming OCR-block parser.
 
 - OCR pages are processed in order
 - The parser works on OCR blocks, not reconstructed page text
@@ -33,7 +45,7 @@ Legal acts now use a streaming OCR-block parser.
 
 This means parsed legal output is available during processing, not only at the end.
 
-### Output Location
+## Output Location
 
 If you run the parser with:
 
@@ -46,7 +58,11 @@ then the parser writes:
 - `parsed/BNS.jsonl`
 - `parsed/BNS.json`
 
-## Legal Record Shape
+Dept Registry and SOP documents are already parsed and stored under `parsed/`.
+
+## Record Shapes
+
+### Legal sections
 
 The current `LegalSectionRecord` stores:
 
@@ -62,45 +78,67 @@ The current `LegalSectionRecord` stores:
 - `page_numbers`
 - `metadata`
 
-Redundant section-level fields such as `clauses`, `subsections`, `page`, `source_page`, and `source_pages` have been removed from the legal section record.
+### Dept Registry
 
-## OCR Cleanup
+The current `DeptRegistryRecord` stores:
 
-The legal parser removes common OCR noise patterns, including:
+- `act`
+- `entity_id`
+- `entity_name`
+- `category`
+- `what_they_can_provide`
+- `legal_basis_typically_cited`
+- `request_format_expected`
+- `typical_response_time`
+- `escalation_path_if_no_response`
+- `notes_or_caveats`
+- `confidence`
 
-- `THE GAZETTE OF INDIA EXTRAORDINARY`
-- lines starting with `[Part ...`
-- `Sec. <number>]`
-- separator-only lines made of underscores
-- `<number> of <year>.`
+### SOP
 
-## Embedding Model
+The current `SOPRecord` stores:
 
-- `BAAI/bge-m3`
-- Local inference only
-- `sentence-transformers`
+- `act`
+- `sop_id`
+- `crime_type`
+- `title`
+- `source`
+- `steps`
+- `dead_end_strategies`
 
-## Reranker
+## Embedding
 
-- `BAAI/bge-reranker-v2-m3`
-- Local inference only
+The embedder now supports mixed document types.
+
+Generate embeddings from parsed JSON:
+
+```bash
+python -m ingestion.embed_records parsed --out embedded/legal_embeddings.jsonl
+```
+
+You can also force a specific schema if needed:
+
+```bash
+python -m ingestion.embed_records parsed/BNS.json --type legal --out embedded/BNS_embeddings.jsonl
+python -m ingestion.embed_records parsed/Department_Registry.json --type dept --out embedded/Department_Registry_embeddings.jsonl
+python -m ingestion.embed_records parsed/SOP2.json --type sop --out embedded/SOP2_embeddings.jsonl
+```
+
+The embedding text is schema-aware:
+
+- Legal sections use `act`, `chapter`, `serial_number`, and `content`
+- Dept Registry uses the operational fields relevant for service requests and escalation
+- SOP uses the crime type, title, steps, and dead-end strategy text
 
 ## Vector Store
 
 - Qdrant Local
 - Single collection: `legal`
+- Shared collection for all supported document types
 - Run locally with:
 
 ```bash
 docker run -p 6333:6333 qdrant/qdrant
-```
-
-## Key Commands
-
-Generate embeddings from parsed JSON:
-
-```bash
-python -m ingestion.embed_records parsed/BNS.json --out embedded/legal_embeddings.jsonl
 ```
 
 Upload embeddings into Qdrant:
@@ -108,6 +146,36 @@ Upload embeddings into Qdrant:
 ```bash
 python -m ingestion.ingest_qdrant embedded/legal_embeddings.jsonl
 ```
+
+## Retrieval
+
+Retrieval now combines:
+
+- BM25 search over schema-specific text
+- Vector search over Qdrant embeddings
+- Weighted Reciprocal Rank Fusion
+- Existing reranker
+
+BM25 fields:
+
+- Legal sections: `chapter_tag`, `summary`, `content`
+- Dept Registry: `entity_name`, `category`, `what_they_can_provide`, `legal_basis_typically_cited`, `request_format_expected`, `typical_response_time`, `escalation_path_if_no_response`, `notes_or_caveats`
+- SOP: boosted `crime_type` and `title`, then flattened step and dead-end strategy fields
+
+Fusion weights:
+
+- BM25: `0.6`
+- Vector: `0.4`
+
+Top retrieved candidate count:
+
+- `15`
+
+Top reranked context sent to the LLM:
+
+- `5`
+
+## Key Commands
 
 Evaluate retrieval quality:
 
@@ -121,21 +189,14 @@ Run the full legal copilot pipeline:
 python scripts/run_legal_copilot.py "Victim lost ₹50,000 through a fake UPI collect request."
 ```
 
-Inspect retrieval quality only:
+Optional act filtering:
 
 ```bash
-python scripts/evaluate_retrieval.py "Victim lost ₹50,000 through a fake UPI collect request."
+python scripts/evaluate_retrieval.py "Your query here" --act BNS --act sop
 ```
-
-The terminal flow prints:
-
-- Top 20 retrieved sections
-- Top 5 reranked sections
-- Reference-expanded sections
-- Confidence score and level
-- Final structured legal analysis JSON
 
 ## Notes
 
-- Chapter metadata and chapter tags are carried into embeddings.
+- Chapter metadata and chapter tags are carried into legal embeddings.
 - Reference expansion is one level deep only.
+- Only the final top 5 reranked sections are passed to the LLM.
