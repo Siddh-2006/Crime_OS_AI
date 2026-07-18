@@ -4,6 +4,7 @@ import { connectDatabase } from './config/database';
 import { getRedisClient } from './config/redis';
 import { startEmailWorker } from './shared/queue/EmailWorker';
 import { startFirWorker } from './shared/queue/FirWorker';
+import { checkOllamaHealth } from './shared/llm/ollamaHealth';
 import env from './config/env';
 import logger from './config/logger';
 
@@ -29,6 +30,7 @@ async function bootstrap(): Promise<void> {
     getRedisClient(); // Initialise Redis connection
     startEmailWorker();
     startFirWorker();
+    await checkOllamaHealth();
 
     const app = createApp();
     const server = app.listen(env.PORT, () => {

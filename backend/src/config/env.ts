@@ -39,6 +39,13 @@ const env = cleanEnv(process.env, {
   CLOUDINARY_API_KEY: str(),
   CLOUDINARY_API_SECRET: str(),
   AI_SERVICE_URL: str({ default: 'http://localhost:8000' }),
+  LEGAL_AGENT_URL: str({ default: 'http://localhost:8001' }),
+  IO_RECOMMENDATION_URL: str({ default: 'http://localhost:8002' }),
+
+  // ── Ollama local LLM ──────────────────────────────────────────────────────────
+  OLLAMA_BASE_URL: str({ default: 'http://localhost:11434' }),
+  OLLAMA_NUM_CTX: num({ default: 32768 }),
+  OLLAMA_REQUIRED_MODELS: str({ default: 'gemma4:e2b,llama3.2:latest' }),
 });
 
 export default env;
