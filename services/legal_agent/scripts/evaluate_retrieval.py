@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import sys
 from pathlib import Path
 
@@ -45,20 +46,62 @@ def _print_sections(title: str, results) -> None:
         )
 
 
+async def _interactive_loop(retriever: LegalRetriever, *, top_k: int, final_k: int, acts) -> int:
+    print("Interactive retrieval mode. Type a query and press Enter. Type 'exit' to quit.")
+    while True:
+        query = await asyncio.to_thread(input, "\nquery> ")
+        query = query.strip()
+        if not query:
+            continue
+        if query.lower() in {"exit", "quit"}:
+            print("Exiting interactive mode.")
+            return 0
+
+        try:
+            bundle = await asyncio.to_thread(
+                retriever.retrieve,
+                query,
+                top_k=top_k,
+                final_k=final_k,
+                act_filter=acts,
+            )
+        except RuntimeError as exc:
+            print(str(exc))
+            continue
+
+        confidence = compute_confidence(bundle)
+        _print_results("Top Fused Candidates", bundle.top_20)
+        print()
+        _print_results("Top 5 Reranked", bundle.top_5)
+        print()
+        _print_sections("Reference-Expanded", bundle.context_sections)
+        print()
+        print(f"Confidence: {confidence.level} ({confidence.score:.2f})")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Evaluate legal retrieval quality for a complaint.")
-    parser.add_argument("complaint", help="Natural language complaint")
+    parser.add_argument("complaint", nargs="?", help="Natural language complaint")
     parser.add_argument("--top-k", type=int, default=15, help="Fused candidate count passed to reranking")
     parser.add_argument("--final-k", type=int, default=5, help="Reranked output size")
     parser.add_argument("--act", action="append", dest="acts", help="Optional legal act filter; can be repeated")
+    parser.add_argument("--interactive", action="store_true", help="Keep the process alive and accept repeated queries")
     args = parser.parse_args()
 
     try:
         retriever = LegalRetriever()
-        bundle = retriever.retrieve(args.complaint, top_k=args.top_k, final_k=args.final_k, act_filter=args.acts)
     except RuntimeError as exc:
         print(str(exc))
         return 1
+
+    if args.interactive:
+        return asyncio.run(_interactive_loop(retriever, top_k=args.top_k, final_k=args.final_k, acts=args.acts))
+
+    if not args.complaint:
+        print("Provide a complaint argument or pass --interactive.")
+        return 1
+
+    bundle = retriever.retrieve(args.complaint, top_k=args.top_k, final_k=args.final_k, act_filter=args.acts)
     confidence = compute_confidence(bundle)
 
     _print_results("Top Fused Candidates", bundle.top_20)

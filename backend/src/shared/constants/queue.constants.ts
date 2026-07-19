@@ -3,8 +3,9 @@
  * Centralised to ensure consistency between producers and workers.
  */
 export const QUEUE_NAMES = {
-  EMAIL: 'email',
-  FIR:   'fir',
+  EMAIL:    'email',
+  FIR:      'fir',
+  ANALYSIS: 'analysis',
 } as const;
 
 /**
@@ -16,6 +17,9 @@ export const EMAIL_JOB_NAMES = {
   SEND_WELCOME:                 'send_welcome',
   SEND_COMPLAINT_REJECTION:     'send_complaint_rejection',
   SEND_FIR_REGISTERED:          'send_fir_registered',
+  SEND_DEPARTMENT_REQUEST:      'send_department_request',
+  SEND_CITIZEN_REQUEST:         'send_citizen_request',
+  SEND_ESCALATION:              'send_escalation',
 } as const;
 
 /**
@@ -23,4 +27,11 @@ export const EMAIL_JOB_NAMES = {
  */
 export const FIR_JOB_NAMES = {
   GENERATE_FIR_PDF: 'generate_fir_pdf',
+} as const;
+
+/**
+ * BullMQ job names within the analysis queue.
+ */
+export const ANALYSIS_JOB_NAMES = {
+  ANALYZE_CASE: 'analyze_case',
 } as const;

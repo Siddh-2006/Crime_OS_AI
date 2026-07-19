@@ -95,4 +95,32 @@ router.delete(
   adminController.deleteOfficer,
 );
 
+// ─── Department Registry CRUD ──────────────────────────────────────────────
+import { DepartmentRegistryController } from '../controllers/DepartmentRegistryController';
+
+router.get(
+  '/departments',
+  authenticate,
+  authorize(Role.ADMIN),
+  DepartmentRegistryController.getDepartments,
+);
+router.post(
+  '/departments',
+  authenticate,
+  authorize(Role.ADMIN),
+  DepartmentRegistryController.addDepartment,
+);
+router.put(
+  '/departments/:id',
+  authenticate,
+  authorize(Role.ADMIN),
+  DepartmentRegistryController.updateDepartment,
+);
+router.patch(
+  '/departments/:id/deactivate',
+  authenticate,
+  authorize(Role.ADMIN),
+  DepartmentRegistryController.deactivateDepartment,
+);
+
 export default router;

@@ -39,6 +39,18 @@ export function startEmailWorker(): void {
         await emailService.sendFirRegisteredEmail(payload);
         break;
 
+      case EMAIL_JOB_NAMES.SEND_DEPARTMENT_REQUEST:
+        await emailService.sendDepartmentRequestEmail(payload);
+        break;
+
+      case EMAIL_JOB_NAMES.SEND_CITIZEN_REQUEST:
+        await emailService.sendCitizenRequestEmail(payload);
+        break;
+
+      case EMAIL_JOB_NAMES.SEND_ESCALATION:
+        await emailService.sendEscalationEmail(payload);
+        break;
+
       default:
         logger.warn('Unknown email job type received', { type });
     }

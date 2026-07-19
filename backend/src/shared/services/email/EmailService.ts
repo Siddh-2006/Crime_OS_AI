@@ -28,6 +28,30 @@ export interface FirRegisteredEmailPayload {
   firPdfUrl: string;
 }
 
+export interface DepartmentRequestEmailPayload {
+  to: string;
+  departmentName: string;
+  caseId: string;
+  requestId: string;
+  content: string;
+}
+
+export interface CitizenRequestEmailPayload {
+  to: string;
+  name: string;
+  caseId: string;
+  content: string;
+  token: string;
+}
+
+export interface EscalationEmailPayload {
+  to: string;
+  caseId: string;
+  escalationId: string;
+  reason: string;
+  summary: string;
+}
+
 /**
  * High-level email service.
  * Uses IEmailProvider to send emails — agnostic to the underlying transport.
@@ -147,6 +171,80 @@ export class EmailService {
               <a href="${payload.firPdfUrl}" style="background: #1a237e; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;">Download FIR Copy</a>
             </div>
             <p style="color: #666; font-size: 12px; margin-top: 32px;">Gujarat Police — Serving with Integrity | This is a system-generated email.</p>
+          </div>
+        </body>
+        </html>
+      `,
+    });
+  }
+
+  async sendDepartmentRequestEmail(payload: DepartmentRequestEmailPayload): Promise<void> {
+    logger.debug('Sending department request email', { to: payload.to, requestId: payload.requestId });
+    await this.provider.sendMail({
+      to: payload.to,
+      subject: `Official Request - Case ${payload.caseId} | Gujarat Police`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
+          <div style="background: #1a237e; padding: 24px; border-radius: 8px 8px 0 0; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 22px;">Gujarat Police — Crime OS</h1>
+          </div>
+          <div style="background: #f5f5f5; padding: 24px; border-radius: 0 0 8px 8px;">
+            <h2 style="color: #1a237e;">Official Request to ${payload.departmentName}</h2>
+            <div style="background: white; border: 1px solid #ccc; padding: 20px; white-space: pre-wrap; font-family: monospace;">${payload.content}</div>
+            <p style="color: #666; font-size: 12px; margin-top: 32px;">Gujarat Police — Serving with Integrity | This is a system-generated email.</p>
+          </div>
+        </body>
+        </html>
+      `,
+    });
+  }
+
+  async sendCitizenRequestEmail(payload: any): Promise<void> {
+    logger.debug('Sending citizen request email', { to: payload.to, caseId: payload.caseId });
+    await this.provider.sendMail({
+      to: payload.to,
+      subject: `Information Required - Case ${payload.caseId} | Gujarat Police`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
+          <div style="background: #1a237e; padding: 24px; border-radius: 8px 8px 0 0; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 22px;">Gujarat Police — Crime OS</h1>
+          </div>
+          <div style="background: #f5f5f5; padding: 24px; border-radius: 0 0 8px 8px;">
+            <h2 style="color: #1a237e;">Information Required for Case ${payload.caseId}</h2>
+            <p>Dear ${payload.name},</p>
+            <div style="background: white; border: 1px solid #ccc; padding: 20px; white-space: pre-wrap;">${payload.content}</div>
+            <br/>
+            <p>Please submit the requested information securely using the official portal link below:</p>
+            <a href="http://localhost:3000/citizen-response/${payload.token}" style="display: inline-block; padding: 10px 20px; background-color: #1a237e; color: white; text-decoration: none; border-radius: 5px;">Submit Information</a>
+            <p style="color: #666; font-size: 12px; margin-top: 32px;">Gujarat Police — Serving with Integrity | This is a system-generated email.</p>
+          </div>
+        </body>
+        </html>
+      `,
+    });
+  }
+
+  async sendEscalationEmail(payload: EscalationEmailPayload): Promise<void> {
+    logger.debug('Sending escalation email', { to: payload.to, escalationId: payload.escalationId });
+    await this.provider.sendMail({
+      to: payload.to,
+      subject: `🚨 URGENT: Escalation for Case ${payload.caseId} | Gujarat Police`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
+          <div style="background: #c62828; padding: 24px; border-radius: 8px 8px 0 0; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 22px;">Gujarat Police — Crime OS Escalation</h1>
+          </div>
+          <div style="background: #f5f5f5; padding: 24px; border-radius: 0 0 8px 8px;">
+            <h2 style="color: #c62828;">Case Escalated: ${payload.caseId}</h2>
+            <p><strong>Reason:</strong> ${payload.reason}</p>
+            <div style="background: white; border: 1px solid #c62828; padding: 20px; white-space: pre-wrap;">${payload.summary}</div>
+            <p style="color: #666; font-size: 12px; margin-top: 32px;">System-generated escalation alert.</p>
           </div>
         </body>
         </html>

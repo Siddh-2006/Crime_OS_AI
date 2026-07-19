@@ -1,0 +1,46 @@
+import { Router } from 'express';
+import { InvestigationController } from '../controllers/InvestigationController';
+import { CitizenRequestController } from '../controllers/CitizenRequestController';
+// Optional: import authentication middlewares if this needs to be protected immediately
+// import { authenticate } from '../../../common/middlewares/auth.middleware';
+
+const router = Router();
+
+// Endpoint to trigger async analysis
+router.post('/:id/analyze', InvestigationController.analyzeCase);
+
+// Copilot
+router.post('/:id/copilot/ask', InvestigationController.askCopilot);
+
+// Endpoint to get the latest analysis snapshot
+router.get('/:id/analysis/latest', InvestigationController.getLatestSnapshot);
+
+// Officer manual overrides
+router.post('/:id/analysis/:snapshotId/correct', InvestigationController.correctSnapshot);
+router.post('/:id/analysis/manual', InvestigationController.createManualSnapshot);
+
+// Request Composer endpoints
+router.post('/:id/requests/draft', InvestigationController.generateDraftRequest);
+router.patch('/requests/:reqId', InvestigationController.updateRequestDraft);
+router.post('/:id/requests/:reqId/send', InvestigationController.sendRequest);
+router.post('/:id/citizen-request', CitizenRequestController.createCitizenRequest);
+
+// Escalation
+router.post('/:id/escalate', InvestigationController.escalateCase);
+
+// State fetchers
+router.get('/:id/diary', InvestigationController.getCaseDiary);
+router.get('/:id/checklist', InvestigationController.getCaseChecklist);
+router.post('/:id/checklist/steps', InvestigationController.addManualStep);
+router.post('/:id/checklist/:stepId/complete', InvestigationController.completeStep);
+router.get('/:id/requests', InvestigationController.getDepartmentRequests);
+router.get('/:id/evidence', InvestigationController.getEvidence);
+router.post('/:id/evidence', InvestigationController.addEvidence);
+router.post('/:id/evidence/:evidenceId/transfer', InvestigationController.transferEvidence);
+
+// Thread endpoints
+router.get('/:id/threads', InvestigationController.getThreads);
+router.get('/threads/:threadId', InvestigationController.getThreadById);
+router.post('/threads/:threadId/reply', InvestigationController.replyToThread);
+
+export default router;

@@ -10,7 +10,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Load parsed JSON and generate embeddings.")
     parser.add_argument("input", type=Path, help="Parsed JSON file or directory containing parsed JSON files")
     parser.add_argument("--out", type=Path, default=Path("embedded") / "legal_embeddings.jsonl", help="Output JSONL file")
-    parser.add_argument("--model", default="BAAI/bge-m3", help="SentenceTransformer embedding model")
+    parser.add_argument("--model", default="BAAI/bge-base-en-v1.5", help="SentenceTransformer embedding model")
     parser.add_argument(
         "--type",
         choices=["auto", "legal", "dept", "sop"],

@@ -87,7 +87,7 @@ export interface RequestSummary {
 export interface RequestRow {
   request_id:           string;
   step_id:              string;
-  department_entity_id: string;
+  department_entity_id?: string;
   status:               string;
   sent_at?:             Date;
   response_at?:         Date;

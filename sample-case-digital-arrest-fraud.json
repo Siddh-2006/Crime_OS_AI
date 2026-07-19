@@ -1,0 +1,89 @@
+{
+  "case_id": "TEST-CYBER-REAL-001",
+  "crime_type": "cyber_financial_fraud",
+  "sop_id": "cyber_upi_fraud_v1",
+  "title": "Digital Arrest / Impersonation Scam with UPI Fraud",
+
+  "complaint_summary": "Complainant Dr. Ashwin Mehta (58, Surat) reports that on 15 July 2026 he received a WhatsApp video call from a person claiming to be 'Inspector R.K. Sharma' of Mumbai Cyber Crime Cell, stating that a parcel booked in the complainant's name and containing illegal substances had been intercepted at Mumbai Airport, and that his Aadhaar and bank accounts were linked to a money-laundering investigation. The caller, in police uniform on video, threatened 'digital arrest' unless the complainant cooperated with a 'verification process.' Under sustained pressure over approximately 3 hours, the complainant shared his Aadhaar number, PAN details, and screenshots of his bank balance, and was then instructed to transfer Rs. 4,85,000 across two transactions to 'RBI verification accounts' to 'prove the funds were not illegal,' with a promise of refund after clearance. No refund occurred and the caller became unreachable the next day. The complainant's son later found saved WhatsApp chat, a partial screen recording of the video call, and the transaction receipts.",
+
+  "entities": [
+    { "entity_type": "phone", "value": "+91-98XXXXXX76", "role": "complainant_contact" },
+    { "entity_type": "phone", "value": "+91-70XXXXXX19", "role": "suspect_whatsapp_number" },
+    { "entity_type": "bank_account", "value": "XXXX-XXXX-2210 (Complainant, ICICI)", "role": "victim_account" },
+    { "entity_type": "bank_account", "value": "XXXX-XXXX-6634 (destination, transaction 1)", "role": "suspect_destination_layer1" },
+    { "entity_type": "bank_account", "value": "XXXX-XXXX-8871 (destination, transaction 2)", "role": "suspect_destination_layer1" },
+    { "entity_type": "upi_id", "value": "rbiverification447@fakebank", "role": "suspect_upi_id" },
+    { "entity_type": "transaction_ref", "value": "RRN 511029884410 (Rs. 2,85,000)", "role": "transaction_reference" },
+    { "entity_type": "transaction_ref", "value": "RRN 511029884521 (Rs. 2,00,000)", "role": "transaction_reference" },
+    { "entity_type": "name_claimed", "value": "\"Inspector R.K. Sharma\" (unverified, likely fabricated identity)", "role": "suspect_claimed_identity" }
+  ],
+
+  "evidence": [
+    {
+      "evidence_id": "EV-R001-01",
+      "type": "screen_recording",
+      "source": "complainant",
+      "ai_description": "23-second partial screen recording of the WhatsApp video call showing the caller in police-style uniform, seated in front of a backdrop with a Mumbai Police-style emblem. Caller's face and uniform badge partially visible.",
+      "ai_tags": ["impersonation", "digital_arrest_scam", "video_evidence", "possible_face_identification"]
+    },
+    {
+      "evidence_id": "EV-R001-02",
+      "type": "chat_screenshot",
+      "source": "complainant",
+      "ai_description": "WhatsApp chat screenshots from +91-70XXXXXX19 showing threats of arrest, instructions to transfer funds to 'RBI verification account,' and a forwarded PDF titled 'Provisional Attachment Order' bearing a fabricated case number and forged signature block.",
+      "ai_tags": ["threat_evidence", "forged_document", "social_engineering"]
+    },
+    {
+      "evidence_id": "EV-R001-03",
+      "type": "document",
+      "source": "complainant",
+      "ai_description": "The forged 'Provisional Attachment Order' PDF sent by the suspect, referencing a fake FIR number and misspelling the issuing authority's designation — internally inconsistent formatting suggesting a template misuse.",
+      "ai_tags": ["forged_document", "impersonation_evidence"]
+    },
+    {
+      "evidence_id": "EV-R001-04",
+      "type": "bank_statement",
+      "source": "complainant",
+      "ai_description": "ICICI Bank statement showing two outgoing transfers on 15 July 2026: Rs. 2,85,000 (RRN 511029884410) and Rs. 2,00,000 (RRN 511029884521), both same-day, 40 minutes apart.",
+      "ai_tags": ["transaction_record", "financial_evidence"]
+    },
+    {
+      "evidence_id": "EV-R001-05",
+      "type": "chat_screenshot",
+      "source": "complainant",
+      "ai_description": "Screenshot showing the suspect requesting and receiving a photo of the complainant's Aadhaar card and PAN card 'for verification purposes' — complainant's own KYC documents, shared under duress, now in the suspect's possession.",
+      "ai_tags": ["victim_kyc_exposure", "identity_theft_risk"]
+    },
+    {
+      "evidence_id": "EV-R001-06",
+      "type": "audio",
+      "source": "complainant",
+      "ai_description": "Partial voice-note exchange (approx. 90 seconds) where the caller can be heard using a scripted tone and background office-like noise; complainant's son flagged the caller's accent and phrasing as inconsistent with claimed Mumbai origin.",
+      "ai_tags": ["voice_evidence", "possible_speaker_identification"]
+    }
+  ],
+
+  "seed_checklist": [
+    { "step_id": "verify_prima_facie", "status": "completed", "criticality": "high", "proof_evidence_ids": ["EV-R001-01", "EV-R001-04"] },
+    { "step_id": "fund_hold_notice", "status": "pending", "criticality": "high" },
+    { "step_id": "kyc_request", "status": "pending", "criticality": "high" },
+    { "step_id": "telecom_cdr_request", "status": "pending", "criticality": "medium" },
+    { "step_id": "layer2_transaction_trace", "status": "pending", "criticality": "high" }
+  ],
+
+  "manual_step_candidates": [
+    {
+      "title": "Reverse-image/face-match the uniform and backdrop from the screen recording against known impersonation-scam call-center raids",
+      "why_manual": "Requires officer/cyber-analyst judgment, not something a department response provides",
+      "proof_required": "Officer's comparison notes or analyst report attached as evidence before this can be checked off"
+    },
+    {
+      "title": "Compare forged 'Provisional Attachment Order' PDF against the real document template/case-number format used by the actual authority it impersonates",
+      "why_manual": "Needs manual document verification with the real department, not a checklist that auto-completes",
+      "proof_required": "Written confirmation from the real department (can also become a department_request if you want to route it that way instead)"
+    }
+  ],
+
+  "expected_first_suggestion": "fund_hold_notice",
+  "notes_for_testing": "This case deliberately includes evidence spanning every media type (screen recording=video, chat screenshots=image, PDF=document, bank statement=document, audio) so it's a good stress test for the evidence container UI across all types at once. It also has two manual-step candidates specifically to exercise the proof-required-before-accept checklist rule."
+}

@@ -14,7 +14,9 @@ export function getRedisClient(): Redis {
       host: env.REDIS_HOST,
       port: env.REDIS_PORT,
       password: env.REDIS_PASSWORD || undefined,
+      lazyConnect: true, // Don't throw immediately if Redis is unreachable
       retryStrategy: (times: number) => {
+        if (times > 5) return null; // Stop retrying after 5 attempts
         const delay = Math.min(times * 100, 3000);
         logger.warn(`Redis reconnecting... attempt ${times}`, { delay });
         return delay;

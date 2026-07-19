@@ -45,7 +45,7 @@ interface OllamaGenerateResponse {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const FAST_MODEL = 'gemma4:e2b';   // upgrade to e4b when pulled via: ollama pull gemma4:e4b
+const FAST_MODEL = 'gemma4:e2b';
 const FAST_DEFAULTS = { temperature: 0.2, maxTokens: 512 };
 const DEEP_DEFAULTS = { temperature: 0.1, maxTokens: 2048 };
 

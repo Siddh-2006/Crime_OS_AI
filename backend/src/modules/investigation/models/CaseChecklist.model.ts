@@ -13,6 +13,8 @@ export interface ICaseChecklist extends Document {
   required_evidence: string[];          // description of what evidence is needed
   proof_evidence_ids: string[];         // evidence_ids that satisfy this step
   locked_by_request_id?: string;        // step is blocked until this request resolves
+  department_entity_id?: string;        // External department ID needed for this step
+  target?: 'department_entity' | 'complainant';
   completed_by?: Types.ObjectId;
   completed_at?: Date;
 }
@@ -28,6 +30,8 @@ const CaseChecklistSchema = new Schema<ICaseChecklist>(
     required_evidence:    [{ type: String }],
     proof_evidence_ids:   [{ type: String }],
     locked_by_request_id: { type: String },
+    department_entity_id: { type: String },
+    target:               { type: String, enum: ['department_entity', 'complainant'], default: 'department_entity' },
     completed_by:         { type: Schema.Types.ObjectId, ref: 'Officer' },
     completed_at:         { type: Date },
   },

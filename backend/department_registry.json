@@ -1,0 +1,30 @@
+[
+  {
+    "entity_id": "HDFC Bank",
+    "category": "financial"
+  },
+  {
+    "entity_id": "Jio",
+    "category": "telecom"
+  },
+  {
+    "entity_id": "cyber_cell",
+    "category": "law_enforcement"
+  },
+  {
+    "entity_id": "crypto_exchange_A",
+    "category": "financial"
+  },
+  {
+    "entity_id": "social_media_B",
+    "category": "social_media"
+  },
+  {
+    "entity_id": "DEPT-NODAL-001",
+    "category": "telecom"
+  },
+  {
+    "entity_id": "DEPT-BANK-001",
+    "category": "financial"
+  }
+]

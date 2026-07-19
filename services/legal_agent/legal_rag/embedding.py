@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Sequence
@@ -167,7 +169,7 @@ def build_embedding_text(record: ParsedRecord) -> str:
 
 @dataclass(slots=True)
 class BGEEmbeddingConfig:
-    model_name: str = "BAAI/bge-m3"
+    model_name: str = "BAAI/bge-base-en-v1.5"
     device: str | None = None
     batch_size: int = 16
     normalize_embeddings: bool = True
@@ -196,25 +198,34 @@ class BGEEmbedder:
 
     def embed_texts(self, texts: Sequence[str]) -> list[list[float]]:
         model = self._load_model()
+        start = time.perf_counter()
         embeddings = model.encode(
             list(texts),
             batch_size=self.config.batch_size,
             normalize_embeddings=self.config.normalize_embeddings,
             show_progress_bar=False,
         )
+        elapsed = time.perf_counter() - start
+        print(f"[timing] embed_texts: {elapsed:.3f}s for {len(texts)} text(s)", file=sys.stderr)
         if hasattr(embeddings, "tolist"):
             return embeddings.tolist()
         return [list(vector) for vector in embeddings]
 
     def embed_record(self, record: ParsedRecord) -> EmbeddedDocumentRecord:
+        start = time.perf_counter()
         embedding_text = build_embedding_text(record)
         embedding = self.embed_texts([embedding_text])[0]
+        elapsed = time.perf_counter() - start
+        print(f"[timing] embed_record: {elapsed:.3f}s for {type(record).__name__}", file=sys.stderr)
         return EmbeddedDocumentRecord(record=record, embedding_text=embedding_text, embedding=embedding)
 
     def embed_records(self, records: Iterable[ParsedRecord]) -> list[EmbeddedDocumentRecord]:
         materialized = list(records)
+        start = time.perf_counter()
         texts = [build_embedding_text(record) for record in materialized]
         vectors = self.embed_texts(texts) if materialized else []
+        elapsed = time.perf_counter() - start
+        print(f"[timing] embed_records: {elapsed:.3f}s for {len(materialized)} record(s)", file=sys.stderr)
         return [
             EmbeddedDocumentRecord(record=record, embedding_text=text, embedding=vector)
             for record, text, vector in zip(materialized, texts, vectors, strict=False)

@@ -9,7 +9,9 @@ export interface IDepartmentRequest extends Document {
   case_id: Types.ObjectId;
   request_id: string;
   step_id: string;                     // checklist step this request satisfies
-  department_entity_id: string;        // references DeptRegistry entity
+  request_type: 'external_department' | 'inter_station_assignment';
+  recipient_type: string;              // e.g., 'Bank', 'Cyber Cell', 'Police Station'
+  department_entity_id?: string;        // references DeptRegistry entity (optional for citizen)
   draft_content: string;
   attachments: string[];               // evidence_ids attached
   status: DeptRequestStatus;
@@ -17,6 +19,8 @@ export interface IDepartmentRequest extends Document {
   sent_at?: Date;
   response_ref?: string;               // storage_ref or text of the response
   response_at?: Date;
+  token?: string;                      // for unauthenticated citizen access
+  token_expires_at?: Date;
 }
 
 const DepartmentRequestSchema = new Schema<IDepartmentRequest>(
@@ -24,7 +28,9 @@ const DepartmentRequestSchema = new Schema<IDepartmentRequest>(
     case_id:              { type: Schema.Types.ObjectId, ref: 'Complaint', required: true, index: true },
     request_id:           { type: String, required: true, unique: true },
     step_id:              { type: String, required: true },
-    department_entity_id: { type: String, required: true },
+    request_type:         { type: String, enum: ['external_department', 'inter_station_assignment'], default: 'external_department', required: true },
+    recipient_type:       { type: String, required: true },
+    department_entity_id: { type: String }, // not required for 'citizen'
     draft_content:        { type: String, required: true },
     attachments:          [{ type: String }],
     status:               {
@@ -37,6 +43,8 @@ const DepartmentRequestSchema = new Schema<IDepartmentRequest>(
     sent_at:     { type: Date },
     response_ref: { type: String },
     response_at:  { type: Date },
+    token:        { type: String, sparse: true },
+    token_expires_at: { type: Date },
   },
   { timestamps: true, versionKey: false },
 );

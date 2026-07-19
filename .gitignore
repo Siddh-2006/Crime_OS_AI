@@ -81,4 +81,14 @@ coverage.xml
 
 # TypeScript
 *.tsbuildinfo
-next-env.d.ts
+next-env.d.ts
+
+# Reranker models
+onnx_reranker/
+
+# Local data and DB files
+services/legal_agent/qdrant_local_storage/
+services/io-recommendation/qdrant_local_storage/
+services/legal_agent/embedded/
+*.sqlite
+*.db

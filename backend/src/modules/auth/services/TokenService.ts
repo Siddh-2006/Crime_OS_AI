@@ -78,17 +78,30 @@ export class TokenService {
   }
 
   private async storeRefreshToken(userId: string, token: string): Promise<void> {
-    const redis = getRedisClient();
-    await redis.setex(REDIS_KEYS.REFRESH_TOKEN(userId), REDIS_TTL.REFRESH_TOKEN, token);
+    try {
+      const redis = getRedisClient();
+      await redis.setex(REDIS_KEYS.REFRESH_TOKEN(userId), REDIS_TTL.REFRESH_TOKEN, token);
+    } catch (err) {
+      logger.warn('Failed to store refresh token in Redis (Redis may be down)', { userId });
+    }
   }
 
   private async getStoredRefreshToken(userId: string): Promise<string | null> {
-    const redis = getRedisClient();
-    return redis.get(REDIS_KEYS.REFRESH_TOKEN(userId));
+    try {
+      const redis = getRedisClient();
+      return await redis.get(REDIS_KEYS.REFRESH_TOKEN(userId));
+    } catch (err) {
+      logger.warn('Failed to get refresh token from Redis (Redis may be down)', { userId });
+      return null;
+    }
   }
 
   private async deleteRefreshToken(userId: string): Promise<void> {
-    const redis = getRedisClient();
-    await redis.del(REDIS_KEYS.REFRESH_TOKEN(userId));
+    try {
+      const redis = getRedisClient();
+      await redis.del(REDIS_KEYS.REFRESH_TOKEN(userId));
+    } catch (err) {
+      logger.warn('Failed to delete refresh token from Redis (Redis may be down)', { userId });
+    }
   }
 }

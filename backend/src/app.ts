@@ -12,6 +12,9 @@ import authRoutes from './modules/auth/routes/auth.routes';
 import policeRoutes from './modules/police/routes/police.routes';
 import adminRoutes from './modules/admin/routes/admin.routes';
 import complaintRoutes from './modules/complaint/routes/complaint.routes';
+import investigationRoutes from './modules/investigation/routes/investigation.routes';
+import citizenRequestRoutes from './modules/investigation/routes/citizenRequest.routes';
+import departmentPortalRoutes from './modules/departmentPortal/routes/departmentPortal.routes';
 import { sendError } from './shared/utils/response.util';
 import { HttpStatusCode } from './common/enums/httpStatus.enum';
 
@@ -62,6 +65,10 @@ export function createApp(): Application {
   app.use('/api/v1/auth', authRoutes);
   app.use('/api/v1/police', policeRoutes);
   app.use('/api/v1/admin', adminRoutes);
+  app.use('/api/v1/complaints', complaintRoutes);
+  app.use('/api/v1/cases', investigationRoutes);
+  app.use('/api/v1/department-portal', departmentPortalRoutes);
+  app.use('/api/v1/citizen-request', citizenRequestRoutes);
   app.use('/api/v1', complaintRoutes);
 
   // ─── 404 handler ──────────────────────────────────────────────────────────────

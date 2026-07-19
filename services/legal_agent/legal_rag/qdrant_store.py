@@ -29,22 +29,31 @@ def _extract_scroll_result(result: Any) -> tuple[list[Any], Any | None]:
 
 @dataclass(slots=True)
 class LegalQdrantConfig:
-    url: str = "http://localhost:6333"
-    collection_name: str = "final"
+    url: str | None = None
+    path: str | None = "./qdrant_local_storage"
+    collection_name: str = "light"
     prefer_grpc: bool = False
-    timeout: float | None = 60.0
+    timeout: float | None = 70.0
 
 
 class LegalQdrantStore:
     def __init__(self, config: LegalQdrantConfig | None = None) -> None:
         self.config = config or LegalQdrantConfig()
         QdrantClient, models = _load_qdrant()
-        self._client = QdrantClient(
-            url=self.config.url,
-            prefer_grpc=self.config.prefer_grpc,
-            timeout=self.config.timeout,
-            check_compatibility=False,
-        )
+        if self.config.url:
+            self._client = QdrantClient(
+                url=self.config.url,
+                prefer_grpc=self.config.prefer_grpc,
+                timeout=self.config.timeout,
+                check_compatibility=False,
+            )
+        else:
+            self._client = QdrantClient(
+                path=self.config.path,
+                timeout=self.config.timeout,
+                check_compatibility=False,
+            )
+
         self._models = models
 
     @property
@@ -173,9 +182,32 @@ class LegalQdrantStore:
             return []
 
         records: list[RetrievedDocumentRecord] = []
-        for document in self.list_documents():
-            if document.act != act:
-                continue
-            if document.identifier in seen:
-                records.append(document)
+        models = self._models
+        for serial_number in unique_ids:
+            try:
+                result = self.client.scroll(
+                    collection_name=self.config.collection_name,
+                    scroll_filter=models.Filter(
+                        must=[
+                            models.FieldCondition(
+                                key="act",
+                                match=models.MatchValue(value=act),
+                            ),
+                            models.FieldCondition(
+                                key="serial_number",
+                                match=models.MatchValue(value=serial_number),
+                            ),
+                        ]
+                    ),
+                    limit=1,
+                    with_payload=True,
+                )
+            except Exception as exc:  # pragma: no cover - network/runtime specific
+                message = f"{self._connection_error_message()} ({self._format_qdrant_exception(exc)})"
+                raise RuntimeError(message) from exc
+
+            points, _ = _extract_scroll_result(result)
+            for point in points:
+                payload = point.payload or {}
+                records.append(RetrievedDocumentRecord.from_payload(payload))
         return records

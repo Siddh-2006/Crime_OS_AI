@@ -11,6 +11,8 @@ import { Select } from '@/components/ui/Select';
 import { useAuth } from '@/hooks/useAuth';
 import apiClient from '@/lib/axios';
 import { API_ROUTES, APP_ROUTES } from '@/lib/constants';
+import { InvestigationWorkspace } from './components/InvestigationWorkspace';
+import { CaseSummaryBlock } from './components/CaseSummaryBlock';
 import {
   ArrowLeft,
   Calendar,
@@ -117,6 +119,8 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
   const params = useParams();
   const router = useRouter();
   const { user } = useAuth(); // Logged in officer info
+
+  const [activeTab, setActiveTab] = useState<'details' | 'investigation'>('details');
 
   const [complaint, setComplaint] = useState<Complaint | null>(null);
   const [ios, setIos] = useState<IOOfficer[]>([]);
@@ -383,194 +387,140 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Details & Edit Fields */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Incident Details Card */}
-          <Card>
-            <CardHeader title="Incident Specifications" />
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4 border-b border-neutral-100 pb-4">
-              <div>
-                <p className="text-xs text-neutral-400 font-semibold uppercase tracking-wider">Date & Time</p>
-                <p className="text-sm font-medium text-neutral-800 mt-1">
-                  {new Date(complaint.incidentDate).toLocaleDateString('en-IN')} {complaint.incidentTime || ''}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-neutral-400 font-semibold uppercase tracking-wider">Occurrence Location</p>
-                <p className="text-sm font-medium text-neutral-800 mt-1">{complaint.incidentPlace}</p>
-              </div>
-              <div>
-                <p className="text-xs text-neutral-400 font-semibold uppercase tracking-wider">Category</p>
-                <p className="text-sm font-medium text-neutral-800 mt-1 uppercase">{complaint.category.replace('_', ' ')}</p>
-              </div>
-            </div>
-
-            {/* Read-Only or Edit Mode Form */}
-            <div className="mt-4 space-y-4">
-              <div>
-                <p className="text-xs text-neutral-400 font-semibold uppercase tracking-wider">Brief Summary</p>
-                <p className="text-sm font-bold text-neutral-800 mt-1">{complaint.shortDescription}</p>
-              </div>
-
-              {!editMode ? (
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-xs text-neutral-400 font-semibold uppercase tracking-wider">Detailed Description (Current)</p>
-                    <p className="text-sm text-neutral-700 mt-1 whitespace-pre-line bg-neutral-50 p-3 rounded-lg border border-neutral-200">
-                      {complaint.detailedDescription}
-                    </p>
-                  </div>
-                  {(complaint.status === 'ASSIGNED_TO_IO' || isLocked) && (
-                    <>
-                      <div>
-                        <p className="text-xs text-neutral-400 font-semibold uppercase tracking-wider">Crime Summary (for FIR)</p>
-                        <p className="text-sm text-neutral-700 mt-1 whitespace-pre-line bg-neutral-50 p-3 rounded-lg border border-neutral-200">
-                          {crimeSummary || <span className="text-neutral-400 italic">No summary entered yet.</span>}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-neutral-400 font-semibold uppercase tracking-wider">Legal Sections (Applicable IPC/BNS)</p>
-                        <p className="text-sm font-semibold text-neutral-800 mt-1 bg-neutral-50 p-3 rounded-lg border border-neutral-200">
-                          {legalSections || <span className="text-neutral-400 italic">No legal sections assigned yet.</span>}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-neutral-400 font-semibold uppercase tracking-wider">Investigation Case Notes</p>
-                        <p className="text-sm text-neutral-700 mt-1 whitespace-pre-line bg-neutral-50 p-3 rounded-lg border border-neutral-200">
-                          {investigationNotes || <span className="text-neutral-400 italic">No case notes recorded yet.</span>}
-                        </p>
-                      </div>
-                    </>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-4 pt-2">
-                  <div>
-                    <label className="block text-xs font-bold text-neutral-400 uppercase mb-1">Detailed Description *</label>
-                    <textarea
-                      value={detailedDescription}
-                      onChange={(e) => setDetailedDescription(e.target.value)}
-                      rows={4}
-                      className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-neutral-400 uppercase mb-1">Crime Summary (for FIR) *</label>
-                    <textarea
-                      value={crimeSummary}
-                      onChange={(e) => setCrimeSummary(e.target.value)}
-                      placeholder="Summarize the core offence details for the FIR registry..."
-                      rows={3}
-                      className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-neutral-400 uppercase mb-1">Applicable Legal Sections *</label>
-                    <input
-                      type="text"
-                      value={legalSections}
-                      onChange={(e) => setLegalSections(e.target.value)}
-                      placeholder="e.g. Section 379, 411 IPC / BNS"
-                      className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-neutral-400 uppercase mb-1">Investigation Case Notes</label>
-                    <textarea
-                      value={investigationNotes}
-                      onChange={(e) => setInvestigationNotes(e.target.value)}
-                      placeholder="Record details of evidence verified, witness statements, etc."
-                      rows={3}
-                      className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          </Card>
-
-          {/* Evidence Attachments */}
-          <Card>
-            <CardHeader title="Attached Case Evidence" />
-            {complaint.evidence.length === 0 ? (
-              <p className="text-sm text-neutral-500 mt-2">No evidence documents or media attached to this application.</p>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                {complaint.evidence.map((file) => (
-                  <div key={file.publicId} className="flex items-center justify-between p-3 border border-neutral-200 rounded-lg bg-neutral-50/30">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <FileText className="h-5 w-5 text-primary-600 flex-shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold text-neutral-800 truncate" title={file.originalFilename}>
-                          {file.originalFilename}
-                        </p>
-                        <p className="text-[10px] text-neutral-400">
-                          {(file.size / 1024 / 1024).toFixed(2)} MB • {file.extension.toUpperCase()}
-                        </p>
-                      </div>
-                    </div>
-                    <a
-                      href={file.secureUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-1 hover:bg-neutral-200 rounded text-neutral-500"
-                    >
-                      <FileDown size={15} />
-                    </a>
-                  </div>
-                ))}
-              </div>
+      {/* Tabs */}
+      {(isAssignedIO || isSHO) && (
+        <div className="flex border-b border-neutral-200 gap-6">
+          <button
+            onClick={() => setActiveTab('details')}
+            className={`pb-3 font-semibold text-sm transition-colors relative ${
+              activeTab === 'details' ? 'text-primary-700' : 'text-neutral-500 hover:text-neutral-800'
+            }`}
+          >
+            Complaint Details
+            {activeTab === 'details' && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600 rounded-t-full" />
             )}
-          </Card>
+          </button>
+          
+          {(complaint.status === 'ASSIGNED_TO_IO' || isLocked || isClosed) && (
+            <button
+              onClick={() => setActiveTab('investigation')}
+              className={`pb-3 font-semibold text-sm transition-colors relative flex items-center gap-2 ${
+                activeTab === 'investigation' ? 'text-primary-700' : 'text-neutral-500 hover:text-neutral-800'
+              }`}
+            >
+              <ShieldCheck size={16} />
+              Investigation Workspace
+              {activeTab === 'investigation' && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600 rounded-t-full" />
+              )}
+            </button>
+          )}
+        </div>
+      )}
 
-          {/* Version History (Collapsible / Accordion) */}
-          {complaint.descriptionHistory.length > 1 && (
-            <Card>
-              <div className="flex items-center gap-2 border-b border-neutral-100 pb-3 mb-4">
-                <History className="h-5 w-5 text-neutral-400" />
-                <h3 className="text-sm font-bold text-neutral-800">Version History (Editable Fields Log)</h3>
-              </div>
-              <div className="space-y-3 max-h-60 overflow-y-auto divide-y divide-neutral-100">
-                {complaint.descriptionHistory.map((h, i) => (
-                  <div key={i} className="pt-3 first:pt-0 text-xs">
-                    <div className="flex justify-between font-semibold text-neutral-700 mb-1">
-                      <span>Version {h.version} • Edited by {h.editedBy}</span>
-                      <span>{new Date(h.timestamp).toLocaleString('en-IN')}</span>
-                    </div>
-                    <p className="text-neutral-600 italic whitespace-pre-wrap bg-neutral-50 p-2 rounded border border-neutral-100">
-                      {h.content}
-                    </p>
+      {/* Content Area */}
+      {activeTab === 'details' ? (
+        <div className="space-y-6">
+          {!editMode ? (
+            <>
+              <CaseSummaryBlock complaint={complaint} evidence={complaint.evidence || []} />
+
+              {/* Version History (Collapsible / Accordion) */}
+              {complaint.descriptionHistory?.length > 1 && (
+                <Card>
+                  <div className="flex items-center gap-2 border-b border-neutral-100 pb-3 mb-4">
+                    <History className="h-5 w-5 text-neutral-400" />
+                    <h3 className="text-sm font-bold text-neutral-800">Version History (Editable Fields Log)</h3>
                   </div>
-                ))}
+                  <div className="space-y-3 max-h-60 overflow-y-auto divide-y divide-neutral-100">
+                    {complaint.descriptionHistory.map((h, i) => (
+                      <div key={i} className="pt-3 first:pt-0 text-xs">
+                        <div className="flex justify-between font-semibold text-neutral-700 mb-1">
+                          <span>Version {h.version} • Edited by {h.editedBy}</span>
+                          <span>{new Date(h.timestamp).toLocaleString('en-IN')}</span>
+                        </div>
+                        <p className="text-neutral-600 italic whitespace-pre-wrap bg-neutral-50 p-2 rounded border border-neutral-100">
+                          {h.content}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
+            </>
+          ) : (
+            <Card>
+              <div className="p-4 space-y-4 pt-2">
+                <div>
+                  <label className="block text-xs font-bold text-neutral-400 uppercase mb-1">Detailed Description *</label>
+                  <textarea
+                    value={detailedDescription}
+                    onChange={(e) => setDetailedDescription(e.target.value)}
+                    rows={4}
+                    className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-neutral-400 uppercase mb-1">Crime Summary (for FIR) *</label>
+                  <textarea
+                    value={crimeSummary}
+                    onChange={(e) => setCrimeSummary(e.target.value)}
+                    placeholder="Summarize the core offence details for the FIR registry..."
+                    rows={3}
+                    className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-neutral-400 uppercase mb-1">Applicable Legal Sections *</label>
+                  <input
+                    type="text"
+                    value={legalSections}
+                    onChange={(e) => setLegalSections(e.target.value)}
+                    placeholder="e.g. Section 379, 411 IPC / BNS"
+                    className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-neutral-400 uppercase mb-1">Investigation Case Notes</label>
+                  <textarea
+                    value={investigationNotes}
+                    onChange={(e) => setInvestigationNotes(e.target.value)}
+                    placeholder="Record details of evidence verified, witness statements, etc."
+                    rows={3}
+                    className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
               </div>
             </Card>
           )}
-        </div>
 
-        {/* Right Column: Case Metadata & Timeline */}
-        <div className="space-y-6">
+          {/* Timeline */}
           <Card>
-            <CardHeader title="Case Status & Timeline" />
-            <div className="mt-6 relative pl-6 border-l-2 border-neutral-200 space-y-6">
-              {complaint.timeline.map((event, idx) => (
-                <div key={idx} className="relative">
-                  <span className="absolute -left-[31px] top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-white border-2 border-primary-700">
-                    <span className="h-1.5 w-1.5 rounded-full bg-primary-700" />
-                  </span>
-                  <div className="space-y-1">
-                    <p className="text-[10px] text-neutral-400 font-semibold">
-                      {new Date(event.timestamp).toLocaleString('en-IN')}
-                    </p>
-                    <p className="text-xs font-bold text-neutral-800">{event.user}</p>
-                    <p className="text-xs text-neutral-600 leading-relaxed">{event.description}</p>
+            <div className="p-4">
+              <h3 className="text-sm font-bold text-neutral-800 border-b border-neutral-100 pb-2 mb-4">Case Status & Timeline</h3>
+              <div className="relative pl-6 border-l-2 border-neutral-200 space-y-6">
+                {complaint.timeline.map((event, idx) => (
+                  <div key={idx} className="relative">
+                    <span className="absolute -left-[31px] top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-white border-2 border-primary-700">
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary-700" />
+                    </span>
+                    <div className="space-y-1">
+                      <p className="text-[10px] text-neutral-400 font-semibold">
+                        {new Date(event.timestamp).toLocaleString('en-IN')}
+                      </p>
+                      <p className="text-xs font-bold text-neutral-800">{event.user}</p>
+                      <p className="text-xs text-neutral-600 leading-relaxed">{event.description}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </Card>
         </div>
-      </div>
+      ) : (
+        <InvestigationWorkspace caseId={complaint._id} />
+      )}
 
       {/* SHO REJECTION REASON MODAL */}
       <Modal

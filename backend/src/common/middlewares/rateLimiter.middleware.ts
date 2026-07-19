@@ -45,7 +45,8 @@ export function createRateLimiter(config: RateLimiterConfig): RequestHandler {
           message: `Too many requests. Please try again in ${retryAfter} seconds.`,
         });
       } else {
-        next(err);
+        // Fallback if Redis is down — just let the request through for dev/testing
+        next();
       }
     }
   };

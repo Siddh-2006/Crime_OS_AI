@@ -57,12 +57,16 @@ export class AuthService {
 
     const otp = await this.otpService.generateAndStoreEmailVerificationOtp(dto.email);
 
-    await EmailQueue.enqueueVerificationOtp({
-      to: dto.email,
-      name: dto.firstName,
-      otp,
-      expiryMinutes: REDIS_TTL.OTP / 60,
-    });
+    try {
+      await EmailQueue.enqueueVerificationOtp({
+        to: dto.email,
+        name: dto.firstName,
+        otp,
+        expiryMinutes: REDIS_TTL.OTP / 60,
+      });
+    } catch (err) {
+      logger.warn('Failed to enqueue verification OTP email (Redis might be down)', { error: err });
+    }
 
     logger.info('Citizen registered — verification OTP sent', { email: dto.email });
   }

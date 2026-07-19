@@ -4,6 +4,7 @@ import { connectDatabase } from './config/database';
 import { getRedisClient } from './config/redis';
 import { startEmailWorker } from './shared/queue/EmailWorker';
 import { startFirWorker } from './shared/queue/FirWorker';
+import { startAnalysisWorker } from './shared/queue/AnalysisWorker';
 import { checkOllamaHealth } from './shared/llm/ollamaHealth';
 import env from './config/env';
 import logger from './config/logger';
@@ -27,10 +28,27 @@ async function bootstrap(): Promise<void> {
   try {
     // Connect to infrastructure
     await connectDatabase();
-    getRedisClient(); // Initialise Redis connection
-    startEmailWorker();
-    startFirWorker();
-    await checkOllamaHealth();
+
+    // Redis & BullMQ workers are optional — server still boots without Redis
+    try {
+      const redisClient = getRedisClient();
+      // Quick ping to check if Redis is actually reachable before starting workers
+      await redisClient.connect();
+      await redisClient.ping();
+      startEmailWorker();
+      startFirWorker();
+      startAnalysisWorker();
+      logger.info('Redis and BullMQ workers started');
+    } catch (redisErr) {
+      logger.warn('Redis unavailable — queue workers disabled. API will function without async jobs.');
+    }
+
+    // Ollama is optional too
+    try {
+      await checkOllamaHealth();
+    } catch (ollamaErr) {
+      logger.warn('Ollama health check failed — LLM calls may fail.', { error: ollamaErr });
+    }
 
     const app = createApp();
     const server = app.listen(env.PORT, () => {
@@ -63,11 +81,22 @@ async function bootstrap(): Promise<void> {
     process.on('SIGINT', () => shutdown('SIGINT'));
 
     process.on('unhandledRejection', (reason: unknown) => {
+      // Don't crash for Redis ECONNREFUSED — workers handle their own errors
+      const msg = reason instanceof Error ? reason.message : String(reason);
+      if (msg.includes('ECONNREFUSED') || msg.includes('Redis')) {
+        logger.warn('Suppressed Redis unhandledRejection (Redis not available)', { reason: msg });
+        return;
+      }
       logger.error('Unhandled Promise Rejection', { reason });
       server.close(() => process.exit(1));
     });
 
     process.on('uncaughtException', (err: Error) => {
+      // Don't crash for Redis connection errors
+      if (err.message.includes('ECONNREFUSED') || err.message.includes('Redis')) {
+        logger.warn('Suppressed Redis uncaughtException', { error: err.message });
+        return;
+      }
       logger.error('Uncaught Exception', { error: err.message, stack: err.stack });
       server.close(() => process.exit(1));
     });

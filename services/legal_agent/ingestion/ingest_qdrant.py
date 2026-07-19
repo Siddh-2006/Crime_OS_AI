@@ -35,8 +35,10 @@ def load_embedded_records(path: str | Path) -> list[EmbeddedDocumentRecord]:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Upload embedded legal records into Qdrant.")
     parser.add_argument("input", type=Path, help="Embedded JSONL or JSON file")
-    parser.add_argument("--url", default="http://localhost:6333", help="Qdrant URL")
-    parser.add_argument("--collection", default="final", help="Qdrant collection name")
+    parser.add_argument("--url", default=None, help="Qdrant URL (if using docker/server)")
+    parser.add_argument("--path", default="./qdrant_local_storage", help="Local Qdrant storage path")
+
+    parser.add_argument("--collection", default="light", help="Qdrant collection name")
     args = parser.parse_args()
 
     embedded = load_embedded_records(args.input)
@@ -44,7 +46,8 @@ def main() -> int:
         print("No embedded records found.")
         return 0
 
-    store = LegalQdrantStore(LegalQdrantConfig(url=args.url, collection_name=args.collection))
+    store = LegalQdrantStore(LegalQdrantConfig(url=args.url, path=args.path, collection_name=args.collection))
+
     store.upsert_embeddings(embedded)
     print(f"Uploaded {len(embedded)} embeddings to Qdrant collection '{args.collection}'")
     return 0
