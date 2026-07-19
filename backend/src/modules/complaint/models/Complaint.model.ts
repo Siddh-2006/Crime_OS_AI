@@ -32,6 +32,13 @@ export interface IEvidenceMetadata {
     virusScanResult?: string;
     aiSummary?: string;
     processingErrors?: string[];
+    classification?: string;
+    classificationConfidence?: number;
+    width?: number;
+    height?: number;
+    fileType?: string;
+    exif?: Record<string, any>;
+    gps?: Record<string, any>;
   };
   cloudinaryVersion?: string;
   checksum?: string;
@@ -53,6 +60,14 @@ export interface IAuditLog {
   action: string;
 }
 
+export interface IComplaintIntelligence {
+  category?: string;
+  summary?: string;
+  entities?: Array<{ name: string; type: string }>;
+  missingInformation?: string[];
+  recommendedEvidence?: string[];
+}
+
 export interface IComplaint extends Document {
   complaintNumber: string; // UUID
   status: ComplaintStatus;
@@ -63,7 +78,10 @@ export interface IComplaint extends Document {
   incidentDate: Date;
   incidentTime?: string;
   incidentPlace: string;
-  category: ComplaintCategory;
+  approximateDateText?: string;
+  coordinates?: string;
+  address?: string;
+  category?: ComplaintCategory;
   crimeCategory?: string;
   shortDescription: string;
   detailedDescription: string;
@@ -90,6 +108,9 @@ export interface IComplaint extends Document {
   approvedAt?: Date;
   assignedAt?: Date;
   investigationStartedAt?: Date;
+
+  processingStatus: 'PENDING' | 'PROCESSED' | 'FAILED';
+  complaintIntelligence: IComplaintIntelligence;
 
   isDeleted: boolean;
   createdAt: Date;
@@ -126,6 +147,13 @@ const EvidenceMetadataSchema = new Schema<IEvidenceMetadata>({
     virusScanResult: { type: String },
     aiSummary: { type: String },
     processingErrors: [{ type: String }],
+    classification: { type: String },
+    classificationConfidence: { type: Number },
+    width: { type: Number },
+    height: { type: Number },
+    fileType: { type: String },
+    exif: { type: Schema.Types.Mixed },
+    gps: { type: Schema.Types.Mixed },
   },
   cloudinaryVersion: { type: String },
   checksum: { type: String },
@@ -147,6 +175,17 @@ const AuditLogSchema = new Schema<IAuditLog>({
   action: { type: String, required: true },
 });
 
+const ComplaintIntelligenceSchema = new Schema<IComplaintIntelligence>({
+  category: { type: String },
+  summary: { type: String },
+  entities: [{
+    name: { type: String },
+    type: { type: String }
+  }],
+  missingInformation: [{ type: String }],
+  recommendedEvidence: [{ type: String }]
+}, { _id: false });
+
 const ComplaintSchema = new Schema<IComplaint>(
   {
     complaintNumber: { type: String, required: true, unique: true },
@@ -163,10 +202,13 @@ const ComplaintSchema = new Schema<IComplaint>(
     incidentDate: { type: Date, required: true },
     incidentTime: { type: String },
     incidentPlace: { type: String, required: true, trim: true },
+    approximateDateText: { type: String },
+    coordinates: { type: String },
+    address: { type: String },
     category: {
       type: String,
       enum: Object.values(ComplaintCategory),
-      required: true,
+      required: false,
     },
     crimeCategory: { type: String },
     shortDescription: { type: String, required: true, trim: true, maxlength: 255 },
@@ -194,6 +236,17 @@ const ComplaintSchema = new Schema<IComplaint>(
     assignedAt: { type: Date },
     investigationStartedAt: { type: Date },
 
+    processingStatus: {
+      type: String,
+      enum: ['PENDING', 'PROCESSED', 'FAILED'],
+      default: 'PENDING',
+      required: true,
+    },
+    complaintIntelligence: {
+      type: ComplaintIntelligenceSchema,
+      default: () => ({}),
+    },
+
     isDeleted: { type: Boolean, default: false, required: true },
   },
   {
@@ -207,6 +260,5 @@ ComplaintSchema.index({ status: 1 });
 ComplaintSchema.index({ citizen: 1 });
 ComplaintSchema.index({ policeStation: 1 });
 ComplaintSchema.index({ assignedIO: 1 });
-ComplaintSchema.index({ complaintNumber: 1 });
 
 export const Complaint = model<IComplaint>('Complaint', ComplaintSchema);

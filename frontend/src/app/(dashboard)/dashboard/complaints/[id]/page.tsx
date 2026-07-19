@@ -23,6 +23,24 @@ interface Evidence {
   originalFilename: string;
   extension: string;
   size: number;
+  aiMetadata?: {
+    ocrText?: string;
+    speechTranscript?: string;
+    imageTags?: string[];
+    detectedObjects?: string[];
+    faces?: string[];
+    embeddings?: number[];
+    virusScanResult?: string;
+    aiSummary?: string;
+    processingErrors?: string[];
+    classification?: string;
+    classificationConfidence?: number;
+    width?: number;
+    height?: number;
+    fileType?: string;
+    exif?: Record<string, any>;
+    gps?: Record<string, any>;
+  };
 }
 
 interface Complaint {
@@ -159,7 +177,9 @@ export default function CitizenComplaintDetailPage(): React.ReactElement {
               </div>
               <div>
                 <p className="text-xs text-neutral-400 font-semibold uppercase tracking-wider">Category</p>
-                <p className="text-sm font-medium text-neutral-800 mt-1 uppercase">{complaint.category.replace('_', ' ')}</p>
+                <p className="text-sm font-medium text-neutral-800 mt-1 uppercase">
+                  {complaint.category ? complaint.category.replace('_', ' ') : 'UNCATEGORIZED'}
+                </p>
               </div>
             </div>
 
@@ -183,28 +203,60 @@ export default function CitizenComplaintDetailPage(): React.ReactElement {
             {complaint.evidence.length === 0 ? (
               <p className="text-sm text-neutral-500 mt-2">No evidence documents or media attached to this application.</p>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 {complaint.evidence.map((file) => (
-                  <div key={file.publicId} className="flex items-center justify-between p-3 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <FileText className="h-6 w-6 text-primary-600 flex-shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-neutral-800 truncate" title={file.originalFilename}>
-                          {file.originalFilename}
-                        </p>
-                        <p className="text-xs text-neutral-400">
-                          {(file.size / 1024 / 1024).toFixed(2)} MB • {file.extension.toUpperCase()}
-                        </p>
+                  <div key={file.publicId} className="flex flex-col p-4 border border-neutral-200 rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow gap-3">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <FileText className="h-8 w-8 text-primary-600 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-neutral-800 truncate" title={file.originalFilename}>
+                            {file.originalFilename}
+                          </p>
+                          <p className="text-xs text-neutral-400">
+                            {(file.size / 1024 / 1024).toFixed(2)} MB • {file.extension.toUpperCase()}
+                          </p>
+                        </div>
                       </div>
+                      <a
+                        href={file.secureUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-500 hover:text-neutral-700 transition-colors"
+                        title="Download Attachment"
+                      >
+                        <Download size={18} />
+                      </a>
                     </div>
-                    <a
-                      href={file.secureUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-1.5 hover:bg-neutral-200 rounded text-neutral-500 hover:text-neutral-700"
-                    >
-                      <Download size={16} />
-                    </a>
+
+                    {/* AI Processing and Classifications */}
+                    {file.aiMetadata && (
+                      <div className="pt-3 border-t border-neutral-100 space-y-2.5">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {file.aiMetadata.classification && file.aiMetadata.classification !== 'Unknown' && (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                              📊 {file.aiMetadata.classification} ({Math.round((file.aiMetadata.classificationConfidence || 0) * 100)}%)
+                            </span>
+                          )}
+                          {file.aiMetadata.imageTags?.map((tag: string) => (
+                            <span key={tag} className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-50/80 text-emerald-700 border border-emerald-100/50">
+                              🏷️ {tag}
+                            </span>
+                          ))}
+                        </div>
+
+                        {file.aiMetadata.ocrText && (
+                          <details className="text-[11px] text-neutral-600 bg-neutral-50 p-2 rounded-lg border border-neutral-100 cursor-pointer">
+                            <summary className="font-semibold text-neutral-700 hover:text-neutral-900 select-none">
+                              🔍 Extracted OCR Text
+                            </summary>
+                            <p className="mt-1.5 whitespace-pre-wrap font-mono text-[10px] bg-white p-2 rounded border border-neutral-100 max-h-32 overflow-y-auto leading-relaxed">
+                              {file.aiMetadata.ocrText}
+                            </p>
+                          </details>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
