@@ -125,6 +125,9 @@ export class ComplaintService {
       detailedDescription,
       policeStation,
       evidence = [],
+      coordinates,
+      address,
+      approximateDateText,
     } = data;
 
     // Verify station exists
@@ -162,11 +165,16 @@ export class ComplaintService {
       incidentDate: new Date(incidentDate),
       incidentTime,
       incidentPlace,
-      category: category as ComplaintCategory,
+      approximateDateText,
+      coordinates,
+      address,
+      category: category ? (category as ComplaintCategory) : undefined,
       shortDescription,
       detailedDescription,
       currentVersionNumber: 1,
       evidence: validatedEvidence,
+      processingStatus: 'PENDING',
+      complaintIntelligence: {},
       descriptionHistory: [
         {
           version: 1,

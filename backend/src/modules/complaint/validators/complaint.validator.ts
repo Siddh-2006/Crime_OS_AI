@@ -15,13 +15,16 @@ const evidenceMetadataSchema = Joi.object({
 
 export const createComplaintSchema = Joi.object({
   incidentDate: Joi.date().iso().max('now').required(),
-  incidentTime: Joi.string().trim().optional(),
+  incidentTime: Joi.string().trim().optional().allow('', null),
   incidentPlace: Joi.string().trim().min(3).max(255).required(),
-  category: Joi.string().valid(...Object.values(ComplaintCategory)).required(),
+  category: Joi.string().valid(...Object.values(ComplaintCategory)).optional().allow('', null),
   shortDescription: Joi.string().trim().min(5).max(255).required(),
   detailedDescription: Joi.string().trim().min(10).required(),
   policeStation: Joi.string().pattern(objectIdPattern).required(),
   evidence: Joi.array().items(evidenceMetadataSchema).max(10).optional(),
+  coordinates: Joi.string().trim().max(100).optional().allow('', null),
+  address: Joi.string().trim().max(255).optional().allow('', null),
+  approximateDateText: Joi.string().trim().max(100).optional().allow('', null),
 });
 
 export const approveComplaintSchema = Joi.object({

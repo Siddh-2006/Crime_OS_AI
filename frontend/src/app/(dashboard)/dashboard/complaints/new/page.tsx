@@ -1,17 +1,38 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
+import { Modal } from '@/components/ui/Modal';
 import apiClient from '@/lib/axios';
 import { API_ROUTES, APP_ROUTES } from '@/lib/constants';
 import {
-  ShieldAlert, ArrowLeft, ArrowRight, ClipboardCheck, Check, Search, X, FileText, Upload, Loader2
+  ShieldAlert, ArrowLeft, ArrowRight, ClipboardCheck, Check, Search, X, FileText, Upload,
+  Loader2, Mic, Calendar, Clock, MapPin, Film, Music, Eye, Trash2, HelpCircle, Paperclip
 } from 'lucide-react';
+
+interface UploadedFile {
+  publicId: string;
+  secureUrl: string;
+  resourceType: string;
+  mimeType: string;
+  originalFilename: string;
+  extension: string;
+  size: number;
+}
+
+interface UploadProgress {
+  fileName: string;
+  progress: number;
+  status: 'uploading' | 'success' | 'error';
+  error?: string;
+  tempUrl?: string;
+  size: number;
+}
 
 export default function NewComplaintPage(): React.ReactElement {
   const router = useRouter();
@@ -20,32 +41,201 @@ export default function NewComplaintPage(): React.ReactElement {
   const [submitStatus, setSubmitStatus] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  // Form Fields State
+  // ─── Step 1: Incident State ─────────────────────────────────────────────────
+  const [shortDescription, setShortDescription] = useState(''); // Complaint Title
+  const [isApproximateDate, setIsApproximateDate] = useState(false);
   const [incidentDate, setIncidentDate] = useState('');
+  const [approximateDateText, setApproximateDateText] = useState('');
+  const [timePeriod, setTimePeriod] = useState('exact'); // 'morning', 'afternoon', 'evening', 'night', 'unknown', 'exact'
   const [incidentTime, setIncidentTime] = useState('');
-  const [incidentPlace, setIncidentPlace] = useState('');
-  const [category, setCategory] = useState('');
-  const [shortDescription, setShortDescription] = useState('');
-  const [detailedDescription, setDetailedDescription] = useState('');
-  const [emergencyContact, setEmergencyContact] = useState('');
-  const [coordinates, setCoordinates] = useState('');
 
-  // Step 2 Fields
+  // Location search, coordinates & Leaflet map integration
+  const [incidentPlace, setIncidentPlace] = useState(''); // Address string
+  const [coordinates, setCoordinates] = useState('');
+  const [searchAddressQuery, setSearchAddressQuery] = useState('');
+  const [searchingAddress, setSearchingAddress] = useState(false);
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const [mapError, setMapError] = useState(false);
+
+  // Police Station Select Autocomplete
   const [searchQuery, setSearchQuery] = useState('');
   const [stations, setStations] = useState<any[]>([]);
   const [loadingStations, setLoadingStations] = useState(false);
   const [selectedStation, setSelectedStation] = useState<any | null>(null);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [stationDropdownOpen, setStationDropdownOpen] = useState(false);
 
-  // Evidence: local File objects only — NOT uploaded yet
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  // Optional category
+  const [category, setCategory] = useState('');
+
+  // ─── Step 2: Describe State ────────────────────────────────────────────────
+  const [detailedDescription, setDetailedDescription] = useState('');
+  const [isRecordingUIActive, setIsRecordingUIActive] = useState(false);
+
+  // Speech-to-Text State
+  const [isRecording, setIsRecording] = useState(false);
+  const [sttLanguage, setSttLanguage] = useState('en-IN');
+  const [interimTranscript, setInterimTranscript] = useState('');
+  const [sttError, setSttError] = useState<string | null>(null);
+  const recognitionRef = useRef<any>(null);
+
+  // Real-time multilingual client-side language script detector
+  const detectLanguage = (text: string) => {
+    if (!text) return null;
+    const gujRange = /[\u0A80-\u0AFF]/;
+    const hinRange = /[\u0900-\u097F]/;
+    const benRange = /[\u0980-\u09FF]/;
+    const tamRange = /[\u0B80-\u0BFF]/;
+    
+    if (gujRange.test(text)) return 'Gujarati';
+    if (hinRange.test(text)) return 'Hindi / Marathi';
+    if (benRange.test(text)) return 'Bengali';
+    if (tamRange.test(text)) return 'Tamil';
+    
+    const latinLetters = (text.match(/[a-zA-Z]/g) || []).length;
+    if (latinLetters > text.length * 0.3) {
+      return 'English';
+    }
+    return null;
+  };
+
+  // Start STT Recording
+  const startSTT = () => {
+    setSttError(null);
+    setInterimTranscript('');
+    
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      setSttError('Speech recognition is not supported in this browser. Please use Chrome, Safari or Edge.');
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = sttLanguage;
+
+      recognition.onstart = () => {
+        setIsRecording(true);
+      };
+
+      recognition.onresult = (event: any) => {
+        let finalText = '';
+        let interimText = '';
+
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalText += event.results[i][0].transcript;
+          } else {
+            interimText += event.results[i][0].transcript;
+          }
+        }
+
+        if (finalText) {
+          setDetailedDescription((prev) => {
+            const separator = prev.trim() ? ' ' : '';
+            return prev + separator + finalText;
+          });
+        }
+        setInterimTranscript(interimText);
+      };
+
+      recognition.onerror = (event: any) => {
+        console.error('Speech recognition error', event);
+        setSttError(`Error: ${event.error}. Please ensure mic access is allowed.`);
+        setIsRecording(false);
+      };
+
+      recognition.onend = () => {
+        setIsRecording(false);
+        setInterimTranscript('');
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (err: any) {
+      console.error(err);
+      setSttError('Failed to initialize speech recognition.');
+    }
+  };
+
+  // Stop STT Recording
+  const stopSTT = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+    setIsRecording(false);
+    setInterimTranscript('');
+  };
+
+  // Toggle STT
+  const toggleSTT = () => {
+    if (isRecording) {
+      stopSTT();
+    } else {
+      startSTT();
+    }
+  };
+
+  // ─── Step 3: Evidence State ────────────────────────────────────────────────
+  const [evidenceFiles, setEvidenceFiles] = useState<UploadedFile[]>([]);
+  const [uploadProgressQueue, setUploadProgressQueue] = useState<Record<string, UploadProgress>>({});
   const [isDragging, setIsDragging] = useState(false);
+  const [previewFile, setPreviewFile] = useState<UploadedFile | null>(null);
+
+  // ─── Step 4: AI Review & Submission State ──────────────────────────────────
   const [declareCheck, setDeclareCheck] = useState(false);
 
-  // Load initial list of stations
+  // Refs for Map
+  const mapRef = useRef<any>(null);
+  const markerRef = useRef<any>(null);
+
+  // Load initial police stations
   useEffect(() => {
     fetchStations('');
   }, []);
+
+  // Auto-assign police station based on incidentPlace keywords
+  useEffect(() => {
+    if (!incidentPlace || stations.length === 0) return;
+
+    const addressTokens = incidentPlace
+      .toLowerCase()
+      .replace(/[^\w\s]/g, '')
+      .split(/\s+/)
+      .filter((t) => t.length > 2);
+
+    if (addressTokens.length === 0) return;
+
+    let bestStation = null;
+    let highestScore = 0;
+
+    stations.forEach((station) => {
+      let score = 0;
+      const stationText = `${station.name} ${station.city} ${station.district} ${station.address}`.toLowerCase();
+      
+      addressTokens.forEach((token) => {
+        if (stationText.includes(token)) {
+          score += 1;
+          if (station.city.toLowerCase() === token) score += 2;
+          if (station.district.toLowerCase() === token) score += 2;
+        }
+      });
+
+      if (score > highestScore) {
+        highestScore = score;
+        bestStation = station;
+      }
+    });
+
+    if (bestStation) {
+      setSelectedStation(bestStation);
+    } else if (stations.length > 0 && !selectedStation) {
+      setSelectedStation(stations[0]);
+    }
+  }, [incidentPlace, stations, selectedStation]);
 
   const fetchStations = async (query: string) => {
     setLoadingStations(true);
@@ -61,189 +251,471 @@ export default function NewComplaintPage(): React.ReactElement {
     }
   };
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleStationSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setSearchQuery(val);
     fetchStations(val);
   };
 
-  // ─── File Selection Helpers ───────────────────────────────────────────────────
-  const ALLOWED_TYPES = [
-    'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp',
-    'video/mp4', 'video/mpeg', 'video/quicktime', 'video/avi',
-    'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp3',
-    'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/zip', 'application/x-zip-compressed',
-  ];
+  // ─── Dynamic Leaflet Map Injection ──────────────────────────────────────────
+  useEffect(() => {
+    if (step !== 1) return;
 
-  const handleAddFiles = (files: File[]) => {
-    const remaining = 10 - selectedFiles.length;
-    if (remaining <= 0) {
-      setError('Maximum 10 evidence files can be selected.');
+    // Check if Leaflet is already loaded globally
+    if ((window as any).L) {
+      setMapLoaded(true);
       return;
     }
 
-    const toAdd: File[] = [];
-    for (const file of files) {
-      if (toAdd.length + selectedFiles.length >= 10) break;
+    // Append CSS
+    if (!document.getElementById('leaflet-css')) {
+      const link = document.createElement('link');
+      link.id = 'leaflet-css';
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      link.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
+      link.crossOrigin = '';
+      document.head.appendChild(link);
+    }
+
+    // Append Script
+    if (!document.getElementById('leaflet-js')) {
+      const script = document.createElement('script');
+      script.id = 'leaflet-js';
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';
+      script.crossOrigin = '';
+      script.onload = () => {
+        setMapLoaded(true);
+      };
+      script.onerror = () => {
+        setMapError(true);
+      };
+      document.head.appendChild(script);
+    } else {
+      // Check periodically for library availability
+      const interval = setInterval(() => {
+        if ((window as any).L) {
+          setMapLoaded(true);
+          clearInterval(interval);
+        }
+      }, 200);
+      return () => clearInterval(interval);
+    }
+  }, [step]);
+
+  // Initialize Map
+  useEffect(() => {
+    if (step !== 1 || !mapLoaded || !(window as any).L) return;
+
+    let initialLat = 23.0225;
+    let initialLng = 72.5714;
+    if (coordinates) {
+      const parts = coordinates.split(',');
+      if (parts.length === 2) {
+        const lat = parseFloat(parts[0]);
+        const lng = parseFloat(parts[1]);
+        if (!isNaN(lat) && !isNaN(lng)) {
+          initialLat = lat;
+          initialLng = lng;
+        }
+      }
+    }
+
+    const L = (window as any).L;
+
+    // Check if map already created on DOM element
+    if (!mapRef.current) {
+      mapRef.current = L.map('leaflet-map-element').setView([initialLat, initialLng], 12);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(mapRef.current);
+
+      markerRef.current = L.marker([initialLat, initialLng], { draggable: true }).addTo(mapRef.current);
+
+      const updateCoordsFromMarker = async () => {
+        const position = markerRef.current.getLatLng();
+        const coordsStr = `${position.lat.toFixed(6)}, ${position.lng.toFixed(6)}`;
+        setCoordinates(coordsStr);
+        await reverseGeocode(position.lat, position.lng);
+      };
+
+      markerRef.current.on('dragend', updateCoordsFromMarker);
+
+      mapRef.current.on('click', (e: any) => {
+        const position = e.latlng;
+        markerRef.current.setLatLng(position);
+        const coordsStr = `${position.lat.toFixed(6)}, ${position.lng.toFixed(6)}`;
+        setCoordinates(coordsStr);
+        reverseGeocode(position.lat, position.lng);
+      });
+    }
+
+    return () => {
+      // Map cleanup
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+        markerRef.current = null;
+      }
+    };
+  }, [step, mapLoaded]);
+
+  const updateMapMarker = (lat: number, lng: number) => {
+    if (mapRef.current && markerRef.current && (window as any).L) {
+      const L = (window as any).L;
+      const latlng = L.latLng(lat, lng);
+      markerRef.current.setLatLng(latlng);
+      mapRef.current.setView(latlng, 15);
+    }
+  };
+
+  const handleReverseGeocode = async (lat: number, lng: number) => {
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, {
+        headers: { 'Accept': 'application/json' }
+      });
+      const data = await res.json();
+      if (data && data.display_name) {
+        setIncidentPlace(data.display_name);
+      }
+    } catch (err) {
+      console.error('Reverse geocode failed', err);
+    }
+  };
+
+  const reverseGeocode = async (lat: number, lng: number) => {
+    await handleReverseGeocode(lat, lng);
+  };
+
+  const handleDetectLocation = () => {
+    if (!navigator.geolocation) {
+      setError('Geolocation is not supported by your browser');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        const coordsStr = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+        setCoordinates(coordsStr);
+        updateMapMarker(latitude, longitude);
+        await reverseGeocode(latitude, longitude);
+      },
+      (err) => {
+        console.error('Geolocation retrieve error', err);
+        setError('Could not retrieve exact location. Please select on map.');
+      }
+    );
+  };
+
+  const handleSearchAddress = async () => {
+    if (!searchAddressQuery.trim()) return;
+    setSearchingAddress(true);
+    setError(null);
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchAddressQuery)}&limit=1`, {
+        headers: { 'Accept': 'application/json' }
+      });
+      const data = await res.json();
+      if (data && data.length > 0) {
+        const lat = parseFloat(data[0].lat);
+        const lon = parseFloat(data[0].lon);
+        const coordsStr = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+        setCoordinates(coordsStr);
+        setIncidentPlace(data[0].display_name);
+        updateMapMarker(lat, lon);
+      } else {
+        setError('No locations found for: ' + searchAddressQuery);
+      }
+    } catch (err) {
+      console.error('Geocoding search failed', err);
+      setError('Could not search address. Please drop pin manually.');
+    } finally {
+      setSearchingAddress(false);
+    }
+  };
+
+  // ─── Step 3: Direct Cloudinary File Uploads ──────────────────────────────
+  const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'mp4', 'mpeg', 'mov', 'avi', 'mp3', 'wav', 'ogg', 'pdf', 'doc', 'docx', 'zip'];
+
+  const processFiles = (files: File[]) => {
+    setError(null);
+    const totalCount = evidenceFiles.length + Object.keys(uploadProgressQueue).filter(k => uploadProgressQueue[k].status === 'uploading').length;
+    if (totalCount + files.length > 10) {
+      setError('You can select a maximum of 10 evidence files.');
+      return;
+    }
+
+    files.forEach((file) => {
       const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
-      const isAllowedType = ALLOWED_TYPES.includes(file.type) || ['pdf', 'docx', 'doc', 'zip'].includes(ext);
-      if (!isAllowedType) {
+      if (!ALLOWED_EXTENSIONS.includes(ext)) {
         setError(`Unsupported file type: ${file.name}`);
-        continue;
+        return;
       }
       if (file.size > 100 * 1024 * 1024) {
-        setError(`File too large (max 100MB): ${file.name}`);
-        continue;
+        setError(`File exceeds 100MB limit: ${file.name}`);
+        return;
       }
-      toAdd.push(file);
-    }
-
-    if (toAdd.length > 0) {
-      setSelectedFiles((prev) => [...prev, ...toAdd]);
-    }
-  };
-
-  const handleRemoveFile = (index: number) => {
-    setSelectedFiles((prev) => {
-      const copy = [...prev];
-      copy.splice(index, 1);
-      return copy;
+      uploadFile(file);
     });
   };
 
-  // ─── Cloudinary Upload (runs AFTER complaint creation) ────────────────────────
-  const uploadFileToCloudinary = async (file: File) => {
-    const sigRes = await apiClient.post(API_ROUTES.COMPLAINTS.UPLOAD_SIGNATURE);
-    const { signature, timestamp, apiKey, cloudName, folder, publicId } = sigRes.data.data;
-
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('api_key', apiKey);
-    formData.append('timestamp', String(timestamp));
-    formData.append('signature', signature);
-    formData.append('folder', folder);
-    formData.append('public_id', publicId);
-
-    // Determine resource_type — PDFs must be 'raw' to preserve actual PDF bytes
-    let resourceType = 'image';
+  const uploadFile = async (file: File) => {
+    const fileId = `${file.name}-${file.size}-${Date.now()}`;
     const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
-    if (file.type.startsWith('video/') || file.type.startsWith('audio/')) {
-      resourceType = 'video';
-    } else if (
-      file.type.includes('pdf') ||
-      file.name.endsWith('.pdf') ||
-      !file.type.startsWith('image/')
-    ) {
-      resourceType = 'raw';
+    const isImage = file.type.startsWith('image/');
+    
+    // Push initial status
+    setUploadProgressQueue((prev) => ({
+      ...prev,
+      [fileId]: {
+        fileName: file.name,
+        progress: 0,
+        status: 'uploading',
+        tempUrl: isImage ? URL.createObjectURL(file) : undefined,
+        size: file.size,
+      },
+    }));
+
+    try {
+      // 1. Signature retrieval
+      const sigRes = await apiClient.post(API_ROUTES.COMPLAINTS.UPLOAD_SIGNATURE);
+      const { signature, timestamp, apiKey, cloudName, folder, publicId } = sigRes.data.data;
+
+      // 2. Form Data preparation
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('api_key', apiKey);
+      formData.append('timestamp', String(timestamp));
+      formData.append('signature', signature);
+      formData.append('folder', folder);
+      formData.append('public_id', publicId);
+
+      let resourceType = 'image';
+      if (file.type.startsWith('video/') || file.type.startsWith('audio/')) {
+        resourceType = 'video';
+      } else if (file.type.includes('pdf') || file.name.endsWith('.pdf') || !file.type.startsWith('image/')) {
+        resourceType = 'raw';
+      }
+
+      // 3. XHR to track progress percent
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`, true);
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const percent = Math.round((e.loaded / e.total) * 100);
+          setUploadProgressQueue((prev) => {
+            if (!prev[fileId]) return prev;
+            return {
+              ...prev,
+              [fileId]: { ...prev[fileId], progress: percent },
+            };
+          });
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status === 200) {
+          const response = JSON.parse(xhr.responseText);
+          const uploadedItem: UploadedFile = {
+            publicId: response.public_id,
+            secureUrl: response.secure_url,
+            resourceType: response.resource_type,
+            mimeType: file.type || 'application/octet-stream',
+            originalFilename: file.name,
+            extension: ext,
+            size: response.bytes,
+          };
+
+          setEvidenceFiles((prev) => [...prev, uploadedItem]);
+          setUploadProgressQueue((prev) => {
+            const next = { ...prev };
+            next[fileId] = { ...next[fileId], status: 'success', progress: 100 };
+            return next;
+          });
+        } else {
+          setUploadProgressQueue((prev) => {
+            if (!prev[fileId]) return prev;
+            return {
+              ...prev,
+              [fileId]: {
+                ...prev[fileId],
+                status: 'error',
+                error: `Upload failed: HTTP ${xhr.status}`,
+              },
+            };
+          });
+        }
+      };
+
+      xhr.onerror = () => {
+        setUploadProgressQueue((prev) => {
+          if (!prev[fileId]) return prev;
+          return {
+            ...prev,
+            [fileId]: {
+              ...prev[fileId],
+              status: 'error',
+              error: 'Network connection error.',
+            },
+          };
+        });
+      };
+
+      xhr.send(formData);
+    } catch (err: any) {
+      console.error(err);
+      setUploadProgressQueue((prev) => {
+        if (!prev[fileId]) return prev;
+        return {
+          ...prev,
+          [fileId]: {
+            ...prev[fileId],
+            status: 'error',
+            error: err.response?.data?.message || err.message || 'Signature error.',
+          },
+        };
+      });
     }
-
-    const uploadUrl = `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`;
-    const response = await axios.post(uploadUrl, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-
-    return {
-      publicId: response.data.public_id,
-      secureUrl: response.data.secure_url,
-      resourceType: response.data.resource_type,
-      mimeType: file.type || 'application/octet-stream',
-      originalFilename: file.name,
-      extension: ext,
-      size: response.data.bytes,
-    };
   };
 
-  // ─── Validation ───────────────────────────────────────────────────────────────
+  const handleRemoveEvidence = (index: number) => {
+    setEvidenceFiles((prev) => {
+      const next = [...prev];
+      next.splice(index, 1);
+      return next;
+    });
+  };
+
+  const handleRemoveProgress = (fileId: string) => {
+    setUploadProgressQueue((prev) => {
+      const next = { ...prev };
+      delete next[fileId];
+      return next;
+    });
+  };
+
+  // ─── Step Validation & Progress ───────────────────────────────────────────
   const validateStep1 = () => {
-    if (!incidentDate) return 'Incident date is required';
-    if (new Date(incidentDate) > new Date()) return 'Incident date cannot be in the future';
-    if (!incidentPlace.trim()) return 'Incident place is required';
-    if (!category) return 'Complaint category is required';
+    if (!shortDescription.trim()) return 'Complaint Title is required';
     if (shortDescription.trim().length < 5 || shortDescription.trim().length > 255) {
-      return 'Brief description must be between 5 and 255 characters';
+      return 'Complaint Title must be between 5 and 255 characters';
     }
-    if (detailedDescription.trim().length < 10) {
-      return 'Detailed description must be at least 10 characters';
+
+    if (isApproximateDate) {
+      if (!approximateDateText.trim()) return 'Approximate Date description is required';
+      if (!incidentDate) return 'Estimated date is required to map timeline index';
+    } else {
+      if (!incidentDate) return 'Incident Date is required';
+      if (new Date(incidentDate) > new Date()) return 'Incident Date cannot be in the future';
     }
+
+    if (timePeriod === 'exact' && !incidentTime) {
+      return 'Please specify exact incident time or select a general time period';
+    }
+
+    if (!incidentPlace.trim()) return 'Incident location is required. Drop pin on map or search address';
+    if (!selectedStation) return 'Jurisdiction police station could not be auto-detected. Please drop a pin on the map or search an address.';
+
     return null;
   };
 
   const validateStep2 = () => {
-    if (!selectedStation) return 'Please select a Police Station';
-    if (!declareCheck) return 'You must accept the legal declaration before submitting';
+    if (detailedDescription.trim().length < 10) {
+      return 'Detailed Description must be at least 10 characters';
+    }
     return null;
   };
 
   const handleNext = () => {
     setError(null);
-    const err = validateStep1();
-    if (err) { setError(err); return; }
-    setStep(2);
+    if (step === 1) {
+      const err = validateStep1();
+      if (err) { setError(err); return; }
+      setStep(2);
+    } else if (step === 2) {
+      const err = validateStep2();
+      if (err) { setError(err); return; }
+      setStep(3);
+    } else if (step === 3) {
+      // Check if files are still uploading
+      const isUploading = Object.values(uploadProgressQueue).some((item) => item.status === 'uploading');
+      if (isUploading) {
+        setError('Please wait for evidence files to finish uploading');
+        return;
+      }
+      setStep(4);
+    }
   };
 
   const handlePrev = () => {
     setError(null);
-    setStep(1);
+    if (step > 1) setStep(step - 1);
   };
 
-  // ─── Submit Handler ───────────────────────────────────────────────────────────
+  // ─── Submission Logic ──────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    const validationErr = validateStep2();
-    if (validationErr) { setError(validationErr); return; }
+    if (!declareCheck) {
+      setError('You must accept the legal declaration before submitting');
+      return;
+    }
 
     setSubmitting(true);
+    setSubmitStatus('Submitting case details and evidence...');
+
     try {
-      // Step 1: Create the complaint (no evidence yet)
-      setSubmitStatus('Filing your complaint details...');
-      const payload = {
-        incidentDate,
-        incidentTime: incidentTime || undefined,
-        incidentPlace,
-        category,
-        shortDescription,
-        detailedDescription,
-        policeStation: selectedStation._id,
-        evidence: [],
-        emergencyContact: emergencyContact || undefined,
-        coordinates: coordinates || undefined,
-      };
-
-      const createRes = await apiClient.post(API_ROUTES.COMPLAINTS.CREATE, payload);
-      const complaintId = createRes.data.data._id;
-
-      // Step 2: Upload each file and collect metadata
-      if (selectedFiles.length > 0) {
-        const uploadedEvidence = [];
-        for (let i = 0; i < selectedFiles.length; i++) {
-          const file = selectedFiles[i];
-          setSubmitStatus(`Uploading evidence ${i + 1} of ${selectedFiles.length}: ${file.name}`);
-          const uploaded = await uploadFileToCloudinary(file);
-          uploadedEvidence.push(uploaded);
-        }
-
-        // Step 3: Attach all uploaded evidence to the complaint
-        setSubmitStatus('Finalizing case file and attaching evidence...');
-        await apiClient.post(`/complaints/${complaintId}/evidence`, {
-          evidence: uploadedEvidence,
-        });
+      let finalTime = incidentTime;
+      if (timePeriod !== 'exact') {
+        finalTime = timePeriod.charAt(0).toUpperCase() + timePeriod.slice(1);
       }
 
+      const payload = {
+        incidentDate,
+        incidentTime: finalTime || undefined,
+        approximateDateText: isApproximateDate ? approximateDateText : undefined,
+        incidentPlace,
+        coordinates: coordinates || undefined,
+        address: incidentPlace,
+        category: category || undefined,
+        shortDescription, // Complaint Title
+        detailedDescription,
+        policeStation: selectedStation._id,
+        evidence: evidenceFiles,
+      };
+
+      await apiClient.post(API_ROUTES.COMPLAINTS.CREATE, payload);
       router.push(APP_ROUTES.MY_COMPLAINTS);
     } catch (err: any) {
       setError(
         err.response?.data?.message ||
         err.message ||
-        'Failed to submit complaint. Please try again.'
+        'Failed to submit complaint. Please check fields and try again.'
       );
     } finally {
       setSubmitting(false);
       setSubmitStatus('');
     }
+  };
+
+  // Helper file icons
+  const getFileIcon = (mime: string, ext: string) => {
+    const checkExt = ext.toLowerCase();
+    if (mime.startsWith('image/') || ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'].includes(checkExt)) {
+      return <Eye className="h-6 w-6 text-blue-500" />;
+    }
+    if (mime.startsWith('video/') || ['mp4', 'mpeg', 'mov', 'avi'].includes(checkExt)) {
+      return <Film className="h-6 w-6 text-purple-500" />;
+    }
+    if (mime.startsWith('audio/') || ['mp3', 'wav', 'ogg'].includes(checkExt)) {
+      return <Music className="h-6 w-6 text-teal-500" />;
+    }
+    if (mime.includes('pdf') || checkExt === 'pdf') {
+      return <FileText className="h-6 w-6 text-red-500" />;
+    }
+    return <FileText className="h-6 w-6 text-neutral-500" />;
   };
 
   const categories = [
@@ -268,354 +740,873 @@ export default function NewComplaintPage(): React.ReactElement {
   ];
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      {/* Wizard Header */}
-      <div className="flex items-center gap-4">
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Header Banner */}
+      <div className="flex items-center gap-4 border-b border-neutral-100 pb-4">
         <button
           onClick={() => router.push(APP_ROUTES.MY_COMPLAINTS)}
-          className="p-2 hover:bg-neutral-200 rounded-full transition-colors"
-          title="Back to complaints"
+          className="p-2 hover:bg-neutral-100 rounded-full transition-all duration-200"
+          title="Back to complaints list"
         >
           <ArrowLeft size={20} className="text-neutral-600" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">E-Application Portal</h1>
-          <p className="text-sm text-neutral-500">File a secure online complaint under Gujarat jurisdiction</p>
+          <h1 className="text-2xl font-bold tracking-tight text-neutral-900">E-Complaint Intake Portal</h1>
+          <p className="text-sm text-neutral-500">File a secure case description with the Gujarat Police Department</p>
         </div>
       </div>
 
-      {/* Progress Steps */}
-      <div className="flex items-center justify-between bg-white border border-neutral-200 rounded-xl p-4 shadow-sm">
-        <div className="flex items-center gap-3">
-          <span
-            className={[
-              'flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-colors',
-              step === 1 ? 'bg-primary-800 text-white' : 'bg-green-100 text-green-700',
-            ].join(' ')}
-          >
-            {step > 1 ? <Check size={16} /> : '1'}
-          </span>
-          <span className={`text-sm font-semibold ${step === 1 ? 'text-primary-900' : 'text-neutral-500'}`}>
-            Incident Details
-          </span>
-        </div>
-        <div className="h-0.5 w-16 bg-neutral-200 flex-1 mx-4" />
-        <div className="flex items-center gap-3">
-          <span
-            className={[
-              'flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-colors',
-              step === 2 ? 'bg-primary-800 text-white' : 'bg-neutral-100 text-neutral-400',
-            ].join(' ')}
-          >
-            2
-          </span>
-          <span className={`text-sm font-semibold ${step === 2 ? 'text-primary-900' : 'text-neutral-400'}`}>
-            Station &amp; Evidence
-          </span>
-        </div>
+      {/* Modern Stepper Indicator */}
+      <div className="grid grid-cols-4 gap-2 bg-neutral-50 border border-neutral-200 rounded-xl p-3 shadow-inner">
+        {[
+          { num: 1, name: 'Incident Details' },
+          { num: 2, name: 'Narrative Story' },
+          { num: 3, name: 'Evidence Files' },
+          { num: 4, name: 'AI Review & Save' }
+        ].map((s) => (
+          <div key={s.num} className="flex flex-col md:flex-row items-center gap-2 px-1 text-center md:text-left">
+            <span
+              className={[
+                'flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-all duration-300',
+                step === s.num
+                  ? 'bg-primary-800 text-white ring-4 ring-primary-100 scale-110 shadow hover:shadow-md'
+                  : step > s.num
+                    ? 'bg-green-600 text-white'
+                    : 'bg-neutral-200 text-neutral-500'
+              ].join(' ')}
+            >
+              {step > s.num ? <Check size={14} /> : s.num}
+            </span>
+            <span
+              className={[
+                'text-xs font-semibold select-none hidden md:inline transition-colors duration-200',
+                step === s.num ? 'text-primary-900 font-bold' : step > s.num ? 'text-green-700' : 'text-neutral-400'
+              ].join(' ')}
+            >
+              {s.name}
+            </span>
+          </div>
+        ))}
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-          <ShieldAlert size={18} />
-          <span>{error}</span>
+        <div className="flex items-center gap-3 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-r-lg text-sm shadow-sm animate-shake">
+          <ShieldAlert size={20} className="flex-shrink-0 text-red-600" />
+          <span className="font-medium">{error}</span>
         </div>
       )}
 
-      {/* Submission progress overlay */}
       {submitting && submitStatus && (
-        <div className="flex items-center gap-3 p-4 bg-primary-50 border border-primary-200 text-primary-800 rounded-lg text-sm">
+        <div className="flex items-center gap-3 p-4 bg-primary-50 border-l-4 border-primary-500 text-primary-800 rounded-r-lg text-sm shadow-sm animate-pulse">
           <Loader2 size={18} className="animate-spin flex-shrink-0" />
           <span className="font-medium">{submitStatus}</span>
         </div>
       )}
 
-      {/* ─── Step 1: Incident Details ─── */}
+      {/* ─── Step 1: Incident specifics ─── */}
       {step === 1 && (
-        <Card className="space-y-6">
-          <h2 className="text-lg font-bold text-neutral-900 border-b border-neutral-100 pb-3">
-            Step 1: Incident Specifics
-          </h2>
+        <Card className="space-y-6 p-6">
+          <div className="border-b border-neutral-100 pb-3">
+            <h2 className="text-xl font-bold text-neutral-900">Step 1: Incident Specification</h2>
+            <p className="text-sm text-neutral-500">Provide dates, general timing, exact coordinates, and jurisdictional area.</p>
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                Incident Date *
-              </label>
-              <input
-                type="date"
-                value={incidentDate}
-                onChange={(e) => setIncidentDate(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-sm"
+          <div className="space-y-4">
+            {/* Title / Summary */}
+            <Input
+              label="Complaint Title *"
+              value={shortDescription}
+              onChange={(e) => setShortDescription(e.target.value)}
+              placeholder="e.g. Someone stole my bike / OTP Fraud transaction / Lost mobile phone"
+              maxLength={255}
+              required
+            />
+
+            {/* Date Specifics */}
+            <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-neutral-800">Incident Date Selection *</span>
+                <label className="flex items-center gap-2 text-xs font-semibold text-primary-800 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isApproximateDate}
+                    onChange={(e) => {
+                      setIsApproximateDate(e.target.checked);
+                      if (!e.target.checked) setApproximateDateText('');
+                    }}
+                    className="rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
+                  />
+                  I only know the Approximate Date
+                </label>
+              </div>
+
+              {isApproximateDate ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input
+                    label="Describe Approximate Date *"
+                    value={approximateDateText}
+                    onChange={(e) => setApproximateDateText(e.target.value)}
+                    placeholder="e.g. Around last Monday / About two weeks ago"
+                    required
+                  />
+                  <Input
+                    type="date"
+                    label="Estimated Date on Calendar * (AI Indexing)"
+                    value={incidentDate}
+                    max={new Date().toISOString().split('T')[0]}
+                    onChange={(e) => setIncidentDate(e.target.value)}
+                    required
+                  />
+                </div>
+              ) : (
+                <div>
+                  <Input
+                    type="date"
+                    label="Exact Incident Date *"
+                    value={incidentDate}
+                    max={new Date().toISOString().split('T')[0]}
+                    onChange={(e) => setIncidentDate(e.target.value)}
+                    required
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Time Specifics */}
+            <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-4 space-y-4">
+              <label className="block text-sm font-semibold text-neutral-800">Approximate Time Period</label>
+              <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+                {[
+                  { value: 'morning', label: 'Morning' },
+                  { value: 'afternoon', label: 'Afternoon' },
+                  { value: 'evening', label: 'Evening' },
+                  { value: 'night', label: 'Night' },
+                  { value: 'unknown', label: 'Unknown' },
+                  { value: 'exact', label: 'Exact Time' }
+                ].map((t) => (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => {
+                      setTimePeriod(t.value);
+                      if (t.value !== 'exact') setIncidentTime('');
+                    }}
+                    className={[
+                      'px-3 py-2 rounded-lg text-xs font-semibold border transition-all duration-200',
+                      timePeriod === t.value
+                        ? 'bg-primary-800 border-primary-900 text-white shadow-sm'
+                        : 'bg-white border-neutral-300 text-neutral-700 hover:bg-neutral-100'
+                    ].join(' ')}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              {timePeriod === 'exact' && (
+                <div className="mt-2">
+                  <Input
+                    type="time"
+                    label="Exact Time *"
+                    value={incidentTime}
+                    onChange={(e) => setIncidentTime(e.target.value)}
+                    required
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Location & Map UI */}
+            <div className="space-y-3">
+              <label className="block text-sm font-semibold text-neutral-800">Incident Location *</label>
+              
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    placeholder="Search address (e.g. Kalupur station, Maninagar)..."
+                    value={searchAddressQuery}
+                    onChange={(e) => setSearchAddressQuery(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSearchAddress(); } }}
+                    className="w-full pl-9 pr-4 py-2 text-sm border border-neutral-300 rounded-lg outline-none focus:ring-2 focus:ring-primary-500 bg-white text-neutral-900"
+                  />
+                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-neutral-400" />
+                </div>
+                <Button type="button" variant="ghost" onClick={handleSearchAddress} isLoading={searchingAddress}>
+                  Search
+                </Button>
+                <Button type="button" variant="secondary" onClick={handleDetectLocation} leftIcon={<MapPin size={16} />}>
+                  Detect Location
+                </Button>
+              </div>
+
+              {/* Coordinates display info */}
+              {coordinates && (
+                <p className="text-xs text-neutral-500 font-mono">
+                  Coordinates: {coordinates} (Captured Automatically)
+                </p>
+              )}
+
+              {/* Map element */}
+              <div className="relative border border-neutral-300 rounded-xl overflow-hidden shadow-sm bg-neutral-100">
+                <div id="leaflet-map-element" className="h-[280px] w-full z-0" />
+                {!mapLoaded && !mapError && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10">
+                    <Loader2 className="animate-spin text-primary-800 mr-2" />
+                    <span className="text-xs font-semibold text-neutral-600">Initializing Interactive Map...</span>
+                  </div>
+                )}
+                {mapError && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-white/90 text-danger-700 z-10 px-4 text-center">
+                    <p className="text-sm font-medium">Failed to load Map layer. Geolocation coordinates remain functional.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Place details display */}
+              <Input
+                label="Confirm Place / Location of Occurrence *"
+                value={incidentPlace}
+                onChange={(e) => setIncidentPlace(e.target.value)}
+                placeholder="Selected address (detect, search, or drop pin above to populate)"
+                required
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                Approximate Time (Optional)
-              </label>
-              <input
-                type="time"
-                value={incidentTime}
-                onChange={(e) => setIncidentTime(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-sm"
+
+            {/* Optional category */}
+            <div className="border border-neutral-200 bg-neutral-50 rounded-lg p-4 space-y-2">
+              <Select
+                label="Complaint Category (Optional)"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                options={[{ value: '', label: 'Select Category (Optional)' }, ...categories]}
               />
+              <p className="text-xs text-neutral-500 font-medium">
+                If you&apos;re unsure, leave this blank. AI will identify the complaint category.
+              </p>
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Select
-              label="Complaint Category *"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              options={[{ value: '', label: 'Select Category' }, ...categories]}
-            />
-            <Input
-              label="Place of Occurrence *"
-              value={incidentPlace}
-              onChange={(e) => setIncidentPlace(e.target.value)}
-              placeholder="e.g. Near Kalupur Railway Station, Ahmedabad"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              label="Emergency Contact Number (Optional)"
-              value={emergencyContact}
-              onChange={(e) => setEmergencyContact(e.target.value)}
-              placeholder="e.g. 9876543210"
-            />
-            <Input
-              label="Location Coordinates (Optional)"
-              value={coordinates}
-              onChange={(e) => setCoordinates(e.target.value)}
-              placeholder="e.g. 23.0225, 72.5714"
-            />
-          </div>
-
-          <Input
-            label="Brief Summary of Crime (Short Description) *"
-            value={shortDescription}
-            onChange={(e) => setShortDescription(e.target.value)}
-            placeholder="A single line summary of what happened"
-            maxLength={255}
-          />
-
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-              Detailed Description *
-            </label>
-            <textarea
-              value={detailedDescription}
-              onChange={(e) => setDetailedDescription(e.target.value)}
-              placeholder="Provide a comprehensive narrative of the incident, including details of any suspects, stolen property, or witnesses..."
-              rows={6}
-              className="w-full px-4 py-2.5 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-sm resize-none"
-            />
           </div>
 
           <div className="flex justify-end pt-4 border-t border-neutral-100">
-            <Button onClick={handleNext}>
-              <span>Continue to Step 2</span>
-              <ArrowRight size={16} />
+            <Button onClick={handleNext} rightIcon={<ArrowRight size={16} />}>
+              Continue to Step 2
             </Button>
           </div>
         </Card>
       )}
 
-      {/* ─── Step 2: Police Station & Evidence ─── */}
+      {/* ─── Step 2: Story Description Narrative ─── */}
       {step === 2 && (
-        <form onSubmit={handleSubmit}>
-          <Card className="space-y-6">
-            <h2 className="text-lg font-bold text-neutral-900 border-b border-neutral-100 pb-3">
-              Step 2: Police Station &amp; Evidence
-            </h2>
+        <Card className="space-y-6 p-6">
+          <div className="border-b border-neutral-100 pb-3">
+            <h2 className="text-xl font-bold text-neutral-900">Step 2: Tell us what happened</h2>
+            <p className="text-sm text-neutral-500">Write everything you remember. Don&apos;t worry about legal terms. Our AI will organize everything later.</p>
+          </div>
 
-            {/* Searchable Police Station Dropdown */}
-            <div className="relative">
-              <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                Assign Police Station (Gujarat Jurisdiction) *
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={selectedStation ? selectedStation.name : searchQuery}
-                  onChange={(e) => {
-                    if (selectedStation) setSelectedStation(null);
-                    handleSearchChange(e);
-                  }}
-                  onFocus={() => setDropdownOpen(true)}
-                  placeholder="Type to search police stations (e.g. Maninagar, Kalupur)..."
-                  className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-sm"
-                />
-                <Search className="absolute left-3 top-3 h-4 w-4 text-neutral-400" />
-                {selectedStation && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedStation(null);
-                      setSearchQuery('');
-                      fetchStations('');
-                    }}
-                    className="absolute right-3 top-3 text-neutral-400 hover:text-neutral-600"
-                  >
-                    <X size={16} />
-                  </button>
-                )}
+          <div className="flex flex-col md:flex-row gap-6">
+            {/* Description Narrative input */}
+            <div className="flex-1 space-y-4">
+              <label className="block text-sm font-semibold text-neutral-700">Detailed Narrative Description *</label>
+              <textarea
+                value={detailedDescription}
+                onChange={(e) => setDetailedDescription(e.target.value)}
+                placeholder="Start typing your story here... Detail the events, suspect characteristics, lost objects, time frames, and potential witnesses."
+                className="w-full p-4 rounded-xl border border-neutral-300 min-h-[260px] text-sm focus:ring-2 focus:ring-primary-500 outline-none transition-all resize-none shadow-sm text-neutral-900 bg-white"
+              />
+
+              <div className="flex items-center gap-3">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setIsRecordingUIActive(true)}
+                  leftIcon={<Mic size={16} />}
+                >
+                  Record Voice
+                </Button>
+                <span className="text-xs text-neutral-400 font-medium">Prepares speech recorder UI placeholder</span>
               </div>
-
-              {dropdownOpen && !selectedStation && (
-                <div className="absolute z-10 w-full bg-white border border-neutral-200 rounded-lg shadow-lg mt-1 max-h-60 overflow-y-auto">
-                  {loadingStations && (
-                    <p className="text-sm text-neutral-500 p-3 text-center">Searching stations...</p>
-                  )}
-                  {!loadingStations && stations.length === 0 && (
-                    <p className="text-sm text-neutral-500 p-3 text-center">No matching stations found.</p>
-                  )}
-                  {!loadingStations &&
-                    stations.map((st) => (
-                      <button
-                        key={st._id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedStation(st);
-                          setDropdownOpen(false);
-                          setSearchQuery('');
-                        }}
-                        className="w-full text-left px-4 py-2.5 text-sm hover:bg-neutral-100 border-b border-neutral-50 last:border-0 flex flex-col"
-                      >
-                        <span className="font-semibold text-neutral-800">{st.name}</span>
-                        <span className="text-xs text-neutral-500">
-                          Code: {st.code} | City: {st.city} | District: {st.district}
-                        </span>
-                      </button>
-                    ))}
-                </div>
-              )}
             </div>
 
-            {/* Evidence File Selector — local only, no upload yet */}
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                Attach Supporting Evidence
-              </label>
-              <p className="text-xs text-neutral-500 mb-3">
-                Select up to 10 files (Images, Videos, Audio, PDF, DOCX, ZIP — max 100MB each).
-                Files will be securely uploaded only after you submit the complaint.
+            {/* Fading Floating Writing Tips Panel */}
+            <div
+              className={[
+                'w-full md:w-64 p-4 rounded-xl border border-primary-100 bg-primary-50/40 text-primary-900 space-y-3 self-start transition-all duration-500 transform',
+                detailedDescription.length > 0 ? 'opacity-0 scale-95 pointer-events-none md:w-0 md:p-0 md:border-0 md:h-0 overflow-hidden' : 'opacity-100 scale-100'
+              ].join(' ')}
+            >
+              <div className="flex items-center gap-2 border-b border-primary-200 pb-2">
+                <HelpCircle size={16} className="text-primary-800" />
+                <h4 className="text-xs font-bold uppercase tracking-wider">Helpful Writing Tips</h4>
+              </div>
+              <p className="text-xs leading-relaxed text-neutral-600">
+                Consider detailing:
               </p>
+              <ul className="text-xs space-y-1.5 list-disc pl-4 text-neutral-700">
+                <li>What exactly took place?</li>
+                <li>Where was the location of crime?</li>
+                <li>When did it occur?</li>
+                <li>Who was involved or suspected?</li>
+                <li>What property or money was lost?</li>
+                <li>Are there witnesses or CCTV?</li>
+              </ul>
+            </div>
+          </div>
 
-              {selectedFiles.length < 10 && (
-                <div
-                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                  onDragLeave={() => setIsDragging(false)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setIsDragging(false);
-                    if (e.dataTransfer.files) {
-                      setError(null);
-                      handleAddFiles(Array.from(e.dataTransfer.files));
-                    }
-                  }}
-                  onClick={() => document.getElementById('evidence-file-input')?.click()}
-                  className={[
-                    'border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all duration-200',
-                    isDragging
-                      ? 'border-primary-500 bg-primary-50/60 scale-[0.99]'
-                      : 'border-neutral-300 hover:border-primary-400 bg-neutral-50/50 hover:bg-neutral-100/30',
-                  ].join(' ')}
-                >
-                  <input
-                    type="file"
-                    id="evidence-file-input"
-                    className="hidden"
-                    multiple
-                    accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.zip"
-                    onChange={(e) => {
-                      if (e.target.files) {
-                        setError(null);
-                        handleAddFiles(Array.from(e.target.files));
-                        e.target.value = '';
-                      }
-                    }}
-                  />
-                  <Upload size={32} className="mx-auto text-neutral-400 mb-3" />
-                  <p className="text-sm font-semibold text-neutral-700">
-                    Drag &amp; drop files here, or{' '}
-                    <span className="text-primary-600 hover:underline">browse</span>
-                  </p>
-                  <p className="text-xs text-neutral-400 mt-1">
-                    No upload happens until you submit
+          <div className="flex justify-between items-center pt-4 border-t border-neutral-100">
+            <Button variant="ghost" onClick={handlePrev} leftIcon={<ArrowLeft size={16} />}>
+              Back to Specifics
+            </Button>
+            <Button onClick={handleNext} rightIcon={<ArrowRight size={16} />}>
+              Continue to Step 3
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {/* ─── Step 3: Evidence uploads ─── */}
+      {step === 3 && (
+        <Card className="space-y-6 p-6">
+          <div className="border-b border-neutral-100 pb-3">
+            <h2 className="text-xl font-bold text-neutral-900">Step 3: Upload Evidence</h2>
+            <p className="text-sm text-neutral-500">Provide supporting files (max 10, up to 100MB each). Supported formats: Images, Videos, Audio, PDF, Documents, ZIP.</p>
+          </div>
+
+          {/* Drag & drop zone */}
+          <div
+            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setIsDragging(false);
+              if (e.dataTransfer.files) {
+                processFiles(Array.from(e.dataTransfer.files));
+              }
+            }}
+            onClick={() => document.getElementById('evidence-select-input')?.click()}
+            className={[
+              'border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200',
+              isDragging
+                ? 'border-primary-500 bg-primary-50/60 scale-[0.99] shadow-inner'
+                : 'border-neutral-300 hover:border-primary-500 bg-neutral-50/50 hover:bg-neutral-100/30'
+            ].join(' ')}
+          >
+            <input
+              type="file"
+              id="evidence-select-input"
+              className="hidden"
+              multiple
+              accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.zip,.txt"
+              onChange={(e) => {
+                if (e.target.files) {
+                  processFiles(Array.from(e.target.files));
+                  e.target.value = '';
+                }
+              }}
+            />
+            <Upload size={36} className="mx-auto text-neutral-400 mb-3" />
+            <p className="text-sm font-semibold text-neutral-700">
+              Drag &amp; drop evidence files here, or{' '}
+              <span className="text-primary-600 hover:underline font-bold">browse files</span>
+            </p>
+            <p className="text-xs text-neutral-400 mt-1.5">
+              Files upload instantly to Cloudinary storage for review
+            </p>
+          </div>
+
+          {/* Upload progress & completed cards */}
+          {(Object.keys(uploadProgressQueue).length > 0 || evidenceFiles.length > 0) && (
+            <div className="space-y-4">
+              <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
+                Upload List ({evidenceFiles.length}/{evidenceFiles.length + Object.keys(uploadProgressQueue).filter(k=>uploadProgressQueue[k].status==='uploading').length} Ready)
+              </h3>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Upload queue list */}
+                {Object.entries(uploadProgressQueue).map(([fileId, item]) => {
+                  if (item.status === 'success') return null; // Displayed below in completed
+                  const ext = item.fileName.split('.').pop()?.toUpperCase() ?? '';
+                  return (
+                    <div key={fileId} className="flex items-center gap-3 p-3 bg-white border border-neutral-200 rounded-lg shadow-sm relative">
+                      {item.tempUrl ? (
+                        <img src={item.tempUrl} className="h-10 w-10 object-cover rounded flex-shrink-0" alt="" />
+                      ) : (
+                        <div className="h-10 w-10 bg-neutral-100 rounded flex items-center justify-center flex-shrink-0">
+                          <FileText className="h-5 w-5 text-neutral-400" />
+                        </div>
+                      )}
+                      
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-neutral-800 truncate" title={item.fileName}>
+                          {item.fileName}
+                        </p>
+                        <p className="text-[10px] text-neutral-400">
+                          {(item.size / (1024 * 1024)).toFixed(2)} MB · {ext}
+                        </p>
+
+                        {item.status === 'uploading' && (
+                          <div className="w-full bg-neutral-200 h-1 rounded-full mt-2 overflow-hidden">
+                            <div className="bg-primary-600 h-full transition-all duration-300" style={{ width: `${item.progress}%` }} />
+                          </div>
+                        )}
+                        {item.status === 'error' && (
+                          <span className="text-[10px] font-semibold text-red-600 mt-1 block truncate">
+                            {item.error || 'Upload error'}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-xs text-neutral-500 font-semibold">{item.progress}%</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveProgress(fileId)}
+                          className="p-1 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Already uploaded evidence list */}
+                {evidenceFiles.map((file, idx) => (
+                  <div key={file.publicId} className="flex items-center gap-3 p-3 bg-white border border-neutral-200 rounded-lg shadow-sm relative group">
+                    <div className="h-10 w-10 bg-neutral-50 rounded flex items-center justify-center flex-shrink-0 border border-neutral-100">
+                      {file.resourceType === 'image' ? (
+                        <img src={file.secureUrl} className="h-10 w-10 object-cover rounded" alt="" />
+                      ) : (
+                        getFileIcon(file.mimeType, file.extension)
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-neutral-800 truncate" title={file.originalFilename}>
+                        {file.originalFilename}
+                      </p>
+                      <p className="text-[10px] text-neutral-400">
+                        {(file.size / (1024 * 1024)).toFixed(2)} MB · {file.extension.toUpperCase()}
+                      </p>
+                      <span className="text-[9px] font-bold text-green-600 flex items-center gap-1 mt-0.5">
+                        <Check size={10} /> Cloudinary Safe
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewFile(file)}
+                        className="p-1.5 text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 rounded border border-transparent hover:border-neutral-200"
+                        title="Preview"
+                      >
+                        <Eye size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveEvidence(idx)}
+                        className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded border border-transparent hover:border-red-100"
+                        title="Remove"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-between items-center pt-4 border-t border-neutral-100">
+            <Button variant="ghost" onClick={handlePrev} leftIcon={<ArrowLeft size={16} />}>
+              Back to Story
+            </Button>
+            <Button onClick={handleNext} rightIcon={<ArrowRight size={16} />}>
+              Continue to Review
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {/* ─── Step 4: Review & Submission ─── */}
+      {step === 4 && (
+        <form onSubmit={handleSubmit} className="max-w-3xl mx-auto space-y-8 animate-fade-in text-neutral-900">
+          {/* Header Banner */}
+          <div className="bg-gradient-to-r from-primary-900 to-primary-850 text-white rounded-2xl p-6 shadow flex items-center justify-between gap-4 border border-primary-955">
+            <div className="space-y-1.5">
+              <h2 className="text-xl font-extrabold tracking-tight">Review &amp; Submit Your Complaint</h2>
+              <p className="text-xs text-primary-200 leading-relaxed">
+                Please double-check all details below. Your story will be securely transmitted to Gujarat Police for immediate review.
+              </p>
+            </div>
+            <div className="h-12 w-12 bg-white/10 rounded-full flex items-center justify-center border border-white/20 shadow-inner flex-shrink-0">
+              <ShieldAlert className="text-secondary-400 h-6 w-6" />
+            </div>
+          </div>
+
+          {/* 1. Incident details Card */}
+          <div className="bg-white border border-neutral-200 rounded-2xl shadow-sm overflow-hidden">
+            <div className="px-6 py-4 bg-neutral-50/75 border-b border-neutral-200 flex justify-between items-center">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 bg-primary-50 rounded-lg text-primary-800 border border-primary-100">
+                  <Calendar size={18} />
+                </div>
+                <h3 className="text-sm font-bold text-neutral-855 uppercase tracking-wider">1. Incident Specifications</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStep(1)}
+                className="text-xs font-bold text-primary-800 hover:text-primary-955 flex items-center gap-1 bg-white border border-neutral-300 hover:border-neutral-400 px-3 py-1.5 rounded-lg shadow-sm transition-all duration-200 active:scale-[0.98]"
+              >
+                Modify Details
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Complaint Title Block */}
+              <div>
+                <span className="block text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Complaint Title</span>
+                <h4 className="text-lg font-extrabold text-neutral-850 mt-1">{shortDescription}</h4>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 border-t border-neutral-100 pt-6">
+                <div>
+                  <span className="block text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Incident Date</span>
+                  <p className="font-semibold text-neutral-855 mt-1.5 text-sm">
+                    {isApproximateDate ? (
+                      <span className="flex flex-col gap-0.5">
+                        <span className="text-primary-800 font-bold">{approximateDateText}</span>
+                        <span className="text-xs text-neutral-400 font-medium">(Estimated Date: {new Date(incidentDate).toLocaleDateString('en-IN')})</span>
+                      </span>
+                    ) : (
+                      new Date(incidentDate).toLocaleDateString('en-IN')
+                    )}
                   </p>
                 </div>
-              )}
 
-              {selectedFiles.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">
-                    Selected Files ({selectedFiles.length}/10)
+                <div>
+                  <span className="block text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Timing</span>
+                  <p className="font-bold text-neutral-855 mt-1.5 text-sm flex items-center gap-1.5">
+                    <Clock size={14} className="text-neutral-400" />
+                    {timePeriod === 'exact' ? incidentTime : timePeriod.charAt(0).toUpperCase() + timePeriod.slice(1)}
                   </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {selectedFiles.map((file, idx) => {
-                      const ext = file.name.split('.').pop()?.toUpperCase() ?? '';
-                      return (
-                        <div
-                          key={idx}
-                          className="flex items-center gap-3 p-3 bg-white border border-neutral-200 rounded-lg shadow-sm"
-                        >
-                          <FileText className="h-5 w-5 text-primary-600 flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-semibold text-neutral-800 truncate" title={file.name}>
-                              {file.name}
-                            </p>
-                            <p className="text-[10px] text-neutral-400 mt-0.5">
-                              {(file.size / 1024 / 1024).toFixed(2)} MB · {ext}
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveFile(idx)}
-                            disabled={submitting}
-                            className="p-1 rounded hover:bg-neutral-100 text-neutral-400 hover:text-red-500 transition-colors"
-                          >
-                            <X size={14} />
-                          </button>
-                        </div>
-                      );
-                    })}
+                </div>
+              </div>
+
+              {/* Location and Station Section */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 border-t border-neutral-100 pt-6">
+                <div>
+                  <span className="block text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Incident Location</span>
+                  <p className="font-semibold text-neutral-855 mt-1.5 text-sm leading-relaxed">{incidentPlace}</p>
+                  {coordinates && (
+                    <span className="inline-block mt-2 font-mono text-[10px] text-neutral-500 bg-neutral-100 border border-neutral-200 px-2 py-0.5 rounded">
+                      GPS: {coordinates}
+                    </span>
+                  )}
+                </div>
+
+                <div>
+                  <span className="block text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Assigned Police Station</span>
+                  <div className="mt-1.5">
+                    <div className="flex items-center gap-2">
+                      <p className="font-extrabold text-neutral-855 text-sm">{selectedStation?.name || 'Detection Pending...'}</p>
+                      {selectedStation && (
+                        <span className="text-[9px] font-extrabold bg-green-100 border border-green-200 text-green-700 px-2 py-0.5 rounded-full select-none uppercase tracking-wide flex items-center gap-0.5">
+                          <Check size={8} /> Auto-Mapped
+                        </span>
+                      )}
+                    </div>
+                    {selectedStation && (
+                      <p className="text-xs text-neutral-400 mt-1 font-medium leading-relaxed">
+                        Station Code: {selectedStation.code} <br />
+                        Jurisdiction: {selectedStation.city}, {selectedStation.district}
+                      </p>
+                    )}
                   </div>
                 </div>
+              </div>
+
+              {category && (
+                <div className="border-t border-neutral-100 pt-6">
+                  <span className="block text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Selected Category (Optional)</span>
+                  <span className="inline-block bg-primary-50 text-primary-850 px-3 py-1 text-xs font-bold rounded-lg mt-2 border border-primary-100 shadow-sm">
+                    {category}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 2. Narrative Section */}
+          <div className="bg-white border border-neutral-200 rounded-2xl shadow-sm overflow-hidden">
+            <div className="px-6 py-4 bg-neutral-50/75 border-b border-neutral-200 flex justify-between items-center">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 bg-primary-50 rounded-lg text-primary-800 border border-primary-100">
+                  <HelpCircle size={18} />
+                </div>
+                <h3 className="text-sm font-bold text-neutral-800 uppercase tracking-wider">2. Narrative Description</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStep(2)}
+                className="text-xs font-bold text-primary-800 hover:text-primary-955 flex items-center gap-1 bg-white border border-neutral-300 hover:border-neutral-400 px-3 py-1.5 rounded-lg shadow-sm transition-all duration-200 active:scale-[0.98]"
+              >
+                Modify Story
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="bg-neutral-50 border border-neutral-200/60 p-5 rounded-xl shadow-inner relative overflow-hidden">
+                <div className="absolute top-0 left-0 bottom-0 w-1 bg-primary-800" />
+                <p className="text-sm text-neutral-700 whitespace-pre-line leading-relaxed italic font-serif pl-2">
+                  &ldquo;{detailedDescription}&rdquo;
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Evidence Section */}
+          <div className="bg-white border border-neutral-200 rounded-2xl shadow-sm overflow-hidden">
+            <div className="px-6 py-4 bg-neutral-50/75 border-b border-neutral-200 flex justify-between items-center">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 bg-primary-50 rounded-lg text-primary-800 border border-primary-100">
+                  <Paperclip size={18} />
+                </div>
+                <h3 className="text-sm font-bold text-neutral-805 uppercase tracking-wider">3. Attached Evidence</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStep(3)}
+                className="text-xs font-bold text-primary-800 hover:text-primary-955 flex items-center gap-1 bg-white border border-neutral-300 hover:border-neutral-400 px-3 py-1.5 rounded-lg shadow-sm transition-all duration-200 active:scale-[0.98]"
+              >
+                Modify Evidence
+              </button>
+            </div>
+            <div className="p-6">
+              {evidenceFiles.length === 0 ? (
+                <div className="text-center py-8 bg-neutral-50 border border-dashed border-neutral-200 rounded-xl">
+                  <p className="text-sm text-neutral-400 italic font-semibold">No evidence files attached to this complaint.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {evidenceFiles.map((file) => (
+                    <div key={file.publicId} className="flex items-center gap-3 p-3 border border-neutral-200 rounded-xl text-xs bg-neutral-50 shadow-sm transition-all hover:bg-neutral-100/50">
+                      <div className="h-10 w-10 bg-white border border-neutral-255 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden">
+                        {file.resourceType === 'image' ? (
+                          <img src={file.secureUrl} className="h-10 w-10 object-cover" alt="" />
+                        ) : (
+                          getFileIcon(file.mimeType, file.extension)
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-neutral-855 truncate">{file.originalFilename}</p>
+                        <p className="text-[10px] text-neutral-400 mt-0.5">{(file.size / (1024 * 1024)).toFixed(2)} MB · {file.extension.toUpperCase()}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Legal declaration check */}
+          <div className="p-5 bg-orange-50/50 border border-orange-200 rounded-2xl shadow-sm flex items-start gap-4 transition-all duration-300 hover:bg-orange-50">
+            <input
+              type="checkbox"
+              id="declareCheck-input"
+              checked={declareCheck}
+              onChange={(e) => setDeclareCheck(e.target.checked)}
+              className="mt-1 h-5 w-5 rounded border-neutral-300 text-primary-800 focus:ring-primary-600 cursor-pointer flex-shrink-0"
+            />
+            <label htmlFor="declareCheck-input" className="text-xs text-neutral-700 leading-relaxed cursor-pointer font-semibold select-none">
+              I hereby solemnly declare that all statements made in this e-application are true, complete and correct
+              to the best of my knowledge and belief. I understand that filing a false police report is a punishable
+              offence under Section 182 of the Indian Penal Code (IPC) and other relevant acts.
+            </label>
+          </div>
+
+          {/* Stepper Footer Controls */}
+          <div className="flex justify-between items-center pt-5 border-t border-neutral-200">
+            <Button type="button" variant="ghost" onClick={handlePrev} leftIcon={<ArrowLeft size={16} />}>
+              Back to Evidence
+            </Button>
+            <Button type="submit" isLoading={submitting} leftIcon={<ClipboardCheck size={18} />} className="shadow hover:shadow-md">
+              {submitting ? 'Submitting Case...' : 'Submit Complaint'}
+            </Button>
+          </div>
+        </form>
+      )}
+
+      {/* Multilingual Voice Recording STT Modal with Live Auto-detect language & Typing text animation */}
+      <Modal
+        isOpen={isRecordingUIActive}
+        onClose={() => {
+          stopSTT();
+          setIsRecordingUIActive(false);
+        }}
+        title="Speech-to-Text Case Narrator"
+      >
+        <div className="py-4 space-y-6 text-neutral-900">
+          <div className="flex flex-col items-center justify-center space-y-4">
+            {/* Pulsing microphone icon */}
+            <div
+              onClick={toggleSTT}
+              className={[
+                'h-20 w-20 rounded-full flex items-center justify-center border-4 cursor-pointer transition-all duration-300 shadow-md select-none',
+                isRecording 
+                  ? 'bg-red-500 border-red-200 text-white animate-pulse scale-105 shadow-red-200' 
+                  : 'bg-primary-50 border-primary-100 text-primary-800 hover:bg-primary-100 hover:scale-102'
+              ].join(' ')}
+            >
+              <Mic size={36} />
+            </div>
+            
+            <div className="text-center">
+              <span className="text-xs font-extrabold uppercase tracking-widest text-neutral-400 block mb-1">Status</span>
+              <p className="text-sm font-bold text-neutral-800">
+                {isRecording ? 'Listening... Speak now' : 'Ready to Record'}
+              </p>
+            </div>
+          </div>
+
+          {/* Multilingual Language Selector */}
+          <div className="space-y-2">
+            <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider">Select Spoken Language</label>
+            <select
+              value={sttLanguage}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSttLanguage(val);
+                if (isRecording) {
+                  stopSTT();
+                  setTimeout(() => {
+                    setSttLanguage(val);
+                  }, 100);
+                }
+              }}
+              disabled={isRecording}
+              className="w-full px-3.5 py-2.5 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 bg-white text-sm font-medium outline-none transition-all cursor-pointer disabled:bg-neutral-50 disabled:text-neutral-400"
+            >
+              <option value="en-IN">English (India)</option>
+              <option value="hi-IN">Hindi (हिन्दी - भारत)</option>
+              <option value="gu-IN">Gujarati (ગુજરાતી - ભારત)</option>
+              <option value="mr-IN">Marathi (मराठी - ભારત)</option>
+              <option value="ta-IN">Tamil (தமிழ் - ભારત)</option>
+              <option value="bn-IN">Bengali (বাংলা - ભારત)</option>
+            </select>
+            <p className="text-[10px] text-neutral-400 font-medium">
+              You can start speaking; speech-to-text will automatically detect and match scripts in real-time.
+            </p>
+          </div>
+
+          {/* Live Preview Text area */}
+          <div className="space-y-2 relative">
+            <div className="flex justify-between items-center mb-1">
+              <span className="block text-xs font-bold text-neutral-500 uppercase tracking-wider">Transcribed Output (Real-time)</span>
+              {detailedDescription && (
+                <div className="flex items-center gap-1">
+                  <span className="text-[9px] font-bold text-neutral-400 uppercase">Language detected:</span>
+                  <span className="text-[9px] font-extrabold bg-blue-50 border border-blue-200 text-blue-700 px-2 py-0.5 rounded-full select-none uppercase tracking-wide">
+                    {detectLanguage(detailedDescription) || 'Latin / English'}
+                  </span>
+                </div>
               )}
             </div>
 
-            {/* Legal Declaration */}
-            <div className="p-4 bg-orange-50/50 border border-orange-100 rounded-lg">
-              <div className="flex gap-3">
-                <input
-                  type="checkbox"
-                  id="declaration"
-                  checked={declareCheck}
-                  onChange={(e) => setDeclareCheck(e.target.checked)}
-                  className="mt-1 h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
-                />
-                <label htmlFor="declaration" className="text-xs text-neutral-700 leading-relaxed cursor-pointer">
-                  I hereby solemnly declare that all statements made in this e-application are true, complete and correct
-                  to the best of my knowledge and belief. I understand that filing a false police report is a punishable
-                  offence under Section 182 of the Indian Penal Code (IPC) and other relevant acts.
-                </label>
-              </div>
-            </div>
+            <div className="min-h-[140px] max-h-[220px] overflow-y-auto p-4 bg-neutral-50 border border-neutral-200 rounded-xl text-sm leading-relaxed text-neutral-800 shadow-inner relative">
+              {detailedDescription ? (
+                <p className="whitespace-pre-line">
+                  {detailedDescription}
+                  {interimTranscript && (
+                    <span className="text-neutral-400 font-medium italic"> {interimTranscript}</span>
+                  )}
+                </p>
+              ) : (
+                <p className="text-neutral-400 italic font-medium">
+                  {interimTranscript ? (
+                    <span className="text-neutral-500 italic"> {interimTranscript}</span>
+                  ) : (
+                    'Click the microphone to start talking. Your speech will appear here...'
+                  )}
+                </p>
+              )}
 
-            {/* Footer Navigation */}
-            <div className="flex justify-between items-center pt-4 border-t border-neutral-100">
-              <Button type="button" variant="ghost" onClick={handlePrev} leftIcon={<ArrowLeft size={16} />}>
-                Back to Details
-              </Button>
-              <Button type="submit" isLoading={submitting} leftIcon={<ClipboardCheck size={18} />}>
-                {submitting ? 'Processing...' : 'Submit Complaint'}
-              </Button>
+              {/* Typing Dot Loader */}
+              {isRecording && (
+                <div className="absolute bottom-2.5 right-3 flex items-center gap-1 bg-white/95 border border-neutral-200 px-2.5 py-1 rounded-md text-[9px] font-bold text-neutral-500 shadow-sm animate-pulse select-none">
+                  <span className="h-1 w-1 bg-neutral-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="h-1 w-1 bg-neutral-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="h-1 w-1 bg-neutral-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <span>STT typing...</span>
+                </div>
+              )}
             </div>
-          </Card>
-        </form>
+          </div>
+
+          {sttError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs font-semibold text-red-700">
+              {sttError}
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div className="flex gap-3 justify-end pt-4 border-t border-neutral-100">
+            {isRecording && (
+              <Button type="button" variant="secondary" onClick={stopSTT}>
+                Pause
+              </Button>
+            )}
+            <Button
+              type="button"
+              onClick={() => {
+                stopSTT();
+                setIsRecordingUIActive(false);
+              }}
+            >
+              Done &amp; Close
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* File Preview Modal */}
+      {previewFile && (
+        <Modal
+          isOpen={!!previewFile}
+          onClose={() => setPreviewFile(null)}
+          title={`Preview: ${previewFile.originalFilename}`}
+          size="lg"
+        >
+          <div className="flex flex-col items-center justify-center py-4 max-h-[60vh] overflow-y-auto">
+            {previewFile.resourceType === 'image' ? (
+              <img
+                src={previewFile.secureUrl}
+                alt={previewFile.originalFilename}
+                className="max-w-full max-h-[50vh] object-contain rounded-lg shadow"
+              />
+            ) : (
+              <div className="text-center space-y-3">
+                <FileText size={64} className="mx-auto text-primary-600" />
+                <h5 className="font-semibold text-neutral-800">{previewFile.originalFilename}</h5>
+                <p className="text-xs text-neutral-500 font-mono">
+                  Cloudinary URL: <a href={previewFile.secureUrl} target="_blank" rel="noopener noreferrer" className="text-primary-700 underline">{previewFile.secureUrl}</a>
+                </p>
+                <div className="grid grid-cols-2 gap-4 text-left max-w-sm mx-auto border-t border-neutral-100 pt-3 text-xs">
+                  <div>
+                    <span className="font-semibold text-neutral-400">File Size:</span>
+                    <p className="text-neutral-800">{(previewFile.size / (1024*1024)).toFixed(2)} MB</p>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-neutral-400">MIME Type:</span>
+                    <p className="text-neutral-800">{previewFile.mimeType}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className="flex justify-center pt-6 w-full">
+              <Button onClick={() => setPreviewFile(null)}>Close Preview</Button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );
