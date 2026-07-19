@@ -199,7 +199,7 @@ export default function PoliceComplaintQueuePage(): React.ReactElement {
                         {new Date(c.incidentDate).toLocaleDateString('en-IN')}
                       </td>
                       <td className="p-4 uppercase text-xs font-semibold text-neutral-500">
-                        {c.category.replace('_', ' ')}
+                        {c.category ? c.category.replace('_', ' ') : 'UNCATEGORIZED'}
                       </td>
                       <td className="p-4">{getStatusBadge(c.status)}</td>
                       <td className="p-4">

@@ -104,7 +104,7 @@ export default function MyComplaintsPage(): React.ReactElement {
                     </span>
                     {getStatusBadge(complaint.status)}
                     <span className="text-xs font-semibold px-2 py-0.5 rounded bg-neutral-100 text-neutral-600 uppercase">
-                      {complaint.category.replace('_', ' ')}
+                      {complaint.category ? complaint.category.replace('_', ' ') : 'UNCATEGORIZED'}
                     </span>
                   </div>
 

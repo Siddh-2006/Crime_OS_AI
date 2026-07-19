@@ -36,7 +36,6 @@ const PoliceStationSchema = new Schema<IPoliceStation>(
   },
 );
 
-PoliceStationSchema.index({ code: 1 });
 PoliceStationSchema.index({ district: 1 });
 
 const clearStationsCache = async () => {
