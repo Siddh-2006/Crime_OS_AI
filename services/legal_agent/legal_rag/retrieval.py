@@ -213,7 +213,7 @@ class RerankerConfig:
     model_name: str = "BAAI/bge-reranker-v2-m3"
     device: str | None = None
     batch_size: int = 8
-    cache_dir = str(
+    cache_dir: str = str(
         Path(__file__).resolve().parent.parent / "onnx_reranker"
     )
 
