@@ -268,7 +268,7 @@ export function startFirWorker(): void {
       incidentDate:       complaint.incidentDate,
       incidentTime:       complaint.incidentTime ?? '',
       incidentPlace:      complaint.incidentPlace,
-      category:           complaint.category,
+      category:           complaint.category || 'UNCATEGORIZED',
       description:        latestDesc?.content ?? complaint.shortDescription,
       officerName:        io?.officerName    ?? 'On-Duty Officer',
       officerBadge:       io?.badgeNumber    ?? 'N/A',
