@@ -180,19 +180,15 @@ export class CitizenRequestController {
       }
 
       // Generate a plain-language draft using fastCall
-      const systemPrompt = `You are a helpful police assistant. Draft a short, professional, plain-language message to the citizen requesting specific information based on the step description. Keep it concise (1-2 sentences).`;
+      const systemPrompt = `You are a helpful police assistant. Draft a short, professional, plain-language message to the citizen requesting specific information based on the step description. Instruct them to log into the Citizen Portal using their credentials to provide the requested information and evidence. Keep it concise (1-2 sentences).`;
       const userPrompt = `Task: ${step.title}\nRequired Evidence: ${(step.required_evidence || []).join(', ')}`;
       
-      let draftContent = 'Please provide the requested information to help us proceed with your case.';
+      let draftContent = 'Please log into the Citizen Portal to provide the requested information to help us proceed with your case.';
       try {
         draftContent = await fastCall(systemPrompt, userPrompt) as string;
       } catch (err) {
         logger.error('LLM draft failed for citizen request, using fallback', err);
       }
-
-      const token = uuidv4();
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
 
       const request = new DepartmentRequest({
         case_id: id,
@@ -204,8 +200,6 @@ export class CitizenRequestController {
         status: 'sent', // we send it immediately
         sent_via: 'email',
         sent_at: new Date(),
-        token,
-        token_expires_at: expiresAt,
       });
 
       await request.save();
@@ -221,7 +215,6 @@ export class CitizenRequestController {
         name: 'Complainant',
         caseId: caseDoc.complaintNumber,
         content: draftContent,
-        token,
       };
       
       await EmailQueue.enqueueCitizenRequest(payload);
@@ -232,11 +225,11 @@ export class CitizenRequestController {
         entry_id: uuidv4(),
         actor: { type: 'system', id: 'orchestrator' },
         event_type: 'request_sent',
-        payload: { recipient: 'Complainant', message: 'Requested evidence from citizen' },
+        payload: { recipient: 'Complainant', message: 'Requested evidence from citizen', content: draftContent },
         ref_ids: { request_id: request.request_id }
       });
 
-      sendSuccess(res, HttpStatusCode.OK, 'Citizen request sent successfully', { request, token });
+      sendSuccess(res, HttpStatusCode.OK, 'Citizen request sent successfully', { request });
     } catch (error: any) {
       logger.error('Error creating citizen request', error);
       sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, 'Error creating citizen request');

@@ -8,9 +8,15 @@ import { DepartmentRequest } from '../models/DepartmentRequest.model';
 import { DiaryEntry } from '../models/DiaryEntry.model';
 import { CaseChecklist } from '../models/CaseChecklist.model';
 import { Evidence } from '../models/Evidence.model';
+import { Complaint } from '../../complaint/models/Complaint.model';
+import { RequestThread } from '../models/RequestThread.model';
 import { buildFactsObject } from '../services/factsAssemblyService';
 import { sendSuccess, sendError } from '../../../shared/utils/response.util';
 import { HttpStatusCode } from '../../../common/enums/httpStatus.enum';
+import { Types } from 'mongoose';
+import PDFDocument from 'pdfkit';
+import { v4 as uuidv4 } from 'uuid';
+import cloudinary from '../../../config/cloudinary';
 
 export class InvestigationController {
   
@@ -382,13 +388,32 @@ export class InvestigationController {
 
   /**
    * GET /cases/:id/evidence
-   * Fetch case evidence.
+   * Fetch case evidence — merges IO/department Evidence records + complainant's original uploads.
    */
   static async getEvidence(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const evidence = await Evidence.find({ case_id: id }).sort({ createdAt: -1 }).lean();
-      sendSuccess(res, HttpStatusCode.OK, 'Fetched evidence', evidence);
+      
+      // 1. Structured Evidence documents (added by IO/dept)
+      const evidenceDocs = await Evidence.find({ case_id: id }).sort({ createdAt: -1 }).lean();
+
+      // 2. Original complainant uploads stored in Complaint.evidence[]
+      const complaint = await Complaint.findById(id, { evidence: 1 }).lean() as any;
+      const complainantFiles = (complaint?.evidence || []).map((ev: any, idx: number) => ({
+        evidence_id: ev.publicId || `COMP-EV-${idx}`,
+        type: ev.resourceType || 'document',
+        storage_ref: ev.secureUrl || ev.publicId,
+        ai_description: ev.aiMetadata?.aiSummary || ev.originalFilename || 'Complainant uploaded file',
+        ai_tags: ev.aiMetadata?.imageTags || [],
+        status: ev.processingStatus === 'PROCESSED' ? 'verified' : 'pending',
+        source: 'complainant',
+        cloudinary_url: ev.secureUrl,
+        original_filename: ev.originalFilename,
+        uploaded_at: ev.uploadedAt,
+      }));
+
+      const combined = [...complainantFiles, ...evidenceDocs];
+      sendSuccess(res, HttpStatusCode.OK, 'Fetched evidence', combined);
     } catch (error) {
       sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, {
         code: 'EVIDENCE_FETCH_FAILED',
@@ -620,8 +645,11 @@ export class InvestigationController {
   static async replyToThread(req: Request, res: Response): Promise<void> {
     try {
       const { threadId } = req.params;
-      const { content, attachments } = req.body;
+      const { content, attachments, sender = 'io' } = req.body;
       const { RequestThread } = require('../models/RequestThread.model');
+      const { Evidence } = require('../models/Evidence.model');
+      const { CaseChecklist } = require('../models/CaseChecklist.model');
+      const { v4: uuidv4 } = require('uuid');
 
       if (!content) {
         sendError(res, HttpStatusCode.BAD_REQUEST, {
@@ -641,26 +669,62 @@ export class InvestigationController {
       }
 
       thread.messages.push({
-        sender: 'io',
+        sender,
         content,
         timestamp: new Date(),
         attachments: attachments || []
       });
-      thread.unread_by_io = false; // since IO just replied
+      
+      thread.unread_by_io = sender === 'department';
       await thread.save();
 
+      const evidenceIds = [];
+      if (sender === 'department' && attachments && attachments.length > 0) {
+        for (const url of attachments) {
+          const evidence = new Evidence({
+            case_id: thread.case_id,
+            evidence_id: uuidv4(),
+            type: 'document',
+            storage_ref: url,
+            uploader_id: new Types.ObjectId(), // mocked dept user ID
+            status: 'pending',
+            source: 'department',
+            origin: 'post_complaint_request',
+            linked_request_id: thread.request_id,
+            ai_description: `Uploaded by ${thread.department_entity_id}`,
+            ai_tags: [thread.department_entity_id.toLowerCase()],
+          });
+          await evidence.save();
+          evidenceIds.push(evidence.evidence_id);
+        }
+      }
+
+      if (sender === 'department') {
+        const step = await CaseChecklist.findOne({ case_id: thread.case_id, step_id: thread.step_id });
+        if (step) {
+          step.status = 'completed';
+          step.completed_at = new Date();
+          step.proof_evidence_ids = evidenceIds;
+          await step.save();
+        }
+      }
+
       // Log in diary
-      const ioId = (req as any).user?.id || '6a5b60a5774e86b7dd85ca7a';
+      const actorType = sender === 'io' ? 'officer' : 'department';
+      const actorId = sender === 'io' ? ((req as any).user?.id || '6a5b60a5774e86b7dd85ca7a') : thread.department_entity_id;
+      const eventType = sender === 'io' ? 'request_sent' : 'evidence_collected';
+
       await DiaryEntry.create({
         case_id: thread.case_id,
         entry_id: `DIARY-${Date.now()}`,
-        event_type: 'request_sent',
-        actor: { type: 'officer', id: ioId },
+        event_type: eventType,
+        actor: { type: actorType, id: actorId },
         timestamp: new Date(),
         payload: {
           thread_id: thread._id,
           content: content,
-          department: thread.department_entity_id
+          department: thread.department_entity_id,
+          attachments
         },
         ref_ids: { request_id: thread.request_id }
       });
@@ -670,6 +734,143 @@ export class InvestigationController {
       sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, {
         code: 'REPLY_FAILED',
         message: error.message || 'Failed to reply to thread'
+      });
+    }
+  }
+
+  /**
+   * POST /cases/:id/threads/:thread_id/export-pdf
+   * Generates a PDF of the chat and uploads it as Evidence.
+   */
+  static async exportThreadToPdf(req: Request, res: Response): Promise<void> {
+    try {
+      const { id, thread_id } = req.params;
+      const { RequestThread } = await import('../models/RequestThread.model');
+      const thread = await RequestThread.findOne({ case_id: id, request_id: thread_id });
+      if (!thread) {
+        sendError(res, HttpStatusCode.NOT_FOUND, { code: 'NOT_FOUND', message: 'Thread not found' });
+        return;
+      }
+
+      // Generate PDF in memory buffer
+      const doc = new PDFDocument({ margin: 50 });
+      const buffers: Buffer[] = [];
+      doc.on('data', buffers.push.bind(buffers));
+      
+      const p = new Promise<Buffer>((resolve, reject) => {
+        doc.on('end', () => resolve(Buffer.concat(buffers)));
+        doc.on('error', reject);
+      });
+
+      // PDF Content
+      doc.fontSize(20).text('Department Communication Evidence', { align: 'center' }).moveDown();
+      doc.fontSize(12).text(`Case ID: ${id}`);
+      doc.text(`Thread ID: ${thread_id}`);
+      doc.text(`Department: ${thread.department_entity_id}`);
+      doc.text(`Generated At: ${new Date().toLocaleString('en-IN')}`).moveDown(2);
+
+      doc.fontSize(14).text('Chat History:', { underline: true }).moveDown();
+      
+      thread.messages.forEach((msg: any) => {
+        const sender = msg.sender === 'io' ? 'Investigating Officer' : thread.department_entity_id;
+        const time = msg.timestamp ? new Date(msg.timestamp).toLocaleString('en-IN') : 'Unknown Time';
+        doc.fontSize(10).fillColor('gray').text(`[${time}] ${sender}:`);
+        doc.fontSize(12).fillColor('black').text(msg.content, { align: 'justify' }).moveDown();
+      });
+
+      doc.end();
+      const pdfBuffer = await p;
+
+      // Upload to cloudinary
+      const uploadResult = await new Promise<any>((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          { resource_type: 'raw', folder: 'crime_os_evidence', format: 'pdf' },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+        uploadStream.end(pdfBuffer);
+      });
+
+      const ioId = (req as any).user?.id || '6a5b60a5774e86b7dd85ca7a';
+      
+      // Save as Evidence
+      const newEvidence = new Evidence({
+        case_id: id,
+        evidence_id: uuidv4(),
+        type: 'document',
+        storage_ref: uploadResult.secure_url,
+        uploader_id: ioId,
+        status: 'verified',
+        source: 'department',
+        linked_request_id: thread_id
+      });
+      await newEvidence.save();
+
+      // Log in Diary
+      await DiaryEntry.create({
+        case_id: id,
+        entry_id: uuidv4(),
+        actor: { type: 'system', id: 'pdf_exporter' },
+        event_type: 'evidence_added',
+        payload: {
+          filename: `Thread_Export_${thread_id}.pdf`,
+          type: 'document',
+          url: uploadResult.secure_url,
+          source: 'thread_export'
+        },
+        ref_ids: { evidence_id: newEvidence.evidence_id, request_id: thread_id }
+      });
+
+      sendSuccess(res, HttpStatusCode.CREATED, 'Thread exported as PDF evidence', { url: uploadResult.secure_url, evidence_id: newEvidence.evidence_id });
+    } catch (error: any) {
+      console.error('PDF Export Error:', error);
+      sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, {
+        code: 'EXPORT_FAILED',
+        message: error.message || 'Failed to export thread as PDF'
+      });
+    }
+  }
+
+  /**
+   * POST /cases/threads/:threadId/format-response
+   * Uses AI to formally format a rough department response.
+   */
+  static async formatThreadResponse(req: Request, res: Response): Promise<void> {
+    try {
+      const { threadId } = req.params;
+      const { content } = req.body;
+
+      if (!content) {
+        sendError(res, HttpStatusCode.BAD_REQUEST, { code: 'INVALID_INPUT', message: 'content is required' });
+        return;
+      }
+
+      const thread = await RequestThread.findById(threadId).lean();
+      if (!thread) {
+        sendError(res, HttpStatusCode.NOT_FOUND, { code: 'NOT_FOUND', message: 'Thread not found' });
+        return;
+      }
+
+      const systemPrompt = `You are a professional assistant helping a government department rewrite a rough, casual response into a highly formal, official response to a police Investigating Officer. Ensure the tone is objective, professional, and clear. Do not add any hallucinated information; only rephrase the provided content.`;
+      
+      const userPrompt = `Context (What the Police asked): ${thread.step_title}\n\nRough Response from Department:\n${content}\n\nPlease rewrite this into a formal response.`;
+
+      let formattedResponse = content; // Fallback
+      try {
+        const { fastCall } = await import('../../../shared/llm/ollamaClient');
+        formattedResponse = await fastCall(systemPrompt, userPrompt) as string;
+      } catch (err) {
+        console.error('LLM format failed, using fallback', err);
+      }
+
+      sendSuccess(res, HttpStatusCode.OK, 'Response formatted', { formattedContent: formattedResponse });
+    } catch (error: any) {
+      console.error('Format Response Error:', error);
+      sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, {
+        code: 'FORMAT_FAILED',
+        message: error.message || 'Failed to format response'
       });
     }
   }

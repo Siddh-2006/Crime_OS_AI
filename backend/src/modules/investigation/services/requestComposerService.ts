@@ -4,6 +4,8 @@ import { buildFactsObject } from './factsAssemblyService';
 import { DepartmentRequest } from '../models/DepartmentRequest.model';
 import { CaseChecklist } from '../models/CaseChecklist.model';
 import { DiaryEntry } from '../models/DiaryEntry.model';
+import { Complaint } from '../../complaint/models/Complaint.model';
+import { DepartmentRegistry } from '../../admin/models/DepartmentRegistry.model';
 import { fastCall } from '../../../shared/llm/ollamaClient';
 // import { EmailQueue } from '../../../shared/queue/EmailQueue';
 import logger from '../../../config/logger';
@@ -29,16 +31,42 @@ export class RequestComposerService {
       throw new Error(`Checklist step ${stepId} not found for case ${caseId}`);
     }
 
+    // Look up Complaint and IO details
+    const complaint = await Complaint.findById(caseId).populate('assignedIO policeStation');
+    let ioDetails = '[Name/Designation of Requesting Officer]\\n[Police Station/Unit Details]';
+    if (complaint && complaint.assignedIO && complaint.policeStation) {
+      const io = complaint.assignedIO as any;
+      const station = complaint.policeStation as any;
+      ioDetails = `${io.rank || 'Investigating Officer'} ${io.name || io.first_name || ''}\n${station.name || 'Cyber Crime Police Station'}\n${station.district || ''}, ${station.state || ''}`;
+    }
+
+    // Look up exact department name
+    let targetDeptName = departmentEntityId;
+    if (departmentEntityId && departmentEntityId !== 'UNKNOWN_DEPARTMENT') {
+      const deptRecord = await DepartmentRegistry.findOne({ entity_id: departmentEntityId });
+      if (deptRecord) targetDeptName = deptRecord.entity_name;
+    }
+
     const systemPrompt = `You are an AI assistant helping a police officer draft an official inter-departmental request letter.
 You must output ONLY a valid JSON object with the following structure:
 {
   "draft_content": "The professional letter content...",
   "suggested_evidence_ids": ["uuid-1", "uuid-2"]
 }
-Keep the letter formal, concise, and highly specific. You MUST include specific details from the Case Facts (e.g., Account Numbers, UPI IDs, Phone Numbers, Transaction IDs) that the receiving department will need to process the request. Do not just put the Case ID.`;
+Keep the letter formal, concise, and highly specific. You MUST include specific details from the Case Facts (e.g., Account Numbers, UPI IDs, Phone Numbers, Transaction IDs) that the receiving department will need to process the request. Do not just put the Case ID.
+
+Formatting rules for "draft_content":
+1. Address the letter "To,\\n${targetDeptName}".
+2. Write a highly specific "Subject:" line that clearly states the exact action and target (e.g., "Subject: Request for freezing HDFC Bank Account XXXXXX in Cyber Fraud FIR"). Do not use generic subjects.
+3. Determine a reasonable timeframe for the response (e.g. "within 7 days") instead of leaving bracketed placeholders.
+4. End the letter EXACTLY with the following sign-off:
+Sincerely,
+${ioDetails}
+
+Do NOT use any bracketed placeholders in the final letter.`;
 
     const userPrompt = `
-Task: Draft a request to ${departmentEntityId} (Type: ${recipientType}) to satisfy the following SOP step:
+Task: Draft a request to ${targetDeptName} (Type: ${recipientType}) to satisfy the following SOP step:
 Title: ${checklistStep.title}
 Required Evidence: ${checklistStep.required_evidence.join(', ')}
 
@@ -138,7 +166,11 @@ Return JSON.`;
       entry_id: uuidv4(),
       actor: { type: 'officer', id: 'system' },
       event_type: 'request_sent',
-      payload: { request_id: request.request_id, department: request.department_entity_id },
+      payload: { 
+        request_id: request.request_id, 
+        department_entity_id: request.department_entity_id,
+        content: request.draft_content
+      },
       ref_ids: { request_id: request.request_id }
     });
 

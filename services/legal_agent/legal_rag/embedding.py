@@ -169,7 +169,7 @@ def build_embedding_text(record: ParsedRecord) -> str:
 
 @dataclass(slots=True)
 class BGEEmbeddingConfig:
-    model_name: str = "BAAI/bge-base-en-v1.5"
+    model_name: str = "BAAI/bge-large-en-v1.5"
     device: str | None = None
     batch_size: int = 16
     normalize_embeddings: bool = True

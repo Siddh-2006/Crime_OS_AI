@@ -11,6 +11,7 @@ import { Select } from '@/components/ui/Select';
 import { useAuth } from '@/hooks/useAuth';
 import apiClient from '@/lib/axios';
 import { API_ROUTES, APP_ROUTES } from '@/lib/constants';
+import { InvestigationWorkspace } from './components/InvestigationWorkspace';
 import {
   ArrowLeft,
   Calendar,
@@ -401,7 +402,8 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {(!isAssignedIO || complaint.status === 'SUBMITTED') ? (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Details & Edit Fields */}
         <div className="lg:col-span-2 space-y-6">
           {/* Incident Details Card */}
@@ -622,7 +624,10 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
             </div>
           </Card>
         </div>
-      </div>
+        </div>
+      ) : (
+        <InvestigationWorkspace caseId={complaint._id} />
+      )}
 
       {/* SHO REJECTION REASON MODAL */}
       <Modal

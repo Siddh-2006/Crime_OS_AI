@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Shield, Lock, User, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import apiClient from '@/lib/apiClient';
+import apiClient from '@/lib/axios';
 
 export default function DepartmentLogin() {
   const router = useRouter();

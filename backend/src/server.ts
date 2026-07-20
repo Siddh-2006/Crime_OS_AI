@@ -97,6 +97,12 @@ async function bootstrap(): Promise<void> {
         logger.warn('Suppressed Redis uncaughtException', { error: err.message });
         return;
       }
+      // Port already in use — exit cleanly so the user can free the port
+      if ((err as NodeJS.ErrnoException).code === 'EADDRINUSE') {
+        logger.error(`Port ${env.PORT} is already in use. Kill the process holding it and restart.`, { error: err.message });
+        process.exit(1);
+        return;
+      }
       logger.error('Uncaught Exception', { error: err.message, stack: err.stack });
       server.close(() => process.exit(1));
     });

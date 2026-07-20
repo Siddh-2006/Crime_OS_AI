@@ -3,8 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Building2, LogOut, Inbox, Send, Loader2 } from 'lucide-react';
-import apiClient from '@/lib/apiClient';
+import apiClient from '@/lib/axios';
 import { Button } from '@/components/ui/Button';
+import { FileUpload, UploadedFile } from '@/components/ui/FileUpload';
+import { useToast } from '@/hooks/useToast';
+import { ToastContainer } from '@/components/ui/Toast';
 
 export default function DepartmentDashboard() {
   const router = useRouter();
@@ -14,6 +17,8 @@ export default function DepartmentDashboard() {
   const [selectedThread, setSelectedThread] = useState<any>(null);
   const [replyContent, setReplyContent] = useState('');
   const [replying, setReplying] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const { toast, showToast, removeToast } = useToast();
 
   useEffect(() => {
     const token = localStorage.getItem('dept_token');
@@ -33,8 +38,10 @@ export default function DepartmentDashboard() {
       setLoading(true);
       const res = await apiClient.get(`/department-portal/inbox?department_entity_id=${id}`);
       setThreads(res.data.data);
+      return res.data.data;
     } catch (err) {
       console.error('Failed to fetch inbox', err);
+      return [];
     } finally {
       setLoading(false);
     }
@@ -47,21 +54,28 @@ export default function DepartmentDashboard() {
   };
 
   const handleReply = async () => {
-    if (!selectedThread || !replyContent.trim()) return;
+    if (!selectedThread || (!replyContent.trim() && uploadedFiles.length === 0)) return;
     setReplying(true);
     try {
       // Actually hitting the respond endpoint
       await apiClient.post(`/department-portal/requests/${selectedThread.request_id}/respond`, {
-        response_content: replyContent
+        response_content: replyContent || 'Attached documents provided.',
+        attachments: uploadedFiles
       });
       setReplyContent('');
-      await fetchInbox(entityId);
+      setUploadedFiles([]);
+      const newThreads = await fetchInbox(entityId);
+      
+      showToast('Response sent successfully!', 'success');
       
       // Update selected thread local state to show new message
-      const updatedThread = await apiClient.get(`/investigation/threads/${selectedThread._id}`);
-      setSelectedThread(updatedThread.data.data);
+      if (newThreads) {
+        const updated = newThreads.find((t: any) => t._id === selectedThread._id);
+        if (updated) setSelectedThread(updated);
+      }
     } catch (error) {
       console.error('Failed to reply', error);
+      showToast('Failed to send response.', 'error');
     } finally {
       setReplying(false);
     }
@@ -140,6 +154,37 @@ export default function DepartmentDashboard() {
                         isDept ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white border border-slate-200 text-slate-800 rounded-tl-none'
                       }`}>
                         <div className="whitespace-pre-wrap font-mono">{msg.content}</div>
+                        {msg.attachments && msg.attachments.length > 0 && (
+                          <div className="mt-3 space-y-2">
+                            <div className="text-xs font-semibold opacity-70 uppercase tracking-wider">Attachments:</div>
+                            <div className="flex flex-wrap gap-2">
+                              {msg.attachments.map((att: any, aIdx: number) => {
+                                const url = att.cloudinary_url || 
+                                  (att.storage_ref && !att.storage_ref.startsWith('none') && !att.storage_ref.startsWith('mock')
+                                    ? (att.storage_ref.startsWith('http') 
+                                        ? att.storage_ref 
+                                        : `https://res.cloudinary.com/q9ixw3zp/image/upload/${att.storage_ref}`)
+                                    : null);
+                                const name = att.original_filename || att.evidence_id || `Attachment ${aIdx + 1}`;
+                                return url ? (
+                                  <a 
+                                    key={aIdx} 
+                                    href={url} 
+                                    target="_blank" 
+                                    rel="noreferrer"
+                                    className={`text-xs px-2 py-1 rounded border flex items-center gap-1 ${isDept ? 'bg-blue-700 border-blue-500 hover:bg-blue-800' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'}`}
+                                  >
+                                    📄 {name}
+                                  </a>
+                                ) : (
+                                  <span key={aIdx} className="text-xs px-2 py-1 rounded border opacity-70">
+                                    📄 {name} (Processing)
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -154,11 +199,19 @@ export default function DepartmentDashboard() {
                   className="w-full border border-slate-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50"
                   rows={4}
                 />
+                <div className="mt-3">
+                  <FileUpload 
+                    value={uploadedFiles} 
+                    onChange={setUploadedFiles} 
+                    maxFiles={5} 
+                    uploadSignatureUrl="/department-portal/upload-signature"
+                  />
+                </div>
                 <div className="mt-3 flex justify-end">
                   <Button 
                     onClick={handleReply} 
                     isLoading={replying} 
-                    disabled={!replyContent.trim()}
+                    disabled={!replyContent.trim() && uploadedFiles.length === 0}
                     leftIcon={<Send size={16} />}
                   >
                     Send Response
@@ -174,6 +227,7 @@ export default function DepartmentDashboard() {
           )}
         </div>
       </main>
+      <ToastContainer toasts={toast ? [toast] : []} onClose={removeToast} />
     </div>
   );
 }

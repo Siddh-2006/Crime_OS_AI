@@ -6,6 +6,7 @@ import { ComplaintCategory } from '../enums/complaintCategory.enum';
 import { PoliceStation } from '../../police/models/PoliceStation.model';
 import { Officer } from '../../police/models/Officer.model';
 import { User } from '../../user/models/User.model';
+import { DiaryEntry } from '../../investigation/models/DiaryEntry.model';
 import { getRedisClient } from '../../../config/redis';
 import { REDIS_KEYS, REDIS_TTL } from '../../../shared/constants/redis.constants';
 import { NotFoundError } from '../../../common/errors/NotFoundError';
@@ -19,6 +20,7 @@ import { Types } from 'mongoose';
 import logger from '../../../config/logger';
 import axios from 'axios';
 import env from '../../../config/env';
+import { InvestigationOrchestrator } from '../../investigation/services/investigationOrchestrator';
 
 export class ComplaintService {
   constructor(private readonly complaintRepository: IComplaintRepository) {}
@@ -203,6 +205,26 @@ export class ComplaintService {
     };
 
     const created = await this.complaintRepository.create(newComplaintData);
+
+    // Write to Case Diary
+    await DiaryEntry.create({
+      case_id: created._id,
+      entry_id: uuidv4(),
+      timestamp: new Date(),
+      actor: { type: 'officer', id: citizenId },
+      event_type: 'complaint_filed',
+      payload: {
+        complainant_id: citizenId,
+        incident_date: incidentDate,
+        incident_place: incidentPlace,
+        category: category,
+        short_description: shortDescription,
+        detailed_description: detailedDescription,
+        evidence_count: validatedEvidence.length,
+        evidence_list: validatedEvidence.map((e: any) => ({ filename: e.originalFilename, type: e.resourceType })),
+      }
+    });
+
     logger.info('Complaint filed by citizen', { citizenId, complaintNumber: created.complaintNumber, complaintId: created._id });
     return created;
   }
@@ -329,6 +351,12 @@ export class ComplaintService {
 
     const saved = await this.complaintRepository.save(complaint);
     logger.info('SHO assigned complaint to IO', { complaintId: saved._id, shoId: officerId, ioId: ioId });
+    
+    // Automatically trigger initial AI analysis in the background
+    InvestigationOrchestrator.runAnalysis(saved._id.toString()).catch(err => {
+      logger.error('Failed to trigger initial AI analysis during assignment:', err);
+    });
+
     return saved;
   }
 

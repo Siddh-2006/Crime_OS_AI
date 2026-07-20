@@ -15,6 +15,7 @@ export default function DepartmentDashboard() {
   const [selectedReq, setSelectedReq] = useState<any>(null);
   const [responseContent, setResponseContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const router = useRouter();
 
@@ -31,7 +32,7 @@ export default function DepartmentDashboard() {
 
   const fetchRequests = async (entity: string) => {
     try {
-      const res = await axios.get(`http://localhost:8080/api/v1/department-portal/requests?department_entity_id=${encodeURIComponent(entity)}`);
+      const res = await axios.get(`http://localhost:5000/api/v1/department-portal/requests?department_entity_id=${encodeURIComponent(entity)}`);
       setRequests(res.data.data);
     } catch (err) {
       console.error('Failed to fetch requests', err);
@@ -48,6 +49,7 @@ export default function DepartmentDashboard() {
 
   const openModal = (req: any) => {
     setSelectedReq(req);
+    setSelectedFile(null);
     // Generate a plausible mock response based on the request type
     let mockResponse = `CONFIDENTIAL RESPONSE\nDate: ${new Date().toLocaleDateString()}\nTo: Gujarat Police, Crime OS\n\n`;
     
@@ -71,9 +73,17 @@ export default function DepartmentDashboard() {
     setSubmitting(true);
     
     try {
-      await axios.post(`http://localhost:8080/api/v1/department-portal/requests/${selectedReq.request_id}/respond`, {
-        response_content: responseContent
-      });
+      const payload: any = { response_content: responseContent };
+      if (selectedFile) {
+        payload.evidence = {
+          title: selectedFile.name,
+          type: 'document',
+          description: 'User uploaded attachment',
+          storage_ref: `mock-upload-url-${Date.now()}`,
+          tags: ['attachment']
+        };
+      }
+      await axios.post(`http://localhost:5000/api/v1/department-portal/requests/${selectedReq.request_id}/respond`, payload);
       
       // Refresh list
       setSelectedReq(null);
@@ -167,14 +177,22 @@ export default function DepartmentDashboard() {
             </div>
             
             <div className="p-6 flex-1 overflow-y-auto">
-              <label className="block text-sm font-medium text-slate-300 mb-2">Response Content (Mock Data)</label>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Response Content</label>
               <textarea
                 value={responseContent}
                 onChange={(e) => setResponseContent(e.target.value)}
-                className="w-full h-64 bg-slate-900 border border-slate-700 rounded-lg p-4 text-white font-mono text-sm focus:outline-none focus:border-blue-500"
+                className="w-full h-48 bg-slate-900 border border-slate-700 rounded-lg p-4 text-white font-mono text-sm focus:outline-none focus:border-blue-500 mb-4"
               />
-              <p className="text-xs text-slate-500 mt-2">
-                This mock response will be ingested into the Crime OS backend as formal evidence, completing the associated Case Checklist step.
+              
+              <label className="block text-sm font-medium text-slate-300 mb-2">Attachment (Optional)</label>
+              <input
+                type="file"
+                onChange={(e) => setSelectedFile(e.target.files ? e.target.files[0] : null)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white text-sm"
+              />
+
+              <p className="text-xs text-slate-500 mt-4">
+                This response will be ingested into the Crime OS backend as formal evidence, completing the associated Case Checklist step.
               </p>
             </div>
             
@@ -184,6 +202,27 @@ export default function DepartmentDashboard() {
                 className="px-4 py-2 text-slate-300 hover:text-white transition-colors"
               >
                 Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (!responseContent) return;
+                  setSubmitting(true);
+                  try {
+                    const res = await axios.post(`http://localhost:5000/api/v1/department-portal/requests/${selectedReq.request_id}/format-response`, {
+                      response_content: responseContent
+                    });
+                    setResponseContent(res.data.data.formattedContent);
+                  } catch (err) {
+                    console.error('Failed to format response', err);
+                    alert('Error formatting response');
+                  } finally {
+                    setSubmitting(false);
+                  }
+                }}
+                disabled={submitting}
+                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors disabled:opacity-50"
+              >
+                {submitting ? 'Formatting...' : 'Format this (AI)'}
               </button>
               <button
                 onClick={submitResponse}

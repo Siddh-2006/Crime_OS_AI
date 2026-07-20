@@ -7,6 +7,8 @@ export interface IRankedNextStep {
   reason: string;
   confidence: number;
   evidence_needed: string[];
+  target?: string;
+  department_entity_id?: string;
 }
 
 export interface ISuspectCandidate {
@@ -25,6 +27,7 @@ export interface IAnalysisSnapshot extends Document {
   ranked_next_steps: IRankedNextStep[];
   suspect_candidates: ISuspectCandidate[];
   narrative_summary: string;
+  suggested_legal_sections: string[];
   confidence_breakdown: Record<string, unknown>;
   officer_authored: boolean;
   parent_snapshot_id?: string;               // links to previous snapshot for diff
@@ -36,6 +39,8 @@ const RankedNextStepSchema = new Schema<IRankedNextStep>(
     reason:          { type: String, required: true },
     confidence:      { type: Number, required: true, min: 0, max: 1 },
     evidence_needed: [{ type: String }],
+    target:          { type: String },
+    department_entity_id: { type: String },
   },
   { _id: false },
 );
@@ -60,6 +65,7 @@ const AnalysisSnapshotSchema = new Schema<IAnalysisSnapshot>(
     ranked_next_steps:    [RankedNextStepSchema],
     suspect_candidates:   [SuspectCandidateSchema],
     narrative_summary:    { type: String, required: true },
+    suggested_legal_sections: [{ type: String }],
     confidence_breakdown: { type: Schema.Types.Mixed, default: {} },
     officer_authored:     { type: Boolean, default: false, required: true },
     parent_snapshot_id:   { type: String },

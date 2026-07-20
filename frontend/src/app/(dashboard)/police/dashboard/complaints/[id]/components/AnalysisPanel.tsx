@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Loader } from '@/components/ui/Loader';
-import { Bot, UserCircle, Send, AlertTriangle, ShieldAlert, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Bot, UserCircle, Send, AlertTriangle, ShieldAlert, CheckCircle2, RefreshCw, Scale } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 
 interface Suspect {
   entity: string;
@@ -33,6 +34,7 @@ interface Snapshot {
     contradiction_penalty: number;
     final_score: number;
   };
+  suggested_legal_sections?: string[];
   trigger: string;
   officer_authored: boolean;
 }
@@ -124,10 +126,36 @@ export function AnalysisPanel({ snapshot, loading, onCorrectSnapshot, onTriggerA
                 </Button>
               )}
             </div>
-            <p className="text-sm text-neutral-700 leading-relaxed bg-neutral-50 p-3 rounded-lg border border-neutral-100">
-              {snapshot.narrative_summary || <span className="italic text-neutral-400">No summary generated yet — click &quot;Generate Summary&quot; above to run the AI.</span>}
-            </p>
+            <div className="text-sm text-neutral-700 leading-relaxed bg-neutral-50 p-4 rounded-lg border border-neutral-200">
+              {snapshot.narrative_summary ? (
+                <div className="prose prose-sm max-w-none">
+                  <ReactMarkdown>{snapshot.narrative_summary}</ReactMarkdown>
+                </div>
+              ) : (
+                <span className="italic text-neutral-400">No summary generated yet — click &quot;Generate Summary&quot; above to run the AI.</span>
+              )}
+            </div>
           </div>
+
+          {/* Legal Advisor Section */}
+          {snapshot.suggested_legal_sections && snapshot.suggested_legal_sections.length > 0 && (
+            <div className="mt-4 border border-indigo-100 rounded-lg overflow-hidden shadow-sm">
+              <div className="bg-indigo-50 px-4 py-2 flex items-center gap-2 border-b border-indigo-100">
+                <Scale className="text-indigo-600 h-4 w-4" />
+                <h4 className="text-xs font-bold text-indigo-900 uppercase tracking-wider">Legal Advisor (Applicable Sections)</h4>
+              </div>
+              <div className="p-4 bg-white">
+                <ul className="space-y-2">
+                  {snapshot.suggested_legal_sections.map((section, idx) => (
+                    <li key={idx} className="flex items-start gap-2 text-sm text-neutral-700 bg-indigo-50/30 p-2 rounded border border-indigo-50">
+                      <span className="text-indigo-400 mt-0.5">•</span>
+                      <span><ReactMarkdown>{section}</ReactMarkdown></span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
 
           {snapshot.confidence_breakdown && (
             <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100">

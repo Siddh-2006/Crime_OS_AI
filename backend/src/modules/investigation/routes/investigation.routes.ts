@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { InvestigationController } from '../controllers/InvestigationController';
 import { CitizenRequestController } from '../controllers/CitizenRequestController';
+import { DepartmentRegistry } from '../../admin/models/DepartmentRegistry.model';
 // Optional: import authentication middlewares if this needs to be protected immediately
 // import { authenticate } from '../../../common/middlewares/auth.middleware';
 
@@ -8,6 +9,16 @@ const router = Router();
 
 // Endpoint to trigger async analysis
 router.post('/:id/analyze', InvestigationController.analyzeCase);
+
+// Public department list (used by IO for request composer)
+router.get('/departments', async (_req, res) => {
+  try {
+    const depts = await DepartmentRegistry.find({ isActive: true }, { entity_id: 1, entity_name: 1, category: 1 }).sort({ entity_name: 1 }).lean();
+    res.json({ success: true, data: depts });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to fetch departments' });
+  }
+});
 
 // Copilot
 router.post('/:id/copilot/ask', InvestigationController.askCopilot);
@@ -21,7 +32,7 @@ router.post('/:id/analysis/manual', InvestigationController.createManualSnapshot
 
 // Request Composer endpoints
 router.post('/:id/requests/draft', InvestigationController.generateDraftRequest);
-router.patch('/requests/:reqId', InvestigationController.updateRequestDraft);
+router.patch('/:id/requests/:reqId', InvestigationController.updateRequestDraft);
 router.post('/:id/requests/:reqId/send', InvestigationController.sendRequest);
 router.post('/:id/citizen-request', CitizenRequestController.createCitizenRequest);
 
@@ -42,5 +53,7 @@ router.post('/:id/evidence/:evidenceId/transfer', InvestigationController.transf
 router.get('/:id/threads', InvestigationController.getThreads);
 router.get('/threads/:threadId', InvestigationController.getThreadById);
 router.post('/threads/:threadId/reply', InvestigationController.replyToThread);
+router.post('/threads/:threadId/format-response', InvestigationController.formatThreadResponse);
+router.post('/:id/threads/:thread_id/export-pdf', InvestigationController.exportThreadToPdf);
 
 export default router;

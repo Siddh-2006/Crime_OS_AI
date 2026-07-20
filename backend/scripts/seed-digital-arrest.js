@@ -175,6 +175,15 @@ async function seedData() {
   console.log('Case ID:', complaint._id);
   console.log('URL: http://localhost:3000/police/dashboard/complaints/' + complaint._id);
   
+  console.log('Triggering initial AI Analysis...');
+  try {
+    const axios = require('axios');
+    await axios.post(`http://localhost:5000/api/v1/cases/${complaint._id}/analyze`);
+    console.log('✅ Analysis triggered successfully (may take a few seconds to appear in dashboard)');
+  } catch (error) {
+    console.error('⚠️ Failed to trigger analysis automatically (is backend running on 5000?):', error.message);
+  }
+
   process.exit(0);
 }
 

@@ -64,12 +64,13 @@ export function Modal({
       {/* Panel */}
       <div
         className={[
-          'relative w-full rounded-xl bg-white shadow-elevated',
+          'relative w-full rounded-xl bg-white shadow-elevated flex flex-col',
+          'max-h-[90vh]',
           sizeClasses[size],
         ].join(' ')}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-neutral-100 px-6 py-4">
+        {/* Header — always visible */}
+        <div className="flex items-center justify-between border-b border-neutral-100 px-6 py-4 flex-shrink-0">
           <h2 id="modal-title" className="text-lg font-semibold text-neutral-900">
             {title}
           </h2>
@@ -82,12 +83,12 @@ export function Modal({
           </button>
         </div>
 
-        {/* Body */}
-        <div className="px-6 py-4">{children}</div>
+        {/* Body — scrollable */}
+        <div className="px-6 py-4 overflow-y-auto flex-1">{children}</div>
 
-        {/* Footer */}
+        {/* Footer — always visible */}
         {footer && (
-          <div className="flex items-center justify-end gap-3 border-t border-neutral-100 px-6 py-4">
+          <div className="flex items-center justify-end gap-3 border-t border-neutral-100 px-6 py-4 flex-shrink-0">
             {footer}
           </div>
         )}

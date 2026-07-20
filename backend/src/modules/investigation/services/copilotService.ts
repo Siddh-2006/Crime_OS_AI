@@ -80,11 +80,11 @@ Always explain your reasoning before outputting the proposal block.`;
     if (isComplex) {
       logger.debug(`[Copilot] Routing to deepCall for message: ${message}`);
       // Return as text, NOT jsonMode, because we want Markdown + the proposal block embedded
-      const response = await deepCall(systemPrompt, message) as string;
+      const response = await deepCall(systemPrompt, message, { maxTokens: 2000 }) as string;
       return response;
     } else {
       logger.debug(`[Copilot] Routing to fastCall for message: ${message}`);
-      const response = await fastCall(systemPrompt, message) as string;
+      const response = await fastCall(systemPrompt, message, { maxTokens: 1500 }) as string;
       return response;
     }
   }

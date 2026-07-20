@@ -140,11 +140,11 @@ export function ChecklistPanel({ checklist, onOpenComposer, evidenceList, caseId
                     </span>
                   )}
 
-                  {step.status !== 'completed' && step.department_entity_id && step.target !== 'complainant' && (
+                  {step.status !== 'completed' && (step.department_entity_id || step.target === 'department_entity') && step.target !== 'complainant' && (
                     <Button
                       size="sm"
                       variant={step.status === 'blocked' ? 'danger' : 'primary'}
-                      onClick={() => onOpenComposer(step.step_id, step.department_entity_id!)}
+                      onClick={() => onOpenComposer(step.step_id, step.department_entity_id || 'UNKNOWN_DEPARTMENT')}
                       className="mt-1"
                     >
                       <Send size={14} className="mr-1" /> Request
@@ -161,7 +161,7 @@ export function ChecklistPanel({ checklist, onOpenComposer, evidenceList, caseId
                       <Send size={14} className="mr-1" /> {step.status === 'blocked' ? 'Requested' : 'Ask Citizen'}
                     </Button>
                   )}
-                  {step.status === 'pending' && !step.department_entity_id && step.target !== 'complainant' && (
+                  {step.status === 'pending' && (!step.target || step.target === 'internal' || (step.target !== 'department_entity' && step.target !== 'complainant')) && (
                     <Button
                       size="sm"
                       variant="secondary"

@@ -241,35 +241,17 @@ class LegalReranker:
             print("[timing] reranker_load:cache_hit", file=sys.stderr)
             return self._model
         try:
-            # Import ORT modules instead of sentence-transformers CrossEncoder
-            from optimum.onnxruntime import ORTModelForSequenceClassification
-            from transformers import AutoTokenizer
-        except Exception as exc:
-            raise RuntimeError("optimum[onnxruntime] and transformers are required.") from exc
+            from sentence_transformers import CrossEncoder
+        except Exception as exc:  # pragma: no cover - dependency missing
+            raise RuntimeError(
+                "sentence-transformers is required for reranking. Install project dependencies first."
+            ) from exc
 
-        # 1. Load the model directly using ORT (automatically exports and handles cache)
-        # Note: Set export=True only on the very first run, then set to False for instant boot
         print("[timing] reranker_load:start", file=sys.stderr)
-
-        self._model = ORTModelForSequenceClassification.from_pretrained(
-            self.config.cache_dir,
-            provider="CPUExecutionProvider"
-        )
-
-        self._tokenizer = AutoTokenizer.from_pretrained(
-            self.config.cache_dir
-        )
+        self._model = CrossEncoder(self.config.model_name, device=self.config.device)
         print("[timing] reranker_load:done", file=sys.stderr)
         return self._model
 
-
-    # def rerank(self, query: str, candidates: Sequence[LegalRetrievalResult]) -> list[LegalRetrievalResult]:
-    #     if not candidates:
-    #         return []
-    #     model = self._load_model()
-    #     pairs = [(query, candidate.to_section_block()) for candidate in candidates]
-    #     scores = model.predict(pairs, batch_size=self.config.batch_size, show_progress_bar=False)
-    #     scored = list(candidates)
     #     for candidate, score in zip(scored, scores, strict=False):
     #         candidate.rerank_score = float(score)
     #     scored.sort(key=lambda item: item.rerank_score, reverse=True)
@@ -282,24 +264,14 @@ class LegalReranker:
         model = self._load_model()
         pairs = [(query, candidate.to_section_block()) for candidate in candidates]
         
-        # --- MINIMAL OPTIMIZATION BLOCK ADDED ---
-        # 1. Tokenize the pairs exactly as before, forcing truncation to fit the model window
-        inputs = self._tokenizer(pairs, padding=True, truncation=True, return_tensors="pt", max_length=512)
+        # Use standard CrossEncoder prediction
+        scores = model.predict(pairs, batch_size=self.config.batch_size, show_progress_bar=False)
         
-        # 2. Run local ONNX inference pass
-        import torch
-        with torch.no_grad():
-            outputs = model(**inputs)
-            scores = outputs.logits.squeeze(-1)
-            if scores.ndim == 0:
-                scores = [float(scores)]
-            else:
-                scores = scores.tolist()
-        # ----------------------------------------
-
         # Force single-item outputs into a list if only 1 candidate was evaluated
-        if isinstance(scores, float):
-            scores = [scores]
+        if getattr(scores, "ndim", 0) == 0 or isinstance(scores, float):
+            scores = [float(scores)]
+        elif hasattr(scores, "tolist"):
+            scores = scores.tolist()
 
         scored = list(candidates)
         for candidate, score in zip(scored, scores, strict=False):
@@ -372,8 +344,8 @@ class LegalRetriever:
         print(f"[timing] fusion: {fusion_elapsed:.3f}s for {len(fused_results)} candidate(s)", file=sys.stderr)
 
         start_rerank = time.perf_counter()
-        print("[timing] retrieval:rerank:start", file=sys.stderr)
-        reranked = self.reranker.rerank(complaint, fused_results)
+        print("[timing] retrieval:rerank:disabled", file=sys.stderr)
+        reranked = fused_results # self.reranker.rerank(complaint, fused_results)
         rerank_elapsed = time.perf_counter() - start_rerank
         print(f"[timing] rerank: {rerank_elapsed:.3f}s for {len(reranked)} candidate(s)", file=sys.stderr)
 

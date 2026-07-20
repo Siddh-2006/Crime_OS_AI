@@ -2,7 +2,7 @@ import axios from 'axios';
 import env from '../../config/env';
 import logger from '../../config/logger';
 
-const TIMEOUT_MS = 15000; // 15s timeout to prevent hanging the orchestrator
+const TIMEOUT_MS = 300000; // 300s timeout to allow for first-time ONNX export
 
 /**
  * Thin client wrapper for the legal_agent FastAPI service.

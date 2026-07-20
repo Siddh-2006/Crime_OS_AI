@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { X, Send } from 'lucide-react';
+import { X, Send, Download } from 'lucide-react';
 import apiClient from '@/lib/axios';
 import { Loader } from '@/components/ui/Loader';
 
@@ -17,6 +17,7 @@ export default function ThreadViewerModal({ isOpen, onClose, caseId, threadId }:
   const [loading, setLoading] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [replying, setReplying] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     if (isOpen && threadId) {
@@ -55,6 +56,20 @@ export default function ThreadViewerModal({ isOpen, onClose, caseId, threadId }:
     }
   };
 
+  const handleExportPdf = async () => {
+    if (!thread) return;
+    setExporting(true);
+    try {
+      await apiClient.post(`/cases/${caseId}/threads/${thread.thread_id}/export-pdf`);
+      alert('Thread exported as Evidence PDF successfully!');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to export thread as PDF.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-neutral-900/40 backdrop-blur-sm p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl flex flex-col h-[80vh] max-h-[800px] overflow-hidden">
@@ -63,9 +78,18 @@ export default function ThreadViewerModal({ isOpen, onClose, caseId, threadId }:
             <h2 className="text-lg font-bold text-neutral-900">Thread Detail</h2>
             <p className="text-sm text-neutral-500">Request ID: {threadId}</p>
           </div>
-          <button onClick={onClose} className="p-2 text-neutral-400 hover:bg-neutral-100 rounded-lg">
-            <X size={18} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={handleExportPdf} 
+              disabled={exporting || !thread}
+              className="px-3 py-1.5 flex items-center gap-1.5 text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg transition-colors disabled:opacity-50"
+            >
+              <Download size={14} /> {exporting ? 'Exporting...' : 'Save as Evidence'}
+            </button>
+            <button onClick={onClose} className="p-2 text-neutral-400 hover:bg-neutral-100 rounded-lg">
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 bg-neutral-50/30">

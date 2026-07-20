@@ -20,6 +20,7 @@ interface FileUploadProps {
   onChange: (files: UploadedFile[]) => void;
   maxFiles?: number;
   maxSizeMB?: number;
+  uploadSignatureUrl?: string;
 }
 
 interface UploadProgress {
@@ -35,6 +36,7 @@ export function FileUpload({
   onChange,
   maxFiles = 10,
   maxSizeMB = 100,
+  uploadSignatureUrl,
 }: FileUploadProps): React.ReactElement {
   const [uploads, setUploads] = useState<Record<string, UploadProgress>>({});
   const [isDragging, setIsDragging] = useState(false);
@@ -112,7 +114,7 @@ export function FileUpload({
 
     try {
       // 1. Fetch upload signature from backend
-      const sigRes = await apiClient.post(API_ROUTES.COMPLAINTS.UPLOAD_SIGNATURE);
+      const sigRes = await apiClient.post(uploadSignatureUrl || API_ROUTES.COMPLAINTS.UPLOAD_SIGNATURE);
       const { signature, timestamp, apiKey, cloudName, folder, publicId } = sigRes.data.data;
 
       // 2. Prepare FormData

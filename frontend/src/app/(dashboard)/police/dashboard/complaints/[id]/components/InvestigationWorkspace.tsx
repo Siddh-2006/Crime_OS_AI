@@ -10,11 +10,15 @@ import EvidenceViewerModal from './EvidenceViewerModal';
 import { DepartmentInboxPanel } from './DepartmentInboxPanel';
 import { CopilotSidebar } from './CopilotSidebar';
 import { Loader } from '@/components/ui/Loader';
+import { useToast } from '@/hooks/useToast';
+import { ToastContainer } from '@/components/ui/Toast';
 import { Bot, BookOpen, ClipboardList, Send, FolderOpen, Sparkles } from 'lucide-react';
 import ThreadViewerModal from './ThreadViewerModal';
 import SnapshotDetailModal from './SnapshotDetailModal';
 import StepDetailModal from './StepDetailModal';
 import { AddEvidenceModal } from './AddEvidenceModal';
+import ComplaintDetailModal from './ComplaintDetailModal';
+import { DiaryDetailModal } from './DiaryDetailModal';
 
 interface InvestigationWorkspaceProps {
   caseId: string;
@@ -23,6 +27,7 @@ interface InvestigationWorkspaceProps {
 type WorkspaceTab = 'analysis' | 'diary' | 'checklist' | 'requests' | 'evidence';
 
 export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) {
+  const { toasts, showToast, removeToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('analysis');
@@ -45,6 +50,8 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
   const [viewingThreadId, setViewingThreadId] = useState<string | null>(null);
   const [viewingSnapshotId, setViewingSnapshotId] = useState<string | null>(null);
   const [viewingStepId, setViewingStepId] = useState<string | null>(null);
+  const [viewingComplaintData, setViewingComplaintData] = useState<any | null>(null);
+  const [selectedDiaryEntry, setSelectedDiaryEntry] = useState<any>(null);
 
   const fetchWorkspaceData = useCallback(async () => {
     try {
@@ -98,22 +105,26 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
   }, [fetchWorkspaceData]);
 
   const handleDiaryEntryClick = (entry: any) => {
-    if (!entry.ref_ids) return;
+    if (!entry) return;
+    // For rich diary entries (analysis, requests, complaint), we open the DiaryDetailModal
+    if (['analysis_run', 'request_sent', 'response_received', 'complaint_filed'].includes(entry.event_type)) {
+      setSelectedDiaryEntry(entry);
+      return;
+    }
 
     switch (entry.event_type) {
       case 'evidence_added':
-        if (entry.ref_ids.evidence_id) setViewingEvidenceId(entry.ref_ids.evidence_id);
+        if (entry.ref_ids?.evidence_id) setViewingEvidenceId(entry.ref_ids.evidence_id);
         break;
-      case 'request_sent':
-      case 'response_received':
-        if (entry.ref_ids.request_id) setViewingThreadId(entry.ref_ids.request_id);
+      case 'request_drafted':
+        if (entry.ref_ids?.request_id) setViewingThreadId(entry.ref_ids.request_id);
         break;
       case 'analysis_run':
       case 'suggestion_generated':
-        if (entry.ref_ids.snapshot_id) setViewingSnapshotId(entry.ref_ids.snapshot_id);
+        if (entry.ref_ids?.snapshot_id) setViewingSnapshotId(entry.ref_ids.snapshot_id);
         break;
       case 'checklist_step_completed':
-        if (entry.ref_ids.step_id) setViewingStepId(entry.ref_ids.step_id);
+        if (entry.ref_ids?.step_id) setViewingStepId(entry.ref_ids.step_id);
         break;
       case 'escalation_raised':
         // assuming we might have an escalation object to view in the future
@@ -257,8 +268,10 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
         caseId={caseId}
         stepId={composerStepId}
         departmentEntityId={composerDeptId}
+        showToast={showToast}
         onSuccess={() => {
           setComposerOpen(false);
+          setActiveTab('requests');
           fetchWorkspaceData();
         }}
       />
@@ -284,12 +297,24 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
         snapshotId={viewingSnapshotId || ''}
       />
 
+      <ComplaintDetailModal
+        isOpen={!!viewingComplaintData}
+        onClose={() => setViewingComplaintData(null)}
+        complaintData={viewingComplaintData}
+      />
+
       <StepDetailModal
         isOpen={!!viewingStepId}
         onClose={() => setViewingStepId(null)}
         caseId={caseId}
         stepId={viewingStepId || ''}
         evidenceList={evidence}
+      />
+
+      <DiaryDetailModal
+        isOpen={!!selectedDiaryEntry}
+        onClose={() => setSelectedDiaryEntry(null)}
+        entry={selectedDiaryEntry}
       />
       </div>
       {/* Copilot Sidebar */}
@@ -302,6 +327,8 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
           />
         </div>
       )}
+      
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );
 }

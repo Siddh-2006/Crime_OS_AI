@@ -41,7 +41,6 @@ export interface CitizenRequestEmailPayload {
   name: string;
   caseId: string;
   content: string;
-  token: string;
 }
 
 export interface EscalationEmailPayload {
@@ -201,7 +200,7 @@ export class EmailService {
     });
   }
 
-  async sendCitizenRequestEmail(payload: any): Promise<void> {
+  async sendCitizenRequestEmail(payload: CitizenRequestEmailPayload): Promise<void> {
     logger.debug('Sending citizen request email', { to: payload.to, caseId: payload.caseId });
     await this.provider.sendMail({
       to: payload.to,
@@ -218,8 +217,8 @@ export class EmailService {
             <p>Dear ${payload.name},</p>
             <div style="background: white; border: 1px solid #ccc; padding: 20px; white-space: pre-wrap;">${payload.content}</div>
             <br/>
-            <p>Please submit the requested information securely using the official portal link below:</p>
-            <a href="http://localhost:3000/citizen-response/${payload.token}" style="display: inline-block; padding: 10px 20px; background-color: #1a237e; color: white; text-decoration: none; border-radius: 5px;">Submit Information</a>
+            <p>Please submit the requested information securely by logging into your official Citizen Portal dashboard:</p>
+            <a href="http://localhost:3000/dashboard" style="display: inline-block; padding: 10px 20px; background-color: #1a237e; color: white; text-decoration: none; border-radius: 5px;">Login to Citizen Portal</a>
             <p style="color: #666; font-size: 12px; margin-top: 32px;">Gujarat Police — Serving with Integrity | This is a system-generated email.</p>
           </div>
         </body>
