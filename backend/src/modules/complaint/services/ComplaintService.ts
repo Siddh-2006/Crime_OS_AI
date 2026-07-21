@@ -21,6 +21,7 @@ import logger from '../../../config/logger';
 import axios from 'axios';
 import env from '../../../config/env';
 import { InvestigationOrchestrator } from '../../investigation/services/investigationOrchestrator';
+import { ChargeSheetGenerator } from '../../investigation/services/ChargeSheetGenerator';
 
 export class ComplaintService {
   constructor(private readonly complaintRepository: IComplaintRepository) {}
@@ -795,6 +796,14 @@ export class ComplaintService {
       newValue: ComplaintStatus.CLOSED,
       action: 'CASE_CLOSURE',
     });
+
+    // ── ChargeSheet Generation ─────────────────────────────────
+    try {
+      await ChargeSheetGenerator.generateForCase(id, officerId);
+    } catch (err: any) {
+      logger.error('Failed to generate ChargeSheet', { error: err.message, caseId: id });
+      throw new Error(`ChargeSheet generation failed: ${err.message}. Case closure aborted.`);
+    }
 
     const saved = await this.complaintRepository.save(complaint);
     logger.info('Case closed by officer', { officerId, complaintId: saved._id, complaintNumber: saved.complaintNumber });

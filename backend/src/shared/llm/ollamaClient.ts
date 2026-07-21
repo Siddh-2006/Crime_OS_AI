@@ -12,6 +12,11 @@
 import axios from 'axios';
 import env from '../../config/env';
 import logger from '../../config/logger';
+// import { GoogleGenAI } from '@google/genai';
+
+// const ai = new GoogleGenAI({
+//   apiKey: process.env.GEMINI_API_KEY,
+// });
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -97,6 +102,46 @@ async function _call(
 
   return response.trim();
 }
+
+// async function _call_for_check(
+//   systemPrompt: string,
+//   userPrompt: string,
+//   temperature: number,
+//   maxTokens: number,
+//   thinkingMode: boolean,
+//   options: OllamaCallOptions = {},
+// ): Promise<string> {
+//   const finalPrompt = thinkingMode
+//     ? `${THINK_TOKEN}\n${userPrompt}`
+//     : userPrompt;
+
+//   const t0 = Date.now();
+
+//   const response = await ai.models.generateContent({
+//     model: thinkingMode ? 'gemini-2.5-pro' : 'gemini-2.5-flash',
+//     contents: `
+// SYSTEM:
+// ${systemPrompt}
+
+// USER:
+// ${finalPrompt}
+// `,
+//     config: {
+//       temperature: options.temperature ?? temperature,
+//       maxOutputTokens: options.maxTokens ?? maxTokens,
+//     },
+//   });
+
+//   const latencyMs = Date.now() - t0;
+
+//   logger.debug('[gemini] call complete', {
+//     model: 'gemini-2.5-flash',
+//     thinkingMode,
+//     latencyMs,
+//   });
+
+//   return (response.text ?? '').trim();
+// }
 
 // ─── JSON helper with one-shot retry ──────────────────────────────────────────
 

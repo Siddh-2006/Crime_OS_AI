@@ -26,9 +26,12 @@ export interface IChargeSheet extends Document {
   departmentRequestIds: Types.ObjectId[];
   diaryEntryIds: Types.ObjectId[];
   investigationSummarySnapshotId?: Types.ObjectId;
+  briefCaseDescription?: string;
   investigationSummary?: string;
+  investigationFindings?: string;
   finalReport?: string;
   filingMetadata?: IFilingMetadata;
+  version: number;
 }
 
 const AccusedAppliedSectionsSchema = new Schema<IAccusedAppliedSections>(
@@ -53,7 +56,7 @@ const FilingMetadataSchema = new Schema<IFilingMetadata>(
 
 const ChargeSheetSchema = new Schema<IChargeSheet>(
   {
-    case_id: { type: Schema.Types.ObjectId, ref: 'Complaint', required: true, unique: true, index: true },
+    case_id: { type: Schema.Types.ObjectId, ref: 'Complaint', required: true, index: true },
     victimIds: { type: [{ type: Schema.Types.ObjectId, ref: 'CaseParticipant' }], default: [] },
     witnessIds: { type: [{ type: Schema.Types.ObjectId, ref: 'CaseParticipant' }], default: [] },
     accusedIds: { type: [{ type: Schema.Types.ObjectId, ref: 'CaseParticipant' }], default: [] },
@@ -63,9 +66,12 @@ const ChargeSheetSchema = new Schema<IChargeSheet>(
     departmentRequestIds: { type: [{ type: Schema.Types.ObjectId, ref: 'DepartmentRequest' }], default: [] },
     diaryEntryIds: { type: [{ type: Schema.Types.ObjectId, ref: 'DiaryEntry' }], default: [] },
     investigationSummarySnapshotId: { type: Schema.Types.ObjectId, ref: 'AnalysisSnapshot' },
+    briefCaseDescription: { type: String, trim: true },
     investigationSummary: { type: String, trim: true },
+    investigationFindings: { type: String, trim: true },
     finalReport: { type: String, trim: true },
     filingMetadata: { type: FilingMetadataSchema },
+    version: { type: Number, default: 1 },
   },
   { timestamps: true, versionKey: false },
 );

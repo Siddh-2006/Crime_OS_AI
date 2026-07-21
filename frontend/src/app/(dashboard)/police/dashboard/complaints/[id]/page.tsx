@@ -12,6 +12,7 @@ import { useAuth } from '@/hooks/useAuth';
 import apiClient from '@/lib/axios';
 import { API_ROUTES, APP_ROUTES } from '@/lib/constants';
 import { InvestigationWorkspace } from './components/InvestigationWorkspace';
+import ChargeSheetModal from './ChargeSheetModal';
 import {
   ArrowLeft,
   Calendar,
@@ -162,6 +163,9 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
   const [crimeSummary, setCrimeSummary] = useState('');
   const [legalSections, setLegalSections] = useState('');
   const [investigationNotes, setInvestigationNotes] = useState('');
+  
+  // Charge Sheet modal
+  const [chargeSheetModalOpen, setChargeSheetModalOpen] = useState(false);
 
   const fetchComplaint = async () => {
     try {
@@ -207,7 +211,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
   };
 
   const handleCloseCase = async () => {
-    if (!confirm('Are you sure you want to close this case? It will be permanently marked as CLOSED and indexed in the AI vector store.')) return;
+    if (!confirm('Are you sure you want to close this case? It will be permanently marked as CLOSED and indexed in the AI vector store. A Charge Sheet will also be automatically generated (this may take some time).')) return;
     setActionLoading(true);
     try {
       const id = params.id as string;
@@ -397,7 +401,17 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
             onClick={handleCloseCase}
             isLoading={actionLoading}
           >
-            Close Case
+            Close Investigation
+          </Button>
+        )}
+        {complaint.status === 'CLOSED' && (isAssignedIO || isSHO) && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setChargeSheetModalOpen(true)}
+            leftIcon={<FileText size={16} />}
+          >
+            View Charge Sheet
           </Button>
         )}
       </div>
@@ -832,6 +846,14 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
           )}
         </div>
       </Modal>
+
+      {chargeSheetModalOpen && (
+        <ChargeSheetModal
+          isOpen={chargeSheetModalOpen}
+          onClose={() => setChargeSheetModalOpen(false)}
+          caseId={complaint._id}
+        />
+      )}
     </div>
   );
 }
