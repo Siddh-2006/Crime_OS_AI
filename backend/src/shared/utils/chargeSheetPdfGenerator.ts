@@ -1,5 +1,4 @@
 import PDFDocument from 'pdfkit';
-import { ChargeSheetService } from '../services/chargeSheetService';
 import { Response } from 'express';
 
 export async function generateChargeSheetPdfStream(chargeSheetData: any, res: Response): Promise<void> {
