@@ -1,0 +1,199 @@
+{
+  "info": {
+    "name": "Crime OS — Complaint Intelligence API",
+    "description": "Production-ready REST API for the Complaint Intelligence service.\n\nBase URL: http://localhost:8001\n\nEndpoints:\n- Health & diagnostics\n- Job management\n- Complaint profile (LLM)\n- Text intelligence (NER + events)\n- Image worker (Pillow + Florence-2)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "4.0.0"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8001", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/health",
+            "description": "Returns service health status, version, and dependency connectivity."
+          },
+          "response": []
+        },
+        {
+          "name": "Liveness Probe",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/health/live",
+            "description": "Kubernetes liveness probe — always 200 if the process is alive."
+          },
+          "response": []
+        },
+        {
+          "name": "Readiness Probe",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/health/ready",
+            "description": "Kubernetes readiness probe — checks Redis connectivity."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Jobs",
+      "item": [
+        {
+          "name": "Get Job Result",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/jobs/{{job_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["jobs", "{{job_id}}"],
+              "variable": [{ "key": "job_id", "value": "your-job-id-here" }]
+            },
+            "description": "Poll job status and retrieve result when complete."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Complaint Profile",
+      "item": [
+        {
+          "name": "Analyse Complaint Text",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/analyse-complaint",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"complaint_text\": \"I received a call from someone claiming to be a CBI officer. They said my Aadhaar card is linked to a money laundering case and demanded Rs. 2,50,000 to clear my name. I transferred the amount via UPI to his number +91-9876543210.\",\n  \"fir_number\": \"FIR-2026-AHM-001\",\n  \"district\": \"Ahmedabad\"\n}"
+            },
+            "description": "Submit complaint text for LLM-based profile generation.\n\nReturns:\n- 200: ComplaintProfile with summary, crime type, severity, etc.\n- 422: Missing required fields\n- 502: LLM service unreachable"
+          },
+          "response": [
+            {
+              "name": "200 OK — ComplaintProfile",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"complaint_id\": \"FIR-2026-AHM-001\",\n  \"summary\": \"Digital arrest fraud — victim coerced into transferring Rs. 2,50,000 via UPI.\",\n  \"crime_type\": \"Digital Arrest Fraud\",\n  \"severity\": \"high\",\n  \"suspects\": [{ \"name\": \"Unknown\", \"phone\": \"+91-9876543210\" }],\n  \"financial_loss\": 250000,\n  \"currency\": \"INR\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Text Intelligence",
+      "item": [
+        {
+          "name": "Analyse Text — Complaint",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/analyze-text",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Rakesh Patel reported that Rs. 48,000 was debited from his account on 12 July 2026 via UPI ID victim@ybl. Phone +91-9876543210. RRN 402198337210.\",\n  \"source_type\": \"complaint\"\n}"
+            },
+            "description": "Extract entities (NER + regex) and events from text.\n\nReturns TextIntelligenceResult with:\n- entities (phone, email, amount, date, UPI, Aadhaar, PAN, etc.)\n- events (temporal events with actors, actions, locations)\n- processing metadata"
+          },
+          "response": [
+            {
+              "name": "200 OK — TextIntelligenceResult",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"entities\": [\n    { \"entity_type\": \"amount\", \"value\": \"Rs. 48,000\", \"source\": \"regex\", \"confidence\": 1.0 },\n    { \"entity_type\": \"date\", \"value\": \"12 July 2026\", \"source\": \"regex\", \"confidence\": 1.0 },\n    { \"entity_type\": \"phone\", \"value\": \"+91-9876543210\", \"source\": \"regex\", \"confidence\": 1.0 },\n    { \"entity_type\": \"transaction_ref\", \"value\": \"RRN 402198337210\", \"source\": \"regex\", \"confidence\": 1.0 }\n  ],\n  \"events\": [\n    {\n      \"event_id\": \"evt-a1b2c3d4\",\n      \"description\": \"Rs. 48,000 was debited from his account on 12 July 2026\",\n      \"action\": \"debited\",\n      \"timestamp\": \"12 July 2026\"\n    }\n  ],\n  \"source_type\": \"complaint\",\n  \"input_text_length\": 148,\n  \"processing_duration_ms\": 3.12\n}"
+            }
+          ]
+        },
+        {
+          "name": "Analyse Text — OCR Output",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/analyze-text",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Bank Statement\\nAccount: XXXXXXXXX1234\\nDate: 01/07/2026\\nDebit: Rs. 1,20,000\\nUTR: 402198337210\",\n  \"source_type\": \"ocr\"\n}"
+            },
+            "description": "Pass OCR-extracted text for entity and event extraction."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Image Worker",
+      "item": [
+        {
+          "name": "Analyse Image — No Text (Complete)",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/analyze-image",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "/path/to/crime_scene.jpg",
+                  "description": "Replace with actual image file path"
+                }
+              ]
+            },
+            "description": "Upload a crime scene image.\n\nIf no text is detected:\n→ Florence-2 caption → EvidenceProfile returned immediately\nHTTP 200 OK\n\nIf text is detected:\n→ OCR job queued → EvidenceProfile with status=pending_ocr\nHTTP 202 Accepted\n\ncurl example:\ncurl -X POST http://localhost:8001/analyze-image -F \"file=@crime_scene.jpg\""
+          },
+          "response": [
+            {
+              "name": "200 OK — EvidenceProfile (complete)",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"evidence_id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"evidence_type\": \"image\",\n  \"file_name\": \"crime_scene.jpg\",\n  \"image_metadata\": {\n    \"format\": \"JPEG\",\n    \"width\": 1920,\n    \"height\": 1080,\n    \"color_mode\": \"RGB\",\n    \"file_size_bytes\": 204800,\n    \"mime_type\": \"image/jpeg\",\n    \"exif_timestamp\": \"2026:07:12 14:32:00\",\n    \"gps_coordinates\": { \"lat\": 23.0225, \"lon\": 72.5714 },\n    \"camera_make\": \"Apple\",\n    \"camera_model\": \"iPhone 15 Pro\"\n  },\n  \"analysis\": {\n    \"description\": \"A street corner showing a blue car parked near a building.\",\n    \"scene_type\": \"outdoor\",\n    \"tags\": [\"street\", \"car\", \"building\"],\n    \"confidence\": 0.85,\n    \"contains_people\": false,\n    \"contains_vehicles\": true,\n    \"contains_weapons\": false,\n    \"contains_buildings\": true,\n    \"contains_documents\": false\n  },\n  \"text_detected\": false,\n  \"ocr_job_id\": null,\n  \"status\": \"complete\",\n  \"processing_duration_ms\": 1234.5,\n  \"created_at\": \"2026-07-22T01:42:00Z\"\n}"
+            },
+            {
+              "name": "202 Accepted — EvidenceProfile (pending_ocr)",
+              "status": "Accepted",
+              "code": 202,
+              "body": "{\n  \"evidence_id\": \"b2c3d4e5-f6a7-8901-bcde-f12345678901\",\n  \"evidence_type\": \"image\",\n  \"file_name\": \"bank_statement.jpg\",\n  \"image_metadata\": { \"format\": \"JPEG\", \"width\": 2480, \"height\": 3508, \"color_mode\": \"RGB\", \"file_size_bytes\": 512000, \"mime_type\": \"image/jpeg\", \"exif_timestamp\": null, \"gps_coordinates\": null, \"camera_make\": null, \"camera_model\": null },\n  \"analysis\": null,\n  \"text_detected\": true,\n  \"ocr_job_id\": \"8f3a2b1c-d4e5-6789-0abc-def123456789\",\n  \"status\": \"pending_ocr\",\n  \"processing_duration_ms\": 234.1,\n  \"created_at\": \"2026-07-22T01:42:01Z\"\n}"
+            },
+            {
+              "name": "400 Bad Request — Corrupt Image",
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{ \"detail\": \"Image 'corrupt.jpg' is corrupt or unreadable.\" }"
+            },
+            {
+              "name": "415 Unsupported Media Type",
+              "status": "Unsupported Media Type",
+              "code": 415,
+              "body": "{ \"detail\": \"Unsupported content type 'application/pdf'. Expected an image.\" }"
+            }
+          ]
+        },
+        {
+          "name": "Analyse Image — Bank Statement (Text Expected)",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/analyze-image",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "/path/to/bank_statement.jpg"
+                }
+              ]
+            },
+            "description": "Upload a bank statement or document image.\nExpects text detection → OCR job queued → 202 Accepted."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

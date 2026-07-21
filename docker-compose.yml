@@ -63,6 +63,29 @@ services:
   #   volumes:
   #     - ./backend/logs:/app/logs
 
+  # ─── Complaint Intelligence Service ────────────────────────────────────────
+  complaint_intelligence:
+    build:
+      context: ./services/complaint_intelligence
+      dockerfile: Dockerfile
+    container_name: crime_os_complaint_intelligence
+    ports:
+      - '8001:8001'
+    env_file:
+      - ./services/complaint_intelligence/.env.example
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      APP_ENV: development
+    depends_on:
+      - redis
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8001/health').raise_for_status()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
   # ─── Qdrant Vector Database ────────────────────────────────────────────────
   qdrant:
     image: qdrant/qdrant:v1.9.1

@@ -1,79 +1,134 @@
+"""
+Domain exception hierarchy + FastAPI global exception handlers.
+Every exception maps to a structured JSON error response.
+"""
+from __future__ import annotations
+
 from fastapi import FastAPI, Request, status
-from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
+
 from app.core.logging import logger
 
 
-class ComplaintIntelligenceException(Exception):
-    """Base exception for the Complaint Intelligence Service."""
-    def __init__(self, message: str, code: str = "INTERNAL_ERROR"):
+# ─── Domain exceptions ────────────────────────────────────────────────────────
+
+class CrimeOSError(Exception):
+    """Base for all domain exceptions."""
+    http_status: int = status.HTTP_500_INTERNAL_SERVER_ERROR
+    error_code: str = "INTERNAL_ERROR"
+
+    def __init__(self, message: str, *, details: dict | None = None) -> None:
         super().__init__(message)
         self.message = message
-        self.code = code
+        self.details = details or {}
 
 
-class PipelineError(ComplaintIntelligenceException):
-    """Raised when a phase of the pipeline execution fails."""
-    def __init__(self, message: str, code: str = "PIPELINE_ERROR"):
-        super().__init__(message, code)
+class ValidationError(CrimeOSError):
+    http_status = status.HTTP_422_UNPROCESSABLE_ENTITY
+    error_code = "VALIDATION_ERROR"
 
 
-class PreprocessingError(PipelineError):
-    """Raised when pre-processing of complaint text fails."""
-    def __init__(self, message: str):
-        super().__init__(message, code="PREPROCESSING_ERROR")
+class NotFoundError(CrimeOSError):
+    http_status = status.HTTP_404_NOT_FOUND
+    error_code = "NOT_FOUND"
 
+
+class ConflictError(CrimeOSError):
+    http_status = status.HTTP_409_CONFLICT
+    error_code = "CONFLICT"
+
+
+class ServiceUnavailableError(CrimeOSError):
+    http_status = status.HTTP_503_SERVICE_UNAVAILABLE
+    error_code = "SERVICE_UNAVAILABLE"
+
+
+class PipelineError(CrimeOSError):
+    http_status = status.HTTP_500_INTERNAL_SERVER_ERROR
+    error_code = "PIPELINE_ERROR"
+
+
+class LLMError(CrimeOSError):
+    http_status = status.HTTP_502_BAD_GATEWAY
+    error_code = "LLM_ERROR"
+
+
+class WorkerError(CrimeOSError):
+    http_status = status.HTTP_500_INTERNAL_SERVER_ERROR
+    error_code = "WORKER_ERROR"
+
+
+class InvalidImageError(CrimeOSError):
+    """Image is corrupt, empty, or cannot be opened by PIL. Never retried."""
+    http_status = status.HTTP_400_BAD_REQUEST
+    error_code = "INVALID_IMAGE"
+
+
+class UnsupportedFormatError(CrimeOSError):
+    """Image format is not supported (BMP, TIFF raw, etc.). Never retried."""
+    http_status = status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
+    error_code = "UNSUPPORTED_FORMAT"
+
+
+# ─── Response builder ─────────────────────────────────────────────────────────
+
+def _error_response(
+    status_code: int,
+    error_code: str,
+    message: str,
+    details: dict | None = None,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            "success": False,
+            "error": {
+                "code": error_code,
+                "message": message,
+                **({"details": details} if details else {}),
+            },
+        },
+    )
+
+
+# ─── FastAPI handlers ─────────────────────────────────────────────────────────
 
 def register_exception_handlers(app: FastAPI) -> None:
-    """Register global exception handlers for standardized JSON error response formats."""
+    """Attach global exception handlers to the FastAPI app."""
 
-    @app.exception_handler(ComplaintIntelligenceException)
-    async def custom_exception_handler(request: Request, exc: ComplaintIntelligenceException):
-        logger.error(
-            f"Custom exception raised: {exc.message}",
-            extra={"code": exc.code, "path": request.url.path}
+    @app.exception_handler(CrimeOSError)
+    async def domain_exception_handler(request: Request, exc: CrimeOSError) -> JSONResponse:
+        logger.warning(
+            "Domain exception",
+            extra={"code": exc.error_code, "error_msg": exc.message, "path": str(request.url)},
         )
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={"error": exc.message, "code": exc.code},
-        )
+        return _error_response(exc.http_status, exc.error_code, exc.message, exc.details or None)
 
     @app.exception_handler(RequestValidationError)
-    async def validation_exception_handler(request: Request, exc: RequestValidationError):
-        error_details = exc.errors()
-        logger.warning(
+    async def validation_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+        logger.warning("Request validation failed", extra={"errors": exc.errors(), "path": str(request.url)})
+        return _error_response(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "VALIDATION_ERROR",
             "Request validation failed",
-            extra={"details": error_details, "path": request.url.path}
-        )
-        return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={
-                "error": "Request validation failed",
-                "details": error_details,
-                "code": "VALIDATION_ERROR"
-            },
+            {"errors": exc.errors()},
         )
 
     @app.exception_handler(StarletteHTTPException)
-    async def http_exception_handler(request: Request, exc: StarletteHTTPException):
-        logger.error(
-            f"HTTP exception: {exc.detail}",
-            extra={"status_code": exc.status_code, "path": request.url.path}
-        )
-        return JSONResponse(
-            status_code=exc.status_code,
-            content={"error": exc.detail, "code": "HTTP_ERROR"},
-        )
+    async def http_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+        return _error_response(exc.status_code, "HTTP_ERROR", str(exc.detail))
 
     @app.exception_handler(Exception)
-    async def generic_exception_handler(request: Request, exc: Exception):
+    async def generic_handler(request: Request, exc: Exception) -> JSONResponse:
         logger.critical(
-            f"Unhandled exception: {str(exc)}",
+            "Unhandled exception",
+            extra={"path": str(request.url)},
             exc_info=exc,
-            extra={"path": request.url.path}
         )
-        return JSONResponse(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"error": "An internal server error occurred", "code": "INTERNAL_ERROR"},
+        return _error_response(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "INTERNAL_ERROR",
+            "An unexpected error occurred.",
         )
