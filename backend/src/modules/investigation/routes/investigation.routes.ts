@@ -1,11 +1,16 @@
 import { Router } from 'express';
 import { InvestigationController } from '../controllers/InvestigationController';
 import { CitizenRequestController } from '../controllers/CitizenRequestController';
+import caseParticipantRoutes from './caseParticipant.routes';
+import chargeSheetRoutes from './chargeSheet.routes';
 import { DepartmentRegistry } from '../../admin/models/DepartmentRegistry.model';
 // Optional: import authentication middlewares if this needs to be protected immediately
 // import { authenticate } from '../../../common/middlewares/auth.middleware';
 
 const router = Router();
+
+router.use(caseParticipantRoutes);
+router.use(chargeSheetRoutes);
 
 // Endpoint to trigger async analysis
 router.post('/:id/analyze', InvestigationController.analyzeCase);

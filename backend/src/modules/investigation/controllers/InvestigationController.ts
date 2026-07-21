@@ -254,7 +254,7 @@ export class InvestigationController {
   static async createManualSnapshot(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { ranked_next_steps, suspect_candidates, narrative_summary } = req.body;
+      const { ranked_next_steps, suspect_candidates, narrative_summary, suggested_legal_sections } = req.body;
 
       if (!narrative_summary || !Array.isArray(ranked_next_steps) || !Array.isArray(suspect_candidates)) {
         sendError(res, HttpStatusCode.BAD_REQUEST, {
@@ -267,7 +267,8 @@ export class InvestigationController {
       const newSnapshot = await InvestigationOrchestrator.createManualSnapshot(id, {
         ranked_next_steps,
         suspect_candidates,
-        narrative_summary
+        narrative_summary,
+        suggested_legal_sections,
       });
 
       sendSuccess(res, HttpStatusCode.CREATED, 'Manual snapshot created successfully', newSnapshot);

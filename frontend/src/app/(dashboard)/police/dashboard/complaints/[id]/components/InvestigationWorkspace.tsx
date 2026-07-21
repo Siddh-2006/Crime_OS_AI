@@ -34,6 +34,7 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
   const [copilotOpen, setCopilotOpen] = useState(true);
 
   const [snapshot, setSnapshot] = useState<any>(null);
+  const [participants, setParticipants] = useState<any[]>([]);
   const [checklist, setChecklist] = useState<any>(null);
   const [diaryEntries, setDiaryEntries] = useState<any[]>([]);
   const [requests, setRequests] = useState<any[]>([]);
@@ -55,12 +56,13 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
 
   const fetchWorkspaceData = useCallback(async () => {
     try {
-      const [snapRes, checkRes, diaryRes, reqRes, evRes] = await Promise.allSettled([
+      const [snapRes, checkRes, diaryRes, reqRes, evRes, participantRes] = await Promise.allSettled([
         apiClient.get(`/cases/${caseId}/analysis/latest`),
         apiClient.get(`/cases/${caseId}/checklist`),
         apiClient.get(`/cases/${caseId}/diary`),
         apiClient.get(`/cases/${caseId}/requests`),
         apiClient.get(`/cases/${caseId}/evidence`),
+        apiClient.get(`/cases/${caseId}/participants`),
       ]);
 
       if (snapRes.status === 'fulfilled') setSnapshot(snapRes.value.data.data);
@@ -83,6 +85,10 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
       
       if (reqRes.status === 'fulfilled') setRequests(reqRes.value.data.data || []);
       if (evRes.status === 'fulfilled') setEvidence(evRes.value.data.data || []);
+      if (participantRes.status === 'fulfilled') {
+        const rawParticipants = participantRes.value.data.data;
+        setParticipants(Array.isArray(rawParticipants) ? rawParticipants : []);
+      }
       
       // Fetch threads specifically
       try {
@@ -168,6 +174,60 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
     }
   };
 
+  const findMatchingParticipant = (recommendation: any) => {
+    if (!Array.isArray(participants) || participants.length === 0) return null;
+
+    const recommendationRoles = Array.isArray(recommendation?.roles) ? recommendation.roles : [];
+    return participants.find((participant) => {
+      const nameMatches = String(participant?.name || '').trim().toLowerCase() === String(recommendation?.name || '').trim().toLowerCase();
+      const participantRoles = Array.isArray(participant?.roles) ? participant.roles : [];
+      const hasRoleOverlap = recommendationRoles.some((role: string) => participantRoles.includes(role));
+      return nameMatches && hasRoleOverlap;
+    }) || null;
+  };
+
+  const handleAttachSectionsToParticipant = async (participantId: string, sections: any[]) => {
+    setActionLoading(true);
+    try {
+      await apiClient.post(`/cases/${caseId}/participants/${participantId}/sections/attach`, {
+        sections,
+      });
+      showToast('Section attachment saved for the participant.', 'success');
+      await fetchWorkspaceData();
+    } catch (error: any) {
+      showToast(error.response?.data?.message || 'Failed to attach sections to participant.', 'error');
+      throw error;
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleAcceptRecommendedSection = async (recommendation: any, section: any) => {
+    setActionLoading(true);
+    try {
+      let participant = findMatchingParticipant(recommendation);
+
+      if (!participant) {
+        const approvalResponse = await apiClient.post(`/cases/${caseId}/participants/recommendations/approve`, {
+          recommendation,
+          snapshot_id: snapshot?.snapshot_id,
+        });
+        participant = approvalResponse.data.data;
+      }
+
+      await apiClient.post(`/cases/${caseId}/participants/${participant.participant_id}/sections/attach`, {
+        sections: [section],
+      });
+
+      showToast(`Attached ${section.code} to ${participant.name}.`, 'success');
+      await fetchWorkspaceData();
+    } catch (error: any) {
+      showToast(error.response?.data?.message || 'Failed to accept and attach the recommended section.', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const openComposer = (stepId: string, deptId: string) => {
     setComposerStepId(stepId);
     setComposerDeptId(deptId);
@@ -232,9 +292,12 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
         {activeTab === 'analysis' && (
           <AnalysisPanel
             snapshot={snapshot}
+            participants={participants}
             loading={actionLoading && !snapshot}
             onCorrectSnapshot={handleCorrectSnapshot}
             onTriggerAnalysis={handleTriggerAnalysis}
+            onAttachSectionsToParticipant={handleAttachSectionsToParticipant}
+            onAcceptRecommendedSection={handleAcceptRecommendedSection}
             actionLoading={actionLoading}
           />
         )}

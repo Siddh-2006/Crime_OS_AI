@@ -22,11 +22,14 @@
  */
 
 import mongoose from 'mongoose';
+import { Complaint }          from '../../complaint/models/Complaint.model';
 import { DiaryEntry }         from '../models/DiaryEntry.model';
 import { CaseChecklist }      from '../models/CaseChecklist.model';
 import { CaseEntity }         from '../models/CaseEntity.model';
+import { CaseParticipant, ParticipantRole } from '../models/CaseParticipant.model';
 import { Evidence }           from '../models/Evidence.model';
 import { DepartmentRequest }  from '../models/DepartmentRequest.model';
+import { ILegalSectionSuggestion } from '../models/LegalSection.schema';
 
 // ─── Output shape types (inferred from schema) ────────────────────────────────
 
@@ -73,6 +76,7 @@ export interface EvidenceRow {
   ai_tags:                string[];
   linked_diary_entry_id?: string;   // which diary entry added this evidence
   linked_request_id?:     string;   // which dept request this evidence came from
+  related_participant_ids?: string[];
 }
 
 export interface RequestSummary {
@@ -102,11 +106,77 @@ export interface DiaryRow {
   ref_ids:    Record<string, string | undefined>;
 }
 
+export interface ComplaintFacts {
+  complaint_id: string;
+  complaint_number?: string;
+  status?: string;
+  incident_date?: Date;
+  incident_time?: string;
+  incident_place?: string;
+  address?: string;
+  coordinates?: string;
+  category?: string;
+  crime_category?: string;
+  short_description?: string;
+  detailed_description?: string;
+  assigned_io_id?: string;
+  assigned_sho_id?: string;
+  legal_sections_history?: Array<{
+    version: number;
+    editedBy: string;
+    editorId: string | null;
+    content: string;
+    timestamp: Date;
+  }>;
+}
+
+export interface ParticipantProfileFacts {
+  injuryDetails?: string;
+  lossDetails?: string;
+  statement?: string;
+  statementRecordedAt?: Date;
+  evidenceIds?: string[];
+  appliedSections?: ILegalSectionSuggestion[];
+  relationshipToIncident?: string;
+}
+
+export interface ParticipantFactsRow {
+  participant_id: string;
+  database_id: string;
+  name: string;
+  roles: ParticipantRole[];
+  contact?: {
+    phone?: string;
+    email?: string;
+    address?: string;
+  };
+  identifiers: Array<{ type: string; value: string }>;
+  victim_profile?: ParticipantProfileFacts;
+  witness_profile?: ParticipantProfileFacts;
+  suspect_profile?: ParticipantProfileFacts;
+  accused_profile?: ParticipantProfileFacts;
+  complainant_profile?: ParticipantProfileFacts;
+  evidence_ids: string[];
+  evidence: EvidenceRow[];
+  // metadata: {
+  //   created_at?: Date;
+  //   updated_at?: Date;
+  // };
+}
+
+export interface ParticipantFactsGroup {
+  total: number;
+  by_role: Record<ParticipantRole, ParticipantFactsRow[]>;
+  raw: ParticipantFactsRow[];
+  summary: Record<ParticipantRole, number>;
+}
+
 export interface FactsObject {
   meta: {
     case_id:      string;
     assembled_at: Date;
   };
+  complaint: ComplaintFacts | null;
   checklist: {
     summary: ChecklistSummary;
     steps:   ChecklistStep[];
@@ -119,6 +189,7 @@ export interface FactsObject {
     summary: EvidenceSummary;
     items:   EvidenceRow[];
   };
+  participants: ParticipantFactsGroup;
   department_requests: {
     summary: RequestSummary;
     items:   RequestRow[];
@@ -136,9 +207,11 @@ export async function buildFactsObject(caseId: string): Promise<FactsObject> {
   const oid = new mongoose.Types.ObjectId(caseId);
 
   // Run all 5 queries in parallel — no sequential dependency.
-  const [checklistDocs, entityDocs, evidenceDocs, requestDocs, diaryDocs] = await Promise.all([
+  const [complaintDoc, checklistDocs, entityDocs, participantDocs, evidenceDocs, requestDocs, diaryDocs] = await Promise.all([
+    Complaint.findById(oid).lean().exec(),
     CaseChecklist.find({ case_id: oid }).lean().exec(),
     CaseEntity.find({ case_id: oid }).lean().exec(),
+    CaseParticipant.find({ case_id: oid }).lean().exec(),
     Evidence.find({ case_id: oid }).lean().exec(),
     DepartmentRequest.find({ case_id: oid }).lean().exec(),
     DiaryEntry.find({ case_id: oid })
@@ -202,8 +275,118 @@ export async function buildFactsObject(caseId: string): Promise<FactsObject> {
       ai_tags:                ev.ai_tags ?? [],
       linked_diary_entry_id:  ev.linked_diary_entry_id,
       linked_request_id:      ev.linked_request_id,
+      related_participant_ids: (ev.relatedParticipantIds ?? []).map((participantId) => participantId.toString()),
     };
   });
+
+  // ── Participants ───────────────────────────────────────────────────────────
+  const participantEvidenceMap = new Map<string, EvidenceRow[]>();
+  for (const evidence of evidenceDocs) {
+    const linkedIds = (evidence.relatedParticipantIds ?? []).map((participantId) => participantId.toString());
+    for (const participantId of linkedIds) {
+      const current = participantEvidenceMap.get(participantId) ?? [];
+      current.push({
+        evidence_id: evidence.evidence_id,
+        type: evidence.type,
+        status: evidence.status,
+        ai_description: evidence.ai_description,
+        ai_tags: evidence.ai_tags ?? [],
+        linked_diary_entry_id: evidence.linked_diary_entry_id,
+        linked_request_id: evidence.linked_request_id,
+        related_participant_ids: linkedIds,
+      });
+      participantEvidenceMap.set(participantId, current);
+    }
+  }
+
+  const participantSummary: Record<ParticipantRole, number> = {
+    Victim: 0,
+    Witness: 0,
+    Suspect: 0,
+    Accused: 0,
+    Complainant: 0,
+  };
+
+  const participantRows: ParticipantFactsRow[] = participantDocs.map((participant) => {
+    const roles = Array.from(new Set((participant.roles ?? []).filter((role): role is ParticipantRole => [
+      'Victim', 'Witness', 'Suspect', 'Accused', 'Complainant',
+    ].includes(role as ParticipantRole))));
+
+    for (const role of roles) {
+      participantSummary[role]++;
+    }
+
+    const linkedEvidence = participantEvidenceMap.get(participant._id.toString()) ?? [];
+    const baseProfile = (profile?: Record<string, unknown>) => profile ? { ...profile } : undefined;
+
+    return {
+      participant_id: participant.participant_id,
+      database_id: participant._id.toString(),
+      name: participant.name,
+      roles,
+      contact: participant.contact ? { ...participant.contact } : undefined,
+      identifiers: (participant.identifiers ?? []).map((identifier) => ({ type: identifier.type, value: identifier.value })),
+      victim_profile: baseProfile(participant.victimProfile) as ParticipantProfileFacts | undefined,
+      witness_profile: participant.witnessProfile ? {
+        statement: participant.witnessProfile.statement,
+        statementRecordedAt: participant.witnessProfile.statementRecordedAt,
+        evidenceIds: (participant.witnessProfile.evidenceIds ?? []).map((evidenceId) => evidenceId.toString()),
+      } : undefined,
+      suspect_profile: participant.suspectProfile ? {
+        appliedSections: participant.suspectProfile.appliedSections ?? [],
+      } : undefined,
+      accused_profile: participant.accusedProfile ? {
+        appliedSections: participant.accusedProfile.appliedSections ?? [],
+      } : undefined,
+      complainant_profile: participant.complainantProfile ? {
+        relationshipToIncident: participant.complainantProfile.relationshipToIncident,
+      } : undefined,
+      evidence_ids: linkedEvidence.map((evidence) => evidence.evidence_id),
+      evidence: linkedEvidence,
+      // metadata: {
+      //   created_at: participant.createdAt,
+      //   updated_at: participant.updatedAt,
+      // },
+    };
+  });
+
+  const participantsByRole: Record<ParticipantRole, ParticipantFactsRow[]> = {
+    Victim: [],
+    Witness: [],
+    Suspect: [],
+    Accused: [],
+    Complainant: [],
+  };
+
+  for (const participant of participantRows) {
+    for (const role of participant.roles) {
+      participantsByRole[role].push(participant);
+    }
+  }
+
+  const complaintFacts: ComplaintFacts | null = complaintDoc ? {
+    complaint_id: complaintDoc._id.toString(),
+    complaint_number: complaintDoc.complaintNumber,
+    status: complaintDoc.status,
+    incident_date: complaintDoc.incidentDate,
+    incident_time: complaintDoc.incidentTime,
+    incident_place: complaintDoc.incidentPlace,
+    address: complaintDoc.address,
+    coordinates: complaintDoc.coordinates,
+    category: complaintDoc.category,
+    crime_category: complaintDoc.crimeCategory,
+    short_description: complaintDoc.shortDescription,
+    detailed_description: complaintDoc.detailedDescription,
+    assigned_io_id: complaintDoc.assignedIO?.toString(),
+    assigned_sho_id: complaintDoc.assignedSHO?.toString(),
+    legal_sections_history: (complaintDoc.legalSectionsHistory ?? []).map((entry) => ({
+      version: entry.version,
+      editedBy: entry.editedBy,
+      editorId: entry.editorId ? entry.editorId.toString() : null,
+      content: entry.content,
+      timestamp: entry.timestamp,
+    })),
+  } : null;
 
   // ── Department requests ─────────────────────────────────────────────────────
   const reqSummary: RequestSummary = {
@@ -233,9 +416,11 @@ export async function buildFactsObject(caseId: string): Promise<FactsObject> {
 
   return {
     meta: { case_id: caseId, assembled_at: new Date() },
+    complaint: complaintFacts,
     checklist:           { summary: checklistSummary, steps },
     entities:            { by_type: byType, raw: rawEntities },
     evidence:            { summary: evSummary, items: evItems },
+    participants:        { total: participantRows.length, by_role: participantsByRole, raw: participantRows, summary: participantSummary },
     department_requests: { summary: reqSummary, items: reqItems },
     recent_diary:        recentDiary,
   };

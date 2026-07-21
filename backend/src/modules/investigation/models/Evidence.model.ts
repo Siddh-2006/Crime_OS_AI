@@ -24,6 +24,7 @@ export interface IEvidence extends Document {
   origin?: 'post_complaint_request';
   linked_diary_entry_id?: string;
   linked_request_id?: string;
+  relatedParticipantIds?: Types.ObjectId[];
   
   // Physical Evidence Tracking
   is_physical?: boolean;
@@ -53,6 +54,7 @@ const EvidenceSchema = new Schema<IEvidence>(
     origin:                { type: String, enum: ['post_complaint_request'] },
     linked_diary_entry_id: { type: String },
     linked_request_id:     { type: String },
+    relatedParticipantIds: [{ type: Schema.Types.ObjectId, ref: 'CaseParticipant' }],
     source:                { type: String, enum: ['complainant', 'io_officer', 'department', 'cyber_analyst'], default: 'complainant' },
     
     // Physical Tracking
