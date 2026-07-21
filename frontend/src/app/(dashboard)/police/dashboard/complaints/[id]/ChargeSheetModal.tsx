@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Download, FileText, RefreshCw, X } from 'lucide-react';
-import { apiClient } from '../../../../../../../lib/apiClient';
-import Button from '../../../../../../../components/ui/Button';
+import apiClient from '@/lib/axios';
+import { Button } from '@/components/ui/Button';
 
 interface ChargeSheetModalProps {
   isOpen: boolean;
