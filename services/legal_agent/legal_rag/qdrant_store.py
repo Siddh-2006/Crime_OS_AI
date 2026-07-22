@@ -1,9 +1,29 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Iterable, Sequence
 
 from .models import EmbeddedDocumentRecord, LegalRetrievalResult, RetrievedDocumentRecord
+
+# Load .env from the legal_agent root (two levels up from this file)
+def _load_dotenv() -> None:
+    env_path = Path(__file__).resolve().parent.parent / ".env"
+    if not env_path.exists():
+        return
+    with env_path.open() as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            key = key.strip()
+            value = value.strip()
+            if key and key not in os.environ:
+                os.environ[key] = value
+
+_load_dotenv()
 
 
 def _load_qdrant():
@@ -29,6 +49,8 @@ def _extract_scroll_result(result: Any) -> tuple[list[Any], Any | None]:
 
 @dataclass(slots=True)
 class LegalQdrantConfig:
+    # Read defaults from environment so nothing needs to be hardcoded.
+    # Set QDRANT_URL and QDRANT_COLLECTION in services/legal_agent/.env
     url: str | None = None
     path: str | None = "./qdrant_local_storage"
     collection_name: str = "light"
@@ -36,22 +58,28 @@ class LegalQdrantConfig:
     timeout: float | None = 70.0
 
 
+def _default_config() -> LegalQdrantConfig:
+    """Build a LegalQdrantConfig from environment variables, with sensible defaults."""
+    import os
+    url = os.environ.get("QDRANT_URL") or None
+    collection = os.environ.get("QDRANT_COLLECTION") or "crime_os"
+    return LegalQdrantConfig(url=url, collection_name=collection)
+
+
 class LegalQdrantStore:
     def __init__(self, config: LegalQdrantConfig | None = None) -> None:
-        self.config = config or LegalQdrantConfig()
+        self.config = config if config is not None else _default_config()
         QdrantClient, models = _load_qdrant()
         if self.config.url:
             self._client = QdrantClient(
                 url=self.config.url,
                 prefer_grpc=self.config.prefer_grpc,
                 timeout=self.config.timeout,
-                check_compatibility=False,
             )
         else:
             self._client = QdrantClient(
                 path=self.config.path,
                 timeout=self.config.timeout,
-                check_compatibility=False,
             )
 
         self._models = models
@@ -121,6 +149,23 @@ class LegalQdrantStore:
             message = f"{self._connection_error_message()} ({self._format_qdrant_exception(exc)})"
             raise RuntimeError(message) from exc
         return len(points)
+
+    def upsert_single(self, record: EmbeddedDocumentRecord) -> str:
+        """Upsert one record into Qdrant. Returns the point UUID."""
+        self.upsert_embeddings([record])
+        return record.uuid
+
+    def delete_by_uuid(self, uuid: str) -> None:
+        """Delete a single Qdrant point by its UUID."""
+        models = self._models
+        try:
+            self.client.delete(
+                collection_name=self.config.collection_name,
+                points_selector=models.PointIdsList(points=[uuid]),
+            )
+        except Exception as exc:
+            message = f"{self._connection_error_message()} ({self._format_qdrant_exception(exc)})"
+            raise RuntimeError(message) from exc
 
     def list_documents(self, *, batch_size: int = 256) -> list[RetrievedDocumentRecord]:
         documents: list[RetrievedDocumentRecord] = []

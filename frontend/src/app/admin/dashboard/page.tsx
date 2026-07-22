@@ -26,6 +26,7 @@ import { Card } from '@/components/ui/Card';
 import { Modal } from '@/components/ui/Modal';
 import { Loader } from '@/components/ui/Loader';
 import { ROLE } from '@/lib/constants';
+import AdminNavbar from '@/components/admin/AdminNavbar';
 import apiClient from '@/lib/axios';
 import type { ApiResponse } from '@/lib/types';
 import type { AxiosError } from 'axios';
@@ -289,34 +290,7 @@ export default function AdminDashboardPage(): React.ReactElement {
   return (
     <div className="min-h-screen bg-neutral-100 flex flex-col">
       {/* Top Header */}
-      <header className="bg-primary-900 text-white px-6 py-4 shadow-md flex justify-between items-center">
-        <div className="flex items-center gap-3">
-          <div className="h-9 w-9 bg-primary-700 flex items-center justify-center rounded-lg">
-            <ShieldCheck size={20} />
-          </div>
-          <div>
-            <p className="text-[10px] tracking-wider font-semibold text-primary-300 uppercase">
-              Gujarat Police
-            </p>
-            <h1 className="text-base font-bold">Crime OS Admin</h1>
-          </div>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="text-right hidden sm:block">
-            <p className="text-xs font-semibold text-primary-300">Logged in as</p>
-            <p className="text-sm font-bold">System Administrator</p>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleLogout}
-            leftIcon={<LogOut size={16} />}
-            className="border-primary-700 hover:bg-primary-800 text-primary-200 hover:text-white"
-          >
-            Logout
-          </Button>
-        </div>
-      </header>
+      <AdminNavbar />
 
       {/* Main Layout */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">

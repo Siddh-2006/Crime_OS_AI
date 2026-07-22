@@ -1,22 +1,55 @@
 import { Request, Response } from 'express';
+import axios from 'axios';
 import { DepartmentRegistry } from '../models/DepartmentRegistry.model';
-import { User } from '../../user/models/User.model';
 import { sendSuccess, sendError } from '../../../shared/utils/response.util';
 import { HttpStatusCode } from '../../../common/enums/httpStatus.enum';
+import env from '../../../config/env';
 import logger from '../../../config/logger';
-import { exec } from 'child_process';
-import path from 'path';
-import fs from 'fs';
-import util from 'util';
-import bcrypt from 'bcrypt';
 
-const execPromise = util.promisify(exec);
+// ─── OLD implementation (subprocess + mock accounts + JSON sync) ──────────────
+// Removed: exec(python embed_records ...), syncToJSON(), createMockAccount()
+// Replaced with: HTTP calls to legal_agent FastAPI /registry/upsert and /registry/:uuid
+// ─────────────────────────────────────────────────────────────────────────────
+
+const legalAgentUrl = env.LEGAL_AGENT_URL; // http://localhost:8001
+
+/**
+ * Call legal_agent to embed a single dept record and upsert into Qdrant.
+ * Returns the qdrant_uuid to store back in MongoDB.
+ * Falls back gracefully — a missing qdrant_uuid just means no vector exists yet.
+ */
+async function upsertDeptVector(deptData: any, existingUuid?: string): Promise<string | null> {
+  try {
+    const res = await axios.post(`${legalAgentUrl}/registry/upsert`, {
+      ...deptData,
+      act: 'department_registry',
+      qdrant_uuid: existingUuid ?? null,
+    }, { timeout: 120_000 }); // embedding can take a few seconds
+    return res.data?.qdrant_uuid ?? null;
+  } catch (err: any) {
+    logger.warn(`[DeptRegistry] Failed to upsert vector for ${deptData.entity_id}: ${err.message}`);
+    return null;
+  }
+}
+
+/**
+ * Call legal_agent to delete a single Qdrant point by UUID.
+ */
+async function deleteDeptVector(uuid: string): Promise<void> {
+  try {
+    await axios.delete(`${legalAgentUrl}/registry/${uuid}`, { timeout: 15_000 });
+  } catch (err: any) {
+    logger.warn(`[DeptRegistry] Failed to delete vector ${uuid}: ${err.message}`);
+  }
+}
 
 export class DepartmentRegistryController {
-  
+
+  /** GET /admin/departments — list all (active + inactive) */
   static async getDepartments(_req: Request, res: Response): Promise<void> {
     try {
-      const departments = await DepartmentRegistry.find({ isActive: true });
+      // Return all departments so admin can see inactive ones and re-activate
+      const departments = await DepartmentRegistry.find().sort({ isActive: -1, entity_name: 1 });
       sendSuccess(res, HttpStatusCode.OK, 'Departments retrieved successfully', departments);
     } catch (error: any) {
       logger.error('Error fetching departments:', error);
@@ -24,31 +57,26 @@ export class DepartmentRegistryController {
     }
   }
 
+  /** POST /admin/departments — create new department */
   static async addDepartment(req: Request, res: Response): Promise<void> {
     try {
       const deptData = req.body;
 
-      // Ensure entity_id is unique
       const existing = await DepartmentRegistry.findOne({ entity_id: deptData.entity_id });
       if (existing) {
         sendError(res, HttpStatusCode.BAD_REQUEST, 'A department with this entity_id already exists');
         return;
       }
 
-      // Save to MongoDB
-      const newDept = new DepartmentRegistry(deptData);
+      const newDept = new DepartmentRegistry({ ...deptData, isActive: true });
       await newDept.save();
 
-      // Export to JSON
-      await DepartmentRegistryController.syncToJSON();
-
-      // Run embedding script in background
-      DepartmentRegistryController.runEmbeddingScript().catch(err => {
-        logger.error('Error running embedding script:', err);
-      });
-
-      // Create Mock Account
-      await DepartmentRegistryController.createMockAccount(deptData);
+      // Embed and store the Qdrant UUID back into MongoDB (fire-and-update)
+      const qdrantUuid = await upsertDeptVector(deptData);
+      if (qdrantUuid) {
+        await DepartmentRegistry.findByIdAndUpdate(newDept._id, { qdrant_uuid: qdrantUuid });
+        (newDept as any).qdrant_uuid = qdrantUuid;
+      }
 
       sendSuccess(res, HttpStatusCode.CREATED, 'Department added successfully', newDept);
     } catch (error: any) {
@@ -57,10 +85,17 @@ export class DepartmentRegistryController {
     }
   }
 
+  /** PUT /admin/departments/:id — update existing department */
   static async updateDepartment(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       const deptData = req.body;
+
+      const existing = await DepartmentRegistry.findById(id);
+      if (!existing) {
+        sendError(res, HttpStatusCode.NOT_FOUND, 'Department not found');
+        return;
+      }
 
       const updated = await DepartmentRegistry.findByIdAndUpdate(id, deptData, { new: true });
       if (!updated) {
@@ -68,11 +103,15 @@ export class DepartmentRegistryController {
         return;
       }
 
-      await DepartmentRegistryController.syncToJSON();
-      
-      DepartmentRegistryController.runEmbeddingScript().catch(err => {
-        logger.error('Error running embedding script:', err);
-      });
+      // Re-embed with same UUID so Qdrant point is overwritten in-place
+      const qdrantUuid = await upsertDeptVector(
+        { ...updated.toObject(), ...deptData },
+        existing.qdrant_uuid ?? undefined,
+      );
+      if (qdrantUuid && qdrantUuid !== existing.qdrant_uuid) {
+        await DepartmentRegistry.findByIdAndUpdate(id, { qdrant_uuid: qdrantUuid });
+        (updated as any).qdrant_uuid = qdrantUuid;
+      }
 
       sendSuccess(res, HttpStatusCode.OK, 'Department updated successfully', updated);
     } catch (error: any) {
@@ -81,20 +120,27 @@ export class DepartmentRegistryController {
     }
   }
 
+  /** PATCH /admin/departments/:id/deactivate — soft-delete, remove vector */
   static async deactivateDepartment(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const updated = await DepartmentRegistry.findByIdAndUpdate(id, { isActive: false }, { new: true });
-      if (!updated) {
+
+      const existing = await DepartmentRegistry.findById(id);
+      if (!existing) {
         sendError(res, HttpStatusCode.NOT_FOUND, 'Department not found');
         return;
       }
 
-      await DepartmentRegistryController.syncToJSON();
-      
-      DepartmentRegistryController.runEmbeddingScript().catch(err => {
-        logger.error('Error running embedding script:', err);
-      });
+      const updated = await DepartmentRegistry.findByIdAndUpdate(
+        id,
+        { isActive: false },
+        { new: true },
+      );
+
+      // Remove from Qdrant so it no longer appears in RAG queries
+      if (existing.qdrant_uuid) {
+        await deleteDeptVector(existing.qdrant_uuid);
+      }
 
       sendSuccess(res, HttpStatusCode.OK, 'Department deactivated successfully', updated);
     } catch (error: any) {
@@ -103,92 +149,36 @@ export class DepartmentRegistryController {
     }
   }
 
-  // --- Helpers ---
-
-  private static async syncToJSON() {
+  /** PATCH /admin/departments/:id/activate — re-activate, re-embed vector */
+  static async activateDepartment(req: Request, res: Response): Promise<void> {
     try {
-      const allDepts = await DepartmentRegistry.find({ isActive: true }).select('-_id -__v -createdAt -updatedAt -isActive -contact_email_pattern').lean();
-      
-      // We map it to the structure expected by Legal Agent
-      const formatted = allDepts.map(d => ({
-        ...d,
-        act: 'department_registry',
-      }));
+      const { id } = req.params;
 
-      const jsonPath = path.join(__dirname, '../../../../../services/legal_agent/parsed/Department_Registry.json');
-      fs.writeFileSync(jsonPath, JSON.stringify(formatted, null, 2));
-      logger.info(`Synced ${allDepts.length} departments to JSON.`);
-    } catch (error) {
-      logger.error('Failed to sync Department_Registry.json:', error);
-    }
-  }
+      const existing = await DepartmentRegistry.findById(id);
+      if (!existing) {
+        sendError(res, HttpStatusCode.NOT_FOUND, 'Department not found');
+        return;
+      }
 
-  private static async runEmbeddingScript() {
-    logger.info('Running embedding script for Department_Registry.json...');
-    const scriptDir = path.join(__dirname, '../../../../../services/legal_agent');
-
-    
-    // Note: the original script appends or overwrites?
-    // Actually embed_records currently overwrites the --out file. But all_embeddings2.jsonl contains other acts.
-    // Wait, embed_records overwrites! If it overwrites all_embeddings2.jsonl, we will lose BNSS and BNS embeddings!
-    // The instructions say "trigger legal_agent's ingestion/embedding step for just this new entry".
-    // Alternatively, just let it output to a specific `Department_Registry_embeddings.jsonl` which the legal_agent can load. 
-    // Wait! Let's check legal_rag config to see how it loads embeddings.
-    
-    // For now, I'll output to a dedicated file just for departments and let's check if legal_agent loads multiple files or just one.
-    // Actually, in Phase F, there's `all_embeddings2.jsonl`.
-    // Let's do nothing on Python side inside the controller, I'll write a Python subprocess that just calls legal_rag to append.
-    const runPy = `python -c "
-from legal_rag.embedding import BGEEmbeddingConfig, BGEEmbedder, load_parsed_records;
-import json;
-records = load_parsed_records('parsed/Department_Registry.json', record_type='dept');
-embedder = BGEEmbedder(BGEEmbeddingConfig(model_name='BAAI/bge-base-en-v1.5', device=None));
-embedded = embedder.embed_records(records);
-# Just output to a separate file that legal_agent will load if it loads all jsonl
-with open('embedded/Department_Registry_embeddings.jsonl', 'w') as f:
-    for e in embedded:
-        f.write(json.dumps(e) + '\n')
-"`;
-    await execPromise(runPy, { cwd: scriptDir });
-    logger.info('Embedding script finished.');
-  }
-
-  private static async createMockAccount(deptData: any) {
-    try {
-      const username = deptData.entity_id.toLowerCase().replace(/[^a-z0-9_]/g, '_');
-      const email = deptData.contact_email_pattern || `${username}@leo.mockdept.local`;
-      
-      const passwordHash = await bcrypt.hash('Testing123!', 10);
-      const securityAnswerHash = await bcrypt.hash('Test', 10);
-      
-      await User.findOneAndUpdate(
-        { username },
-        {
-          firstName: deptData.entity_name || deptData.entity_id,
-          lastName: 'Department',
-          username,
-          email,
-          phone: '9999999999',
-          password: passwordHash,
-          dateOfBirth: new Date('2000-01-01'),
-          gender: 'other',
-          address: 'Virtual',
-          city: 'Virtual',
-          district: 'Virtual',
-          state: 'Virtual',
-          pincode: '000000',
-          idProofType: 'aadhaar',
-          idProofNumber: '000000000000',
-          securityQuestion: 'What is your mock name?',
-          securityAnswer: securityAnswerHash,
-          role: 'department',
-          department_entity_id: deptData.entity_id
-        },
-        { upsert: true, new: true }
+      const updated = await DepartmentRegistry.findByIdAndUpdate(
+        id,
+        { isActive: true },
+        { new: true },
       );
-      logger.info(`Mock account created for ${username}`);
-    } catch (error) {
-      logger.error('Failed to create mock account:', error);
+
+      // Re-embed — reuse existing UUID if available so the same Qdrant point is restored
+      const qdrantUuid = await upsertDeptVector(
+        existing.toObject(),
+        existing.qdrant_uuid ?? undefined,
+      );
+      if (qdrantUuid) {
+        await DepartmentRegistry.findByIdAndUpdate(id, { qdrant_uuid: qdrantUuid });
+      }
+
+      sendSuccess(res, HttpStatusCode.OK, 'Department activated successfully', updated);
+    } catch (error: any) {
+      logger.error('Error activating department:', error);
+      sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, 'Error activating department');
     }
   }
 }

@@ -180,7 +180,7 @@ export class EmailService {
   async sendDepartmentRequestEmail(payload: DepartmentRequestEmailPayload): Promise<void> {
     logger.debug('Sending department request email', { to: payload.to, requestId: payload.requestId });
     await this.provider.sendMail({
-      to: payload.to,
+      to:      payload.to,
       subject: `Official Request - Case ${payload.caseId} | Gujarat Police`,
       html: `
         <!DOCTYPE html>
@@ -192,7 +192,29 @@ export class EmailService {
           <div style="background: #f5f5f5; padding: 24px; border-radius: 0 0 8px 8px;">
             <h2 style="color: #1a237e;">Official Request to ${payload.departmentName}</h2>
             <div style="background: white; border: 1px solid #ccc; padding: 20px; white-space: pre-wrap; font-family: monospace;">${payload.content}</div>
-            <p style="color: #666; font-size: 12px; margin-top: 32px;">Gujarat Police — Serving with Integrity | This is a system-generated email.</p>
+
+            <!-- Reply instructions box -->
+            <div style="background: #fff8e1; border: 2px solid #f9a825; border-radius: 8px; padding: 16px; margin-top: 24px;">
+              <p style="margin: 0 0 8px; font-weight: bold; color: #e65100; font-size: 14px;">
+                ⚠️ IMPORTANT — Reply Instructions
+              </p>
+              <p style="margin: 0 0 8px; color: #333; font-size: 13px;">
+                When replying to this email, you <strong>MUST</strong> include the following line
+                at the very beginning of your reply body (before any other content):
+              </p>
+              <div style="background: #fff3e0; border: 1px dashed #fb8c00; padding: 10px 14px; border-radius: 4px; font-family: monospace; font-size: 14px; color: #bf360c; font-weight: bold;">
+                Complaint ID: ${payload.caseId}
+              </div>
+              <p style="margin: 8px 0 0; color: #555; font-size: 12px;">
+                This line allows our system to automatically link your response to the correct case.
+                Responses without this line will not be processed automatically.
+                You may attach documents, images, audio, or video files to your reply.
+              </p>
+            </div>
+
+            <p style="color: #666; font-size: 12px; margin-top: 32px;">
+              Gujarat Police — Serving with Integrity | This is a system-generated email.
+            </p>
           </div>
         </body>
         </html>

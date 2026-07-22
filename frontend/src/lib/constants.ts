@@ -51,6 +51,7 @@ export const APP_ROUTES = {
   POLICE_DASHBOARD: '/police/dashboard',
   ADMIN_LOGIN: '/admin/login',
   ADMIN_DASHBOARD: '/admin/dashboard',
+  ADMIN_DEPARTMENTS: '/admin/departments',
   FILE_COMPLAINT: '/dashboard/complaints/new',
   MY_COMPLAINTS: '/dashboard/complaints',
   COMPLAINT_DETAIL: (id: string) => `/dashboard/complaints/${id}`,

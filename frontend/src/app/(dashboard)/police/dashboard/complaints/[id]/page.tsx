@@ -298,7 +298,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
   const isClosed = complaint.status === 'CLOSED';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-x-hidden">
       {/* Navigation & Header */}
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <button
@@ -317,15 +317,15 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
       </div>
 
       {/* Main Info Header */}
-      <div className="bg-white border border-neutral-200 rounded-xl p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold text-neutral-900">{complaint.complaintNumber}</h1>
-            <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-              {complaint.status}
+      <div className="bg-white border border-neutral-200 rounded-xl p-5 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-3 overflow-hidden">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-base font-bold text-neutral-900 truncate">{complaint.complaintNumber}</h1>
+            <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-200 whitespace-nowrap">
+              {complaint.status.replace(/_/g, ' ')}
             </span>
           </div>
-          <p className="text-sm text-neutral-500 mt-1">
+          <p className="text-xs text-neutral-500 mt-1 truncate">
             Complainant: {complaint.citizen.firstName} {complaint.citizen.lastName} | Phone: {complaint.citizen.phone}
           </p>
         </div>
@@ -356,29 +356,13 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
 
         {/* Action Controls for assigned IO */}
         {isAssignedIO && !isLocked && (
-          <div className="flex gap-2 w-full md:w-auto justify-end">
-            {!editMode ? (
-              <>
-                <Button variant="ghost" size="sm" leftIcon={<Edit3 size={15} />} onClick={() => setEditMode(true)}>
-                  Edit Details
-                </Button>
-                <Button variant="secondary" size="sm" leftIcon={<FileText size={15} />} onClick={() => setPreviewModalOpen(true)}>
-                  Preview FIR
-                </Button>
-                <Button size="sm" leftIcon={<FileSignature size={15} />} onClick={() => setFirConfirmModalOpen(true)}>
-                  Register FIR
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button variant="ghost" size="sm" onClick={() => setEditMode(false)} disabled={actionLoading}>
-                  Cancel
-                </Button>
-                <Button size="sm" leftIcon={<Save size={15} />} onClick={handleSaveEdits} isLoading={actionLoading}>
-                  Save Changes
-                </Button>
-              </>
-            )}
+          <div className="flex flex-wrap gap-2 w-full md:w-auto justify-end">
+            <Button variant="secondary" size="sm" leftIcon={<FileText size={15} />} onClick={() => setPreviewModalOpen(true)}>
+              Preview FIR
+            </Button>
+            <Button size="sm" leftIcon={<FileSignature size={15} />} onClick={() => setFirConfirmModalOpen(true)}>
+              Register FIR
+            </Button>
           </div>
         )}
 

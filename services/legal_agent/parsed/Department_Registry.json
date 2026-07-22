@@ -23,7 +23,8 @@
       "Debit freeze / lien marking on accounts suspected of holding proceeds of crime",
       "Cheque leaf copies, deposit slips, and RTGS/NEFT/IMPS routing vouchers",
       "Reversal of fraudulent funds (subject to court/magistrate orders or indemnity)"
-    ]
+    ],
+    "contact_email": "jenil21prajapati@gmail.com"
   },
   {
     "entity_id": "telecom_operator",
@@ -48,7 +49,8 @@
       "International Mobile Equipment Identity (IMEI) search / handset tracking history",
       "Lawful interception (live call listening) and real-time location tracking",
       "Point of Sale (PoS) / agent details who activated the SIM"
-    ]
+    ],
+    "contact_email": "jenil21prajapati@gmail.com"
   },
   {
     "entity_id": "meta_platforms",
@@ -72,7 +74,8 @@
       "Content removal / blocking of unlawful accounts, pages, or groups",
       "WhatsApp specific: Profile photo, 'About' status, group membership lists, and interaction timestamps (Does NOT provide message content due to end-to-end encryption)",
       "Facebook/Instagram specific: Stored content (posts, photos, videos, direct messages) — provided only under formal mutual legal assistance or emergency life-safety protocols"
-    ]
+    ],
+    "contact_email": "jenil04prajapati@gmail.com"
   },
   {
     "entity_id": "google_llc",
@@ -97,7 +100,8 @@
       "Account data preservation (90 days freeze of account state, extendable)",
       "Removal or geo-blocking of unlawful content, phishing links, and CSAM",
       "Stored content data (Gmail body text, Google Drive attachments, Google Photos) via MLAT/LR or emergency disclosure"
-    ]
+    ],
+    "contact_email": "jenil04prajapati@gmail.com"
   },
   {
     "entity_id": "upi_npci",
@@ -120,7 +124,8 @@
       "Device metadata and IP address logged at the NPCI central switch during transaction initiation",
       "Ecosystem-wide blocking / blacklisting of fraudulent VPAs and mobile numbers linked to UPI",
       "Transaction status verification (success, failure, reversal, pending)"
-    ]
+    ],
+    "contact_email": "jenil04prajapati@gmail.com"
   },
   {
     "entity_id": "vasp_crypto_exchange",
@@ -145,7 +150,8 @@
       "Login IP address logs, timestamps, and device fingerprints",
       "Freezing / restraining of user crypto wallets and fiat balances under investigation",
       "Inter-exchange transfer destination details and external wallet clustering data"
-    ]
+    ],
+    "contact_email": "jenil04prajapati@gmail.com"
   },
   {
     "entity_id": "rto_parivahan",
@@ -170,7 +176,8 @@
       "Traffic violation / e-challan history and accident involvement records",
       "Transfer of ownership history (previous owners) and NOC issuance status",
       "Blacklisting, impounding, or putting an alert flag on a vehicle's RC across the national database"
-    ]
+    ],
+    "contact_email": "jenil06prajapati@gmail.com"
   },
   {
     "entity_id": "hospital_forensic_medical",
@@ -195,7 +202,8 @@
       "Medical examination reports of accused / victim of sexual assault (DNA profiling material collection)",
       "Age estimation reports (radiological and physical examination)",
       "Patient admission/discharge summaries, treatment case sheets, and emergency room notes"
-    ]
+    ],
+    "contact_email": "jenil21prajapati@gmail.com"
   },
   {
     "entity_id": "forensic_science_lab",
@@ -220,7 +228,8 @@
       "Questioned Documents & Handwriting analysis (signature verification, forgery detection, paper/ink analysis)",
       "Digital & Cyber Forensics (mobile phone data extraction, hard drive disk imaging, audio/video authenticity, speaker voice identification)",
       "Physics & Trace Evidence analysis (tool marks, glass, soil, paint, explosives fragments)"
-    ]
+    ],
+    "contact_email": "jenil21prajapati@gmail.com"
   },
   {
     "entity_id": "railway_police",
@@ -245,7 +254,8 @@
       "Investigation and FIR registration for IPC/BNS offences occurring on trains or railway premises (GRP)",
       "Tracking and recovery of stolen railway property, luggage, and verification of illegal ticket touting (RPF)",
       "Detention of suspects / absconders traveling on specific trains or boarding/alighting at stations"
-    ]
+    ],
+    "contact_email": "jenil21prajapati@gmail.com"
   },
   {
     "entity_id": "immigration_border",
@@ -269,7 +279,8 @@
       "Opening, modification, and deletion of Look Out Circulars (LOC) against absconding accused / witnesses",
       "Real-time interception, detention, and intimation upon arrival or departure of flagged individuals at airports, seaports, and Integrated Check Posts (ICPs)",
       "Foreigners Registration (FRRO/FRO) residential address tracking and visa extension records for foreign nationals"
-    ]
+    ],
+    "contact_email": "jenil04prajapati@gmail.com"
   },
   {
     "entity_id": "employer_labour_dept",
@@ -295,7 +306,8 @@
       "Interstate migrant workman contractor details, labor licenses, and registration certificates under labor codes",
       "Workplace CCTV footage, entry/exit gate pass logs, and site supervisor details",
       "Workplace injury / fatal accident reporting logs and compensation disbursement records"
-    ]
+    ],
+    "contact_email": "jenil21prajapati@gmail.com"
   },
   {
     "entity_id": "insurance_company",
@@ -320,7 +332,8 @@
       "Internal insurance fraud investigation reports and field surveyor findings",
       "Motor accident surveyor reports, vehicle damage assessment, and third-party liability claims (MACT cases)",
       "Hospitalization bills, discharge summaries, and medical reports submitted for health insurance claims"
-    ]
+    ],
+    "contact_email": "jenil04prajapati@gmail.com"
   },
   {
     "entity_id": "ecommerce_platform",
@@ -346,7 +359,8 @@
       "Logistics and delivery tracking logs (courier partner, delivery agent name/number, exact delivery timestamp, recipient signature/OTP verification)",
       "IMEI numbers, serial numbers, or MAC addresses of delivered electronic devices (mobiles, laptops)",
       "Freezing seller wallet disbursements or suspending fraudulent buyer/seller accounts under Section 106 BNSS"
-    ]
+    ],
+    "contact_email": "jenil21prajapati@gmail.com"
   },
   {
     "entity_id": "isp_non_telecom",
@@ -369,7 +383,8 @@
       "Media Access Control (MAC) address binding logs and router/modem serial numbers",
       "Connection session history (login/logout timestamps, data volume used, session duration)",
       "Blocking of specific malicious IP addresses, URLs, or domains under lawful directions"
-    ]
+    ],
+    "contact_email": "jenil06prajapati@gmail.com"
   },
   {
     "entity_id": "court_magistrate_office",
@@ -396,7 +411,8 @@
       "Recording of judicial confessions and statements of witnesses under BNSS Section 183 (formerly CrPC Section 164)",
       "Police remand / judicial custody authorization orders under BNSS Section 187 (formerly CrPC Section 167)",
       "Orders for Test Identification Parade (TIP) of accused or property under BNSS Section 54 (formerly CrPC Section 54A / Evidence Act Section 9)"
-    ]
+    ],
+    "contact_email": "jenil06prajapati@gmail.com"
   },
   {
     "entity_id": "uidai_aadhaar",
@@ -418,7 +434,8 @@
       "Biometric lock / unlock status of an Aadhaar number",
       "Confirmation of Aadhaar suspension or cancellation status in suspected identity fraud cases",
       "Demographic metadata matching verification (subject to strict statutory restrictions under the Aadhaar Act)"
-    ]
+    ],
+    "contact_email": "jenil06prajapati@gmail.com"
   },
   {
     "entity_id": "digilocker_meity",
@@ -441,7 +458,8 @@
       "List of issued / fetched digital documents (Driving License, RC, PAN, educational certificates, Marksheets)",
       "Revocation of active sessions or temporary freezing/blocking of compromised DigiLocker accounts",
       "Verification of authenticity of specific digital certificates issued via the platform"
-    ]
+    ],
+    "contact_email": "jenil21prajapati@gmail.com"
   },
   {
     "entity_id": "cert_in",
@@ -464,7 +482,8 @@
       "Log preservation coordination across regulated intermediaries, service providers, and data centres",
       "Forensic advisory and root cause analysis guidelines for critical infrastructure breaches",
       "National-level coordination with foreign CERTs and international cyber incident response bodies"
-    ]
+    ],
+    "contact_email": "jenil21prajapati@gmail.com"
   },
   {
     "entity_id": "mca21_roc",
@@ -488,7 +507,8 @@
       "Registered office address verification reports, Form INC-22 filings, and historical registered office changes",
       "Details of charges created on company assets, hypothecation, and secured creditors (Form CHG-1/CHG-4)",
       "Information on strike-off status, shell company flagging, and internal RoC inspection/inquiry reports under Sections 206-207"
-    ]
+    ],
+    "contact_email": "jenil04prajapati@gmail.com"
   },
   {
     "entity_id": "sub_registrar_property",
@@ -511,7 +531,8 @@
       "Section 32-A statutory registration records: Biometric thumb impressions, digital photographs, and KYC ID proofs of executants, claimants, and presentants",
       "Names, addresses, and ID details of attesting witnesses and document writers/advocates identified on the deed",
       "Placing an investigative alert / noting on property records to prevent further sale or mutation (subject to court order or strict Section 106 BNSS notice)"
-    ]
+    ],
+    "contact_email": "jenil04prajapati@gmail.com"
   },
   {
     "entity_id": "passport_seva_kendra",
@@ -534,7 +555,8 @@
       "Police Verification Report (PVR) history and details of the verifying police station/officer",
       "Impounding, revocation, or suspension of passport of an accused / absconder fleeing justice",
       "Flagging / placing a system alert on a passport number to notify law enforcement upon attempt to renew or use for travel services"
-    ]
+    ],
+    "contact_email": "jenil06prajapati@gmail.com"
   },
   {
     "entity_id": "state_cyber_cell_cid",
@@ -557,7 +579,8 @@
       "High-level liaison with foreign law enforcement, Interpol (via CBI Nodal Officer), and central agencies (I4C, CERT-In, ED)",
       "Direct interception, CDR/IPDR analysis, and Tower Dump processing through centralized state LEA telecom server gateways",
       "Takeover and investigation of complex, high-value cyber frauds, cryptocurrency thefts, or sensitive state crimes transferred from local police stations"
-    ]
+    ],
+    "contact_email": "jenil21prajapati@gmail.com"
   },
   {
     "entity_id": "excise_dept_ncb",
@@ -580,7 +603,8 @@
       "Intelligence and database on known drug traffickers, interstate smuggling syndicates, and historical seizures (NCB / State Excise)",
       "Joint operations, search, seizure, and sampling of illicit narcotics, psychotropic substances, and illicit liquor",
       "Forensic chemical analysis coordination and chain-of-custody documentation under NDPS disposal rules"
-    ]
+    ],
+    "contact_email": "jenil21prajapati@gmail.com"
   },
   {
     "entity_id": "arms_licensing_authority",
@@ -604,7 +628,8 @@
       "Records of arms gunsmiths, dealers, and manufacturers (Form VIII/IX registers showing sales and inventory)",
       "Suspension, revocation, or impounding of an arms license and direction to surrender weapon under investigation",
       "Ballistic history matching coordination via National Database on Arms and Licenses (NDAL-ALIS)"
-    ]
+    ],
+    "contact_email": "jenil04prajapati@gmail.com"
   },
   {
     "entity_id": "municipal_corporation",
@@ -628,7 +653,8 @@
       "Trade licenses, shop establishment registrations, and commercial occupancy records",
       "Public CCTV footage (if the municipal body manages smart-city surveillance infrastructure)",
       "Solid waste management vehicle GPS logs or sanitation attendance sheets (for localized alibi verification)"
-    ]
+    ],
+    "contact_email": "jenil04prajapati@gmail.com"
   },
   {
     "entity_id": "private_cctv_sources",
@@ -650,7 +676,8 @@
       "Logbooks, visitor management software exports (e.g., MyGate, NoBrokerHood records, flat entry/exit timestamps)",
       "Camera orientation layouts, technical specifications, and internal time-synchronization offsets",
       "Physical custody or forensic mirroring of the DVR hard drive (in case of tampering or critical crime evidence)"
-    ]
+    ],
+    "contact_email": "jenil21prajapati@gmail.com"
   },
   {
     "entity_id": "pawn_shops_jewelers",
@@ -673,7 +700,8 @@
       "Customer / pledgor KYC documentation (Aadhaar, PAN, photographs, mobile numbers)",
       "Store CCTV footage showing the suspect making the transaction at the counter",
       "Financial settlement logs, cash disbursement vouchers, or bank transfer reference numbers"
-    ]
+    ],
+    "contact_email": "jenil06prajapati@gmail.com"
   },
   {
     "entity_id": "fire_brigade",
@@ -696,7 +724,8 @@
       "Logbooks showing details of personnel, fire tenders deployed, and rescue operations executed",
       "Fire Safety Audit reports, No Objection Certificates (NOC), and compliance status of the affected building",
       "Emergency voice recording logs of the initial 101/112 distress call made to the fire control room"
-    ]
+    ],
+    "contact_email": "jenil04prajapati@gmail.com"
   },
   {
     "entity_id": "postal_courier_companies",
@@ -720,7 +749,8 @@
       "Weight sheets, dimensions, and commercial invoice copies attached to the parcel",
       "CCTV footage from sorting hubs, booking counters, or delivery fulfillment centers",
       "Interception and withholding of a suspicious parcel in transit (contraband, fake currency, illegal arms)"
-    ]
+    ],
+    "contact_email": "jenil21prajapati@gmail.com"
   },
   {
     "entity_id": "ridehailing_delivery_apps",
@@ -744,7 +774,8 @@
       "In-app communication logs (masked phone calls metadata, chat transcripts between user and driver)",
       "Live trip tracking data (in active kidnapping or emergency missing person tracking cases)",
       "Payment gateway transaction strings, corporate wallet usage records, and device hardware profiles"
-    ]
+    ],
+    "contact_email": "jenil21prajapati@gmail.com"
   },
   {
     "entity_id": "dating_matrimonial_platforms",
@@ -768,7 +799,8 @@
       "In-app interaction trails (match history, profile likes, chat communication transcripts)",
       "Subscription payment trail, linked bank accounts, or credit card reference records",
       "Account deletion, suspension, or geoblocking parameters for fraudulent profiles"
-    ]
+    ],
+    "contact_email": "jenil06prajapati@gmail.com"
   },
   {
     "entity_id": "one_stop_centre_181",
@@ -791,7 +823,8 @@
       "Counseling session summaries, medical assistance referrals, and temporary shelter logs",
       "Legal aid coordination records and statements documented during institutional shelter stay",
       "Referral memos and internal communications forwarded to local protection officers or police desks"
-    ]
+    ],
+    "contact_email": "jenil21prajapati@gmail.com"
   },
   {
     "entity_id": "cwc_jjb_nodes",
@@ -813,7 +846,8 @@
       "Orders for temporary placement, institutional care, or restoration of a Child in Need of Care and Protection (CNCP)",
       "Bail, rehabilitation, or institutional custody orders for a Child in Conflict with the Law (CCL)",
       "Individual Care Plans (ICP) and psychological counseling tracking records"
-    ]
+    ],
+    "contact_email": "jenil04prajapati@gmail.com"
   },
   {
     "entity_id": "prisons_department",
@@ -837,7 +871,8 @@
       "Internal prison CCTV footage from barracks, corridors, gates, and visitor meeting screens",
       "Prisoner currency accounts (Jail canteen spending accounts and deposit tracking logs)",
       "Records of disciplinary infractions, inside-jail offenses, parole/furlough histories, and release orders"
-    ]
+    ],
+    "contact_email": "jenil04prajapati@gmail.com"
   },
   {
     "entity_id": "wazirx_crypto",
@@ -856,6 +891,7 @@
     "escalation_path_if_no_response": "nodal_escalation@wazirx.test",
     "notes_or_caveats": "Responsive exchange",
     "confidence": "high",
-    "act": "department_registry"
+    "act": "department_registry",
+    "contact_email": "jenil21prajapati@gmail.com"
   }
 ]

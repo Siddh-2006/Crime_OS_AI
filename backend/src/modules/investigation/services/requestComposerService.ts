@@ -7,7 +7,7 @@ import { DiaryEntry } from '../models/DiaryEntry.model';
 import { Complaint } from '../../complaint/models/Complaint.model';
 import { DepartmentRegistry } from '../../admin/models/DepartmentRegistry.model';
 import { fastCall } from '../../../shared/llm/ollamaClient';
-// import { EmailQueue } from '../../../shared/queue/EmailQueue';
+import { EmailQueue } from '../../../shared/queue/EmailQueue';
 import logger from '../../../config/logger';
 
 export class RequestComposerService {
@@ -174,19 +174,31 @@ Return JSON.`;
       ref_ids: { request_id: request.request_id }
     });
 
-    // 4. Enqueue Email Job
+    // 4. Enqueue Email Job via existing EmailQueue → Nodemailer worker
+    // Looks up the department's contact email from DepartmentRegistry.
+    // Falls back to a log warning if no email is found rather than crashing.
     try {
-      /* Bypassed for local testing without Redis
-      await EmailQueue.enqueueDepartmentRequest({
-        to: 'dummy-department@example.com',
-        departmentName: request.department_entity_id,
-        caseId: caseId.toString(),
-        requestId: request.request_id,
-        content: request.draft_content
-      });
-      */
-    } catch (err) {
-      logger.warn(`Failed to enqueue email for request ${requestId} (Redis might be down)`);
+      const registry = await DepartmentRegistry.findOne({ entity_id: request.department_entity_id }).lean();
+      const deptEmail: string | undefined =
+        (registry as any)?.contact_email ?? undefined;
+
+      if (deptEmail) {
+        await EmailQueue.enqueueDepartmentRequest({
+          to:             deptEmail,
+          departmentName: request.department_entity_id ?? 'External Department',
+          caseId:         caseId.toString(),
+          requestId:      request.request_id,
+          content:        request.draft_content,
+        });
+        logger.info(`Department request email queued to ${deptEmail} for request ${requestId}`);
+      } else {
+        logger.warn(
+          `No contact_email found in DepartmentRegistry for "${request.department_entity_id}". ` +
+          `Email not sent for request ${requestId}. Add a contact_email field to the registry entry.`,
+        );
+      }
+    } catch (err: any) {
+      logger.warn(`Failed to enqueue department request email for request ${requestId}`, { error: err.message });
     }
 
     logger.info(`Request ${requestId} dispatched successfully.`);

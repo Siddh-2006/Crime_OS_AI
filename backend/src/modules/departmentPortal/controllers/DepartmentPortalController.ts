@@ -76,7 +76,7 @@ export class DepartmentPortalController {
 
       sendSuccess(res, HttpStatusCode.OK, 'Login successful', {
         token: `mock-token-${user.username}`, // For frontend localStorage
-        department_entity_id: user.department_entity_id
+        department_entity_id: (user as any).department_entity_id  // field removed from model — portal disabled
       });
     } catch (error) {
       sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, {

@@ -22,8 +22,7 @@ export interface IUser extends Document {
   securityQuestion: string;
   securityAnswer: string;
   isEmailVerified: boolean;
-  role: 'officer' | 'department';
-  department_entity_id?: string;
+  // role and department_entity_id removed — departments are no longer User accounts
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,8 +48,10 @@ const UserSchema = new Schema<IUser>(
     securityQuestion:{ type: String, required: true },
     securityAnswer:  { type: String, required: true, select: false },
     isEmailVerified: { type: Boolean, default: false },
-    role:            { type: String, enum: ['officer', 'department'], default: 'officer' },
-    department_entity_id: { type: String },
+    // role and department_entity_id removed — departments are no longer User accounts.
+    // Kept in schema comments for reference only.
+    // role:            { type: String, enum: ['officer', 'department'], default: 'officer' },
+    // department_entity_id: { type: String },
   },
   {
     timestamps: true,

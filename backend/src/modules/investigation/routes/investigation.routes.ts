@@ -10,6 +10,12 @@ const router = Router();
 // Endpoint to trigger async analysis
 router.post('/:id/analyze', InvestigationController.analyzeCase);
 
+// SSE: real-time progress stream (open AFTER fetching /status)
+router.get('/:id/analysis/progress', InvestigationController.streamAnalysisProgress);
+
+// State-recovery: current stage on page load / reload
+router.get('/:id/analysis/status', InvestigationController.getAnalysisStatus);
+
 // Public department list (used by IO for request composer)
 router.get('/departments', async (_req, res) => {
   try {

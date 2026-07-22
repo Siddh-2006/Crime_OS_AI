@@ -19,8 +19,9 @@ export function middleware(req: NextRequest): NextResponse {
   const roleCookie = req.cookies.get('role')?.value;
 
   const isProtectedCitizenRoute = pathname.startsWith('/dashboard');
-  const isProtectedPoliceRoute = pathname.startsWith('/police/dashboard');
-  const isProtectedAdminRoute = pathname.startsWith('/admin/dashboard');
+  const isProtectedPoliceRoute  = pathname.startsWith('/police/dashboard');
+  const isProtectedAdminRoute   = pathname.startsWith('/admin/dashboard') ||
+                                   pathname.startsWith('/admin/departments');
 
   // Not a protected route — allow
   if (!isProtectedCitizenRoute && !isProtectedPoliceRoute && !isProtectedAdminRoute) {
@@ -67,5 +68,11 @@ export function middleware(req: NextRequest): NextResponse {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/police/dashboard/:path*', '/admin/dashboard/:path*'],
+  matcher: [
+    '/dashboard/:path*',
+    '/police/dashboard/:path*',
+    '/admin/dashboard/:path*',
+    '/admin/departments/:path*',
+    '/admin/departments',
+  ],
 };

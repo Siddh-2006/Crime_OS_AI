@@ -1,16 +1,14 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
 import {
   Building2,
   Plus,
   Edit2,
   PowerOff,
-  LogOut,
+  Power,
 } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
+import { useForm } from 'react-hook-form';
 import { useToast } from '@/hooks/useToast';
 import { ToastContainer } from '@/components/ui/Toast';
 import { Button } from '@/components/ui/Button';
@@ -18,6 +16,7 @@ import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
 import { Modal } from '@/components/ui/Modal';
 import { Loader } from '@/components/ui/Loader';
+import AdminNavbar from '@/components/admin/AdminNavbar';
 import apiClient from '@/lib/axios';
 
 interface DepartmentRegistry {
@@ -32,7 +31,8 @@ interface DepartmentRegistry {
   escalation_path_if_no_response: string;
   notes_or_caveats: string;
   confidence: string;
-  contact_email_pattern?: string;
+  contact_email?: string;
+  qdrant_uuid?: string;
   isActive: boolean;
 }
 
@@ -40,27 +40,30 @@ interface DeptFormValues {
   entity_id: string;
   entity_name: string;
   category: string;
-  what_they_can_provide: string;
-  legal_basis_typically_cited: string;
+  what_they_can_provide: string;       // textarea — newline-separated
+  legal_basis_typically_cited: string; // textarea — newline-separated
   request_format_expected: string;
   typical_response_time: string;
   escalation_path_if_no_response: string;
   notes_or_caveats: string;
   confidence: string;
-  contact_email_pattern?: string;
-  isActive?: boolean;
+  contact_email: string;
 }
 
+const CONFIDENCE_OPTIONS = [
+  { value: 'high',   label: 'High (response highly reliable and consistently provided)' },
+  { value: 'medium', label: 'Medium (response usually provided, occasional delays)' },
+  { value: 'low',    label: 'Low (response unreliable, may need escalation)' },
+];
+
 export default function AdminDepartmentsPage(): React.ReactElement {
-  const { logout } = useAuth();
-  const router = useRouter();
   const { toasts, showToast, removeToast } = useToast();
 
   const [departments, setDepartments] = useState<DepartmentRegistry[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
-
   const [isDeptModalOpen, setIsDeptModalOpen] = useState(false);
   const [editingDept, setEditingDept] = useState<DepartmentRegistry | null>(null);
+  const [showInactive, setShowInactive] = useState(false);
 
   const {
     register,
@@ -68,15 +71,13 @@ export default function AdminDepartmentsPage(): React.ReactElement {
     reset,
     setValue,
     formState: { errors, isSubmitting },
-  } = useForm<DeptFormValues>();
+  } = useForm<DeptFormValues>({ defaultValues: { confidence: 'high' } });
 
   const fetchDepartments = useCallback(async () => {
     try {
       setIsLoadingData(true);
       const res = await apiClient.get('/admin/departments');
-      if (res.data.success) {
-        setDepartments(res.data.data);
-      }
+      if (res.data.success) setDepartments(res.data.data);
     } catch (err: any) {
       showToast('error', err.response?.data?.message || 'Failed to fetch departments');
     } finally {
@@ -84,17 +85,15 @@ export default function AdminDepartmentsPage(): React.ReactElement {
     }
   }, [showToast]);
 
-  useEffect(() => {
-    fetchDepartments();
-  }, [fetchDepartments]);
+  useEffect(() => { fetchDepartments(); }, [fetchDepartments]);
 
-  const openAddDeptModal = () => {
+  const openAddModal = () => {
     setEditingDept(null);
-    reset();
+    reset({ confidence: 'high', contact_email: '' });
     setIsDeptModalOpen(true);
   };
 
-  const openEditDeptModal = (dept: DepartmentRegistry) => {
+  const openEditModal = (dept: DepartmentRegistry) => {
     setEditingDept(dept);
     setValue('entity_id', dept.entity_id);
     setValue('entity_name', dept.entity_name);
@@ -106,159 +105,172 @@ export default function AdminDepartmentsPage(): React.ReactElement {
     setValue('escalation_path_if_no_response', dept.escalation_path_if_no_response || '');
     setValue('notes_or_caveats', dept.notes_or_caveats || '');
     setValue('confidence', dept.confidence || 'high');
-    setValue('contact_email_pattern', dept.contact_email_pattern || '');
+    setValue('contact_email', dept.contact_email || '');
     setIsDeptModalOpen(true);
   };
 
-  const onDeptSubmit = async (data: DeptFormValues) => {
+  const onSubmit = async (data: DeptFormValues) => {
     try {
       const payload = {
         ...data,
-        what_they_can_provide: data.what_they_can_provide.split('\n').filter(s => s.trim()),
-        legal_basis_typically_cited: data.legal_basis_typically_cited.split('\n').filter(s => s.trim()),
+        what_they_can_provide:      data.what_they_can_provide.split('\n').map(s => s.trim()).filter(Boolean),
+        legal_basis_typically_cited: data.legal_basis_typically_cited.split('\n').map(s => s.trim()).filter(Boolean),
       };
 
       if (editingDept) {
-        const res = await apiClient.put(`/admin/departments/${editingDept._id}`, payload);
-        if (res.data.success) {
-          showToast('success', 'Department updated successfully');
-        }
+        await apiClient.put(`/admin/departments/${editingDept._id}`, payload);
+        showToast('Department updated. Vector re-embedded.', 'success');
       } else {
-        const res = await apiClient.post('/admin/departments', payload);
-        if (res.data.success) {
-          showToast('success', 'Department added successfully');
-        }
+        await apiClient.post('/admin/departments', payload);
+        showToast('Department added and embedded.', 'success');
       }
       setIsDeptModalOpen(false);
       fetchDepartments();
     } catch (err: any) {
-      showToast('error', err.response?.data?.message || 'Failed to save department');
+      showToast(err.response?.data?.message || 'Failed to save department', 'error');
     }
   };
 
-  const toggleDeptStatus = async (id: string) => {
-    if (!confirm('Are you sure you want to deactivate this department?')) return;
+  const deactivate = async (dept: DepartmentRegistry) => {
+    if (!confirm(`Deactivate "${dept.entity_name}"? It will be removed from the AI knowledge base.`)) return;
     try {
-      const res = await apiClient.patch(`/admin/departments/${id}/deactivate`);
-      if (res.data.success) {
-        showToast('success', 'Department deactivated');
-        fetchDepartments();
-      }
+      await apiClient.patch(`/admin/departments/${dept._id}/deactivate`);
+      showToast('Department deactivated and vector removed.', 'success');
+      fetchDepartments();
     } catch (err: any) {
-      showToast('error', err.response?.data?.message || 'Failed to deactivate department');
+      showToast(err.response?.data?.message || 'Failed to deactivate', 'error');
     }
   };
+
+  const activate = async (dept: DepartmentRegistry) => {
+    if (!confirm(`Re-activate "${dept.entity_name}"? It will be re-embedded into the AI knowledge base.`)) return;
+    try {
+      await apiClient.patch(`/admin/departments/${dept._id}/activate`);
+      showToast('Department re-activated and re-embedded.', 'success');
+      fetchDepartments();
+    } catch (err: any) {
+      showToast(err.response?.data?.message || 'Failed to activate', 'error');
+    }
+  };
+
+  const visible = showInactive ? departments : departments.filter(d => d.isActive);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
-      
-      {/* Header */}
-      <header className="bg-[#1a237e] text-white py-4 px-6 shadow-md flex justify-between items-center shrink-0">
-        <div className="flex items-center space-x-3">
-          <Building2 size={28} className="text-blue-200" />
-          <h1 className="text-2xl font-bold tracking-tight">Admin | Manage Departments</h1>
-        </div>
-        <div className="flex items-center space-x-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={logout}
-            className="text-white border-white hover:bg-white hover:text-[#1a237e] transition-colors"
-          >
-            <LogOut size={16} className="mr-2" />
-            Logout
-          </Button>
-        </div>
-      </header>
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+      <AdminNavbar />
 
       <main className="flex-grow p-6 lg:px-12 max-w-7xl mx-auto w-full">
-        {/* Actions */}
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold text-gray-800">Department Registry</h2>
-          <Button onClick={openAddDeptModal} className="bg-blue-600 hover:bg-blue-700">
+        {/* Toolbar */}
+        <div className="flex flex-wrap justify-between items-center mb-6 gap-3">
+          <div className="flex items-center gap-4">
+            <h2 className="text-xl font-semibold text-gray-800">Department Registry</h2>
+            <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showInactive}
+                onChange={e => setShowInactive(e.target.checked)}
+                className="rounded"
+              />
+              Show inactive
+            </label>
+          </div>
+          <Button onClick={openAddModal} className="bg-blue-600 hover:bg-blue-700">
             <Plus size={18} className="mr-2" />
             Add Department
           </Button>
         </div>
 
-        {/* Content */}
         {isLoadingData ? (
-          <div className="flex justify-center items-center h-64">
-            <Loader size="lg" />
-          </div>
+          <div className="flex justify-center items-center h-64"><Loader size="lg" /></div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {departments.map((dept) => (
-              <Card key={dept._id} className="p-5 flex flex-col justify-between hover:shadow-lg transition-shadow">
+            {visible.map((dept) => (
+              <Card
+                key={dept._id}
+                className={`p-5 flex flex-col justify-between hover:shadow-lg transition-shadow ${!dept.isActive ? 'opacity-60 border-dashed' : ''}`}
+              >
                 <div>
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-bold text-lg text-[#1a237e] truncate" title={dept.entity_name}>
+                  <div className="flex justify-between items-start mb-1">
+                    <h3 className="font-bold text-base text-[#1a237e] truncate" title={dept.entity_name}>
                       {dept.entity_name}
                     </h3>
-                    <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded">
-                      {dept.category}
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded ${dept.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'}`}>
+                      {dept.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-500 mb-4 font-mono">{dept.entity_id}</p>
-                  
-                  <div className="text-sm text-gray-700 space-y-1 mb-4">
+                  <p className="text-xs text-gray-400 font-mono mb-3">{dept.entity_id}</p>
+
+                  <div className="text-sm text-gray-700 space-y-1">
+                    <p><span className="font-medium">Category:</span> {dept.category}</p>
                     <p><span className="font-medium">Confidence:</span> {dept.confidence}</p>
-                    <p><span className="font-medium">Contact:</span> {dept.contact_email_pattern || 'N/A'}</p>
+                    <p><span className="font-medium">Email:</span> {dept.contact_email || <span className="text-gray-400 italic">not set</span>}</p>
+                    {dept.qdrant_uuid && (
+                      <p className="text-xs text-gray-400 font-mono truncate" title={dept.qdrant_uuid}>
+                        Vector: {dept.qdrant_uuid.slice(0, 16)}…
+                      </p>
+                    )}
                   </div>
                 </div>
 
                 <div className="flex space-x-2 mt-4 pt-4 border-t border-gray-100">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => openEditDeptModal(dept)}
-                    className="flex-1"
-                  >
-                    <Edit2 size={14} className="mr-2" />
-                    Edit
+                  <Button variant="ghost" size="sm" onClick={() => openEditModal(dept)} className="flex-1">
+                    <Edit2 size={14} className="mr-1" /> Edit
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => toggleDeptStatus(dept._id)}
-                    className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50"
-                  >
-                    <PowerOff size={14} className="mr-2" />
-                    Deactivate
-                  </Button>
+                  {dept.isActive ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => deactivate(dept)}
+                      className="flex-1 text-red-600 hover:bg-red-50"
+                    >
+                      <PowerOff size={14} className="mr-1" /> Deactivate
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => activate(dept)}
+                      className="flex-1 text-green-700 hover:bg-green-50"
+                    >
+                      <Power size={14} className="mr-1" /> Activate
+                    </Button>
+                  )}
                 </div>
               </Card>
             ))}
-            
-            {departments.length === 0 && (
+
+            {visible.length === 0 && (
               <div className="col-span-full py-12 text-center text-gray-500 bg-white rounded-lg border border-dashed border-gray-300">
                 <Building2 size={48} className="mx-auto mb-4 text-gray-300" />
-                <p>No departments found in the registry.</p>
+                <p>{showInactive ? 'No departments found.' : 'No active departments. Enable "Show inactive" to see all.'}</p>
               </div>
             )}
           </div>
         )}
       </main>
 
-      {/* Add/Edit Modal */}
+      {/* Add / Edit Modal */}
       <Modal
         isOpen={isDeptModalOpen}
         onClose={() => setIsDeptModalOpen(false)}
-        title={editingDept ? 'Edit Department' : 'Add New Department'}
+        title={editingDept ? `Edit — ${editingDept.entity_name}` : 'Add New Department'}
       >
-        <form onSubmit={handleSubmit(onDeptSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto px-1">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-h-[72vh] overflow-y-auto px-1 pb-2">
+
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Entity ID (Unique)*"
+              label="Entity ID (unique)*"
               {...register('entity_id', { required: 'Required' })}
               error={errors.entity_id?.message}
               disabled={!!editingDept}
+              placeholder="e.g. hdfc_bank"
             />
             <Input
               label="Entity Name*"
               {...register('entity_name', { required: 'Required' })}
               error={errors.entity_name?.message}
+              placeholder="e.g. HDFC Bank"
             />
           </div>
 
@@ -267,23 +279,41 @@ export default function AdminDepartmentsPage(): React.ReactElement {
               label="Category*"
               {...register('category', { required: 'Required' })}
               error={errors.category?.message}
+              placeholder="e.g. bank, telecom, court"
             />
             <Input
-              label="Contact Email Pattern"
-              placeholder="e.g. nodal@wazirx.com"
-              {...register('contact_email_pattern')}
-              error={errors.contact_email_pattern?.message}
+              label="Contact Email"
+              type="email"
+              {...register('contact_email')}
+              placeholder="nodal@department.gov.in"
             />
           </div>
 
+          {/* Confidence dropdown */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              What They Can Provide (One per line)*
+              Confidence
+            </label>
+            <select
+              {...register('confidence')}
+              className="w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 bg-white"
+            >
+              {CONFIDENCE_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Arrays as textarea — one item per line */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              What They Can Provide* <span className="text-gray-400 font-normal">(one item per line)</span>
             </label>
             <textarea
               {...register('what_they_can_provide', { required: 'Required' })}
-              className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+              className="w-full rounded-md border-gray-300 border shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
               rows={4}
+              placeholder="Account KYC details&#10;Transaction statements&#10;CDR logs"
             />
             {errors.what_they_can_provide && (
               <p className="text-red-500 text-xs mt-1">{errors.what_they_can_provide.message}</p>
@@ -292,41 +322,43 @@ export default function AdminDepartmentsPage(): React.ReactElement {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Legal Basis (One per line)
+              Legal Basis <span className="text-gray-400 font-normal">(one item per line)</span>
             </label>
             <textarea
               {...register('legal_basis_typically_cited')}
-              className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+              className="w-full rounded-md border-gray-300 border shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
               rows={3}
+              placeholder="BNSS Section 94&#10;IT Act Section 69"
             />
           </div>
 
           <Input
             label="Request Format Expected"
             {...register('request_format_expected')}
+            placeholder="e.g. Written notice under Section 94 BNSS"
           />
-          
           <Input
             label="Typical Response Time"
             {...register('typical_response_time')}
+            placeholder="e.g. 3–7 working days"
           />
-          
           <Input
-            label="Escalation Path"
+            label="Escalation Path if No Response"
             {...register('escalation_path_if_no_response')}
+            placeholder="e.g. Issue summons to Branch Manager"
           />
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Notes / Caveats</label>
             <textarea
               {...register('notes_or_caveats')}
-              className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+              className="w-full rounded-md border-gray-300 border shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
               rows={2}
             />
           </div>
 
           <div className="flex justify-end space-x-3 pt-4 border-t border-gray-100">
-            <Button type="button" variant="outline" onClick={() => setIsDeptModalOpen(false)}>
+            <Button type="button" variant="ghost" onClick={() => setIsDeptModalOpen(false)}>
               Cancel
             </Button>
             <Button type="submit" isLoading={isSubmitting}>

@@ -152,14 +152,7 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
     setActionLoading(true);
     try {
       await apiClient.post(`/cases/${caseId}/analyze`);
-      // Poll for new snapshot, awaiting so loading state persists
-      const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
-      await wait(5000);
-      await fetchWorkspaceData();
-      await wait(5000);
-      await fetchWorkspaceData();
-      await wait(5000);
-      await fetchWorkspaceData();
+      // SSE in AnalysisPanel handles progress — no polling loop needed here
     } catch (error) {
       console.error('Failed to trigger analysis', error);
       alert('Failed to trigger analysis.');
@@ -187,9 +180,9 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
   }
 
   return (
-    <div className="flex gap-4 items-start" style={{ minHeight: '600px' }}>
-      {/* Main workspace */}
-      <div className="flex-1 min-w-0 space-y-4">
+    <div className="flex gap-4 items-start overflow-hidden" style={{ minHeight: '600px' }}>
+      {/* Main workspace — takes all available width, never overflows */}
+      <div className="flex-1 min-w-0 overflow-hidden space-y-4">
       {/* Tab Bar */}
       <div className="flex gap-1 border-b border-neutral-200 overflow-x-auto items-center">
         {tabs.map((tab) => (
@@ -231,10 +224,12 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
       <div className="min-h-[500px]">
         {activeTab === 'analysis' && (
           <AnalysisPanel
+            caseId={caseId}
             snapshot={snapshot}
             loading={actionLoading && !snapshot}
             onCorrectSnapshot={handleCorrectSnapshot}
             onTriggerAnalysis={handleTriggerAnalysis}
+            onAnalysisComplete={fetchWorkspaceData}
             actionLoading={actionLoading}
           />
         )}
@@ -317,9 +312,9 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
         entry={selectedDiaryEntry}
       />
       </div>
-      {/* Copilot Sidebar */}
+      {/* Copilot Sidebar — hidden on small screens */}
       {copilotOpen && (
-        <div className="w-80 flex-shrink-0 rounded-xl overflow-hidden border border-slate-200 shadow-md" style={{ height: '700px', position: 'sticky', top: '80px' }}>
+        <div className="hidden xl:block w-80 flex-shrink-0 rounded-xl overflow-hidden border border-slate-200 shadow-md" style={{ height: '700px', position: 'sticky', top: '80px' }}>
           <CopilotSidebar
             caseId={caseId}
             onStateChangeApplied={fetchWorkspaceData}

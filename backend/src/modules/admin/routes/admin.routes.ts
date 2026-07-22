@@ -122,5 +122,11 @@ router.patch(
   authorize(Role.ADMIN),
   DepartmentRegistryController.deactivateDepartment,
 );
+router.patch(
+  '/departments/:id/activate',
+  authenticate,
+  authorize(Role.ADMIN),
+  DepartmentRegistryController.activateDepartment,
+);
 
 export default router;

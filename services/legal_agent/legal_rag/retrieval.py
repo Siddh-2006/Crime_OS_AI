@@ -327,7 +327,7 @@ class LegalRetriever:
 
         start_embed = time.perf_counter()
         print("[timing] retrieval:query_embed:start", file=sys.stderr)
-        query_vector = self.embedder.embed_texts([complaint])[0]
+        query_vector = self.embedder.embed_query(complaint)
         embed_elapsed = time.perf_counter() - start_embed
         print(f"[timing] query_embed: {embed_elapsed:.3f}s", file=sys.stderr)
 

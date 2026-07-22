@@ -6,8 +6,8 @@ import { InvestigationOrchestrator } from '../../modules/investigation/services/
 import logger from '../../config/logger';
 
 export function startAnalysisWorker(): void {
-  createWorker<AnalysisJobData>(QUEUE_NAMES.ANALYSIS, async (job: Job<AnalysisJobData>) => {
-    logger.info(`[AnalysisWorker] Processing job ${job.name} (id: ${job.id})`);
+  const worker = createWorker<AnalysisJobData>(QUEUE_NAMES.ANALYSIS, async (job: Job<AnalysisJobData>) => {
+    logger.info(`[AnalysisWorker] ▶ Processing job ${job.name} (id: ${job.id}) for caseId: ${job.data.caseId}`);
 
     try {
       switch (job.name) {
@@ -17,11 +17,30 @@ export function startAnalysisWorker(): void {
         default:
           logger.warn(`[AnalysisWorker] Unknown job name: ${job.name}`);
       }
-    } catch (error) {
-      logger.error(`[AnalysisWorker] Job ${job.name} failed`, { error });
+      logger.info(`[AnalysisWorker] ✅ Job ${job.id} completed successfully for caseId: ${job.data.caseId}`);
+    } catch (error: any) {
+      logger.error(`[AnalysisWorker] ❌ Job ${job.id} FAILED for caseId: ${job.data.caseId}`, {
+        error: error?.message,
+        stack: error?.stack?.split('\n').slice(0, 5).join(' | '),
+      });
+      try {
+        const { publishProgress } = await import('../utils/analysisProgress');
+        await publishProgress(job.data.caseId, 'analysis_error', {
+          error: `Analysis failed: ${error?.message ?? 'Unknown error'}`,
+        } as any);
+      } catch { /* swallow */ }
       throw error;
     }
   });
 
-  logger.info('[AnalysisWorker] Started');
+  // Log when worker actually connects to Redis and is ready to process
+  worker.on('ready', () => {
+    logger.info('[AnalysisWorker] ✅ Worker connected to Redis and ready to process jobs');
+  });
+
+  worker.on('error', (err) => {
+    logger.error('[AnalysisWorker] Worker connection error', { error: err.message });
+  });
+
+  logger.info('[AnalysisWorker] Started — listening for analyze_case jobs');
 }

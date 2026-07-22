@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 // import { AnalysisQueue } from '../../../shared/queue/AnalysisQueue';
+import { subscribeProgress, publishProgress } from '../../../shared/utils/analysisProgress';
+import { getRedisClient } from '../../../config/redis';
 import { RequestComposerService } from '../services/requestComposerService';
 import { InvestigationOrchestrator } from '../services/investigationOrchestrator';
 import { CopilotService } from '../services/copilotService';
@@ -53,20 +55,115 @@ export class InvestigationController {
   static async analyzeCase(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      
-      // Enqueue the job for async processing (Bypassed for local testing without Redis)
+
+      // Publish 'queued' to Redis immediately so state-recovery works on reload
+      await publishProgress(id, 'queued');
+
+      // Run analysis in the background (fire-and-forget).
+      // We use a direct in-process call rather than BullMQ because the worker
+      // was silently failing to dequeue jobs in this environment.
+      // BullMQ enqueue is kept below as a comment for future restoration.
+      //
       // await AnalysisQueue.enqueueAnalyzeCase(id);
-      InvestigationOrchestrator.runAnalysis(id).catch(err => {
-          console.error(`In-process analysis failed:`, err);
+      // logger.info(`Enqueued analyze_case job for caseId: ${id}`);
+      InvestigationOrchestrator.runAnalysis(id).catch(async (err: any) => {
+        // logger.error(`[analyzeCase] In-process analysis failed for ${id}`, { error: err?.message });
+        try {
+          await publishProgress(id, 'analysis_error', {
+            error: `Analysis failed: ${err?.message ?? 'Unknown error'}`,
+          } as any);
+        } catch { /* swallow */ }
       });
 
-      sendSuccess(res, HttpStatusCode.OK, 'Analysis job enqueued successfully. Poll /snapshot/latest for results.');
+      sendSuccess(res, HttpStatusCode.OK, 'Analysis started. Connect to /analysis/progress for live updates.');
     } catch (error) {
       sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, {
         code: 'ANALYSIS_ENQUEUE_FAILED',
-        message: 'Failed to enqueue analysis job'
+        message: 'Failed to start analysis job',
       });
     }
+  }
+
+  /**
+   * GET /cases/:id/analysis/status
+   * State-recovery endpoint — returns current progress stage stored in Redis
+   * (or 'done' if a snapshot already exists, 'idle' if nothing is running).
+   * Called by the frontend on page load BEFORE opening the SSE connection.
+   */
+  static async getAnalysisStatus(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const redis = getRedisClient();
+
+      // Check if there's a stored latest-stage key
+      const stageJson = await redis.get(`analysis:status:${id}`);
+      if (stageJson) {
+        sendSuccess(res, HttpStatusCode.OK, 'Analysis status', JSON.parse(stageJson));
+        return;
+      }
+
+      // If no in-progress marker, check whether a snapshot exists
+      const snapshot = await AnalysisSnapshot.findOne({ case_id: id })
+        .sort({ timestamp: -1 })
+        .select('snapshot_id timestamp')
+        .lean();
+
+      if (snapshot) {
+        sendSuccess(res, HttpStatusCode.OK, 'Analysis status', {
+          stage: 'done', label: 'Analysis complete — results are ready', pct: 100, done: true,
+        });
+      } else {
+        sendSuccess(res, HttpStatusCode.OK, 'Analysis status', {
+          stage: 'idle', label: 'No analysis has been run yet', pct: 0,
+        });
+      }
+    } catch (error) {
+      sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, {
+        code: 'STATUS_FETCH_FAILED',
+        message: 'Failed to fetch analysis status',
+      });
+    }
+  }
+
+  /**
+   * GET /cases/:id/analysis/progress  (SSE endpoint)
+   * Streams real-time progress events published by the BullMQ worker via Redis pub/sub.
+   * The browser opens this as an EventSource after fetching /analysis/status.
+   * The connection auto-closes when the worker publishes the 'done' or 'error' event.
+   */
+  static async streamAnalysisProgress(req: Request, res: Response): Promise<void> {
+    const { id } = req.params;
+
+    // SSE headers
+    res.setHeader('Content-Type',  'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection',    'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no'); // disable nginx buffering
+    res.flushHeaders();
+
+    const send = (data: object) => {
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+      // flush for proxies that buffer
+      if (typeof (res as any).flush === 'function') (res as any).flush();
+    };
+
+    // Send a keepalive comment every 20s so the connection doesn't time out
+    const keepalive = setInterval(() => res.write(': keepalive\n\n'), 20_000);
+
+    const unsubscribe = subscribeProgress(id, (stage) => {
+      send(stage);
+      if (stage.done || stage.error) {
+        clearInterval(keepalive);
+        unsubscribe();
+        res.end();
+      }
+    });
+
+    // Clean up if the client disconnects
+    req.on('close', () => {
+      clearInterval(keepalive);
+      unsubscribe();
+    });
   }
 
   /**

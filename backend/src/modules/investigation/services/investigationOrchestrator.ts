@@ -10,6 +10,7 @@ import { DiaryEntry } from '../models/DiaryEntry.model';
 import { Escalation } from '../models/Escalation.model';
 import { CaseChecklist } from '../models/CaseChecklist.model';
 import { EmailQueue } from '../../../shared/queue/EmailQueue';
+import { publishProgress } from '../../../shared/utils/analysisProgress';
 
 import logger from '../../../config/logger';
 
@@ -18,47 +19,55 @@ export class InvestigationOrchestrator {
    * Executes the full orchestrator loop for a given case.
    */
   static async runAnalysis(caseId: string): Promise<any> {
-    logger.info(`[Orchestrator] Starting analysis loop for caseId: ${caseId}`);
-    
-    // 1. Facts Assembly (pure data, no AI)
+    logger.info(`[Orchestrator] ▶ Starting analysis for caseId: ${caseId}`);
+
+    // 1. Facts Assembly
+    logger.info(`[Orchestrator] [1/7] Assembling facts from MongoDB for caseId: ${caseId}`);
     const factsObject = await buildFactsObject(caseId);
-    
-    // 2. Retrieval Calls (concurrent)
-    // Convert facts to a simple query string for retrieval
+    logger.info(`[Orchestrator] [1/7] Facts assembled — checklist: ${factsObject.checklist.summary.total} steps, evidence: ${factsObject.evidence.summary.total} items, diary: ${factsObject.recent_diary.length} entries`);
+    await publishProgress(caseId, 'facts_assembled');
+
+    // 2. Retrieval
     const queryStr = `Blocked Steps: ${factsObject.checklist.summary.blocked}. Pending High Criticality: ${factsObject.checklist.summary.high_criticality_pending}.`;
-    
-    logger.debug(`[Orchestrator] Dispatching retrieval calls for caseId: ${caseId}`);
+    logger.info(`[Orchestrator] [2/7] Dispatching concurrent retrieval calls — legal agent + IO recommendation`);
     const [legalAgentResult, recommendationResult] = await Promise.all([
       callLegalAgent(queryStr),
-      callIoRecommendation(queryStr)
+      callIoRecommendation(queryStr),
     ]);
-    
-    // 3. Fast Model Pass
-    logger.debug(`[Orchestrator] Running Fast Model pass for caseId: ${caseId}`);
+    const legalFallback = (legalAgentResult as any)._fallback_used;
+    const ioFallback    = (recommendationResult as any)._fallback_used;
+    logger.info(`[Orchestrator] [2/7] Retrieval done — legal agent: ${legalFallback ? 'FALLBACK' : `${(legalAgentResult as any).retrieved_chunks?.length ?? 0} chunks`}, IO recommendation: ${ioFallback ? 'FALLBACK' : 'OK'}`);
+    await publishProgress(caseId, 'legal_retrieved');
+
+    // 3. Confidence scoring (deterministic, no LLM)
+    logger.info(`[Orchestrator] [3/7] Computing algorithmic confidence score`);
+    const confidenceBreakdown = computeConfidenceScore(factsObject);
+    logger.info(`[Orchestrator] [3/7] Confidence: evidence=${(confidenceBreakdown.evidence_coverage * 100).toFixed(0)}% checklist=${(confidenceBreakdown.checklist_progress * 100).toFixed(0)}% final=${(confidenceBreakdown.final_score * 100).toFixed(0)}%`);
+    await publishProgress(caseId, 'confidence_scored');
+
+    // 4. Fast LLM pass
+    logger.info(`[Orchestrator] [4/7] Running fast model pass (temp=0.3, max_tokens=512)`);
     const fastPrompt = buildFastPrompt(factsObject, legalAgentResult);
     const fastResponse = await fastCall(fastPrompt.system, fastPrompt.user) as string;
-    
-    // 4. Deep Model Pass
-    logger.debug(`[Orchestrator] Running Deep Model pass for caseId: ${caseId}`);
-    
-    // Calculate algorithmic confidence score BEFORE calling the LLM
-    const confidenceBreakdown = computeConfidenceScore(factsObject);
-    
+    logger.info(`[Orchestrator] [4/7] Fast pass complete — response length: ${fastResponse?.length ?? 0} chars`);
+    await publishProgress(caseId, 'fast_pass_done');
+
+    // 5. Deep LLM pass
+    logger.info(`[Orchestrator] [5/7] Running deep model pass (temp=0.1, max_tokens=1024, jsonMode=true)`);
     const deepPrompt = buildDeepPrompt(factsObject, legalAgentResult, recommendationResult, confidenceBreakdown);
-    // Request strictly parsed JSON output
     const deepResponse = await deepCall(deepPrompt.system, deepPrompt.user, { jsonMode: true }) as any;
-    
+
     if (!deepResponse || !deepResponse.ranked_next_steps) {
+      logger.error(`[Orchestrator] [5/7] Deep model returned invalid/empty JSON. Response: ${JSON.stringify(deepResponse)?.slice(0, 200)}`);
       throw new Error(`[Orchestrator] Deep model failed to return valid JSON structure.`);
     }
+    logger.info(`[Orchestrator] [5/7] Deep pass complete — ${deepResponse.ranked_next_steps?.length ?? 0} steps, ${deepResponse.suspect_candidates?.length ?? 0} suspects`);
+    await publishProgress(caseId, 'deep_pass_done');
 
-    // 5. Persist Results (Transaction recommended, but keeping it simple for now)
-    logger.debug(`[Orchestrator] Persisting AnalysisSnapshot for caseId: ${caseId}`);
-    
-    // Find previous snapshot to set parent chain
+    // 6. Persist
+    logger.info(`[Orchestrator] [6/7] Persisting AnalysisSnapshot to MongoDB`);
     const previousSnapshot = await AnalysisSnapshot.findOne({ case_id: caseId }).sort({ timestamp: -1 });
 
-    // Normalize confidence from [0,100] to [0,1]
     const normalizeConfidence = (c: number) => c > 1 ? c / 100 : c;
     const ranked_next_steps = deepResponse.ranked_next_steps.map((step: any) => ({
       ...step,
@@ -72,17 +81,19 @@ export class InvestigationOrchestrator {
     const newSnapshot = new AnalysisSnapshot({
       case_id: caseId,
       snapshot_id: uuidv4(),
-      trigger: 'manual', // hardcoded to manual for /analyze endpoint
+      trigger: 'manual',
       facts_used: factsObject,
       ranked_next_steps,
       suspect_candidates,
       narrative_summary: deepResponse.narrative_summary || fastResponse,
       suggested_legal_sections: deepResponse.suggested_legal_sections || [],
-      confidence_breakdown: confidenceBreakdown, // Using algorithmic breakdown per Section 6
+      confidence_breakdown: confidenceBreakdown,
       officer_authored: false,
       parent_snapshot_id: previousSnapshot?._id || undefined,
     });
     const savedSnapshot = await newSnapshot.save();
+    logger.info(`[Orchestrator] [6/7] Snapshot saved — id: ${savedSnapshot.snapshot_id}`);
+    await publishProgress(caseId, 'persisted');
 
     // Append Diary Entry
     await DiaryEntry.create({
@@ -151,10 +162,12 @@ export class InvestigationOrchestrator {
       }
     }
 
-    // 6. Escalation Check
+    // 7. Escalation check
+    logger.info(`[Orchestrator] [7/7] Running escalation check`);
     await this.runEscalationCheck(caseId, savedSnapshot);
 
-    logger.info(`[Orchestrator] Analysis complete for caseId: ${caseId}`);
+    await publishProgress(caseId, 'done');
+    logger.info(`[Orchestrator] ✅ Analysis complete for caseId: ${caseId} — snapshot: ${savedSnapshot.snapshot_id}`);
     return savedSnapshot;
   }
 

@@ -11,7 +11,9 @@ export interface IDepartmentRegistry extends Document {
   escalation_path_if_no_response: string;
   notes_or_caveats: string;
   confidence: string;
-  contact_email_pattern?: string;
+  contact_email?: string;
+  // contact_email_pattern removed — superseded by contact_email
+  qdrant_uuid?: string;   // Qdrant point UUID — set after first embedding, used for update/delete
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -29,7 +31,9 @@ const DepartmentRegistrySchema = new Schema<IDepartmentRegistry>(
     escalation_path_if_no_response: { type: String },
     notes_or_caveats: { type: String },
     confidence: { type: String, default: 'high' },
-    contact_email_pattern: { type: String },
+    contact_email: { type: String },
+    // contact_email_pattern removed — superseded by contact_email
+    qdrant_uuid: { type: String },  // Qdrant point UUID for targeted update/delete
     isActive: { type: Boolean, default: true },
   },
   {

@@ -5,6 +5,7 @@ import { getRedisClient } from './config/redis';
 import { startEmailWorker } from './shared/queue/EmailWorker';
 import { startFirWorker } from './shared/queue/FirWorker';
 import { startAnalysisWorker } from './shared/queue/AnalysisWorker';
+import { startGmailPollWorker } from './shared/queue/GmailPollWorker';
 import { checkOllamaHealth } from './shared/llm/ollamaHealth';
 import env from './config/env';
 import logger from './config/logger';
@@ -38,16 +39,17 @@ async function bootstrap(): Promise<void> {
       startEmailWorker();
       startFirWorker();
       startAnalysisWorker();
+      startGmailPollWorker();
       logger.info('Redis and BullMQ workers started');
     } catch (redisErr) {
       logger.warn('Redis unavailable — queue workers disabled. API will function without async jobs.');
     }
 
-    // Ollama is optional too
+    // Sarvam / llama-server is optional — server still boots without it
     try {
       await checkOllamaHealth();
     } catch (ollamaErr) {
-      logger.warn('Ollama health check failed — LLM calls may fail.', { error: ollamaErr });
+      logger.warn('Sarvam health check failed — LLM calls may fail.', { error: ollamaErr });
     }
 
     const app = createApp();
