@@ -1,0 +1,7 @@
+# Pyrefly configuration for the florence_service.
+# Points the type checker at the local venv so `transformers` and its
+# sub-modules (e.g. transformers.utils.import_utils) are resolved correctly
+# instead of falling back to the global Python 3.13 interpreter.
+
+[python]
+interpreter = ".venv/Scripts/python.exe"

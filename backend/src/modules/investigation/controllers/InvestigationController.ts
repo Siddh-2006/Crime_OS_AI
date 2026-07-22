@@ -185,6 +185,33 @@ export class InvestigationController {
   }
 
   /**
+   * GET /cases/:id/analysis/:snapshotId
+   * Returns a specific AnalysisSnapshot for modal/detail views.
+   */
+  static async getSnapshotById(req: Request, res: Response): Promise<void> {
+    try {
+      const { id, snapshotId } = req.params;
+
+      const snapshot = await AnalysisSnapshot.findOne({ case_id: id, snapshot_id: snapshotId }).lean();
+
+      if (!snapshot) {
+        sendError(res, HttpStatusCode.NOT_FOUND, {
+          code: 'NOT_FOUND',
+          message: 'Analysis snapshot not found for this case.',
+        });
+        return;
+      }
+
+      sendSuccess(res, HttpStatusCode.OK, 'Fetched analysis snapshot', snapshot);
+    } catch (error) {
+      sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, {
+        code: 'SNAPSHOT_FETCH_FAILED',
+        message: 'Failed to fetch analysis snapshot',
+      });
+    }
+  }
+
+  /**
    * Generates a new DepartmentRequest draft using the AI Composer.
    */
   static async generateDraftRequest(req: Request, res: Response): Promise<void> {
@@ -340,7 +367,7 @@ export class InvestigationController {
   static async createManualSnapshot(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { ranked_next_steps, suspect_candidates, narrative_summary } = req.body;
+      const { ranked_next_steps, suspect_candidates, narrative_summary, suggested_legal_sections } = req.body;
 
       if (!narrative_summary || !Array.isArray(ranked_next_steps) || !Array.isArray(suspect_candidates)) {
         sendError(res, HttpStatusCode.BAD_REQUEST, {
@@ -353,7 +380,8 @@ export class InvestigationController {
       const newSnapshot = await InvestigationOrchestrator.createManualSnapshot(id, {
         ranked_next_steps,
         suspect_candidates,
-        narrative_summary
+        narrative_summary,
+        suggested_legal_sections,
       });
 
       sendSuccess(res, HttpStatusCode.CREATED, 'Manual snapshot created successfully', newSnapshot);

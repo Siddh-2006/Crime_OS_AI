@@ -1,18 +1,128 @@
 import { v4 as uuidv4 } from 'uuid';
 import { buildFactsObject } from './factsAssemblyService';
 import { callLegalAgent } from '../../../shared/clients/legalAgentClient';
-import { callIoRecommendation } from '../../../shared/clients/ioRecommendationClient';
+// import { callIoRecommendation } from '../../../shared/clients/ioRecommendationClient';
 import { buildFastPrompt, buildDeepPrompt, buildCorrectionPrompt } from './analysisPromptBuilder';
 import { computeConfidenceScore } from './confidenceScoringService';
 import { fastCall, deepCall } from '../../../shared/llm/ollamaClient';
-import { AnalysisSnapshot } from '../models/AnalysisSnapshot.model';
+import { AnalysisSnapshot, IParticipantRecommendation, ISuspectCandidate, ParticipantRecommendationRole } from '../models/AnalysisSnapshot.model';
 import { DiaryEntry } from '../models/DiaryEntry.model';
 import { Escalation } from '../models/Escalation.model';
 import { CaseChecklist } from '../models/CaseChecklist.model';
 import { EmailQueue } from '../../../shared/queue/EmailQueue';
 import { publishProgress } from '../../../shared/utils/analysisProgress';
+import { ILegalSectionSuggestion } from '../models/LegalSection.schema';
 
 import logger from '../../../config/logger';
+
+function normalizeSuggestedLegalSections(sections: unknown): ILegalSectionSuggestion[] {
+  if (!Array.isArray(sections)) return [];
+
+  return sections.flatMap((section): ILegalSectionSuggestion[] => {
+    if (typeof section === 'string') {
+      return [{ code: section, title: section }];
+    }
+    
+    if (!section || typeof section !== 'object') return [];
+
+    const candidate = section as Record<string, unknown>;
+    if (typeof candidate.code !== 'string' || typeof candidate.title !== 'string') return [];
+
+    return [{
+      code: candidate.code,
+      title: candidate.title,
+      ...(typeof candidate.reason === 'string' ? { reason: candidate.reason } : {}),
+    }];
+  });
+}
+
+function normalizeParticipantRoles(roles: unknown): ParticipantRecommendationRole[] {
+  if (!Array.isArray(roles)) return [];
+
+  const allowedRoles: ParticipantRecommendationRole[] = ['Victim', 'Witness', 'Suspect', 'Accused', 'Complainant'];
+  return Array.from(new Set(
+    roles.filter((role): role is ParticipantRecommendationRole => typeof role === 'string' && allowedRoles.includes(role as ParticipantRecommendationRole))
+  ));
+}
+
+function normalizeParticipantRecommendations(recommendations: unknown): IParticipantRecommendation[] {
+  if (!Array.isArray(recommendations)) return [];
+
+  return recommendations.flatMap((recommendation): IParticipantRecommendation[] => {
+    if (!recommendation || typeof recommendation !== 'object') return [];
+
+    const candidate = recommendation as Record<string, unknown>;
+    if (typeof candidate.name !== 'string' || typeof candidate.reason !== 'string') return [];
+    const reasonText = candidate.reason as string;
+
+    const roles = normalizeParticipantRoles(candidate.roles);
+    if (roles.length === 0) return [];
+
+    const supportingEvidence = Array.isArray(candidate.supporting_evidence_ids)
+      ? candidate.supporting_evidence_ids.filter((value): value is string => typeof value === 'string')
+      : [];
+    const contradictingEvidence = Array.isArray(candidate.contradicting_evidence_ids)
+      ? candidate.contradicting_evidence_ids.filter((value): value is string => typeof value === 'string')
+      : [];
+
+    const normalizedSections = normalizeSuggestedLegalSections(candidate.recommended_sections);
+    const hasSensitiveRole = roles.includes('Suspect') || roles.includes('Accused');
+
+    return [{
+      name: candidate.name,
+      roles,
+      confidence: typeof candidate.confidence === 'number' ? (candidate.confidence > 1 ? candidate.confidence / 100 : candidate.confidence) : 0,
+      reason: reasonText,
+      supporting_evidence_ids: supportingEvidence,
+      contradicting_evidence_ids: contradictingEvidence,
+      recommended_sections: hasSensitiveRole ? normalizedSections.map((section) => ({
+        code: section.code,
+        title: section.title,
+        reason: typeof section.reason === 'string' && section.reason.trim().length > 0 ? section.reason : reasonText,
+      })) : [],
+    }];
+  });
+}
+
+function participantRecommendationsToSuspectCandidates(recommendations: IParticipantRecommendation[]): ISuspectCandidate[] {
+  return recommendations
+    .filter((recommendation) => recommendation.roles.includes('Suspect') || recommendation.roles.includes('Accused'))
+    .map((recommendation) => ({
+      entity: recommendation.name,
+      confidence: recommendation.confidence,
+      supporting_evidence_ids: recommendation.supporting_evidence_ids,
+      contradicting_evidence_ids: recommendation.contradicting_evidence_ids,
+      recommended_sections: recommendation.recommended_sections?.map((section) => ({
+        code: section.code,
+        title: section.title,
+        reason: section.reason,
+      })) ?? [],
+    }));
+}
+
+function suspectCandidatesToParticipantRecommendations(candidates: ISuspectCandidate[]): IParticipantRecommendation[] {
+  return candidates.map((candidate) => ({
+    name: candidate.entity,
+    roles: ['Suspect'],
+    confidence: candidate.confidence,
+    reason: candidate.recommended_sections?.length
+      ? `Legacy suspect candidate aligned to candidate legal sections: ${candidate.recommended_sections.map((section) => section.code).join(', ')}`
+      : 'Legacy suspect candidate output from deep analysis.',
+    supporting_evidence_ids: candidate.supporting_evidence_ids,
+    contradicting_evidence_ids: candidate.contradicting_evidence_ids,
+    recommended_sections: candidate.recommended_sections?.map((section) => ({
+      code: section.code,
+      title: section.title,
+      reason: section.reason || 'Legacy suspect candidate recommendation',
+    })) ?? [],
+  }));
+}
+
+function legalSectionsToLegacyText(sections: ILegalSectionSuggestion[]): string {
+  return sections
+    .map((section) => `${section.code}: ${section.title}${section.reason ? ` - ${section.reason}` : ''}`)
+    .join('\n');
+}
 
 export class InvestigationOrchestrator {
   /**
@@ -30,13 +140,15 @@ export class InvestigationOrchestrator {
     // 2. Retrieval
     const queryStr = `Blocked Steps: ${factsObject.checklist.summary.blocked}. Pending High Criticality: ${factsObject.checklist.summary.high_criticality_pending}.`;
     logger.info(`[Orchestrator] [2/7] Dispatching concurrent retrieval calls — legal agent + IO recommendation`);
-    const [legalAgentResult, recommendationResult] = await Promise.all([
+    
+    const [legalAgentResult] = await Promise.all([
       callLegalAgent(queryStr),
-      callIoRecommendation(queryStr),
+      // callIoRecommendation(queryStr)
     ]);
     const legalFallback = (legalAgentResult as any)._fallback_used;
-    const ioFallback    = (recommendationResult as any)._fallback_used;
-    logger.info(`[Orchestrator] [2/7] Retrieval done — legal agent: ${legalFallback ? 'FALLBACK' : `${(legalAgentResult as any).retrieved_chunks?.length ?? 0} chunks`}, IO recommendation: ${ioFallback ? 'FALLBACK' : 'OK'}`);
+    // const ioFallback    = (recommendationResult as any)._fallback_used;
+    logger.info(`[Orchestrator] [2/7] Retrieval done — legal agent: ${legalFallback ? 'FALLBACK' : `${(legalAgentResult as any).retrieved_chunks?.length ?? 0} chunks`}`);
+    // logger.info(`[Orchestrator] [2/7] Retrieval done — legal agent: ${legalFallback ? 'FALLBACK' : `${(legalAgentResult as any).retrieved_chunks?.length ?? 0} chunks`}, IO recommendation: ${ioFallback ? 'FALLBACK' : 'OK'}`);
     await publishProgress(caseId, 'legal_retrieved');
 
     // 3. Confidence scoring (deterministic, no LLM)
@@ -61,7 +173,8 @@ export class InvestigationOrchestrator {
     const deptWhitelist = activeDepts.map((d: any) => `  ${d.entity_id} → ${d.entity_name}`).join('\n');
     logger.debug(`[Orchestrator] Dept whitelist: ${activeDepts.length} active departments`);
 
-    const deepPrompt = buildDeepPrompt(factsObject, legalAgentResult, recommendationResult, confidenceBreakdown, deptWhitelist);
+    const deepPrompt = buildDeepPrompt(factsObject, legalAgentResult, confidenceBreakdown, deptWhitelist);
+    // const deepPrompt = buildDeepPrompt(factsObject, legalAgentResult, recommendationResult, confidenceBreakdown, deptWhitelist);
     const deepResponse = await deepCall(deepPrompt.system, deepPrompt.user, { jsonMode: true }) as any;
 
     if (!deepResponse || !deepResponse.ranked_next_steps) {
@@ -80,10 +193,17 @@ export class InvestigationOrchestrator {
       ...step,
       confidence: normalizeConfidence(step.confidence)
     }));
-    const suspect_candidates = (deepResponse.suspect_candidates || []).map((cand: any) => ({
+    const legacySuspectCandidates = (deepResponse.suspect_candidates || []).map((cand: any) => ({
       ...cand,
-      confidence: normalizeConfidence(cand.confidence)
+      confidence: normalizeConfidence(cand.confidence),
+      recommended_sections: normalizeSuggestedLegalSections(cand.recommended_sections),
     }));
+    const participant_recommendations = normalizeParticipantRecommendations(deepResponse.participant_recommendations);
+    const normalizedParticipantRecommendations = participant_recommendations.length > 0
+      ? participant_recommendations
+      : suspectCandidatesToParticipantRecommendations(legacySuspectCandidates);
+    const normalizedSuspectCandidates = participantRecommendationsToSuspectCandidates(normalizedParticipantRecommendations);
+    const suggested_legal_sections = normalizeSuggestedLegalSections(deepResponse.suggested_legal_sections);
 
     const newSnapshot = new AnalysisSnapshot({
       case_id: caseId,
@@ -91,7 +211,8 @@ export class InvestigationOrchestrator {
       trigger: 'manual',
       facts_used: factsObject,
       ranked_next_steps,
-      suspect_candidates,
+      suspect_candidates: normalizedSuspectCandidates,
+      participant_recommendations: normalizedParticipantRecommendations,
       narrative_summary: deepResponse.narrative_summary || fastResponse,
       suggested_legal_sections: deepResponse.suggested_legal_sections || [],
       confidence_breakdown: confidenceBreakdown,
@@ -148,7 +269,7 @@ export class InvestigationOrchestrator {
       }
     }
 
-    if (deepResponse.suggested_legal_sections) {
+    if (suggested_legal_sections.length > 0) {
       const { Complaint } = await import('../../complaint/models/Complaint.model');
       const complaintDoc = await Complaint.findById(caseId);
       if (complaintDoc) {
@@ -161,7 +282,7 @@ export class InvestigationOrchestrator {
               version: lastVersion + 1,
               editedBy: 'IO', // Needs to match 'Citizen' | 'SHO' | 'IO'
               editorId: null, // AI system
-              content: Array.isArray(deepResponse.suggested_legal_sections) ? deepResponse.suggested_legal_sections.join('\n') : deepResponse.suggested_legal_sections,
+              content: legalSectionsToLegacyText(suggested_legal_sections),
               timestamp: new Date()
             }
           }
@@ -302,10 +423,17 @@ export class InvestigationOrchestrator {
       ...step,
       confidence: normalizeConfidence(step.confidence)
     }));
-    const suspect_candidates = (deepResponse.suspect_candidates || []).map((cand: any) => ({
+    const legacySuspectCandidates = (deepResponse.suspect_candidates || []).map((cand: any) => ({
       ...cand,
-      confidence: normalizeConfidence(cand.confidence)
+      confidence: normalizeConfidence(cand.confidence),
+      recommended_sections: normalizeSuggestedLegalSections(cand.recommended_sections),
     }));
+    const participant_recommendations = normalizeParticipantRecommendations(deepResponse.participant_recommendations);
+    const normalizedParticipantRecommendations = participant_recommendations.length > 0
+      ? participant_recommendations
+      : suspectCandidatesToParticipantRecommendations(legacySuspectCandidates);
+    const suspect_candidates = participantRecommendationsToSuspectCandidates(normalizedParticipantRecommendations);
+    const suggested_legal_sections = normalizeSuggestedLegalSections(deepResponse.suggested_legal_sections);
 
     const newSnapshot = new AnalysisSnapshot({
       case_id: caseId,
@@ -314,7 +442,9 @@ export class InvestigationOrchestrator {
       facts_used: originalSnapshot.facts_used, // keep the same facts as the parent
       ranked_next_steps,
       suspect_candidates,
+      participant_recommendations: normalizedParticipantRecommendations,
       narrative_summary: deepResponse.narrative_summary,
+      suggested_legal_sections,
       confidence_breakdown: originalSnapshot.confidence_breakdown, // Keep same breakdown or recalulate? Keeping same for audit traceability.
       officer_authored: false,
       parent_snapshot_id: snapshotId,
@@ -344,7 +474,9 @@ export class InvestigationOrchestrator {
   static async createManualSnapshot(caseId: string, payload: {
     ranked_next_steps: any[];
     suspect_candidates: any[];
+    participant_recommendations?: IParticipantRecommendation[];
     narrative_summary: string;
+    suggested_legal_sections?: ILegalSectionSuggestion[];
   }): Promise<any> {
     logger.info(`[Orchestrator] Creating manual officer snapshot for caseId: ${caseId}`);
 
@@ -360,7 +492,9 @@ export class InvestigationOrchestrator {
       facts_used: factsObject,
       ranked_next_steps: payload.ranked_next_steps,
       suspect_candidates: payload.suspect_candidates,
+      participant_recommendations: payload.participant_recommendations || [],
       narrative_summary: payload.narrative_summary,
+      suggested_legal_sections: normalizeSuggestedLegalSections(payload.suggested_legal_sections),
       confidence_breakdown: computeConfidenceScore(factsObject),
       officer_authored: true,
       parent_snapshot_id: previousSnapshot?._id || undefined,

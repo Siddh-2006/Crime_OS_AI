@@ -14,6 +14,9 @@ import {
   Building2,
 } from 'lucide-react';
 import apiClient from '@/lib/axios';
+import { Card, CardHeader } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+
 import { StepProofModal } from './StepProofModal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────

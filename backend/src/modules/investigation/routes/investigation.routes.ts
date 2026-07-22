@@ -1,11 +1,19 @@
 import { Router } from 'express';
 import { InvestigationController } from '../controllers/InvestigationController';
 import { CitizenRequestController } from '../controllers/CitizenRequestController';
+import caseParticipantRoutes from './caseParticipant.routes';
+import chargeSheetRoutes from './chargeSheet.routes';
 import { DepartmentRegistry } from '../../admin/models/DepartmentRegistry.model';
-// Optional: import authentication middlewares if this needs to be protected immediately
-// import { authenticate } from '../../../common/middlewares/auth.middleware';
+import { authenticate } from '../../../common/middlewares/authenticate.middleware';
+import { authorize } from '../../../common/middlewares/authorize.middleware';
+import { Role } from '../../../shared/enums/roles.enum';
 
 const router = Router();
+
+router.use(authenticate, authorize(Role.SHO, Role.IO));
+
+router.use(caseParticipantRoutes);
+router.use(chargeSheetRoutes);
 
 // Endpoint to trigger async analysis
 router.post('/:id/analyze', InvestigationController.analyzeCase);
@@ -31,6 +39,7 @@ router.post('/:id/copilot/ask', InvestigationController.askCopilot);
 
 // Endpoint to get the latest analysis snapshot
 router.get('/:id/analysis/latest', InvestigationController.getLatestSnapshot);
+router.get('/:id/analysis/:snapshotId', InvestigationController.getSnapshotById);
 
 // Officer manual overrides
 router.post('/:id/analysis/:snapshotId/correct', InvestigationController.correctSnapshot);

@@ -32,6 +32,12 @@ export default function SnapshotDetailModal({ isOpen, onClose, caseId, snapshotI
 
   if (!isOpen) return null;
 
+  const confidencePercent = snapshot?.confidence_breakdown?.final_score !== undefined
+    ? `${Math.round(Number(snapshot.confidence_breakdown.final_score) * 100)}%`
+    : 'N/A';
+  const rankedSteps = Array.isArray(snapshot?.ranked_next_steps) ? snapshot.ranked_next_steps : [];
+  const narrative = snapshot?.narrative_summary || 'No narrative available.';
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-neutral-900/40 backdrop-blur-sm p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl flex flex-col h-[85vh] max-h-[850px] overflow-hidden">
@@ -64,7 +70,7 @@ export default function SnapshotDetailModal({ isOpen, onClose, caseId, snapshotI
                   <p className="text-xs text-neutral-500">Based on evidence verified at the time</p>
                 </div>
                 <div className="text-2xl font-black text-blue-600">
-                  {snapshot.confidence_score}%
+                  {confidencePercent}
                 </div>
               </div>
 
@@ -72,23 +78,23 @@ export default function SnapshotDetailModal({ isOpen, onClose, caseId, snapshotI
               <div className="bg-white p-5 rounded-xl border border-neutral-200 shadow-sm">
                 <h3 className="text-sm font-bold text-neutral-800 mb-3 border-b border-neutral-100 pb-2">AI Narrative</h3>
                 <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap">
-                  {snapshot.narrative}
+                  {narrative}
                 </p>
               </div>
 
               {/* Ranked Steps */}
-              {snapshot.ranked_steps && snapshot.ranked_steps.length > 0 && (
+              {rankedSteps.length > 0 && (
                 <div className="bg-white p-5 rounded-xl border border-neutral-200 shadow-sm">
                   <h3 className="text-sm font-bold text-neutral-800 mb-3 border-b border-neutral-100 pb-2">Suggested Next Steps</h3>
                   <div className="space-y-3">
-                    {snapshot.ranked_steps.map((step: any, idx: number) => (
+                    {rankedSteps.map((step: any, idx: number) => (
                       <div key={idx} className="flex gap-3 items-start">
                         <div className="bg-neutral-100 text-neutral-500 font-bold text-xs h-6 w-6 rounded flex items-center justify-center shrink-0 mt-0.5">
                           {idx + 1}
                         </div>
                         <div>
                           <p className="text-sm font-bold text-neutral-900">{step.step_id.replace(/_/g, ' ').toUpperCase()}</p>
-                          <p className="text-xs text-neutral-500 mt-1">{step.reasoning}</p>
+                          <p className="text-xs text-neutral-500 mt-1">{step.reason}</p>
                         </div>
                       </div>
                     ))}

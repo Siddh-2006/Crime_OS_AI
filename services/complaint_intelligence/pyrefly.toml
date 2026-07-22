@@ -1,0 +1,6 @@
+# Pyrefly configuration for complaint_intelligence service
+# This tells Pyrefly where to root module resolution for imports like `app.llm.client`
+
+[python]
+# The import root is this directory, so `app` resolves to `./app/`
+import_roots = ["."]

@@ -38,6 +38,11 @@ export const API_ROUTES = {
     UPDATE: (id: string) => `/complaints/${id}/update`,
     REGISTER_FIR: (id: string) => `/complaints/${id}/register-fir`,
   },
+  CASES: {
+    PARTICIPANTS: (id: string) => `/cases/${id}/participants`,
+    APPROVE_PARTICIPANT_RECOMMENDATION: (id: string) => `/cases/${id}/participants/recommendations/approve`,
+    ATTACH_PARTICIPANT_SECTIONS: (id: string, participantId: string) => `/cases/${id}/participants/${participantId}/sections/attach`,
+  },
 } as const;
 
 export const APP_ROUTES = {

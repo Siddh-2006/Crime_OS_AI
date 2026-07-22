@@ -1,9 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Bot, UserCircle, Send, AlertTriangle, RefreshCw, Scale, ShieldAlert } from 'lucide-react';
+import { Loader } from '@/components/ui/Loader';
+import { Modal } from '@/components/ui/Modal';
+import { Select } from '@/components/ui/Select';
+import { Bot, UserCircle, Send, AlertTriangle, ShieldAlert, RefreshCw, Scale, Users, Plus, XCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import apiClient from '@/lib/axios';
 
@@ -23,10 +26,33 @@ interface NextStep {
   evidence_needed: string[];
 }
 
+interface SuggestedLegalSection {
+  code: string;
+  title: string;
+  reason?: string;
+}
+
+interface ParticipantRecommendation {
+  name: string;
+  roles: Array<'Victim' | 'Witness' | 'Suspect' | 'Accused' | 'Complainant'>;
+  confidence: number;
+  reason: string;
+  supporting_evidence_ids: string[];
+  contradicting_evidence_ids: string[];
+  recommended_sections?: SuggestedLegalSection[];
+}
+
+interface ParticipantSummary {
+  participant_id: string;
+  name: string;
+  roles: string[];
+}
+
 interface Snapshot {
   snapshot_id: string;
   timestamp: string;
   narrative_summary: string;
+  participant_recommendations?: ParticipantRecommendation[];
   suspect_candidates: Suspect[];
   ranked_next_steps: NextStep[];
   confidence_breakdown?: {
@@ -36,7 +62,7 @@ interface Snapshot {
     contradiction_penalty: number;
     final_score: number;
   };
-  suggested_legal_sections?: string[];
+  suggested_legal_sections?: SuggestedLegalSection[];
   trigger: string;
   officer_authored: boolean;
 }
@@ -52,9 +78,12 @@ interface ProgressStage {
 interface AnalysisPanelProps {
   caseId: string;
   snapshot: Snapshot | null;
+  participants: ParticipantSummary[];
   loading: boolean;
   onCorrectSnapshot: (message: string) => Promise<void>;
   onTriggerAnalysis: () => Promise<void>;
+  onAttachSectionsToParticipant: (participantId: string, sections: SuggestedLegalSection[]) => Promise<void>;
+  onAcceptRecommendedSection: (recommendation: ParticipantRecommendation, section: SuggestedLegalSection) => Promise<void>;
   /** Called when SSE delivers 'done' so the workspace can refresh the snapshot */
   onAnalysisComplete: () => void;
   actionLoading: boolean;
@@ -102,9 +131,17 @@ export function AnalysisPanel({
   onCorrectSnapshot,
   onTriggerAnalysis,
   onAnalysisComplete,
+  actionLoading: boolean;
+  participants,
+  onAttachSectionsToParticipant,
+  onAcceptRecommendedSection,
   actionLoading,
 }: AnalysisPanelProps) {
   const [correctionMsg, setCorrectionMsg] = useState('');
+  const [attachModalOpen, setAttachModalOpen] = useState(false);
+  const [selectedParticipantId, setSelectedParticipantId] = useState('');
+  const [selectedSectionCodes, setSelectedSectionCodes] = useState<string[]>([]);
+  const [dismissedRecommendationKeys, setDismissedRecommendationKeys] = useState<string[]>([]);
 
   // SSE / progress state
   const [progress, setProgress] = useState<ProgressStage | null>(null);
@@ -136,7 +173,7 @@ export function AnalysisPanel({
       },
     );
     sseCleanupRef.current = cleanup;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [caseId]); // intentionally stable — onAnalysisComplete handled via ref
 
   // ── State-recovery on mount ─────────────────────────────────────────────
@@ -164,8 +201,8 @@ export function AnalysisPanel({
       cancelled = true;
       sseCleanupRef.current?.();
     };
-  // Only run on mount (caseId won't change within this component lifetime)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Only run on mount (caseId won't change within this component lifetime)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [caseId]);
 
   const handleTriggerAnalysis = async () => {
@@ -188,7 +225,54 @@ export function AnalysisPanel({
   };
 
   const isAnalysing = !!progress && !progress.done && !progress.error;
-  const hasFailed   = !!progress?.error;
+  const hasFailed = !!progress?.error;
+  const eligibleParticipants = useMemo(
+    () => participants.filter((participant) => participant.roles.some((role) => role === 'Suspect' || role === 'Accused')),
+    [participants],
+  );
+
+  const openAttachModal = (preselectedCodes: string[] = []) => {
+    setSelectedSectionCodes(preselectedCodes);
+    setSelectedParticipantId('');
+    setAttachModalOpen(true);
+  };
+
+  const toggleSectionSelection = (code: string) => {
+    setSelectedSectionCodes((current) => (
+      current.includes(code)
+        ? current.filter((item) => item !== code)
+        : [...current, code]
+    ));
+  };
+
+  const handleAttachSelectedSections = async () => {
+    if (!snapshot || !selectedParticipantId || selectedSectionCodes.length === 0) return;
+
+    const sections = (snapshot.suggested_legal_sections || []).filter((section) => selectedSectionCodes.includes(section.code));
+    if (sections.length === 0) return;
+
+    await onAttachSectionsToParticipant(selectedParticipantId, sections);
+    setAttachModalOpen(false);
+    setSelectedParticipantId('');
+    setSelectedSectionCodes([]);
+  };
+
+  const attachableRecommendations = (snapshot?.participant_recommendations || []).filter(
+    (recommendation) =>
+      recommendation.roles.some((role) => role === 'Suspect' || role === 'Accused') &&
+      (recommendation.recommended_sections?.length || 0) > 0,
+  );
+
+  const isRecommendationDismissed = (recommendationName: string, sectionCode: string) =>
+    dismissedRecommendationKeys.includes(`${recommendationName}:${sectionCode}`);
+
+  if (loading) {
+    return (
+      <Card className="h-full flex items-center justify-center min-h-[400px]">
+        <Loader />
+      </Card>
+    );
+  }
 
   // ── Idle / no snapshot ──────────────────────────────────────────────────
   if (!loading && !snapshot && !isAnalysing && !hasFailed) {
@@ -332,127 +416,305 @@ export function AnalysisPanel({
                 <h4 className="text-xs font-bold text-indigo-900 uppercase tracking-wider">
                   Applicable Legal Sections
                 </h4>
-              </div>
-              <ul className="p-4 bg-white space-y-2">
-                {snapshot.suggested_legal_sections.map((section, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-sm text-neutral-700 bg-indigo-50/30 p-2 rounded border border-indigo-50">
-                    <span className="text-indigo-400 mt-0.5">•</span>
-                    <ReactMarkdown>{section}</ReactMarkdown>
-                  </li>
-                ))}
-              </ul>
-            </div>
+                <div className="mt-4 border border-indigo-100 rounded-lg overflow-hidden shadow-sm">
+                  <div className="bg-indigo-50 px-4 py-2 flex items-center justify-between gap-2 border-b border-indigo-100">
+                    <div className="flex items-center gap-2">
+                      <Scale className="text-indigo-600 h-4 w-4" />
+                      <h4 className="text-xs font-bold text-indigo-900 uppercase tracking-wider">Legal Advisor (Applicable Sections)</h4>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => openAttachModal((snapshot.suggested_legal_sections || []).map((section) => section.code))}
+                      disabled={actionLoading || eligibleParticipants.length === 0}
+                      leftIcon={<Plus size={12} />}
+                      className="!px-2 !py-1 text-[11px]"
+                    >
+                      Attach Sections
+                    </Button>
+                  </div>
+                  <div className="p-4 bg-white">
+                    <ul className="space-y-2">
+                      {snapshot.suggested_legal_sections.map((section, idx) => (
+                        <li key={idx} className="flex items-start gap-2 text-sm text-neutral-700 bg-indigo-50/30 p-2 rounded border border-indigo-50">
+                          <span className="text-indigo-400 mt-0.5">•</span>
+                          <div className="flex-1 min-w-0">
+                            <strong>{section.code}</strong>: {section.title}
+                            {section.reason && <span className="block mt-1 text-xs text-neutral-500">{section.reason}</span>}
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => openAttachModal([section.code])}
+                            disabled={actionLoading || eligibleParticipants.length === 0}
+                            className="!px-2 !py-1 text-[11px] flex-shrink-0"
+                          >
+                            Attach
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <ul className="p-4 bg-white space-y-2">
+                    {snapshot.suggested_legal_sections.map((section, idx) => (
+                      <li key={idx} className="flex items-start gap-2 text-sm text-neutral-700 bg-indigo-50/30 p-2 rounded border border-indigo-50">
+                        <span className="text-indigo-400 mt-0.5">•</span>
+                        <ReactMarkdown>{section}</ReactMarkdown>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
           )}
 
-          {/* Confidence Breakdown */}
-          {snapshot.confidence_breakdown && (
-            <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100">
-              <p className="text-[10px] font-bold text-blue-800 uppercase tracking-wider mb-2">Score Breakdown</p>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                <div>
-                  <p className="text-neutral-500">Evidence</p>
-                  <p className="font-semibold text-neutral-800">{(snapshot.confidence_breakdown.evidence_coverage * 100).toFixed(0)}%</p>
-                </div>
-                <div>
-                  <p className="text-neutral-500">Checklist</p>
-                  <p className="font-semibold text-neutral-800">{(snapshot.confidence_breakdown.checklist_progress * 100).toFixed(0)}%</p>
-                </div>
-                <div>
-                  <p className="text-neutral-500">Corroboration</p>
-                  <p className="font-semibold text-green-600">+{(snapshot.confidence_breakdown.corroboration * 100).toFixed(0)}</p>
-                </div>
-                <div>
-                  <p className="text-neutral-500">Contradiction</p>
-                  <p className="font-semibold text-red-600">-{(snapshot.confidence_breakdown.contradiction_penalty * 100).toFixed(0)}</p>
-                </div>
+                {/* Confidence Breakdown */}
+                {attachableRecommendations.length > 0 && (
+                  <div className="mt-4 border border-emerald-100 rounded-lg overflow-hidden shadow-sm">
+                    <div className="bg-emerald-50 px-4 py-2 flex items-center gap-2 border-b border-emerald-100">
+                      <Users className="text-emerald-600 h-4 w-4" />
+                      <h4 className="text-xs font-bold text-emerald-900 uppercase tracking-wider">Participant Section Suggestions</h4>
+                    </div>
+                    <div className="p-4 bg-white space-y-4">
+                      {attachableRecommendations.map((recommendation) => (
+                        <div key={`${recommendation.name}-${recommendation.roles.join(',')}`} className="rounded-lg border border-neutral-200 p-3 bg-neutral-50/40">
+                          <div className="flex items-start justify-between gap-3 mb-3">
+                            <div>
+                              <p className="text-sm font-bold text-neutral-900">{recommendation.name}</p>
+                              <p className="text-xs text-neutral-500 mt-0.5">
+                                {recommendation.roles.join(', ')} • {(recommendation.confidence * 100).toFixed(0)}% confidence
+                              </p>
+                            </div>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+                              Suggested Attachments
+                            </span>
+                          </div>
+
+                          <div className="space-y-2">
+                            {recommendation.recommended_sections?.map((section) => {
+                              const dismissalKey = `${recommendation.name}:${section.code}`;
+                              if (isRecommendationDismissed(recommendation.name, section.code)) return null;
+
+                              return (
+                                <div key={dismissalKey} className="flex items-start justify-between gap-3 rounded-md border border-emerald-100 bg-white p-3">
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-semibold text-neutral-800">
+                                      <strong>{section.code}</strong>: {section.title}
+                                    </p>
+                                    {section.reason && <p className="text-xs text-neutral-500 mt-1">{section.reason}</p>}
+                                  </div>
+                                  <div className="flex items-center gap-2 flex-shrink-0">
+                                    <Button
+                                      size="sm"
+                                      onClick={() => onAcceptRecommendedSection(recommendation, section)}
+                                      isLoading={actionLoading}
+                                      disabled={actionLoading}
+                                      className="!px-2.5 !py-1 text-[11px]"
+                                    >
+                                      Accept
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => setDismissedRecommendationKeys((current) => [...current, dismissalKey])}
+                                      disabled={actionLoading}
+                                      leftIcon={<XCircle size={12} />}
+                                      className="!px-2.5 !py-1 text-[11px]"
+                                    >
+                                      Reject
+                                    </Button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {snapshot.confidence_breakdown && (
+                  <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100">
+                    <p className="text-[10px] font-bold text-blue-800 uppercase tracking-wider mb-2">Score Breakdown</p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                      <div>
+                        <p className="text-neutral-500">Evidence</p>
+                        <p className="font-semibold text-neutral-800">{(snapshot.confidence_breakdown.evidence_coverage * 100).toFixed(0)}%</p>
+                      </div>
+                      <div>
+                        <p className="text-neutral-500">Checklist</p>
+                        <p className="font-semibold text-neutral-800">{(snapshot.confidence_breakdown.checklist_progress * 100).toFixed(0)}%</p>
+                      </div>
+                      <div>
+                        <p className="text-neutral-500">Corroboration</p>
+                        <p className="font-semibold text-green-600">+{(snapshot.confidence_breakdown.corroboration * 100).toFixed(0)}</p>
+                      </div>
+                      <div>
+                        <p className="text-neutral-500">Contradiction</p>
+                        <p className="font-semibold text-red-600">-{(snapshot.confidence_breakdown.contradiction_penalty * 100).toFixed(0)}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
-        </div>
-      </Card>
+            </Card>
 
       {/* Suspects + Next Steps */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card className="flex flex-col">
-          <CardHeader title="Suspect Candidates" />
-          <div className="mt-3 space-y-3 overflow-y-auto max-h-[300px] pr-2">
-            {snapshot.suspect_candidates.length === 0 ? (
-              <p className="text-sm text-neutral-400 italic">No suspects identified yet.</p>
-            ) : (
-              snapshot.suspect_candidates.map((s, idx) => (
-                <div key={idx} className="p-3 border border-neutral-200 rounded-lg bg-white shadow-sm flex items-start gap-3">
-                  <UserCircle className="text-neutral-400 h-8 w-8 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-center mb-1">
-                      <p className="text-sm font-bold text-neutral-900 truncate">{s.entity}</p>
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded ${s.confidence > 0.7 ? 'bg-red-100 text-red-700' : s.confidence > 0.4 ? 'bg-yellow-100 text-yellow-700' : 'bg-neutral-100 text-neutral-600'}`}>
-                        {(s.confidence * 100).toFixed(0)}%
-                      </span>
-                    </div>
-                    {s.contradicting_evidence_ids.length > 0 && (
-                      <p className="text-[10px] text-red-600 font-semibold flex items-center gap-1 mt-1">
-                        <AlertTriangle size={12} /> Contradictory evidence found
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </Card>
-
-        <Card className="flex flex-col">
-          <CardHeader title="Ranked Next Steps" />
-          <div className="mt-3 space-y-3 overflow-y-auto max-h-[300px] pr-2">
-            {snapshot.ranked_next_steps.length === 0 ? (
-              <p className="text-sm text-neutral-400 italic">No further steps suggested.</p>
-            ) : (
-              snapshot.ranked_next_steps.map((step, idx) => (
-                <div key={idx} className="p-3 border border-primary-100 rounded-lg bg-primary-50/30 flex gap-3 items-start">
-                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold">
-                    {idx + 1}
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-neutral-800">{step.step_id.replace(/_/g, ' ')}</p>
-                    <p className="text-xs text-neutral-600 mt-1">{step.reason}</p>
-                    {step.evidence_needed.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {step.evidence_needed.map(ev => (
-                          <span key={ev} className="text-[9px] uppercase tracking-wider bg-white border border-neutral-200 text-neutral-500 px-1.5 py-0.5 rounded">
-                            Requires: {ev}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card className="flex flex-col">
+              <CardHeader title="Suspect Candidates" />
+              <div className="mt-3 space-y-3 overflow-y-auto max-h-[300px] pr-2">
+                {snapshot.suspect_candidates.length === 0 ? (
+                  <p className="text-sm text-neutral-400 italic">No suspects identified yet.</p>
+                ) : (
+                  snapshot.suspect_candidates.map((s, idx) => (
+                    <div key={idx} className="p-3 border border-neutral-200 rounded-lg bg-white shadow-sm flex items-start gap-3">
+                      <UserCircle className="text-neutral-400 h-8 w-8 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-center mb-1">
+                          <p className="text-sm font-bold text-neutral-900 truncate">{s.entity}</p>
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded ${s.confidence > 0.7 ? 'bg-red-100 text-red-700' : s.confidence > 0.4 ? 'bg-yellow-100 text-yellow-700' : 'bg-neutral-100 text-neutral-600'}`}>
+                            {(s.confidence * 100).toFixed(0)}%
                           </span>
-                        ))}
+                        </div>
+                        {s.contradicting_evidence_ids.length > 0 && (
+                          <p className="text-[10px] text-red-600 font-semibold flex items-center gap-1 mt-1">
+                            <AlertTriangle size={12} /> Contradictory evidence found
+                          </p>
+                        )}
                       </div>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </Card>
-      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
 
-      {/* Officer Override */}
-      <Card>
-        <div className="flex items-center gap-2 mb-2">
-          <ShieldAlert className="text-orange-500 h-4 w-4" />
-          <h4 className="text-xs font-bold text-neutral-700 uppercase">Officer Override & Correction</h4>
+            <Card className="flex flex-col">
+              <CardHeader title="Ranked Next Steps" />
+              <div className="mt-3 space-y-3 overflow-y-auto max-h-[300px] pr-2">
+                {snapshot.ranked_next_steps.length === 0 ? (
+                  <p className="text-sm text-neutral-400 italic">No further steps suggested.</p>
+                ) : (
+                  snapshot.ranked_next_steps.map((step, idx) => (
+                    <div key={idx} className="p-3 border border-primary-100 rounded-lg bg-primary-50/30 flex gap-3 items-start">
+                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold">
+                        {idx + 1}
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-neutral-800">{step.step_id.replace(/_/g, ' ')}</p>
+                        <p className="text-xs text-neutral-600 mt-1">{step.reason}</p>
+                        {step.evidence_needed.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {step.evidence_needed.map(ev => (
+                              <span key={ev} className="text-[9px] uppercase tracking-wider bg-white border border-neutral-200 text-neutral-500 px-1.5 py-0.5 rounded">
+                                Requires: {ev}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+          </div>
+
+          <Modal
+            isOpen={attachModalOpen}
+            onClose={() => setAttachModalOpen(false)}
+            title="Attach Case Sections"
+            size="lg"
+            footer={
+              <div className="flex gap-2">
+                <Button variant="ghost" size="sm" onClick={() => setAttachModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleAttachSelectedSections}
+                  disabled={!selectedParticipantId || selectedSectionCodes.length === 0 || actionLoading}
+                  isLoading={actionLoading}
+                >
+                  Attach Selected Sections
+                </Button>
+              </div>
+            }
+          >
+            <div className="space-y-4">
+              <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+                <p className="text-xs font-bold uppercase tracking-wider text-neutral-500 mb-2">Select Accused / Suspect</p>
+                {eligibleParticipants.length > 0 ? (
+                  <Select
+                    value={selectedParticipantId}
+                    onChange={(e) => setSelectedParticipantId(e.target.value)}
+                    placeholder="Choose participant"
+                    options={eligibleParticipants.map((participant) => ({
+                      value: participant.participant_id,
+                      label: `${participant.name} (${participant.roles.join(', ')})`,
+                    }))}
+                  />
+                ) : (
+                  <p className="text-sm text-neutral-500 italic">No approved Suspect or Accused participants are available yet.</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold uppercase tracking-wider text-neutral-500">Applicable Sections</p>
+                  <p className="text-[10px] text-neutral-400">Select one or more sections to attach.</p>
+                </div>
+                <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+                  {(snapshot?.suggested_legal_sections || []).map((section) => {
+                    const checked = selectedSectionCodes.includes(section.code);
+                    return (
+                      <label
+                        key={section.code}
+                        className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors ${checked ? 'border-indigo-300 bg-indigo-50/40' : 'border-neutral-200 bg-white hover:border-neutral-300'}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleSectionSelection(section.code)}
+                          className="mt-1 h-4 w-4 rounded border-neutral-300 text-primary-700 focus:ring-primary-500"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-neutral-800">
+                            <strong>{section.code}</strong>: {section.title}
+                          </p>
+                          {section.reason && <p className="text-xs text-neutral-500 mt-1">{section.reason}</p>}
+                        </div>
+                      </label>
+                    );
+                  })}
+                  {(snapshot?.suggested_legal_sections || []).length === 0 && (
+                    <p className="text-sm text-neutral-500 italic">No case-level applicable sections are available to attach.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </Modal>
+
+          {/* Correction Chat Box */}
+          <Card className="mt-auto">
+            <div className="flex items-center gap-2 mb-2">
+              <ShieldAlert className="text-orange-500 h-4 w-4" />
+              <h4 className="text-xs font-bold text-neutral-700 uppercase">Officer Override & Correction</h4>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={correctionMsg}
+                onChange={(e) => setCorrectionMsg(e.target.value)}
+                placeholder="Tell the AI to correct an assumption, ignore a suspect, or prioritise a step…"
+                className="flex-1 px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                onKeyDown={(e) => e.key === 'Enter' && handleCorrect()}
+                disabled={actionLoading}
+              />
+              <Button onClick={handleCorrect} isLoading={actionLoading} disabled={!correctionMsg.trim()}>
+                <Send size={16} />
+              </Button>
+            </div>
+          </Card>
         </div>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={correctionMsg}
-            onChange={(e) => setCorrectionMsg(e.target.value)}
-            placeholder="Tell the AI to correct an assumption, ignore a suspect, or prioritise a step…"
-            className="flex-1 px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-            onKeyDown={(e) => e.key === 'Enter' && handleCorrect()}
-            disabled={actionLoading}
-          />
-          <Button onClick={handleCorrect} isLoading={actionLoading} disabled={!correctionMsg.trim()}>
-            <Send size={16} />
-          </Button>
-        </div>
-      </Card>
-    </div>
-  );
+        );
 }
