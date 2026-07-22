@@ -9,10 +9,12 @@ import { ChargeSheet, IChargeSheet } from '../models/ChargeSheet.model';
 import { buildChargeSheetPrompt } from './ChargeSheetPromptBuilder';
 import { deepCall } from '../../../shared/llm/ollamaClient';
 import logger from '../../../config/logger';
+import { IAppliedLegalSection } from '../models/LegalSection.schema';
 
 export class ChargeSheetGenerator {
   static async generateForCase(caseId: string, officerId: string): Promise<IChargeSheet> {
     logger.info('Starting ChargeSheet generation', { caseId });
+    const caseObjectId = new Types.ObjectId(caseId);
 
     // Stage 1: Assemble ChargeSheet Context
     const complaint = await Complaint.findById(caseId).lean();
@@ -20,11 +22,11 @@ export class ChargeSheetGenerator {
       throw new Error(`Complaint not found for caseId: ${caseId}`);
     }
 
-    const participants = await CaseParticipant.find({ caseId }).lean();
-    const departmentRequests = await DepartmentRequest.find({ caseId }).lean();
-    const diaryEntries = await DiaryEntry.find({ caseId }).lean();
-    const evidence = await Evidence.find({ caseId }).lean();
-    const latestSnapshot = await AnalysisSnapshot.findOne({ caseId }).sort({ createdAt: -1 }).lean();
+    const participants = await CaseParticipant.find({ case_id: caseObjectId }).lean();
+    const departmentRequests = await DepartmentRequest.find({ case_id: caseObjectId }).lean();
+    const diaryEntries = await DiaryEntry.find({ case_id: caseObjectId }).lean();
+    const evidence = await Evidence.find({ case_id: caseObjectId }).lean();
+    const latestSnapshot = await AnalysisSnapshot.findOne({ case_id: caseObjectId }).sort({ timestamp: -1 }).lean();
 
     const context = {
       complaint,
@@ -42,6 +44,20 @@ export class ChargeSheetGenerator {
     const evidenceIds = evidence.map((e: any) => e._id);
     const departmentRequestIds = departmentRequests.map((d: any) => d._id);
     const diaryEntryIds = diaryEntries.map((d: any) => d._id);
+    const applicableLegalSections = latestSnapshot?.suggested_legal_sections ?? [];
+    const appliedSectionsByAccused = participants
+      .filter((participant: any) => participant.roles.includes('Accused') || participant.roles.includes('Suspect'))
+      .map((participant: any) => {
+        const appliedSections = (participant.accusedProfile?.appliedSections ||
+          participant.suspectProfile?.appliedSections ||
+          []) as IAppliedLegalSection[];
+
+        return {
+          accusedId: participant._id,
+          sections: appliedSections,
+        };
+      })
+      .filter((entry) => entry.sections.length > 0);
 
     // Stage 2: Build ChargeSheet Prompt
     const prompt = buildChargeSheetPrompt(context);
@@ -69,12 +85,12 @@ export class ChargeSheetGenerator {
     }
 
     // Determine version
-    const lastChargeSheet = await ChargeSheet.findOne({ case_id: caseId }).sort({ version: -1 });
+    const lastChargeSheet = await ChargeSheet.findOne({ case_id: caseObjectId }).sort({ version: -1 });
     const nextVersion = lastChargeSheet ? lastChargeSheet.version + 1 : 1;
 
     // Stage 5: Persist the ChargeSheet
     const newChargeSheet = new ChargeSheet({
-      case_id: new Types.ObjectId(caseId),
+      case_id: caseObjectId,
       version: nextVersion,
       investigationSummarySnapshotId: latestSnapshot?._id,
       briefCaseDescription: narratives.briefCaseDescription || '',
@@ -84,6 +100,8 @@ export class ChargeSheetGenerator {
       victimIds,
       witnessIds,
       accusedIds,
+      applicableLegalSections,
+      appliedSectionsByAccused,
       evidenceIds,
       departmentRequestIds,
       diaryEntryIds,

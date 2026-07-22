@@ -4,6 +4,7 @@ import React from 'react';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { CheckCircle2, Circle, AlertCircle, Clock, Send, Lock } from 'lucide-react';
+import apiClient from '@/lib/axios';
 
 import { StepProofModal } from './StepProofModal';
 
@@ -39,15 +40,9 @@ export function ChecklistPanel({ checklist, onOpenComposer, evidenceList, caseId
   const handleCitizenRequest = async (stepId: string) => {
     setRequestingCitizen(stepId);
     try {
-      const res = await fetch(`http://localhost:5000/api/v1/cases/${caseId}/citizen-request`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}` // use token if any
-        },
-        body: JSON.stringify({ step_id: stepId })
+      await apiClient.post(`/cases/${caseId}/citizen-request`, {
+        step_id: stepId,
       });
-      if (!res.ok) throw new Error('Failed to create citizen request');
       onRefresh();
     } catch (e) {
       console.error(e);
