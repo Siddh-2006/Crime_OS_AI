@@ -103,7 +103,7 @@ async function _call(
   return response.trim();
 }
 
-// async function _call_for_check(
+// async function _call(
 //   systemPrompt: string,
 //   userPrompt: string,
 //   temperature: number,
@@ -118,7 +118,7 @@ async function _call(
 //   const t0 = Date.now();
 
 //   const response = await ai.models.generateContent({
-//     model: thinkingMode ? 'gemini-2.5-pro' : 'gemini-2.5-flash',
+//     model: 'gemini-2.5-flash',
 //     contents: `
 // SYSTEM:
 // ${systemPrompt}

@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { buildFactsObject } from './factsAssemblyService';
 import { callLegalAgent } from '../../../shared/clients/legalAgentClient';
-import { callIoRecommendation } from '../../../shared/clients/ioRecommendationClient';
+// import { callIoRecommendation } from '../../../shared/clients/ioRecommendationClient';
 import { buildFastPrompt, buildDeepPrompt, buildCorrectionPrompt } from './analysisPromptBuilder';
 import { computeConfidenceScore } from './confidenceScoringService';
 import { fastCall, deepCall } from '../../../shared/llm/ollamaClient';
@@ -21,7 +21,7 @@ function normalizeSuggestedLegalSections(sections: unknown): ILegalSectionSugges
     if (typeof section === 'string') {
       return [{ code: section, title: section }];
     }
-
+    
     if (!section || typeof section !== 'object') return [];
 
     const candidate = section as Record<string, unknown>;
@@ -138,9 +138,9 @@ export class InvestigationOrchestrator {
     const queryStr = `Blocked Steps: ${factsObject.checklist.summary.blocked}. Pending High Criticality: ${factsObject.checklist.summary.high_criticality_pending}.`;
     
     logger.debug(`[Orchestrator] Dispatching retrieval calls for caseId: ${caseId}`);
-    const [legalAgentResult, recommendationResult] = await Promise.all([
+    const [legalAgentResult] = await Promise.all([
       callLegalAgent(queryStr),
-      callIoRecommendation(queryStr)
+      // callIoRecommendation(queryStr)
     ]);
     
     // 3. Fast Model Pass
@@ -154,7 +154,7 @@ export class InvestigationOrchestrator {
     // Calculate algorithmic confidence score BEFORE calling the LLM
     const confidenceBreakdown = computeConfidenceScore(factsObject);
     
-    const deepPrompt = buildDeepPrompt(factsObject, legalAgentResult, recommendationResult, confidenceBreakdown);
+    const deepPrompt = buildDeepPrompt(factsObject, legalAgentResult, confidenceBreakdown);
     // Request strictly parsed JSON output
     const deepResponse = await deepCall(deepPrompt.system, deepPrompt.user, { jsonMode: true }) as any;
     

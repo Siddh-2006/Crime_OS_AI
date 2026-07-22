@@ -30,7 +30,7 @@ Please summarize what has changed and format these retrieved chunks into readabl
 export function buildDeepPrompt(
   facts: FactsObject,
   legalAgentResult: any,
-  recommendationResult: any,
+  // recommendationResult: any,
   confidenceBreakdown: ConfidenceBreakdown
 ): PromptPayload {
   const system = `You are a Senior Investigative Officer AI. 
@@ -119,7 +119,6 @@ ${JSON.stringify(confidenceBreakdown, null, 2)}
 ${JSON.stringify(legalAgentResult, null, 2)}
 
 === SIMILAR CASE RECOMMENDATIONS ===
-${JSON.stringify(recommendationResult, null, 2)}
 
 Produce the JSON object now.`;
 
