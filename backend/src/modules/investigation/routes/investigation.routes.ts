@@ -4,10 +4,13 @@ import { CitizenRequestController } from '../controllers/CitizenRequestControlle
 import caseParticipantRoutes from './caseParticipant.routes';
 import chargeSheetRoutes from './chargeSheet.routes';
 import { DepartmentRegistry } from '../../admin/models/DepartmentRegistry.model';
-// Optional: import authentication middlewares if this needs to be protected immediately
-// import { authenticate } from '../../../common/middlewares/auth.middleware';
+import { authenticate } from '../../../common/middlewares/authenticate.middleware';
+import { authorize } from '../../../common/middlewares/authorize.middleware';
+import { Role } from '../../../shared/enums/roles.enum';
 
 const router = Router();
+
+router.use(authenticate, authorize(Role.SHO, Role.IO));
 
 router.use(caseParticipantRoutes);
 router.use(chargeSheetRoutes);
@@ -30,6 +33,7 @@ router.post('/:id/copilot/ask', InvestigationController.askCopilot);
 
 // Endpoint to get the latest analysis snapshot
 router.get('/:id/analysis/latest', InvestigationController.getLatestSnapshot);
+router.get('/:id/analysis/:snapshotId', InvestigationController.getSnapshotById);
 
 // Officer manual overrides
 router.post('/:id/analysis/:snapshotId/correct', InvestigationController.correctSnapshot);

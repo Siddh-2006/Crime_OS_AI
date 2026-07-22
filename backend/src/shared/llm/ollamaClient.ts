@@ -103,7 +103,7 @@ async function _call(
   return response.trim();
 }
 
-// async function _call_for_check(
+// async function _call(
 //   systemPrompt: string,
 //   userPrompt: string,
 //   temperature: number,
@@ -118,7 +118,7 @@ async function _call(
 //   const t0 = Date.now();
 
 //   const response = await ai.models.generateContent({
-//     model: thinkingMode ? 'gemini-2.5-pro' : 'gemini-2.5-flash',
+//     model: 'gemini-2.5-flash',
 //     contents: `
 // SYSTEM:
 // ${systemPrompt}
@@ -221,3 +221,206 @@ export async function deepCall(
   }
   return _call(systemPrompt, userPrompt, DEEP_DEFAULTS.temperature, DEEP_DEFAULTS.maxTokens, true, options);
 }
+
+
+// import axios from 'axios';
+// import env from '../../config/env';
+// import logger from '../../config/logger';
+
+// export interface OllamaCallOptions {
+//   jsonMode?: boolean;
+//   maxTokens?: number;
+//   temperature?: number;
+// }
+
+// interface OllamaGenerateRequest {
+//   model: string;
+//   prompt: string;
+//   system?: string;
+//   think?: boolean;
+//   stream: false;
+//   options: {
+//     temperature: number;
+//     num_predict: number;
+//     num_ctx: number;
+//   };
+// }
+
+// interface OllamaGenerateResponse {
+//   response: string;
+//   prompt_eval_count?: number;
+//   eval_count?: number;
+//   total_duration?: number;
+// }
+
+// const MODEL = 'qwen3:1.7b';
+
+// const FAST_DEFAULTS = {
+//   temperature: 0.0,
+//   maxTokens: 512,
+// };
+
+// const DEEP_DEFAULTS = {
+//   temperature: 0.0,
+//   maxTokens: 2048,
+// };
+
+// async function _call(
+//   systemPrompt: string,
+//   userPrompt: string,
+//   temperature: number,
+//   maxTokens: number,
+//   thinkingMode: boolean,
+//   options: OllamaCallOptions = {},
+// ): Promise<string> {
+//   const body: OllamaGenerateRequest = {
+//     model: MODEL,
+//     prompt: userPrompt,
+//     system: systemPrompt,
+//     think: thinkingMode,
+//     stream: false,
+//     options: {
+//       temperature: options.temperature ?? temperature,
+//       num_predict: options.maxTokens ?? maxTokens,
+//       num_ctx: env.OLLAMA_NUM_CTX,
+//     },
+//   };
+
+//   const t0 = Date.now();
+
+//   const res = await axios.post<OllamaGenerateResponse>(
+//     `${env.OLLAMA_BASE_URL}/api/generate`,
+//     body,
+//     {
+//       timeout: 120_000,
+//     },
+//   );
+
+//   const latencyMs = Date.now() - t0;
+
+//   logger.debug('[ollama] call complete', {
+//     model: MODEL,
+//     thinkingMode,
+//     latencyMs,
+//     promptTokens: res.data.prompt_eval_count,
+//     completionTokens: res.data.eval_count,
+//     ollamaReportedMs: res.data.total_duration
+//       ? Math.round(res.data.total_duration / 1e6)
+//       : undefined,
+//   });
+
+//   return res.data.response.trim();
+// }
+
+// async function _callJson(
+//   systemPrompt: string,
+//   userPrompt: string,
+//   temperature: number,
+//   maxTokens: number,
+//   thinkingMode: boolean,
+//   options: OllamaCallOptions,
+// ): Promise<unknown> {
+//   const raw = await _call(
+//     systemPrompt,
+//     userPrompt,
+//     temperature,
+//     maxTokens,
+//     thinkingMode,
+//     options,
+//   );
+
+//   const clean = raw
+//     .replace(/^```(?:json)?\s*/i, '')
+//     .replace(/\s*```$/, '');
+
+//   try {
+//     return JSON.parse(clean);
+//   } catch {
+//     logger.warn('[ollama] JSON parse failed — retrying');
+
+//     const retryPrompt = `${userPrompt}
+
+// IMPORTANT:
+// Return ONLY valid JSON.
+// Do not use markdown.
+// Do not explain anything.
+// `;
+
+//     const retryRaw = await _call(
+//       systemPrompt,
+//       retryPrompt,
+//       temperature,
+//       maxTokens,
+//       thinkingMode,
+//       options,
+//     );
+
+//     const retryClean = retryRaw
+//       .replace(/^```(?:json)?\s*/i, '')
+//       .replace(/\s*```$/, '');
+
+//     try {
+//       return JSON.parse(retryClean);
+//     } catch (err) {
+//       logger.error('[ollama] JSON parse failed after retry', {
+//         raw: retryClean,
+//       });
+
+//       throw new Error(
+//         `Ollama returned invalid JSON: ${(err as Error).message}`,
+//       );
+//     }
+//   }
+// }
+
+// export async function fastCall(
+//   systemPrompt: string,
+//   userPrompt: string,
+//   options: OllamaCallOptions = {},
+// ): Promise<string | unknown> {
+//   if (options.jsonMode) {
+//     return _callJson(
+//       systemPrompt,
+//       userPrompt,
+//       FAST_DEFAULTS.temperature,
+//       FAST_DEFAULTS.maxTokens,
+//       false,
+//       options,
+//     );
+//   }
+
+//   return _call(
+//     systemPrompt,
+//     userPrompt,
+//     FAST_DEFAULTS.temperature,
+//     FAST_DEFAULTS.maxTokens,
+//     false,
+//     options,
+//   );
+// }
+
+// export async function deepCall(
+//   systemPrompt: string,
+//   userPrompt: string,
+//   options: OllamaCallOptions = {},
+// ): Promise<string | unknown> {
+//   if (options.jsonMode) {
+//     return _callJson(
+//       systemPrompt,
+//       userPrompt,
+//       DEEP_DEFAULTS.temperature,
+//       DEEP_DEFAULTS.maxTokens,
+//       true,
+//       options,
+//     );
+//   }
+
+//   return _call(
+//     systemPrompt,
+//     userPrompt,
+//     DEEP_DEFAULTS.temperature,
+//     DEEP_DEFAULTS.maxTokens,
+//     true,
+//     options,
+//   );
+// }

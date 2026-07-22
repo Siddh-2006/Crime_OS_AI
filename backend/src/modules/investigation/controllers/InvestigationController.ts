@@ -99,6 +99,33 @@ export class InvestigationController {
   }
 
   /**
+   * GET /cases/:id/analysis/:snapshotId
+   * Returns a specific AnalysisSnapshot for modal/detail views.
+   */
+  static async getSnapshotById(req: Request, res: Response): Promise<void> {
+    try {
+      const { id, snapshotId } = req.params;
+
+      const snapshot = await AnalysisSnapshot.findOne({ case_id: id, snapshot_id: snapshotId }).lean();
+
+      if (!snapshot) {
+        sendError(res, HttpStatusCode.NOT_FOUND, {
+          code: 'NOT_FOUND',
+          message: 'Analysis snapshot not found for this case.',
+        });
+        return;
+      }
+
+      sendSuccess(res, HttpStatusCode.OK, 'Fetched analysis snapshot', snapshot);
+    } catch (error) {
+      sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, {
+        code: 'SNAPSHOT_FETCH_FAILED',
+        message: 'Failed to fetch analysis snapshot',
+      });
+    }
+  }
+
+  /**
    * Generates a new DepartmentRequest draft using the AI Composer.
    */
   static async generateDraftRequest(req: Request, res: Response): Promise<void> {

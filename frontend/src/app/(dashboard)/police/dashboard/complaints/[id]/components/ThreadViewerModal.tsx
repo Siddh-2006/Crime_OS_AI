@@ -24,7 +24,7 @@ export default function ThreadViewerModal({ isOpen, onClose, caseId, threadId }:
       setLoading(true);
       apiClient.get(`/cases/${caseId}/threads`)
         .then((res) => {
-          const t = res.data.data.find((x: any) => x.request_id === threadId);
+          const t = res.data.data.find((x: any) => x.request_id === threadId || x._id === threadId);
           setThread(t);
         })
         .catch(console.error)
@@ -41,13 +41,13 @@ export default function ThreadViewerModal({ isOpen, onClose, caseId, threadId }:
     if (!replyText.trim() || !thread) return;
     setReplying(true);
     try {
-      await apiClient.post(`/cases/${caseId}/threads/${thread.thread_id}/reply`, {
+      await apiClient.post(`/cases/threads/${thread._id}/reply`, {
         content: replyText,
       });
       setReplyText('');
       // refresh thread
       const res = await apiClient.get(`/cases/${caseId}/threads`);
-      const t = res.data.data.find((x: any) => x.request_id === threadId);
+      const t = res.data.data.find((x: any) => x.request_id === threadId || x._id === threadId);
       setThread(t);
     } catch (err) {
       console.error(err);
@@ -60,7 +60,7 @@ export default function ThreadViewerModal({ isOpen, onClose, caseId, threadId }:
     if (!thread) return;
     setExporting(true);
     try {
-      await apiClient.post(`/cases/${caseId}/threads/${thread.thread_id}/export-pdf`);
+      await apiClient.post(`/cases/${caseId}/threads/${thread.request_id}/export-pdf`);
       alert('Thread exported as Evidence PDF successfully!');
     } catch (err) {
       console.error(err);
