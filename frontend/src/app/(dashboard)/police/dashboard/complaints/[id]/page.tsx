@@ -720,20 +720,43 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
               );
             }
 
-            // Merge data: prefer snapshot deep analysis, fall back to complaintIntelligence
-            const crimeType = snap?.summary?.crimeType ?? ci?.crimeType ?? '—';
-            const statute   = snap?.summary?.statute ?? '—';
-            const priority  = snap?.summary?.priority ?? ci?.priority ?? '—';
-            const confidence = snap?.summary?.confidence ?? ci?.confidence ?? 0;
-            const riskReason = snap?.summary?.riskReason ?? ci?.summary ?? '—';
-            const risk = (priority === 'High' ? 'high' : priority === 'Medium' ? 'medium' : 'low');
+            // Merge data: prefer snapshot deep analysis, fall back to M12 complaintIntelligence fields
+            const crimeType = snap?.summary?.crimeType ?? (ci?.m12CrimeClassification ? `${ci.m12CrimeClassification.primary_category.toUpperCase()} (${ci.m12CrimeClassification.sub_category})` : (ci?.crimeType ?? '—'));
+            const statute   = snap?.summary?.statute ?? (ci?.m12CrimeClassification?.applicable_statutes?.join(', ') ?? '—');
+            const priority  = snap?.summary?.priority ?? ci?.m12RiskAssessment?.level ?? ci?.priority ?? '—';
+            const confidence = snap?.summary?.confidence ?? ci?.m12ConfidenceScore ?? ci?.confidence ?? 0;
+            const riskReason = snap?.summary?.riskReason ?? ci?.m12Understanding ?? ci?.summary ?? '—';
+            const risk = (priority?.toLowerCase() === 'high' ? 'high' : priority?.toLowerCase() === 'medium' ? 'medium' : 'low');
 
-            const icdItems: Array<{ k: string; v: string }> = snap?.summary?.icd ?? [];
+            const icdItems: Array<{ k: string; v: string }> = snap?.summary?.icd ?? (
+              ci?.m12Understanding || ci?.summary ? [
+                { k: 'Incident Summary', v: ci?.m12Understanding || ci?.summary || '—' },
+                { k: 'Primary Category', v: ci?.m12CrimeClassification?.primary_category || ci?.crimeType || '—' },
+                { k: 'Sub Category', v: ci?.m12CrimeClassification?.sub_category || '—' },
+                { k: 'Applicable Statutes', v: ci?.m12CrimeClassification?.applicable_statutes?.join(', ') || '—' },
+                { k: 'Crime Classification Rationale', v: ci?.m12CrimeClassification?.rationale || '—' },
+                { k: 'Risk Score & Level', v: ci?.m12RiskAssessment?.score ? `${ci.m12RiskAssessment.score} / 10 (${ci.m12RiskAssessment.level})` : '—' },
+              ] : []
+            );
+
             const entities: Record<string, Array<{ v: string }>> = snap?.summary?.entities ?? {};
-            const conflicts: Array<{ t: string }> = snap?.summary?.conflicts ?? [];
-            const gaps: string[] = snap?.summary?.gaps ?? ci?.missingInformation ?? [];
-            const timelineEvents: Array<{ time?: string; what?: string; description?: string; conflict?: boolean }> =
-              snap?.summary?.timeline ?? ci?.m3Events?.map(e => ({ time: e.time || e.timestamp, what: e.what || e.description })) ?? [];
+            const conflicts: Array<{ t: string }> = snap?.summary?.conflicts ?? (
+              ci?.m12Contradictions?.map((c: any) => ({ t: c.description || c.contradiction_type })) ??
+              ci?.correlation?.conflicts?.map((t: string) => ({ t })) ?? []
+            );
+            const gaps: string[] = snap?.summary?.gaps ?? (
+              ci?.m12InvestigativeGaps?.map((g: any) => typeof g === 'string' ? g : g.description || g.impact) ??
+              ci?.missingInformation ?? []
+            );
+            const timelineEvents: Array<{ time?: string; what?: string; description?: string; source?: string; conflict?: boolean }> =
+              snap?.summary?.timeline ?? 
+              (ci?.investigationTimeline && ci.investigationTimeline.length > 0 
+                ? ci.investigationTimeline.map((e: any) => ({ time: e.time || e.isoTime, what: e.event || e.description, source: e.source })) 
+                : null) ??
+              (ci?.m10Timeline && ci.m10Timeline.length > 0 
+                ? ci.m10Timeline.map((e: any) => ({ time: e.timestamp || e.time, what: e.description || e.event })) 
+                : null) ??
+              ci?.m3Events?.map((e: any) => ({ time: e.time || e.timestamp, what: e.what || e.description })) ?? [];
 
             const confPct = Math.round(confidence * 100);
             const riskColorClass =
@@ -789,12 +812,12 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                       <Card>
                         <p className="text-[10.5px] text-neutral-500 uppercase tracking-widest font-semibold mb-2">Likely Crime Type</p>
                         <p className="text-base font-extrabold text-neutral-800 leading-snug">{crimeType}</p>
-                        {statute !== '—' && <p className="text-[11px] text-neutral-400 mt-1">{statute}</p>}
+                        {statute !== '—' && <p className="text-[11px] text-indigo-600 font-semibold mt-1">{statute}</p>}
                       </Card>
                       <Card>
                         <p className="text-[10.5px] text-neutral-500 uppercase tracking-widest font-semibold mb-2">Investigation Priority</p>
                         <span className={`inline-block text-[11.5px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wide ${riskColorClass}`}>
-                          {priority}
+                          {priority} {ci?.m12RiskAssessment?.score ? `(${ci.m12RiskAssessment.score}/10)` : ''}
                         </span>
                       </Card>
                       <Card>
@@ -815,8 +838,22 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                       </Card>
                     </div>
                     <Card>
-                      <p className="text-[10.5px] text-neutral-500 uppercase tracking-widest font-semibold mb-3">Investigation Risk Assessment</p>
-                      <p className="text-sm text-neutral-700 leading-relaxed">{riskReason}</p>
+                      <p className="text-[10.5px] text-neutral-500 uppercase tracking-widest font-semibold mb-3">Investigation Synthesis & Risk Assessment</p>
+                      <p className="text-sm text-neutral-700 leading-relaxed font-medium">{riskReason}</p>
+                      {ci?.m12RiskAssessment?.factors && ci.m12RiskAssessment.factors.length > 0 && (
+                        <div className="mt-4 pt-3 border-t border-neutral-100 space-y-2">
+                          <p className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider">Identified Risk Factors:</p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {ci.m12RiskAssessment.factors.map((f: any, idx: number) => (
+                              <div key={idx} className="bg-neutral-50 border border-neutral-200 rounded-lg p-2.5 text-xs">
+                                <span className="font-bold text-neutral-800">{f.factor_name}</span>
+                                <span className="ml-2 text-[10px] uppercase font-extrabold px-1.5 py-0.5 rounded bg-red-100 text-red-700">{f.severity}</span>
+                                <p className="text-neutral-600 mt-1">{f.description}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </Card>
                   </div>
                 )}
@@ -826,7 +863,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                   <Card>
                     <p className="text-[10.5px] text-neutral-500 uppercase tracking-widest font-semibold mb-4">Categorized Incident Details</p>
                     {icdItems.length === 0 ? (
-                      <p className="text-sm text-neutral-400 italic">No structured ICD data available in this analysis.</p>
+                      <p className="text-sm text-neutral-400 italic">No structured incident details available in this analysis.</p>
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {icdItems.map((item, i) => (
@@ -844,7 +881,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                 {aiSubTab === 'entities' && (
                   <Card>
                     <p className="text-[10.5px] text-neutral-500 uppercase tracking-widest font-semibold mb-4">Involved Entities</p>
-                    {Object.keys(entities).length === 0 ? (
+                    {Object.keys(entities).length === 0 && (!ci?.m3Entities || ci.m3Entities.length === 0) ? (
                       <p className="text-sm text-neutral-400 italic">No entities extracted yet.</p>
                     ) : (
                       <div className="space-y-4">
@@ -865,13 +902,13 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                     {/* Fallback: show m3Entities from complaintIntelligence */}
                     {Object.keys(entities).length === 0 && ci?.m3Entities && ci.m3Entities.length > 0 && (
                       <div className="space-y-4">
-                        {Array.from(new Set(ci.m3Entities.map(e => e.type || e.entity_type || e.entityType))).filter(Boolean).map(type => (
-                          <div key={type}>
-                            <p className="text-[10.5px] text-neutral-400 uppercase tracking-widest font-bold mb-2">{type}</p>
+                        {Array.from(new Set(ci.m3Entities.map(e => e.type || (e as any).entity_type || (e as any).entityType))).filter(Boolean).map(type => (
+                          <div key={type as string}>
+                            <p className="text-[10.5px] text-indigo-600 uppercase tracking-widest font-extrabold mb-2">{type as string}</p>
                             <div className="flex flex-wrap gap-2">
-                              {ci.m3Entities!.filter(e => (e.type || e.entity_type || e.entityType) === type).map((ent, ei) => (
-                                <span key={ei} className="flex items-center gap-2 bg-neutral-50 border border-neutral-200 text-neutral-700 text-[12.5px] font-semibold px-3 py-1.5 rounded-full">
-                                  {ent.value || ent.name || ent.canonical_value}
+                              {ci.m3Entities!.filter(e => (e.type || (e as any).entity_type || (e as any).entityType) === type).map((ent, ei) => (
+                                <span key={ei} className="flex items-center gap-2 bg-indigo-50 border border-indigo-100 text-indigo-900 text-[12.5px] font-semibold px-3 py-1.5 rounded-full">
+                                  {ent.value || (ent as any).name || (ent as any).canonical_value}
                                 </span>
                               ))}
                             </div>
@@ -889,28 +926,66 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                       <Card><p className="text-sm text-neutral-400 italic">No evidence files attached to this complaint.</p></Card>
                     ) : (
                       complaint.evidence.map((file, i) => (
-                        <div key={file.publicId} className="border border-neutral-200 rounded-xl p-4 bg-neutral-50">
-                          <div className="flex items-center gap-3 flex-wrap mb-2">
-                            <span className="text-sm font-bold text-neutral-800">{file.originalFilename}</span>
-                            {file.aiMetadata?.classification && file.aiMetadata.classification !== 'Unknown' && (
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700">
-                                {file.aiMetadata.classification} ({Math.round((file.aiMetadata.classificationConfidence || 0) * 100)}%)
-                              </span>
-                            )}
-                            {file.aiMetadata?.imageTags?.map((tag: string) => (
-                              <span key={tag} className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
-                                {tag}
-                              </span>
-                            ))}
+                        <div key={file.publicId || i} className="border border-neutral-200 rounded-xl p-4 bg-neutral-50 space-y-3">
+                          <div className="flex items-center justify-between flex-wrap gap-2">
+                            <div className="flex items-center gap-2">
+                              <FileText className="h-4 w-4 text-indigo-600 flex-none" />
+                              <span className="text-sm font-bold text-neutral-800">{file.originalFilename}</span>
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {file.aiMetadata?.classification && file.aiMetadata.classification !== 'Unknown' && (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                  {file.aiMetadata.classification} ({Math.round((file.aiMetadata.classificationConfidence || 0) * 100)}%)
+                                </span>
+                              )}
+                              {(file.aiMetadata as any)?.m4SceneType && (file.aiMetadata as any).m4SceneType !== 'unknown' && (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 uppercase">
+                                  {(file.aiMetadata as any).m4SceneType}
+                                </span>
+                              )}
+                              {file.aiMetadata?.imageTags?.map((tag: string) => (
+                                <span key={tag} className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
                           </div>
+
+                          {/* Evidence AI Description / Summary */}
+                          {(file.aiMetadata?.aiSummary || (file.aiMetadata as any)?.m4Caption) && (
+                            <div className="bg-indigo-50/50 border border-indigo-100 rounded-lg p-2.5 text-xs text-indigo-950">
+                              <span className="font-bold text-indigo-700 mr-1.5">📷 Scene Analysis:</span>
+                              {file.aiMetadata?.aiSummary || (file.aiMetadata as any)?.m4Caption}
+                            </div>
+                          )}
+
+                          {/* Extracted OCR Text */}
                           {file.aiMetadata?.ocrText && (
-                            <details className="cursor-pointer">
-                              <summary className="text-[11px] font-semibold text-neutral-600 hover:text-neutral-900 select-none">🔍 Extracted OCR Text</summary>
-                              <pre className="mt-2 whitespace-pre-wrap text-[11px] font-mono bg-white p-2 rounded border border-neutral-100 max-h-40 overflow-y-auto text-neutral-700 leading-relaxed">
+                            <details className="cursor-pointer group">
+                              <summary className="text-[11.5px] font-semibold text-indigo-700 hover:text-indigo-900 select-none flex items-center gap-1.5">
+                                <span>🔍 Extracted OCR Text ({file.aiMetadata.ocrText.length} chars)</span>
+                              </summary>
+                              <pre className="mt-2 whitespace-pre-wrap text-[11px] font-mono bg-white p-3 rounded-lg border border-neutral-200 max-h-48 overflow-y-auto text-neutral-800 leading-relaxed shadow-inner">
                                 {file.aiMetadata.ocrText}
                               </pre>
                             </details>
                           )}
+
+                          {/* Extracted Evidence Entities */}
+                          {(file.aiMetadata as any)?.m3Entities && (file.aiMetadata as any).m3Entities.length > 0 && (
+                            <div className="pt-1">
+                              <p className="text-[10px] font-extrabold uppercase tracking-wider text-neutral-400 mb-1.5">Evidence Extracted Entities:</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {(file.aiMetadata as any).m3Entities.map((ent: any, idx: number) => (
+                                  <span key={idx} className="text-[11px] font-medium px-2 py-0.5 rounded bg-white border border-neutral-200 text-neutral-700">
+                                    <span className="font-bold text-indigo-600 mr-1">{ent.entity_type || ent.type}:</span>
+                                    {ent.value}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
                           {!file.aiMetadata && (
                             <p className="text-[11px] text-neutral-400 italic">AI has not processed this file yet.</p>
                           )}
@@ -975,10 +1050,17 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                             <div className={`rounded-xl p-3 border text-sm ${
                               ev.conflict ? 'bg-red-50 border-red-100' : 'bg-neutral-50 border-neutral-200'
                             }`}>
-                              {ev.time && (
-                                <p className="text-[11px] font-extrabold text-indigo-700 mb-0.5">{ev.time}</p>
-                              )}
-                              <p className="text-neutral-800 leading-relaxed">{ev.what ?? ev.description}</p>
+                              <div className="flex items-center justify-between flex-wrap gap-1 mb-1">
+                                {ev.time && (
+                                  <p className="text-[11px] font-extrabold text-indigo-700">{ev.time}</p>
+                                )}
+                                {ev.source && (
+                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                    {ev.source}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-neutral-800 text-xs font-medium leading-relaxed">{ev.what ?? ev.description}</p>
                             </div>
                           </div>
                         ))}

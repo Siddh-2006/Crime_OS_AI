@@ -1,3 +1,6 @@
+import { spawn } from 'child_process';
+import path from 'path';
+import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import { IComplaintRepository } from '../repositories/IComplaintRepository';
 import { Complaint, IComplaint, IEvidenceMetadata } from '../models/Complaint.model';
@@ -227,7 +230,32 @@ export class ComplaintService {
     });
 
     logger.info('Complaint filed by citizen', { citizenId, complaintNumber: created.complaintNumber, complaintId: created._id });
+
+    // Automatically trigger full M1-M12 processing pipeline in background
+    this.triggerComplaintIntelligencePipeline(created.complaintNumber);
+
     return created;
+  }
+
+  // ─── Automated Pipeline Trigger ─────────────────────────────────────────────
+  private triggerComplaintIntelligencePipeline(complaintNumber: string): void {
+    try {
+      const scriptPath = path.resolve(__dirname, '../../../../../services/complaint_intelligence/run_full_pipeline.py');
+      const venvPython = path.resolve(__dirname, '../../../../../services/complaint_intelligence/.venv/Scripts/python.exe');
+      const pythonExec = process.platform === 'win32' && fs.existsSync(venvPython) ? venvPython : 'python';
+
+      logger.info(`[ComplaintIntelligence] Triggering full pipeline for ${complaintNumber}`);
+
+      const pyProcess = spawn(pythonExec, [scriptPath, complaintNumber], {
+        detached: true,
+        stdio: 'ignore',
+        env: { ...process.env, PYTHONUTF8: '1' }
+      });
+
+      pyProcess.unref();
+    } catch (err: any) {
+      logger.error(`[ComplaintIntelligence] Failed to trigger pipeline for ${complaintNumber}`, { error: err?.message });
+    }
   }
 
   // ─── Get Citizen's Complaints ──────────────────────────────────────────────
