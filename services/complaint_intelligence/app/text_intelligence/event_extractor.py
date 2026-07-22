@@ -52,10 +52,11 @@ class TemporalEventExtractor(IEventExtractor):
             # Collect entities that fall within this sentence
             sent_entities = self._entities_in_range(entities, sent_start, sent_end)
 
-            # Only create an event if the sentence has a temporal marker
+            # Filter valid temporal entities (exclude age ranges, heights, vehicle numbers)
             temporal_entities = [
                 e for e in sent_entities
                 if e.entity_type in ("DATE", "TIME", "date", "time")
+                and not self._is_invalid_temporal(e.value, sentence)
             ]
             if not temporal_entities:
                 continue
@@ -92,6 +93,31 @@ class TemporalEventExtractor(IEventExtractor):
             )
 
         return events
+
+    @staticmethod
+    def _is_invalid_temporal(val: str, sentence: str) -> bool:
+        val_lower = val.lower().strip()
+        sent_lower = sentence.lower().strip()
+
+        # 1. Ignore age phrases
+        if any(k in val_lower for k in ("year", "age", "old", "years")):
+            return True
+
+        # 2. Ignore physical measurements / heights
+        if any(k in val_lower for k in ("feet", "inch", "cm", "meters", "build")):
+            return True
+
+        # 3. Ignore isolated non-year digits (like vehicle plate endings: 4721, 1234)
+        if re.fullmatch(r"\d+", val_lower):
+            num = int(val_lower)
+            if not (1900 <= num <= 2099):
+                return True
+
+        # 4. Reject sentences describing suspect appearance or vehicle features
+        if any(k in sent_lower for k in ("suspect appeared", "wearing a", "motorcycle appeared", "registration number ending")):
+            return True
+
+        return False
 
     @staticmethod
     def _entities_in_range(

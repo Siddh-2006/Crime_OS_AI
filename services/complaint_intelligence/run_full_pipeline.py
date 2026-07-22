@@ -40,7 +40,7 @@ from pymongo import MongoClient
 
 from app.core.config import settings
 
-COMPLAINT_NUMBER = "COMP-55333382-6280-494a-ab79-4665d3dcb3f0"
+COMPLAINT_NUMBER = sys.argv[1] if len(sys.argv) > 1 else os.getenv("COMPLAINT_NUMBER", "COMP-55333382-6280-494a-ab79-4665d3dcb3f0")
 SEP  = "=" * 70
 DIV  = "-" * 70
 T0_GLOBAL = time.perf_counter()
@@ -358,6 +358,7 @@ async def main() -> None:
                 "imageTags":               ev_tags,
                 "classification":          classification,
                 "classificationConfidence": classification_conf,
+                "aiSummary":               ev_caption,
             })
 
             if text_detected:
@@ -504,11 +505,80 @@ async def main() -> None:
     try:
         timeline = tl_engine.build(investigation_context)
         print(f"  Timeline events  : {len(timeline.entries)}")
-        for te in timeline.entries[:5]:
-            ts   = getattr(te, "timestamp", "?")
-            desc = str(getattr(te, "description", ""))[:80]
-            print(f"    [{ts}] {desc}")
-        print("  M10 ✓  Complete")
+        m10_entries = []
+        for te in timeline.entries:
+            m10_entries.append({
+                "timestamp": getattr(te, "raw_timestamp", None) or getattr(te, "timestamp", "N/A"),
+                "description": getattr(te, "description", ""),
+                "actors": getattr(te, "actors", []),
+                "action": getattr(te, "action", ""),
+                "location": getattr(te, "location", None),
+                "sources": getattr(te, "sources", []),
+            })
+        # Build detailed, high-quality investigation timeline combining narrative + evidence
+        investigation_timeline = []
+
+        # 1. Events from Narrative
+        if narrative_events:
+            for ne in narrative_events:
+                ts = ne.get("timestamp") or ne.get("time") or "Incident Date"
+                desc = ne.get("description") or ne.get("source_text") or ""
+                if desc:
+                    investigation_timeline.append({
+                        "time": ts,
+                        "event": desc,
+                        "source": "complaint narrative",
+                        "category": "Complaint Narrative"
+                    })
+
+        # 2. Events from Evidence OCR & AI Vision Summaries
+        for es in evidence_summaries:
+            src = es.get("source", "Evidence")
+            caption = es.get("caption", "")
+            ocr = es.get("ocr_text", "")
+            ev_events_list = es.get("events", [])
+            
+            if ev_events_list:
+                for ee in ev_events_list:
+                    ts = ee.get("timestamp") or ee.get("time") or "Evidence Date"
+                    desc = ee.get("description") or ee.get("source_text") or caption or f"Evidence document: {src}"
+                    investigation_timeline.append({
+                        "time": ts,
+                        "event": f"[{src}] {desc}",
+                        "source": src,
+                        "category": "Evidence Event"
+                    })
+            elif "invoice" in caption.lower() or "invoice" in ocr.lower():
+                investigation_timeline.append({
+                    "time": "Invoice Date",
+                    "event": f"Device/Purchase Invoice ({src}): {ocr[:120]}...",
+                    "source": src,
+                    "category": "Device Invoice"
+                })
+            elif "statement" in ocr.lower() or "bank" in ocr.lower():
+                investigation_timeline.append({
+                    "time": "Statement Period",
+                    "event": f"Bank Account Statement ({src}): {ocr[:120]}...",
+                    "source": src,
+                    "category": "Bank Statement"
+                })
+            elif caption or ocr:
+                investigation_timeline.append({
+                    "time": "Evidence Event",
+                    "event": f"[{src}] {caption or ocr[:120]}",
+                    "source": src,
+                    "category": "Evidence Analysis"
+                })
+
+        db["complaints"].update_one(
+            {"_id": doc["_id"]},
+            {"$set": {
+                "complaintIntelligence.m10Timeline": m10_entries,
+                "complaintIntelligence.investigationTimeline": investigation_timeline,
+                "complaintIntelligence.m10ProcessedAt": datetime.now(timezone.utc).isoformat(),
+            }}
+        )
+        print(f"  M10 ✓  Written {len(investigation_timeline)} detailed timeline events to MongoDB")
     except Exception as e:
         print(f"  M10 WARN: {e} — building empty timeline")
         import traceback; traceback.print_exc()
