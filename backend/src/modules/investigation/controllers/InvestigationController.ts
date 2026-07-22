@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-// import { AnalysisQueue } from '../../../shared/queue/AnalysisQueue';
+import { AnalysisQueue } from '../../../shared/queue/AnalysisQueue';
 import { subscribeProgress, publishProgress } from '../../../shared/utils/analysisProgress';
 import { getRedisClient } from '../../../config/redis';
 import { RequestComposerService } from '../services/requestComposerService';
@@ -56,30 +56,19 @@ export class InvestigationController {
     try {
       const { id } = req.params;
 
-      // Publish 'queued' to Redis immediately so state-recovery works on reload
+      // Publish 'queued' to Redis immediately so state-recovery and SSE work before
+      // the BullMQ worker even picks up the job.
       await publishProgress(id, 'queued');
 
-      // Run analysis in the background (fire-and-forget).
-      // We use a direct in-process call rather than BullMQ because the worker
-      // was silently failing to dequeue jobs in this environment.
-      // BullMQ enqueue is kept below as a comment for future restoration.
-      //
-      // await AnalysisQueue.enqueueAnalyzeCase(id);
-      // logger.info(`Enqueued analyze_case job for caseId: ${id}`);
-      InvestigationOrchestrator.runAnalysis(id).catch(async (err: any) => {
-        // logger.error(`[analyzeCase] In-process analysis failed for ${id}`, { error: err?.message });
-        try {
-          await publishProgress(id, 'analysis_error', {
-            error: `Analysis failed: ${err?.message ?? 'Unknown error'}`,
-          } as any);
-        } catch { /* swallow */ }
-      });
+      // Enqueue via BullMQ — the worker runs runAnalysis() in the background.
+      // lockDuration on the worker is set to 25 min so the lock survives long LLM calls.
+      await AnalysisQueue.enqueueAnalyzeCase(id);
 
-      sendSuccess(res, HttpStatusCode.OK, 'Analysis started. Connect to /analysis/progress for live updates.');
+      sendSuccess(res, HttpStatusCode.OK, 'Analysis job enqueued. Connect to /analysis/progress for live updates.');
     } catch (error) {
       sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, {
         code: 'ANALYSIS_ENQUEUE_FAILED',
-        message: 'Failed to start analysis job',
+        message: 'Failed to enqueue analysis job',
       });
     }
   }
