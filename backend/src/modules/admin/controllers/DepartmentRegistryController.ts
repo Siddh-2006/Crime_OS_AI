@@ -20,14 +20,17 @@ const legalAgentUrl = env.LEGAL_AGENT_URL; // http://localhost:8001
  */
 async function upsertDeptVector(deptData: any, existingUuid?: string): Promise<string | null> {
   try {
+    logger.info(`[DeptRegistry] Requesting embedding for "${deptData.entity_id}" via legal_agent /registry/upsert (BGE primary, Nomic fallback)`);
     const res = await axios.post(`${legalAgentUrl}/registry/upsert`, {
       ...deptData,
       act: 'department_registry',
       qdrant_uuid: existingUuid ?? null,
-    }, { timeout: 120_000 }); // embedding can take a few seconds
-    return res.data?.qdrant_uuid ?? null;
+    }, { timeout: 120_000 });
+    const uuid = res.data?.qdrant_uuid ?? null;
+    logger.info(`[DeptRegistry] Embedding complete for "${deptData.entity_id}" — qdrant_uuid: ${uuid ?? 'null'}`);
+    return uuid;
   } catch (err: any) {
-    logger.warn(`[DeptRegistry] Failed to upsert vector for ${deptData.entity_id}: ${err.message}`);
+    logger.warn(`[DeptRegistry] Failed to upsert vector for "${deptData.entity_id}": ${err.message} — check legal_agent logs for embedding backend details`);
     return null;
   }
 }

@@ -32,21 +32,18 @@ def _load_dotenv() -> None:
 
 _load_dotenv()
 
-# ─── Config ───────────────────────────────────────────────────────────────────
-# llama.cpp server running nomic-embed-text-v2-moe.Q4_K_M at port 8003.
-# All three values are read from environment / .env so they can be changed
-# without touching code.
-LLAMA_CPP_URL    = os.environ.get("LEGAL_AGENT_LLAMA_CPP_URL",    "http://127.0.0.1:8003")
-EMBEDDING_MODEL  = os.environ.get("LEGAL_AGENT_EMBEDDING_MODEL",  "nomic-embed-text-v2-moe")
-EMBEDDING_DIM    = int(os.environ.get("LEGAL_AGENT_EMBEDDING_DIM", "768"))
+# ─── Nomic / llama.cpp config (fallback) ──────────────────────────────────────
+LLAMA_CPP_URL     = os.environ.get("LEGAL_AGENT_LLAMA_CPP_URL",   "http://127.0.0.1:8003")
+NOMIC_MODEL       = os.environ.get("LEGAL_AGENT_EMBEDDING_MODEL",  "nomic-embed-text-v2-moe")
+NOMIC_DIM         = int(os.environ.get("LEGAL_AGENT_EMBEDDING_DIM", "768"))
 EMBEDDING_TIMEOUT = 60  # seconds
 
-# nomic asymmetric prefixes
+# nomic asymmetric prefixes (not used by BGE — BGE is symmetric)
 DOCUMENT_PREFIX = "search_document: "
-QUERY_PREFIX = "search_query: "
+QUERY_PREFIX    = "search_query: "
 
 
-# ─── Text helpers (unchanged) ─────────────────────────────────────────────────
+# ─── Text helpers ─────────────────────────────────────────────────────────────
 
 def _normalize_text(value: Any) -> str:
     if value is None:
@@ -137,7 +134,7 @@ def load_sop_records(path: str | Path) -> list[SOPRecord]:
     return [r for r in load_parsed_records(path, record_type="sop") if isinstance(r, SOPRecord)]
 
 
-# ─── Embedding text builders (unchanged) ─────────────────────────────────────
+# ─── Embedding text builders ──────────────────────────────────────────────────
 
 def build_legal_embedding_text(record: LegalSectionRecord) -> str:
     return (
@@ -195,35 +192,36 @@ def build_embedding_text(record: ParsedRecord) -> str:
     return build_legal_embedding_text(record)
 
 
-# ─── NomicEmbedder — replaces BGEEmbedder ─────────────────────────────────────
-# Uses llama.cpp server running nomic-embed-text-v2-moe.Q4_K_M at port 8003.
-# Synchronous httpx client — same interface as BGEEmbedder so retrieval.py
-# requires zero changes (it calls embed_texts / embed_records / embed_record).
+# ─── BGEEmbeddingConfig ───────────────────────────────────────────────────────
+
+@dataclass(slots=True)
+class BGEEmbeddingConfig:
+    """Configuration for BGEEmbedder. Ignored when falling back to NomicEmbedder."""
+    model_name: str = "BAAI/bge-large-en-v1.5"
+    device: str | None = None
+    batch_size: int = 16
+    normalize_embeddings: bool = True
+
+
+# ─── NomicEmbedder (fallback — llama.cpp HTTP) ────────────────────────────────
 
 class NomicEmbedder:
     """
     Synchronous embedder backed by llama-server (nomic-embed-text-v2-moe.Q4_K_M).
-    Exposes the same public interface as the old BGEEmbedder so all callers
-    (retrieval.py, embed_records.py) work without modification.
+    Used as fallback when sentence-transformers / BGE is not available.
 
-    Accepts an optional BGEEmbeddingConfig as first arg for drop-in compatibility
-    with old call sites — the config fields are ignored; URL/model come from env.
+    Exposes the same interface as BGEEmbedder so callers need no changes.
     """
 
     def __init__(
         self,
         config_or_url: "BGEEmbeddingConfig | str | None" = None,
-        model: str = EMBEDDING_MODEL,
+        model: str = NOMIC_MODEL,
         timeout: int = EMBEDDING_TIMEOUT,
     ) -> None:
         import httpx
-        # Accept either a legacy BGEEmbeddingConfig object (ignored) or a URL string
-        if isinstance(config_or_url, str):
-            llama_cpp_url = config_or_url
-        else:
-            # BGEEmbeddingConfig passed — ignore it, use env value
-            llama_cpp_url = LLAMA_CPP_URL
-        self._url = llama_cpp_url.rstrip("/")
+        llama_cpp_url = config_or_url if isinstance(config_or_url, str) else LLAMA_CPP_URL
+        self._url   = llama_cpp_url.rstrip("/")
         self._model = model
         self._client = httpx.Client(
             base_url=self._url,
@@ -231,15 +229,14 @@ class NomicEmbedder:
             headers={"Content-Type": "application/json"},
         )
         print(
-            f"[NomicEmbedder] initialised — server: {self._url}, model: {self._model}",
+            f"[NomicEmbedder] Initialised — server: {self._url}, model: {self._model}",
             file=sys.stderr,
         )
 
     def embedding_dimension(self) -> int:
-        return EMBEDDING_DIM
+        return NOMIC_DIM
 
     def _embed_one(self, text: str, label: str = "doc") -> list[float]:
-        """Call llama-server /v1/embeddings for a single text, returns vector."""
         import hashlib
         t0 = time.perf_counter()
         try:
@@ -250,124 +247,284 @@ class NomicEmbedder:
             response.raise_for_status()
             vector: list[float] = response.json()["data"][0]["embedding"]
             elapsed = round((time.perf_counter() - t0) * 1000, 2)
-            print(
-                f"[timing] nomic_embed ({label}): {elapsed}ms dim={len(vector)}",
-                file=sys.stderr,
-            )
+            print(f"[NomicEmbedder] Embedded ({label}) in {elapsed}ms  dim={len(vector)}", file=sys.stderr)
             return vector
         except Exception as exc:
-            # Deterministic mock fallback so offline dev still works
             print(
                 f"[NomicEmbedder] WARNING: embedding call failed ({exc}). "
-                f"Using mock vector of dim {EMBEDDING_DIM}.",
+                f"Using deterministic mock vector of dim {NOMIC_DIM}.",
                 file=sys.stderr,
             )
             seed = hashlib.sha256(text.encode()).digest()
-            return [(seed[i % len(seed)] / 255.0) * 2.0 - 1.0 for i in range(EMBEDDING_DIM)]
+            return [(seed[i % len(seed)] / 255.0) * 2.0 - 1.0 for i in range(NOMIC_DIM)]
 
     def embed_texts(self, texts: Sequence[str]) -> list[list[float]]:
-        """Embed a list of texts. Uses document prefix for all (indexing context)."""
         t0 = time.perf_counter()
         result = [self._embed_one(DOCUMENT_PREFIX + t, label="doc") for t in texts]
-        elapsed = time.perf_counter() - t0
-        print(f"[timing] embed_texts: {elapsed:.3f}s for {len(texts)} text(s)", file=sys.stderr)
+        print(f"[NomicEmbedder] embed_texts: {time.perf_counter() - t0:.3f}s for {len(texts)} text(s)", file=sys.stderr)
         return result
 
     def embed_query(self, query: str) -> list[float]:
-        """Embed a query string with the query prefix for retrieval."""
+        """Embed query-side text (uses search_query: prefix for nomic asymmetric model)."""
         return self._embed_one(QUERY_PREFIX + query, label="query")
 
     def embed_record(self, record: ParsedRecord) -> EmbeddedDocumentRecord:
         t0 = time.perf_counter()
         embedding_text = build_embedding_text(record)
         embedding = self._embed_one(DOCUMENT_PREFIX + embedding_text, label="record")
-        elapsed = time.perf_counter() - t0
-        print(f"[timing] embed_record: {elapsed:.3f}s for {type(record).__name__}", file=sys.stderr)
+        print(f"[NomicEmbedder] embed_record: {time.perf_counter() - t0:.3f}s for {type(record).__name__}", file=sys.stderr)
         return EmbeddedDocumentRecord(record=record, embedding_text=embedding_text, embedding=embedding)
 
     def embed_records(self, records: Iterable[ParsedRecord]) -> list[EmbeddedDocumentRecord]:
         materialized = list(records)
         t0 = time.perf_counter()
         embedded = [self.embed_record(r) for r in materialized]
-        elapsed = time.perf_counter() - t0
-        print(f"[timing] embed_records: {elapsed:.3f}s for {len(materialized)} record(s)", file=sys.stderr)
+        print(f"[NomicEmbedder] embed_records: {time.perf_counter() - t0:.3f}s for {len(materialized)} record(s)", file=sys.stderr)
         return embedded
 
     def close(self) -> None:
         self._client.close()
 
 
-# ─── Alias — keeps __init__.py and any future code using BGEEmbedder working ──
-# Old class is commented out below; NomicEmbedder is the active implementation.
-BGEEmbedder = NomicEmbedder
+# ─── Cache check helper ───────────────────────────────────────────────────────
 
-# Old config dataclass kept for import compatibility (embed_records.py CLI uses it)
-@dataclass(slots=True)
-class BGEEmbeddingConfig:
-    model_name: str = EMBEDDING_MODEL   # ignored — model is set via env/init
-    device: str | None = None           # ignored — llama-server handles device
-    batch_size: int = 16                # ignored — requests are one-at-a-time
-    normalize_embeddings: bool = True   # ignored — llama-server normalises
+def _is_model_cached(model_name: str) -> bool:
+    """
+    Check if a HuggingFace model is already downloaded in the local cache.
+    Returns True only if a snapshot directory with actual files exists.
+    Never triggers a network request.
+    """
+    try:
+        # Standard HuggingFace cache location
+        hf_home = Path(os.environ.get("HF_HOME", Path.home() / ".cache" / "huggingface"))
+        hub_dir = hf_home / "hub"
+
+        # Model repos are stored as "models--{org}--{name}"
+        # e.g. BAAI/bge-large-en-v1.5 → models--BAAI--bge-large-en-v1.5
+        safe_name = model_name.replace("/", "--")
+        model_dir = hub_dir / f"models--{safe_name}"
+
+        if not model_dir.exists():
+            return False
+
+        # Check that at least one snapshot directory has files
+        snapshots_dir = model_dir / "snapshots"
+        if not snapshots_dir.exists():
+            return False
+
+        for snapshot in snapshots_dir.iterdir():
+            if snapshot.is_dir() and any(snapshot.iterdir()):
+                return True
+
+        return False
+    except Exception:
+        # If we can't determine cache state, assume not cached (safe default)
+        return False
 
 
-# ─── OLD BGEEmbedder (sentence-transformers, in-process) — COMMENTED OUT ──────
-# class BGEEmbedder:
-#     def __init__(self, config: BGEEmbeddingConfig | None = None) -> None:
-#         self.config = config or BGEEmbeddingConfig()
-#         self._model = None
+# ─── BGEEmbedder (primary — sentence-transformers in-process) ─────────────────
 #
-#     def _load_model(self):
-#         if self._model is not None:
-#             return self._model
-#         try:
-#             from sentence_transformers import SentenceTransformer
-#         except Exception as exc:
-#             raise RuntimeError(
-#                 "sentence-transformers is required for embedding."
-#             ) from exc
-#         self._model = SentenceTransformer(self.config.model_name, device=self.config.device)
-#         return self._model
+# Tries to load sentence-transformers on first use.
+# If the library is not installed, logs a clear warning and transparently
+# delegates every call to NomicEmbedder for the rest of the process lifetime.
 #
-#     def embedding_dimension(self) -> int:
-#         model = self._load_model()
-#         return int(model.get_sentence_embedding_dimension())
+# Priority:  BGE (sentence-transformers)  →  Nomic (llama.cpp HTTP fallback)
 #
-#     def embed_texts(self, texts: Sequence[str]) -> list[list[float]]:
-#         model = self._load_model()
-#         start = time.perf_counter()
-#         embeddings = model.encode(
-#             list(texts),
-#             batch_size=self.config.batch_size,
-#             normalize_embeddings=self.config.normalize_embeddings,
-#             show_progress_bar=False,
-#         )
-#         elapsed = time.perf_counter() - start
-#         print(f"[timing] embed_texts: {elapsed:.3f}s for {len(texts)} text(s)", file=sys.stderr)
-#         if hasattr(embeddings, "tolist"):
-#             return embeddings.tolist()
-#         return [list(vector) for vector in embeddings]
-#
-#     def embed_record(self, record: ParsedRecord) -> EmbeddedDocumentRecord:
-#         start = time.perf_counter()
-#         embedding_text = build_embedding_text(record)
-#         embedding = self.embed_texts([embedding_text])[0]
-#         elapsed = time.perf_counter() - start
-#         print(f"[timing] embed_record: {elapsed:.3f}s for {type(record).__name__}", file=sys.stderr)
-#         return EmbeddedDocumentRecord(record=record, embedding_text=embedding_text, embedding=embedding)
-#
-#     def embed_records(self, records: Iterable[ParsedRecord]) -> list[EmbeddedDocumentRecord]:
-#         materialized = list(records)
-#         start = time.perf_counter()
-#         texts = [build_embedding_text(record) for record in materialized]
-#         vectors = self.embed_texts(texts) if materialized else []
-#         elapsed = time.perf_counter() - start
-#         print(f"[timing] embed_records: {elapsed:.3f}s for {len(materialized)} record(s)", file=sys.stderr)
-#         return [
-#             EmbeddedDocumentRecord(record=record, embedding_text=text, embedding=vector)
-#             for record, text, vector in zip(materialized, texts, vectors, strict=False)
-#         ]
-# ─── END OLD BGEEmbedder ───────────────────────────────────────────────────────
+# Logs printed to stderr so they appear in the terminal alongside [timing] lines.
 
+class BGEEmbedder:
+    """
+    Primary embedder using BAAI/bge-* via sentence-transformers (in-process).
+
+    On first use, attempts to import sentence_transformers.SentenceTransformer.
+    - If found   → uses BGE model directly (fast, local, no HTTP needed).
+    - If missing → logs "[BGEEmbedder] sentence-transformers not found — falling
+                   back to NomicEmbedder (llama.cpp)" and delegates all calls
+                   to a NomicEmbedder instance for the rest of the process.
+
+    Call sites are identical for both paths — no code changes needed upstream.
+    """
+
+    def __init__(self, config: BGEEmbeddingConfig | None = None) -> None:
+        self.config = config or BGEEmbeddingConfig()
+        self._model = None          # SentenceTransformer or None
+        self._fallback: NomicEmbedder | None = None
+        self._checked = False       # whether we already attempted to load
+
+    # ── Private: resolve the backend on first call ────────────────────────────
+
+    def _resolve(self) -> None:
+        """Load BGE or set up Nomic fallback. Called once, on first embed request."""
+        if self._checked:
+            return
+        self._checked = True
+
+        print(
+            f"[BGEEmbedder] Attempting to load sentence-transformers "
+            f"with model '{self.config.model_name}'...",
+            file=sys.stderr,
+        )
+        try:
+            from sentence_transformers import SentenceTransformer  # type: ignore
+        except ImportError:
+            print(
+                "[BGEEmbedder] sentence-transformers NOT found (ImportError). "
+                "Falling back to NomicEmbedder (llama.cpp HTTP server).",
+                file=sys.stderr,
+            )
+            self._fallback = NomicEmbedder()
+            return
+        except Exception as exc:
+            print(
+                f"[BGEEmbedder] sentence-transformers failed to import ({exc}). "
+                "Falling back to NomicEmbedder (llama.cpp HTTP server).",
+                file=sys.stderr,
+            )
+            self._fallback = NomicEmbedder()
+            return
+
+        # ── Check if the model is already cached locally ──────────────────────
+        # We must NOT trigger a download. Check the HuggingFace cache directory
+        # by probing the snapshot folder before calling SentenceTransformer().
+        model_cached = _is_model_cached(self.config.model_name)
+        if not model_cached:
+            print(
+                f"[BGEEmbedder] Model '{self.config.model_name}' is NOT present in local "
+                "HuggingFace cache. Skipping download — falling back to NomicEmbedder "
+                "(llama.cpp HTTP server). To use BGE, run: "
+                f"python -c \"from sentence_transformers import SentenceTransformer; "
+                f"SentenceTransformer('{self.config.model_name}')\"",
+                file=sys.stderr,
+            )
+            self._fallback = NomicEmbedder()
+            return
+
+        # Model is cached — load it (no network call needed)
+        try:
+            t0 = time.perf_counter()
+            self._model = SentenceTransformer(
+                self.config.model_name,
+                device=self.config.device,
+                local_files_only=True,  # never download, fail fast if missing
+            )
+            elapsed = round((time.perf_counter() - t0) * 1000)
+            print(
+                f"[BGEEmbedder] ✓ Loaded BGE model '{self.config.model_name}' "
+                f"in {elapsed}ms  dim={self._model.get_sentence_embedding_dimension()}  "
+                f"device={self.config.device or 'auto'}",
+                file=sys.stderr,
+            )
+        except Exception as exc:
+            print(
+                f"[BGEEmbedder] Failed to load model '{self.config.model_name}': {exc}. "
+                "Falling back to NomicEmbedder (llama.cpp HTTP server).",
+                file=sys.stderr,
+            )
+            self._fallback = NomicEmbedder()
+
+    # ── Public API ────────────────────────────────────────────────────────────
+
+    def embedding_dimension(self) -> int:
+        self._resolve()
+        if self._fallback:
+            return self._fallback.embedding_dimension()
+        return int(self._model.get_sentence_embedding_dimension())  # type: ignore[union-attr]
+
+    def embed_texts(self, texts: Sequence[str]) -> list[list[float]]:
+        self._resolve()
+        if self._fallback:
+            print(
+                f"[BGEEmbedder] Using NomicEmbedder fallback for embed_texts "
+                f"({len(texts)} text(s))",
+                file=sys.stderr,
+            )
+            return self._fallback.embed_texts(texts)
+
+        # ── BGE path ──────────────────────────────────────────────────────────
+        print(
+            f"[BGEEmbedder] Using BGE model for embed_texts ({len(texts)} text(s))",
+            file=sys.stderr,
+        )
+        t0 = time.perf_counter()
+        embeddings = self._model.encode(  # type: ignore[union-attr]
+            list(texts),
+            batch_size=self.config.batch_size,
+            normalize_embeddings=self.config.normalize_embeddings,
+            show_progress_bar=False,
+        )
+        elapsed = time.perf_counter() - t0
+        print(f"[BGEEmbedder] embed_texts: {elapsed:.3f}s for {len(texts)} text(s)", file=sys.stderr)
+        if hasattr(embeddings, "tolist"):
+            return embeddings.tolist()
+        return [list(v) for v in embeddings]
+
+    def embed_query(self, query: str) -> list[float]:
+        """
+        Embed query-side text.
+        BGE is symmetric — uses the same encode() as documents.
+        Nomic fallback uses the search_query: prefix.
+        """
+        self._resolve()
+        if self._fallback:
+            print(
+                "[BGEEmbedder] Using NomicEmbedder fallback for embed_query",
+                file=sys.stderr,
+            )
+            return self._fallback.embed_query(query)
+
+        # BGE: symmetric — no special prefix needed
+        print("[BGEEmbedder] Using BGE model for embed_query", file=sys.stderr)
+        result = self.embed_texts([query])
+        return result[0]
+
+    def embed_record(self, record: ParsedRecord) -> EmbeddedDocumentRecord:
+        self._resolve()
+        if self._fallback:
+            print(
+                f"[BGEEmbedder] Using NomicEmbedder fallback for "
+                f"embed_record ({type(record).__name__})",
+                file=sys.stderr,
+            )
+            return self._fallback.embed_record(record)
+
+        print(
+            f"[BGEEmbedder] Using BGE model for embed_record ({type(record).__name__})",
+            file=sys.stderr,
+        )
+        t0 = time.perf_counter()
+        embedding_text = build_embedding_text(record)
+        embedding = self.embed_texts([embedding_text])[0]
+        elapsed = time.perf_counter() - t0
+        print(f"[BGEEmbedder] embed_record: {elapsed:.3f}s", file=sys.stderr)
+        return EmbeddedDocumentRecord(record=record, embedding_text=embedding_text, embedding=embedding)
+
+    def embed_records(self, records: Iterable[ParsedRecord]) -> list[EmbeddedDocumentRecord]:
+        materialized = list(records)
+        self._resolve()
+        if self._fallback:
+            print(
+                f"[BGEEmbedder] Using NomicEmbedder fallback for "
+                f"embed_records ({len(materialized)} record(s))",
+                file=sys.stderr,
+            )
+            return self._fallback.embed_records(materialized)
+
+        print(
+            f"[BGEEmbedder] Using BGE model for embed_records ({len(materialized)} record(s))",
+            file=sys.stderr,
+        )
+        t0 = time.perf_counter()
+        texts = [build_embedding_text(r) for r in materialized]
+        vectors = self.embed_texts(texts) if materialized else []
+        elapsed = time.perf_counter() - t0
+        print(f"[BGEEmbedder] embed_records: {elapsed:.3f}s for {len(materialized)} record(s)", file=sys.stderr)
+        return [
+            EmbeddedDocumentRecord(record=r, embedding_text=t, embedding=v)
+            for r, t, v in zip(materialized, texts, vectors, strict=False)
+        ]
+
+
+# ─── Persistence ──────────────────────────────────────────────────────────────
 
 def save_embedded_records(records: Iterable[EmbeddedDocumentRecord], path: str | Path) -> Path:
     output_path = Path(path)

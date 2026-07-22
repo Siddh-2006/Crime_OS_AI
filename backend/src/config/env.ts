@@ -42,19 +42,20 @@ const env = cleanEnv(process.env, {
   LEGAL_AGENT_URL: str({ default: 'http://localhost:8001' }),
   IO_RECOMMENDATION_URL: str({ default: 'http://localhost:8002' }),
 
-  // ── LLM — Sarvam-1 via llama.cpp server ──────────────────────────────────────
-  SARVAM_BASE_URL:       str({ default: 'http://localhost:8004' }),  // llama-server port
-  SARVAM_MODEL:          str({ default: 'sarvam-1' }),               // model name sent in API calls
-  SARVAM_MAX_CTX:        num({ default: 2048 }),                     // must match -c flag in llama-server
-  SARVAM_TIMEOUT_MS:     num({ default: 120000 }),                   // HTTP timeout per call (ms)
-
-  // ── Ollama (DISABLED — kept for reference, do not remove) ────────────────────
-  // OLLAMA_BASE_URL:      str({ default: 'http://localhost:11434' }),
-  // OLLAMA_NUM_CTX:       num({ default: 32768 }),
-  // OLLAMA_REQUIRED_MODELS: str({ default: 'gemma4:e2b,llama3.2:latest' }),
+  // ── LLM — Ollama (primary, local) ────────────────────────────────────────────
   OLLAMA_BASE_URL:        str({ default: 'http://localhost:11434' }),
   OLLAMA_NUM_CTX:         num({ default: 32768 }),
-  OLLAMA_REQUIRED_MODELS: str({ default: 'gemma4:e2b,llama3.2:latest' }),
+  OLLAMA_REQUIRED_MODELS: str({ default: 'gemma4:e2b' }),
+
+  // ── LLM — Gemini (cloud fallback when Ollama is unavailable) ─────────────────
+  GEMINI_API_KEY:   str({ default: '' }),   // set to enable Gemini fallback
+  GEMINI_MODEL:     str({ default: 'gemini-3.5-flash-lite' }),
+
+  // ── LLM — Sarvam-1 via llama.cpp (DISABLED — kept for reference) ─────────────
+  SARVAM_BASE_URL:   str({ default: 'http://localhost:8004' }),
+  SARVAM_MODEL:      str({ default: 'sarvam-1' }),
+  SARVAM_MAX_CTX:    num({ default: 8192 }),
+  SARVAM_TIMEOUT_MS: num({ default: 600000 }),
 
   // ── Gmail OAuth2 (for sending department request emails + polling responses) ──
   GMAIL_CLIENT_ID: str(),

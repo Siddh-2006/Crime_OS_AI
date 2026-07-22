@@ -49,7 +49,7 @@ async function bootstrap(): Promise<void> {
     try {
       await checkOllamaHealth();
     } catch (ollamaErr) {
-      logger.warn('Sarvam health check failed — LLM calls may fail.', { error: ollamaErr });
+      logger.warn('Gemma health check failed — LLM calls may fail.', { error: ollamaErr });
     }
 
     const app = createApp();

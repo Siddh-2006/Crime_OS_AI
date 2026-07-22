@@ -7,19 +7,33 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from legal_rag.retrieval import LegalRetriever
-from legal_rag.embedding import NomicEmbedder, build_dept_embedding_text
+from legal_rag.embedding import (
+    BGEEmbedder,
+    BGEEmbeddingConfig,
+    build_dept_embedding_text,
+    DOCUMENT_PREFIX,
+)
 from legal_rag.qdrant_store import LegalQdrantStore
 from legal_rag.models import EmbeddedDocumentRecord
 from ingestion.schemas import DeptRegistryRecord
 
 app = FastAPI(title="Legal Agent API")
 
-retriever = LegalRetriever()
-embedder = NomicEmbedder()
-store = LegalQdrantStore()
+# ── Shared singletons ─────────────────────────────────────────────────────────
+# BGEEmbedder tries sentence-transformers on first use.
+# If not installed, it automatically falls back to NomicEmbedder (llama.cpp).
+# The _resolve() call here forces the check at startup so the log appears
+# immediately rather than on the first incoming request.
+print("[app/main] Initialising embedder — checking for sentence-transformers (BGE)...", file=sys.stderr)
+_embedder_config = BGEEmbeddingConfig()
+embedder = BGEEmbedder(config=_embedder_config)
+embedder._resolve()   # trigger the BGE-vs-Nomic decision at startup
+
+retriever = LegalRetriever(embedder=embedder)
+store     = LegalQdrantStore()
 
 
-# ─── Existing copilot endpoint (unchanged) ────────────────────────────────────
+# ─── Copilot endpoint (unchanged) ────────────────────────────────────────────
 
 class CopilotRequest(BaseModel):
     query: str
@@ -46,11 +60,6 @@ def copilot_endpoint(req: CopilotRequest):
 # ─── Department Registry vector management ───────────────────────────────────
 
 class DeptRegistryUpsertRequest(BaseModel):
-    """
-    Mirrors the DepartmentRegistry MongoDB document fields relevant for embedding.
-    qdrant_uuid is optional — if provided the existing point is overwritten (update),
-    if omitted a new UUID is generated (create).
-    """
     entity_id: str
     entity_name: str
     category: str
@@ -62,17 +71,14 @@ class DeptRegistryUpsertRequest(BaseModel):
     notes_or_caveats: str = ""
     confidence: str = "high"
     act: str = "department_registry"
-    qdrant_uuid: Optional[str] = None  # if set, reuse this UUID (update in-place)
+    qdrant_uuid: Optional[str] = None
 
 
 @app.post("/registry/upsert")
 def registry_upsert(req: DeptRegistryUpsertRequest):
     """
     Embed a single department registry record and upsert it into Qdrant.
-    Returns the Qdrant point UUID so the caller can persist it in MongoDB.
-
-    - Create: omit qdrant_uuid → new UUID generated and returned.
-    - Update: pass existing qdrant_uuid → same point overwritten with new vector + payload.
+    Uses BGEEmbedder (falls back to Nomic if sentence-transformers unavailable).
     """
     try:
         record = DeptRegistryRecord(
@@ -89,10 +95,23 @@ def registry_upsert(req: DeptRegistryUpsertRequest):
             confidence=req.confidence,
         )
 
+        print(
+            f"[registry/upsert] Embedding dept record '{req.entity_id}' "
+            f"via {'BGE' if not embedder._fallback else 'Nomic (fallback)'}",
+            file=sys.stderr,
+        )
+
+        # Build embedding text and embed using whichever backend is active
         embedding_text = build_dept_embedding_text(record)
-        # Use document prefix — this is an indexing operation, not a query
-        from legal_rag.embedding import DOCUMENT_PREFIX
-        vector = embedder._embed_one(DOCUMENT_PREFIX + embedding_text, label="doc")
+
+        if embedder._fallback:
+            # Nomic path — apply document prefix
+            vector = embedder._fallback._embed_one(
+                DOCUMENT_PREFIX + embedding_text, label="dept_doc"
+            )
+        else:
+            # BGE path — symmetric, no prefix needed
+            vector = embedder.embed_texts([embedding_text])[0]
 
         embedded = EmbeddedDocumentRecord(
             record=record,
@@ -103,21 +122,26 @@ def registry_upsert(req: DeptRegistryUpsertRequest):
 
         store.upsert_embeddings([embedded])
 
+        print(
+            f"[registry/upsert] Upserted '{req.entity_id}' → Qdrant uuid={embedded.uuid}",
+            file=sys.stderr,
+        )
         return {"success": True, "qdrant_uuid": embedded.uuid}
 
     except Exception as e:
         import traceback
-        raise HTTPException(status_code=500, detail={"error": str(e), "traceback": traceback.format_exc()})
+        raise HTTPException(
+            status_code=500,
+            detail={"error": str(e), "traceback": traceback.format_exc()},
+        )
 
 
 @app.delete("/registry/{uuid}")
 def registry_delete(uuid: str):
-    """
-    Delete a single department registry point from Qdrant by its UUID.
-    Called when a department is deactivated.
-    """
+    """Delete a single department registry point from Qdrant by UUID."""
     try:
         store.delete_by_uuid(uuid)
+        print(f"[registry/delete] Deleted Qdrant point {uuid}", file=sys.stderr)
         return {"success": True, "deleted_uuid": uuid}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

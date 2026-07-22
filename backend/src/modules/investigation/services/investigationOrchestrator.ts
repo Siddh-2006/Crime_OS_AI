@@ -54,7 +54,14 @@ export class InvestigationOrchestrator {
 
     // 5. Deep LLM pass
     logger.info(`[Orchestrator] [5/7] Running deep model pass (temp=0.1, max_tokens=1024, jsonMode=true)`);
-    const deepPrompt = buildDeepPrompt(factsObject, legalAgentResult, recommendationResult, confidenceBreakdown);
+
+    // Fetch active department entity IDs to ground the LLM — prevents hallucinated entity IDs
+    const { DepartmentRegistry } = await import('../../admin/models/DepartmentRegistry.model');
+    const activeDepts = await DepartmentRegistry.find({ isActive: true }, { entity_id: 1, entity_name: 1 }).lean();
+    const deptWhitelist = activeDepts.map((d: any) => `  ${d.entity_id} → ${d.entity_name}`).join('\n');
+    logger.debug(`[Orchestrator] Dept whitelist: ${activeDepts.length} active departments`);
+
+    const deepPrompt = buildDeepPrompt(factsObject, legalAgentResult, recommendationResult, confidenceBreakdown, deptWhitelist);
     const deepResponse = await deepCall(deepPrompt.system, deepPrompt.user, { jsonMode: true }) as any;
 
     if (!deepResponse || !deepResponse.ranked_next_steps) {

@@ -11,6 +11,16 @@ export interface PromptPayload {
   user: string;
 }
 
+// Single source of truth for requirement 5 — used in both deep and correction prompts
+const DEPT_ENTITY_ID_INSTRUCTION = (validEntityIds: string) =>
+  `5. For ranked_next_steps, if a step requires an external department, set "target" to "department_entity" ` +
+  `and "department_entity_id" to an EXACT entity_id from this whitelist (format: id → name):\n` +
+  `${validEntityIds}\n` +
+  `Only use entity_id values from that list. Never invent department names. ` +
+  `If no relevant department applies, set "department_entity_id" to null. ` +
+  `If it requires the complainant to provide info, set "target" to "complainant". ` +
+  `Otherwise leave target blank for IO internal tasks.`;
+
 export function buildFastPrompt(facts: any, retrievedChunks: any): { system: string, user: string } {
   const system = `You are a fast, efficient AI assistant helping organize investigation data.
 Your task is to take raw case facts and retrieved legal/SOP chunks and format them cleanly.
@@ -31,7 +41,8 @@ export function buildDeepPrompt(
   facts: FactsObject,
   legalAgentResult: any,
   recommendationResult: any,
-  confidenceBreakdown: ConfidenceBreakdown
+  confidenceBreakdown: ConfidenceBreakdown,
+  deptEntityWhitelist: string = '(no departments available)',
 ): PromptPayload {
   const system = `You are a Senior Investigative Officer AI. 
 Your job is to read case facts, SOPs (legal agent), similar historical cases (recommendations), and a computed algorithmic confidence breakdown, then generate a strict JSON response.
@@ -42,7 +53,7 @@ REQUIREMENTS:
 2. ranked_next_steps MUST be highly detailed, case-specific, and actionable. You MUST invent custom, precise steps tailored to the Case Facts. For example, instead of a generic "Review Evidence", write "Cross-check WhatsApp screenshots and freeze HDFC bank account ending in 1234". If a phone number is present in the facts, add a step to "Request CDR for phone number X". DO NOT output generic, vague steps.
 3. narrative_summary MUST act as an intelligent investigative assistant. It must explain the current state of the investigation, explicitly mention the factors from the confidence breakdown (evidence coverage, checklist progress, corroboration, contradictions), and clearly outline potential risks or gaps in the investigation.
 4. suggested_legal_sections MUST provide a brief list of the applicable legal sections (e.g., IPC, IT Act) with a short explanation of why they apply. It MUST be an array of strings.
-5. For ranked_next_steps, if a step requires an external department, set "target" to "department_entity" and "department_entity_id" to the name of the department (e.g., BANK, ISP, TELECOM). If it requires the complainant to provide info, set "target" to "complainant". Otherwise leave target blank for IO internal tasks.
+${DEPT_ENTITY_ID_INSTRUCTION(deptEntityWhitelist)}
 6. Do not wrap JSON in markdown \`\`\` blocks, just return raw JSON text.
 
 JSON SCHEMA:
@@ -54,7 +65,7 @@ JSON SCHEMA:
       "confidence": 95, 
       "evidence_needed": ["bank statement"],
       "target": "department_entity",
-      "department_entity_id": "BANK" 
+      "department_entity_id": "bank_generic" 
     }
   ],
   "suspect_candidates": [
@@ -89,7 +100,8 @@ Produce the JSON object now.`;
 export function buildCorrectionPrompt(
   facts: FactsObject,
   originalSnapshot: any,
-  correctionMessage: string
+  correctionMessage: string,
+  deptEntityWhitelist: string = '(no departments available)',
 ): PromptPayload {
   const system = `You are a Senior Investigative Officer AI handling a manual override from a human officer.
 You generated a previous analysis, but the human officer has provided a correction message.
@@ -100,7 +112,7 @@ REQUIREMENTS:
 2. Revise your previous analysis to be completely consistent with the officer's correction.
 3. DO NOT contradict facts that you have no reason to doubt. Focus on integrating the officer's correction gracefully.
 4. ranked_next_steps MUST ONLY use steps from the provided SOPs (from the original facts or previous steps).
-5. For ranked_next_steps, if a step requires an external department, set "target" to "department_entity" and "department_entity_id" to the name of the department (e.g., BANK, ISP, TELECOM). If it requires the complainant to provide info, set "target" to "complainant". Otherwise leave target blank for IO internal tasks.
+${DEPT_ENTITY_ID_INSTRUCTION(deptEntityWhitelist)}
 6. Do not wrap JSON in markdown \`\`\` blocks, just return raw JSON text.
 
 JSON SCHEMA:
@@ -112,7 +124,7 @@ JSON SCHEMA:
       "confidence": 95, 
       "evidence_needed": ["bank statement"],
       "target": "department_entity",
-      "department_entity_id": "BANK" 
+      "department_entity_id": "bank_generic" 
     }
   ],
   "suspect_candidates": [
