@@ -79,7 +79,7 @@ class InvestigationIntelligenceEngine(IInvestigationIntelligenceEngine):
         try:
             raw_response = await self._llm_client.generate(
                 prompt=user_prompt,
-                system=system_prompt,
+                system_prompt=system_prompt,
             )
             data = _extract_json(raw_response)
             parsed = _build_structured_intelligence(
