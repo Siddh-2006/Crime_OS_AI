@@ -2,9 +2,15 @@
 Evidence schemas — used by Image Worker (M4), OCR Worker (M5),
 Audio Worker (M6), Video Worker (M7), and PDF Worker (M8).
 
-ImageMetadata      — deterministic Pillow-extracted image properties.
+ImageMetadata       — deterministic Pillow-extracted image properties.
 ImageAnalysisResult — strongly typed Florence-2 output (never raw).
-EvidenceProfile    — the complete, immutable evidence record.
+AudioMetadata       — mutagen/pydub-extracted audio properties.
+TranscriptSegment   — per-segment Whisper output with timestamps.
+AudioTranscript     — full Whisper transcript with optional translation.
+VideoMetadata       — OpenCV/mutagen-extracted video properties.
+SceneInfo           — PySceneDetect scene boundary with timestamps.
+PDFMetadata         — pymupdf-extracted PDF document properties.
+EvidenceProfile     — the complete, immutable evidence record.
 """
 from __future__ import annotations
 
@@ -94,6 +100,176 @@ class ImageAnalysisResult(BaseModel):
         default=False,
         validation_alias=AliasChoices("contains_documents", "containsDocuments"),
     )
+
+
+# ── Audio schemas ────────────────────────────────────────────────────────────────
+
+class AudioMetadata(BaseModel):
+    """Deterministic audio properties extracted by mutagen/pydub."""
+    model_config = ConfigDict(populate_by_name=True)
+
+    duration_seconds: float = Field(
+        validation_alias=AliasChoices("duration_seconds", "durationSeconds"),
+        description="Duration of the audio in seconds.",
+    )
+    sample_rate: int | None = Field(
+        default=None,
+        validation_alias=AliasChoices("sample_rate", "sampleRate"),
+        description="Audio sample rate in Hz.",
+    )
+    channels: int | None = Field(
+        default=None,
+        description="Number of audio channels (1=mono, 2=stereo).",
+    )
+    codec: str | None = Field(
+        default=None,
+        description="Audio codec (mp3, wav, ogg, flac, aac, etc.).",
+    )
+    file_size_bytes: int = Field(
+        validation_alias=AliasChoices("file_size_bytes", "fileSizeBytes"),
+        description="Original file size in bytes.",
+    )
+    mime_type: str = Field(
+        validation_alias=AliasChoices("mime_type", "mimeType"),
+        description="MIME type of the audio file.",
+    )
+    bit_rate: int | None = Field(
+        default=None,
+        validation_alias=AliasChoices("bit_rate", "bitRate"),
+        description="Bit rate in bps.",
+    )
+
+
+class TranscriptSegment(BaseModel):
+    """A single Whisper transcript segment with timestamps."""
+    model_config = ConfigDict(populate_by_name=True)
+
+    start: float = Field(description="Segment start time in seconds.")
+    end: float = Field(description="Segment end time in seconds.")
+    text: str = Field(description="Transcribed text for this segment.")
+    confidence: float = Field(
+        default=0.0,
+        description="Avg log-probability converted to 0–1 confidence score.",
+    )
+
+
+class AudioTranscript(BaseModel):
+    """Structured Whisper output. Business logic never receives raw Whisper output."""
+    model_config = ConfigDict(populate_by_name=True)
+
+    detected_language: str = Field(
+        validation_alias=AliasChoices("detected_language", "detectedLanguage"),
+        description="BCP-47 language code detected by Whisper (e.g. 'en', 'hi').",
+    )
+    language_probability: float = Field(
+        default=0.0,
+        validation_alias=AliasChoices("language_probability", "languageProbability"),
+        description="Whisper language detection confidence (0–1).",
+    )
+    raw_text: str = Field(
+        validation_alias=AliasChoices("raw_text", "rawText"),
+        description="Full transcript in the original detected language.",
+    )
+    translated_text: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("translated_text", "translatedText"),
+        description="English translation (set only when source language is non-English).",
+    )
+    segments: list[TranscriptSegment] = Field(
+        default_factory=list,
+        description="Per-segment breakdown with timestamps and confidence.",
+    )
+
+
+# ── PDF schemas ────────────────────────────────────────────────────────────────
+
+class PDFMetadata(BaseModel):
+    """Deterministic PDF document properties extracted by pymupdf. No AI used."""
+    model_config = ConfigDict(populate_by_name=True)
+
+    page_count: int = Field(
+        validation_alias=AliasChoices("page_count", "pageCount"),
+        description="Total number of pages in the document.",
+    )
+    file_size_bytes: int = Field(
+        validation_alias=AliasChoices("file_size_bytes", "fileSizeBytes"),
+        description="Original file size in bytes.",
+    )
+    mime_type: str = Field(
+        default="application/pdf",
+        validation_alias=AliasChoices("mime_type", "mimeType"),
+    )
+    title: str | None = Field(default=None, description="PDF document title (from metadata).")  
+    author: str | None = Field(default=None, description="PDF document author.")  
+    producer: str | None = Field(default=None, description="PDF producer (tool that created it).")  
+    creator: str | None = Field(default=None, description="PDF creator application.")  
+    is_encrypted: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("is_encrypted", "isEncrypted"),
+        description="Whether the PDF is password-protected.",
+    )
+
+
+# ── Video schemas ────────────────────────────────────────────────────────────────
+
+class VideoMetadata(BaseModel):
+    """Deterministic video properties extracted by OpenCV + mutagen. No AI used."""
+    model_config = ConfigDict(populate_by_name=True)
+
+    duration_seconds: float = Field(
+        validation_alias=AliasChoices("duration_seconds", "durationSeconds"),
+        description="Video duration in seconds.",
+    )
+    fps: float = Field(description="Frames per second.")
+    width: int = Field(description="Frame width in pixels.")
+    height: int = Field(description="Frame height in pixels.")
+    frame_count: int = Field(
+        validation_alias=AliasChoices("frame_count", "frameCount"),
+        description="Total number of frames.",
+    )
+    codec: str | None = Field(
+        default=None,
+        description="Video codec (h264, hevc, vp9, av1, etc.).",
+    )
+    has_audio: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("has_audio", "hasAudio"),
+        description="Whether the video file contains an audio track.",
+    )
+    file_size_bytes: int = Field(
+        validation_alias=AliasChoices("file_size_bytes", "fileSizeBytes"),
+        description="Original file size in bytes.",
+    )
+    mime_type: str = Field(
+        validation_alias=AliasChoices("mime_type", "mimeType"),
+        description="MIME type of the video file.",
+    )
+
+
+class SceneInfo(BaseModel):
+    """A single scene detected by PySceneDetect ContentDetector."""
+    model_config = ConfigDict(populate_by_name=True)
+
+    scene_index: int = Field(
+        validation_alias=AliasChoices("scene_index", "sceneIndex"),
+        description="Zero-based scene index.",
+    )
+    start_time_s: float = Field(
+        validation_alias=AliasChoices("start_time_s", "startTimeS"),
+        description="Scene start time in seconds.",
+    )
+    end_time_s: float = Field(
+        validation_alias=AliasChoices("end_time_s", "endTimeS"),
+        description="Scene end time in seconds.",
+    )
+
+    @property
+    def duration_s(self) -> float:
+        return self.end_time_s - self.start_time_s
+
+    @property
+    def midpoint_s(self) -> float:
+        return (self.start_time_s + self.end_time_s) / 2.0
 
 
 class EvidenceProfile(BaseModel):

@@ -41,6 +41,8 @@ class Settings(BaseSettings):
     # ── LLM (Ollama) ──────────────────────────────────────────────────────────
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "gemma4:e2b"
+    TIMELINE_INTELLIGENCE_MODEL: str = "gemma4:e2b"
+    INVESTIGATION_INTELLIGENCE_MODEL: str = "gemma4:e2b"
     OLLAMA_TIMEOUT_SECONDS: int = 120
     OLLAMA_NUM_CTX: int = 4096
 
@@ -56,6 +58,19 @@ class Settings(BaseSettings):
     FLORENCE_BASE_URL: str = "http://localhost:8002"
     FLORENCE_TIMEOUT_SECONDS: int = 60
     FLORENCE_MAX_IMAGE_DIM: int = 1024    # longest edge limit before Florence inference
+
+    # ── Whisper (Audio AI) ────────────────────────────────────────────────
+    WHISPER_MODEL: str = "tiny"           # tiny | base | small | medium | large-v3
+    WHISPER_DEVICE: str = "cpu"           # cpu | cuda
+    WHISPER_COMPUTE_TYPE: str = "int8"    # int8 | float16 | float32
+
+    # ── Video Worker ────────────────────────────────────────────────
+    VIDEO_SCENE_THRESHOLD: float = 27.0   # PySceneDetect ContentDetector threshold
+    VIDEO_KEYFRAMES_PER_SCENE: int = 3    # keyframes per scene: 1 (middle) or 3 (start/middle/end)
+
+    # ── PDF Worker ────────────────────────────────────────────────
+    PDF_DIGITAL_CHAR_THRESHOLD: int = 20  # min non-whitespace chars to classify page as digital
+    PDF_PAGE_RENDER_DPI: int = 150        # DPI for rendering scanned pages to JPEG
 
     @property
     def redis_url(self) -> str:

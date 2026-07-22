@@ -19,7 +19,7 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import health, jobs, complaint, text_intelligence, image, ocr
+from app.api.routes import health, jobs, complaint, text_intelligence, image, ocr, audio, video, pdf, fusion, timeline, timeline_intelligence, investigation_intelligence
 from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import logger
@@ -98,6 +98,13 @@ def create_app() -> FastAPI:
     app.include_router(text_intelligence.router)
     app.include_router(image.router)
     app.include_router(ocr.router)
+    app.include_router(audio.router)
+    app.include_router(video.router)
+    app.include_router(pdf.router)
+    app.include_router(fusion.router)
+    app.include_router(timeline.router)
+    app.include_router(timeline_intelligence.router)
+    app.include_router(investigation_intelligence.router)
 
     # ── Exception handlers ────────────────────────────────────────────────────
     register_exception_handlers(app)

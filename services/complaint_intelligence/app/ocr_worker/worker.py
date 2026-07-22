@@ -21,7 +21,7 @@ from app.base.worker import BaseWorker, WorkerResult
 from app.core.logging import logger
 from app.ocr_worker.interfaces import IOCREngine, ITranslationEngine
 from app.queue.interface import IQueue
-from app.queue.job import JobType
+from app.queue.job import Job, JobType
 from app.schemas.ocr import OCRWorkerOutput
 
 
@@ -110,11 +110,13 @@ class OCRWorker(BaseWorker):
                 "evidence_id": evidence_id,
                 "ocr_job_id": job_id,
             }
-            await self._queue.enqueue(
+            ti_job = Job(
                 job_type=JobType.TEXT_INTELLIGENCE,
                 payload=ti_payload,
-                job_id=ti_job_id,
+                correlation_id=job_id,
             )
+            ti_job = ti_job.model_copy(update={"job_id": ti_job_id})
+            await self._queue.enqueue(ti_job)
             logger.info(
                 "[ocr_worker] Text Intelligence job enqueued",
                 extra={"job_id": job_id, "ti_job_id": ti_job_id},

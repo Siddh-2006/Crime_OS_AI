@@ -72,6 +72,42 @@ class UnsupportedFormatError(CrimeOSError):
     error_code = "UNSUPPORTED_FORMAT"
 
 
+class InvalidAudioError(CrimeOSError):
+    """Audio file is empty, corrupt, or cannot be decoded. Never retried."""
+    http_status = status.HTTP_400_BAD_REQUEST
+    error_code = "INVALID_AUDIO"
+
+
+class UnsupportedAudioFormatError(CrimeOSError):
+    """Audio MIME type is not supported. Never retried."""
+    http_status = status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
+    error_code = "UNSUPPORTED_AUDIO_FORMAT"
+
+
+class InvalidVideoError(CrimeOSError):
+    """Video file is empty, corrupt, or cannot be decoded. Never retried."""
+    http_status = status.HTTP_400_BAD_REQUEST
+    error_code = "INVALID_VIDEO"
+
+
+class UnsupportedVideoFormatError(CrimeOSError):
+    """Video MIME type / container is not supported. Never retried."""
+    http_status = status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
+    error_code = "UNSUPPORTED_VIDEO_FORMAT"
+
+
+class InvalidPDFError(CrimeOSError):
+    """PDF file is empty, corrupt, or cannot be opened. Never retried."""
+    http_status = status.HTTP_400_BAD_REQUEST
+    error_code = "INVALID_PDF"
+
+
+class UnsupportedPDFError(CrimeOSError):
+    """PDF type or version is not supported. Never retried."""
+    http_status = status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
+    error_code = "UNSUPPORTED_PDF"
+
+
 # ─── Response builder ─────────────────────────────────────────────────────────
 
 def _error_response(

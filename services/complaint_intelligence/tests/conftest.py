@@ -21,6 +21,17 @@ from app.image_worker.evidence_builder import EvidenceBuilder
 from app.image_worker.metadata_extractor import PILMetadataExtractor
 from app.image_worker.preprocessor import PILImagePreprocessor
 from app.image_worker.text_detector import MockTextDetector
+from app.ocr_worker.translator import NoOpTranslator
+from tests.pdf_test_utils import MockOCREngine
+from app.audio_worker.transcriber import MockAudioTranscriber
+from app.audio_worker.metadata_extractor import MockAudioMetadataExtractor
+from app.video_worker.scene_detector import MockSceneDetector
+from app.video_worker.keyframe_extractor import MockKeyframeExtractor
+from app.video_worker.audio_extractor import MockAudioExtractor
+from app.video_worker.metadata_extractor import MockVideoMetadataExtractor
+from app.pdf_worker.text_extractor import MockPDFTextExtractor
+from app.pdf_worker.page_renderer import MockPDFPageRenderer
+from app.pdf_worker.metadata_extractor import MockPDFMetadataExtractor
 
 
 @pytest.fixture
@@ -58,6 +69,66 @@ def app(mock_queue: MockQueue, mock_llm_client: MockLLMClient):
     container.text_detector = MockTextDetector(returns=False)
     container.image_captioner = MockImageCaptioner()
     container.evidence_builder = EvidenceBuilder()
+    # Override OCR worker — no PaddleOCR or deep_translator in tests
+    container.ocr_engine = MockOCREngine()
+    container.translation_engine = NoOpTranslator()
+    from app.ocr_worker.worker import OCRWorker
+    container.ocr_worker = OCRWorker(
+        ocr_engine=container.ocr_engine,
+        translator=container.translation_engine,
+        queue=mock_queue,
+    )
+    # Override audio worker — no Whisper or mutagen required in unit tests
+    container.audio_transcriber = MockAudioTranscriber()
+    container.audio_metadata_extractor = MockAudioMetadataExtractor()
+    # Re-create audio_worker so it picks up the mock dependencies
+    from app.audio_worker.worker import AudioWorker
+    container.audio_worker = AudioWorker(
+        transcriber=container.audio_transcriber,
+        metadata_extractor=container.audio_metadata_extractor,
+        queue=mock_queue,
+    )
+    # Override video worker — no OpenCV, PySceneDetect, or moviepy in tests
+    from tests.audio_test_utils import make_silent_wav_bytes
+    container.scene_detector = MockSceneDetector()
+    container.keyframe_extractor = MockKeyframeExtractor()
+    container.video_audio_extractor = MockAudioExtractor(audio_bytes=make_silent_wav_bytes())
+    container.video_metadata_extractor = MockVideoMetadataExtractor()
+    # Re-create video_worker with all mocked sub-workers
+    from app.video_worker.worker import VideoWorker
+    container.video_worker = VideoWorker(
+        scene_detector=container.scene_detector,
+        keyframe_extractor=container.keyframe_extractor,
+        audio_extractor=container.video_audio_extractor,
+        video_metadata_extractor=container.video_metadata_extractor,
+        image_worker=container.image_worker,
+        audio_worker=container.audio_worker,
+        frames_per_scene=3,
+    )
+    # Override pdf worker — no pymupdf in tests
+    container.pdf_text_extractor = MockPDFTextExtractor(pages_text=["Sample digital PDF text page."])
+    container.pdf_page_renderer = MockPDFPageRenderer()
+    container.pdf_metadata_extractor = MockPDFMetadataExtractor()
+    from app.pdf_worker.worker import PDFWorker
+    container.pdf_worker = PDFWorker(
+        text_extractor=container.pdf_text_extractor,
+        page_renderer=container.pdf_page_renderer,
+        metadata_extractor=container.pdf_metadata_extractor,
+        ocr_worker=container.ocr_worker,
+        translator=container.translation_engine,
+        queue=mock_queue,
+        digital_char_threshold=20,
+    )
+    # Override timeline intelligence engine (M11) — uses MockLLMClient, no Ollama required
+    from app.timeline_intelligence.engine import TimelineIntelligenceEngine
+    container.timeline_intelligence_engine = TimelineIntelligenceEngine(
+        llm_client=mock_llm_client,
+    )
+    # Override investigation intelligence engine (M12) — uses MockLLMClient, no Ollama required
+    from app.investigation_intelligence.engine import InvestigationIntelligenceEngine
+    container.investigation_intelligence_engine = InvestigationIntelligenceEngine(
+        llm_client=mock_llm_client,
+    )
     application.dependency_overrides[get_di_container] = lambda: container
 
     return application

@@ -32,6 +32,22 @@ class SpacyNERExtractor(INERExtractor):
 
     def _load_model(self):
         """Lazy-load spaCy model. Raises ImportError if spacy/model not installed."""
+        import os, sys, importlib.util
+        # Windows: register torch DLL dir before spaCy/thinc tries to import torch
+        if sys.platform == "win32":
+            _spec = importlib.util.find_spec("torch")
+            if _spec and _spec.origin:
+                _lib = os.path.join(os.path.dirname(_spec.origin), "lib")
+                if os.path.isdir(_lib):
+                    try:
+                        os.add_dll_directory(_lib)
+                    except Exception:
+                        pass
+            # Pre-import torch so its DLLs are resident before thinc loads
+            try:
+                import torch as _t  # noqa: F401
+            except Exception:
+                pass
         import spacy  # noqa: local import — keeps spaCy off the import path for tests
         self._nlp = spacy.load("en_core_web_sm")
 
