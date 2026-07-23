@@ -136,6 +136,7 @@ interface Complaint {
     recommendations?: string[];
     m3Entities?: Array<{ type: string; value: string; context?: string }>;
     m3Events?: Array<{ time?: string; description: string; sourceRef?: string }>;
+    [key: string]: any;
   };
 }
 
@@ -151,12 +152,15 @@ interface IOOfficer {
   } | null;
 }
 
+import { CaseUnderstandingView, CaseUnderstandingData } from '@/components/case-understanding/CaseUnderstandingView';
+
 export default function PoliceComplaintDetailPage(): React.ReactElement {
   const params = useParams();
   const router = useRouter();
   const { user } = useAuth(); // Logged in officer info
 
   const [complaint, setComplaint] = useState<Complaint | null>(null);
+  const [caseUnderstanding, setCaseUnderstanding] = useState<CaseUnderstandingData | null>(null);
   const [ios, setIos] = useState<IOOfficer[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -203,8 +207,15 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
       // Populate IO edit fields
       setDetailedDescription(c.detailedDescription);
       setCrimeSummary(c.crimeSummaryHistory?.[c.crimeSummaryHistory.length - 1]?.content || '');
-      setLegalSections(c.legalSectionsHistory?.[c.legalSectionsHistory.length - 1]?.content || '');
-      setInvestigationNotes(c.investigationNotesHistory?.[c.investigationNotesHistory.length - 1]?.content || '');
+      // Fetch Case Understanding JSON
+      try {
+        const cuRes = await apiClient.get(API_ROUTES.CASE_UNDERSTANDING.DETAIL(id));
+        if (cuRes.data?.data) {
+          setCaseUnderstanding(cuRes.data.data);
+        }
+      } catch {
+        // Non-blocking if case understanding not yet processed
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch complaint details.');
     } finally {
@@ -455,6 +466,13 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
           </Button>
         )}
       </div>
+
+      {/* Single Case Understanding Engine Component */}
+      {caseUnderstanding && (
+        <div className="mb-6">
+          <CaseUnderstandingView data={caseUnderstanding} />
+        </div>
+      )}
 
       {(!isAssignedIO || complaint.status === 'SUBMITTED') ? (
         <div>

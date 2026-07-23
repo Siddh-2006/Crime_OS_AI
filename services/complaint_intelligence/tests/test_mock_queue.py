@@ -6,7 +6,7 @@ from app.queue.mock_queue import MockQueue
 from app.queue.job import Job, JobStatus, JobType
 
 
-def _job(jtype: JobType = JobType.COMPLAINT_PROFILE, payload: dict | None = None) -> Job:
+def _job(jtype: JobType = JobType.CASE_UNDERSTANDING, payload: dict | None = None) -> Job:
     return Job(job_type=jtype, payload=payload or {"test": True})
 
 
@@ -47,7 +47,7 @@ async def test_dequeue_returns_job_and_sets_running():
 @pytest.mark.asyncio
 async def test_dequeue_empty_returns_none():
     q = MockQueue()
-    result = await q.dequeue(JobType.COMPLAINT_PROFILE.value)
+    result = await q.dequeue(JobType.CASE_UNDERSTANDING.value)
     assert result is None
 
 
@@ -85,7 +85,7 @@ async def test_nack_retries_when_attempts_remain():
 @pytest.mark.asyncio
 async def test_nack_dead_letters_after_max_attempts():
     q = MockQueue()
-    job = Job(job_type=JobType.COMPLAINT_PROFILE, payload={}, attempt=3, max_attempts=3)
+    job = Job(job_type=JobType.CASE_UNDERSTANDING, payload={}, attempt=3, max_attempts=3)
     assert job.can_retry is False
 
     await q.enqueue(job)
@@ -94,7 +94,7 @@ async def test_nack_dead_letters_after_max_attempts():
 
     assert await q.get_status(job.job_id) == JobStatus.DEAD
     assert await q.depth() == 0
-    dead = q.dead_jobs(JobType.COMPLAINT_PROFILE.value)
+    dead = q.dead_jobs(JobType.CASE_UNDERSTANDING.value)
     assert len(dead) == 1
     assert dead[0].job_id == job.job_id
 
@@ -103,11 +103,11 @@ async def test_nack_dead_letters_after_max_attempts():
 @pytest.mark.asyncio
 async def test_depth_by_job_type():
     q = MockQueue()
-    await q.enqueue(_job(JobType.COMPLAINT_PROFILE))
-    await q.enqueue(_job(JobType.COMPLAINT_PROFILE))
+    await q.enqueue(_job(JobType.CASE_UNDERSTANDING))
+    await q.enqueue(_job(JobType.CASE_UNDERSTANDING))
     await q.enqueue(_job(JobType.OCR_WORKER))
 
-    assert await q.depth(JobType.COMPLAINT_PROFILE.value) == 2
+    assert await q.depth(JobType.CASE_UNDERSTANDING.value) == 2
     assert await q.depth(JobType.OCR_WORKER.value) == 1
     assert await q.depth() == 3
 

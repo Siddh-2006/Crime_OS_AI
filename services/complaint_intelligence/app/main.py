@@ -19,10 +19,11 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import health, jobs, complaint, text_intelligence, image, ocr, audio, video, pdf, fusion, timeline, timeline_intelligence, investigation_intelligence
+from app.api.routes import health, jobs, image, ocr, audio, video, pdf, case_understanding
 from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import logger
+from app.core.mongo import close_mongo
 from app.core.redis import close_redis, ping_redis
 
 
@@ -64,6 +65,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         await app.state.worker_runner.stop()
         
     await close_redis()
+    await close_mongo()
     logger.info("Service stopped cleanly")
 
 
@@ -73,8 +75,8 @@ def create_app() -> FastAPI:
         version=settings.APP_VERSION,
         description=(
             "AI-powered complaint intelligence pipeline for Crime OS. "
-            "Processes complaints and evidence through OCR, NLP, "
-            "LLM reasoning, and timeline generation."
+            "Processes complaints and evidence through OCR, vision AI, "
+            "and single-pass LLM Case Understanding."
         ),
         docs_url="/docs",
         redoc_url="/redoc",
@@ -94,17 +96,12 @@ def create_app() -> FastAPI:
     # ── Routers ───────────────────────────────────────────────────────────────
     app.include_router(health.router)
     app.include_router(jobs.router)
-    app.include_router(complaint.router)
-    app.include_router(text_intelligence.router)
     app.include_router(image.router)
     app.include_router(ocr.router)
     app.include_router(audio.router)
     app.include_router(video.router)
     app.include_router(pdf.router)
-    app.include_router(fusion.router)
-    app.include_router(timeline.router)
-    app.include_router(timeline_intelligence.router)
-    app.include_router(investigation_intelligence.router)
+    app.include_router(case_understanding.router)
 
     # ── Exception handlers ────────────────────────────────────────────────────
     register_exception_handlers(app)

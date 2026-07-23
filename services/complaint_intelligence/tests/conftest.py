@@ -12,10 +12,6 @@ from app.core.container import get_container
 from app.llm.client import MockLLMClient
 from app.main import create_app
 from app.queue.mock_queue import MockQueue
-from app.text_intelligence.entity_linker import PassthroughEntityLinker
-from app.text_intelligence.event_extractor import TemporalEventExtractor
-from app.text_intelligence.ner_extractor import MockNERExtractor
-from app.text_intelligence.regex_extractor import IndianRegexExtractor
 from app.image_worker.captioner import MockImageCaptioner
 from app.image_worker.evidence_builder import EvidenceBuilder
 from app.image_worker.metadata_extractor import PILMetadataExtractor
@@ -118,16 +114,6 @@ def app(mock_queue: MockQueue, mock_llm_client: MockLLMClient):
         translator=container.translation_engine,
         queue=mock_queue,
         digital_char_threshold=20,
-    )
-    # Override timeline intelligence engine (M11) — uses MockLLMClient, no Ollama required
-    from app.timeline_intelligence.engine import TimelineIntelligenceEngine
-    container.timeline_intelligence_engine = TimelineIntelligenceEngine(
-        llm_client=mock_llm_client,
-    )
-    # Override investigation intelligence engine (M12) — uses MockLLMClient, no Ollama required
-    from app.investigation_intelligence.engine import InvestigationIntelligenceEngine
-    container.investigation_intelligence_engine = InvestigationIntelligenceEngine(
-        llm_client=mock_llm_client,
     )
     application.dependency_overrides[get_di_container] = lambda: container
 

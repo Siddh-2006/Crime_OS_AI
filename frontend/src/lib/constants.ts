@@ -43,6 +43,20 @@ export const API_ROUTES = {
     APPROVE_PARTICIPANT_RECOMMENDATION: (id: string) => `/cases/${id}/participants/recommendations/approve`,
     ATTACH_PARTICIPANT_SECTIONS: (id: string, participantId: string) => `/cases/${id}/participants/${participantId}/sections/attach`,
   },
+  CASE_UNDERSTANDING: {
+    ANALYZE: '/case-understanding/analyze',
+    SUBMIT_CASE: '/case-understanding/submit-case',
+    DETAIL: (id: string) => `/case-understanding/${id}`,
+    OVERVIEW: (id: string) => `/case-understanding/${id}/overview`,
+    TIMELINE: (id: string) => `/case-understanding/${id}/timeline`,
+    ENTITIES: (id: string) => `/case-understanding/${id}/entities`,
+    EVIDENCE: (id: string) => `/case-understanding/${id}/evidence`,
+    CORRELATION: (id: string) => `/case-understanding/${id}/evidence-correlation`,
+    CRIME_ANALYSIS: (id: string) => `/case-understanding/${id}/crime-analysis`,
+    CONTRADICTIONS: (id: string) => `/case-understanding/${id}/contradictions`,
+    MISSING_INFO: (id: string) => `/case-understanding/${id}/missing-information`,
+    MISSING_EVIDENCE: (id: string) => `/case-understanding/${id}/missing-evidence`,
+  },
 } as const;
 
 export const APP_ROUTES = {

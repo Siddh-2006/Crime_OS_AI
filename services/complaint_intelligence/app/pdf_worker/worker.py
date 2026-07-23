@@ -152,27 +152,8 @@ class PDFWorker(BaseWorker[dict, dict]):
                 english_texts.append(effective)
         merged_text = "\n\n".join(english_texts)
 
-        # ── Step 5: Enqueue TextIntelligence job ─────────────────────────────
+        # ── Step 5: Set ti_job_id (legacy field, single-pass pipeline processes merged_text directly) ──
         ti_job_id: str | None = None
-        if merged_text.strip():
-            ti_job_id = str(uuid.uuid4())
-            ti_job = Job(
-                job_type=JobType.TEXT_INTELLIGENCE,
-                payload={
-                    "text": merged_text,
-                    "source": "pdf",
-                    "file_name": file_name,
-                    "evidence_id": evidence_id,
-                    "pdf_job_id": job_id,
-                },
-                correlation_id=job_id,
-            )
-            ti_job = ti_job.model_copy(update={"job_id": ti_job_id})
-            await self._queue.enqueue(ti_job)
-            logger.info(
-                "[pdf_worker] TextIntelligence job enqueued",
-                extra={"job_id": job_id, "ti_job_id": ti_job_id},
-            )
 
         # ── Step 6: Build output ─────────────────────────────────────────────
         self.report_progress(

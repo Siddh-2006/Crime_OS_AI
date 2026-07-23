@@ -30,7 +30,7 @@ class OllamaLLMClient(ILLMClient):
         self,
         base_url: str,
         model: str,
-        timeout: int = 120,
+        timeout: int = 300,
         num_ctx: int = 4096,
     ) -> None:
         self.base_url = base_url.rstrip("/")
@@ -44,9 +44,12 @@ class OllamaLLMClient(ILLMClient):
             "model": self.model,
             "prompt": prompt,
             "stream": False,
+            "format": "json",
             "options": {
                 "num_ctx": self.num_ctx,
-                "temperature": 0.2,
+                "num_predict": 4096,
+                "num_thread": 8,
+                "temperature": 0.1,
             },
         }
         if system_prompt:
@@ -58,6 +61,9 @@ class OllamaLLMClient(ILLMClient):
                 response.raise_for_status()
                 data = response.json()
                 result = data.get("response", "").strip()
+                if "<think>" in result and "</think>" in result:
+                    import re
+                    result = re.sub(r"<think>.*?</think>", "", result, flags=re.DOTALL).strip()
                 if not result:
                     raise LLMError("Ollama returned an empty response")
                 return result

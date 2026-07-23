@@ -9,10 +9,6 @@ import asyncio
 from app.core.container import Container
 from app.core.logging import logger
 from app.image_worker.worker import ImageWorker
-from app.llm.worker import ComplaintProfileWorker
-from app.queue.interface import IQueue
-from app.queue.job import JobType
-from app.text_intelligence.worker import TextIntelligenceWorker
 
 
 class AnalysisWorker:
@@ -64,16 +60,7 @@ class AnalysisWorker:
                 if job:
                     logger.info("Retrieved job from queue", extra={"job_id": job.job_id, "job_type": job.job_type})
                     # Dispatch to correct worker based on job type
-                    if job.job_type == JobType.COMPLAINT_PROFILE:
-                        worker = ComplaintProfileWorker(self.container.llm_client)
-                    elif job.job_type == JobType.TEXT_INTELLIGENCE:
-                        worker = TextIntelligenceWorker(
-                            ner_extractor=self.container.ner_extractor,
-                            regex_extractor=self.container.regex_extractor,
-                            event_extractor=self.container.event_extractor,
-                            entity_linker=self.container.entity_linker,
-                        )
-                    elif job.job_type == JobType.IMAGE_WORKER:
+                    if job.job_type == JobType.IMAGE_WORKER:
                         worker = ImageWorker(
                             metadata_extractor=self.container.metadata_extractor,
                             preprocessor=self.container.image_preprocessor,

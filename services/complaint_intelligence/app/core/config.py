@@ -38,13 +38,17 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = Field(default="INFO", pattern="^(DEBUG|INFO|WARNING|ERROR|CRITICAL)$")
     LOG_FORMAT: str = "json"  # "json" | "text"
 
+    # ── Database (MongoDB Atlas) ──────────────────────────────────────────────
+    MONGODB_URL: str = "mongodb+srv://crimeosxbrightweb_db_user:Xaygb5mGmPh92bFg@crime-os.4gyn7b5.mongodb.net/?appName=crime-os"
+    MONGODB_DB_NAME: str = "test"
+
     # ── LLM (Ollama) ──────────────────────────────────────────────────────────
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "gemma4:e2b"
-    TIMELINE_INTELLIGENCE_MODEL: str = "gemma4:e2b"
-    INVESTIGATION_INTELLIGENCE_MODEL: str = "gemma4:e2b"
-    OLLAMA_TIMEOUT_SECONDS: int = 120
+    CASE_UNDERSTANDING_MODEL: str = "gemma4:e2b"
+    OLLAMA_TIMEOUT_SECONDS: int = 600
     OLLAMA_NUM_CTX: int = 4096
+    LLM_MAX_RETRIES: int = 3
 
     # ── Queue ─────────────────────────────────────────────────────────────────
     QUEUE_MAX_JOBS: int = 10          # arq worker concurrency
