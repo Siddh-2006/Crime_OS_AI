@@ -73,9 +73,11 @@ const ChargeSheetSchema = new Schema<IChargeSheet>(
     investigationFindings: { type: String, trim: true },
     finalReport: { type: String, trim: true },
     filingMetadata: { type: FilingMetadataSchema },
-    version: { type: Number, default: 1 },
+    version: { type: Number, default: 1, index: true },
   },
   { timestamps: true, versionKey: false },
 );
+
+ChargeSheetSchema.index({ case_id: 1, version: 1 }, { unique: true });
 
 export const ChargeSheet = model<IChargeSheet>('ChargeSheet', ChargeSheetSchema);

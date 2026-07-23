@@ -93,8 +93,7 @@ export class ChargeSheetGenerator {
     const lastChargeSheet = await ChargeSheet.findOne({ case_id: caseObjectId }).sort({ version: -1 });
     const nextVersion = lastChargeSheet ? lastChargeSheet.version + 1 : 1;
 
-    // Stage 5: Persist the ChargeSheet
-    const newChargeSheet = new ChargeSheet({
+    const chargeSheetPayload = {
       case_id: caseObjectId,
       version: nextVersion,
       investigationSummarySnapshotId: latestSnapshot?._id,
@@ -116,10 +115,11 @@ export class ChargeSheetGenerator {
         filedAt: new Date(),
         filedBy: new Types.ObjectId(officerId),
       },
-    });
+    };
 
-    const saved = await newChargeSheet.save();
-    logger.info('ChargeSheet generated and persisted successfully', { chargeSheetId: saved._id, version: nextVersion });
+    // Stage 5: Persist the ChargeSheet as a new versioned document
+    const saved = await new ChargeSheet(chargeSheetPayload).save();
+    logger.info('ChargeSheet generated and persisted successfully', { chargeSheetId: saved._id, version: saved.version });
 
     // Stage 6: Return the persisted ChargeSheet
     return saved;
