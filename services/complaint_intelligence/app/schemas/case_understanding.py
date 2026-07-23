@@ -19,10 +19,20 @@ class Overview(BaseModel):
 
 
 class TimelineEvent(BaseModel):
-    timestamp: str = Field(description="Timestamp or date/time indication")
-    description: str = Field(description="Description of what happened at this point in time")
+    timestamp: str = Field(default="Unknown", description="Timestamp or date/time indication")
+    description: str = Field(default="", description="Description of what happened at this point in time")
     supporting_evidence_ids: List[str] = Field(default_factory=list, description="IDs of supporting evidence files")
     confidence: float = Field(default=0.9, ge=0.0, le=1.0)
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_nulls(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if not data.get("timestamp"):
+                data["timestamp"] = "Unknown"
+            if not data.get("description"):
+                data["description"] = ""
+        return data
 
 
 class EntityItem(BaseModel):

@@ -30,8 +30,14 @@ export class CaseUnderstandingController {
         return;
       }
 
-      // case_id in 'cases' equals the complaint's MongoDB _id (stored as string)
-      const doc = await db.collection('cases').findOne({ case_id: id });
+      // case_id in 'cases' equals the complaint's MongoDB _id (stored as string or _id)
+      let doc = await db.collection('cases').findOne({ case_id: id });
+      if (!doc) {
+        doc = await db.collection('cases').findOne({ _id: id as any });
+      }
+      if (!doc && mongoose.Types.ObjectId.isValid(id)) {
+        doc = await db.collection('cases').findOne({ _id: new mongoose.Types.ObjectId(id) as any });
+      }
 
       if (!doc) {
         sendError(res, HttpStatusCode.NOT_FOUND, {

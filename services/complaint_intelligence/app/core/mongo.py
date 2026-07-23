@@ -18,7 +18,7 @@ async def get_mongo_db() -> Any:
     if _mongo_client is None:
         try:
             from motor.motor_asyncio import AsyncIOMotorClient
-            _mongo_client = AsyncIOMotorClient(settings.MONGODB_URL, serverSelectionTimeoutMS=2000)
+            _mongo_client = AsyncIOMotorClient(settings.MONGODB_URL, serverSelectionTimeoutMS=30000)
             await _mongo_client.admin.command('ping')
             logger.info("Connected to MongoDB successfully", extra={"url": settings.MONGODB_URL})
         except Exception as exc:

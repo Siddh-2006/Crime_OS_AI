@@ -241,7 +241,7 @@ export class ComplaintService {
   // ─── Automated Pipeline Trigger ─────────────────────────────────────────────
   private triggerComplaintIntelligencePipeline(complaintNumber: string): void {
     try {
-      const scriptPath = path.resolve(__dirname, '../../../../../services/complaint_intelligence/run_full_pipeline.py');
+      const scriptPath = path.resolve(__dirname, '../../../../../services/complaint_intelligence/run_pipeline_from_atlas.py');
       const venvPython = path.resolve(__dirname, '../../../../../services/complaint_intelligence/.venv/Scripts/python.exe');
       const pythonExec = process.platform === 'win32' && fs.existsSync(venvPython) ? venvPython : 'python';
 

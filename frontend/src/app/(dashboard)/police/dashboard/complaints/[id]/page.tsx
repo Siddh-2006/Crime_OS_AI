@@ -472,20 +472,13 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
         )}
       </div>
 
-      {/* Single Case Understanding Engine Component */}
-      {caseUnderstanding && (
-        <div className="mb-6">
-          <CaseUnderstandingView data={caseUnderstanding} />
-        </div>
-      )}
-
       {(!isAssignedIO || complaint.status === 'SUBMITTED') ? (
         <div>
           {/* ── Segmented Top-Level Tabs ── */}
           <div className="inline-flex items-center gap-1 bg-neutral-100 p-1 rounded-xl mb-6">
             {([
               { key: 'original', label: '📄 Original Complaint' },
-              { key: 'ai', label: '🧠 AI Complaint Intelligence' },
+              { key: 'ai', label: '🧠 AI Case Understanding' },
               { key: 'audit', label: '🕘 Case Status & Timeline' },
             ] as const).map(({ key, label }) => (
               <button
@@ -500,11 +493,11 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                 {label}
                 {key === 'ai' && (
                   <span className={`ml-2 text-[10px] font-extrabold px-1.5 py-0.5 rounded-md ${
-                    complaint.complaintIntelligence || snapshot
-                      ? 'bg-indigo-50 text-indigo-700'
-                      : 'bg-amber-50 text-amber-600'
+                    caseUnderstanding || complaint.complaintIntelligence || snapshot
+                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                      : 'bg-amber-50 text-amber-600 border border-amber-200'
                   }`}>
-                    {complaint.complaintIntelligence || snapshot ? 'READY' : 'PENDING'}
+                    {caseUnderstanding || complaint.complaintIntelligence || snapshot ? 'READY' : 'PENDING'}
                   </span>
                 )}
               </button>
@@ -733,6 +726,10 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
 
           {/* ── TAB: AI COMPLAINT INTELLIGENCE ── */}
           {activeTab === 'ai' && (() => {
+            if (caseUnderstanding) {
+              return <CaseUnderstandingView data={caseUnderstanding} />;
+            }
+
             const ci = complaint.complaintIntelligence;
             const snap = snapshot;
             const hasAI = !!(ci || snap);

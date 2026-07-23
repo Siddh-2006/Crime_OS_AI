@@ -186,7 +186,7 @@ export function CaseUnderstandingView({ data }: Props): React.ReactElement {
           <Card className="p-6">
             <CardHeader title="2. Chronological Case Timeline" />
             <div className="mt-4 space-y-4">
-              {data.timeline.length === 0 ? (
+              {(!data.timeline || data.timeline.length === 0) ? (
                 <p className="text-sm text-neutral-500 italic">No timeline events extracted.</p>
               ) : (
                 data.timeline.map((event, idx) => (
@@ -196,7 +196,7 @@ export function CaseUnderstandingView({ data }: Props): React.ReactElement {
                         {event.timestamp}
                       </span>
                       <p className="text-sm text-neutral-800 font-medium mt-1">{event.description}</p>
-                      {event.supporting_evidence_ids.length > 0 && (
+                      {event.supporting_evidence_ids && event.supporting_evidence_ids.length > 0 && (
                         <p className="text-xs text-neutral-400">
                           Evidence Ref: {event.supporting_evidence_ids.join(', ')}
                         </p>
@@ -216,28 +216,29 @@ export function CaseUnderstandingView({ data }: Props): React.ReactElement {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <h4 className="text-xs font-bold uppercase tracking-wider text-red-600 flex items-center gap-2">
-                  <Users size={14} /> Suspects ({data.people_and_entities.suspects.length})
+                  <Users size={14} /> Suspects ({(data.people_and_entities?.suspects || []).length})
                 </h4>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {data.people_and_entities.suspects.map((s, i) => (
+                  {(data.people_and_entities?.suspects || []).map((s, i) => (
                     <span key={i} className="px-2.5 py-1 text-xs font-semibold bg-red-50 text-red-700 border border-red-200 rounded-md">
                       {s.value}
                     </span>
                   ))}
-                  {data.people_and_entities.suspects.length === 0 && <span className="text-xs text-neutral-400 italic">None</span>}
+                  {(!data.people_and_entities?.suspects || data.people_and_entities.suspects.length === 0) && <span className="text-xs text-neutral-400 italic">None</span>}
                 </div>
               </div>
 
               <div>
                 <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600 flex items-center gap-2">
-                  <Users size={14} /> Victims ({data.people_and_entities.victims.length})
+                  <Users size={14} /> Victims ({(data.people_and_entities?.victims || []).length})
                 </h4>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {data.people_and_entities.victims.map((v, i) => (
+                  {(data.people_and_entities?.victims || []).map((v, i) => (
                     <span key={i} className="px-2.5 py-1 text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 rounded-md">
                       {v.value}
                     </span>
                   ))}
+                  {(!data.people_and_entities?.victims || data.people_and_entities.victims.length === 0) && <span className="text-xs text-neutral-400 italic">None</span>}
                 </div>
               </div>
 
@@ -246,11 +247,12 @@ export function CaseUnderstandingView({ data }: Props): React.ReactElement {
                   <Phone size={14} /> Phone Numbers
                 </h4>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {data.people_and_entities.phone_numbers.map((p, i) => (
+                  {(data.people_and_entities?.phone_numbers || []).map((p, i) => (
                     <span key={i} className="px-2.5 py-1 text-xs font-mono bg-slate-100 text-slate-800 rounded-md">
                       {p.value}
                     </span>
                   ))}
+                  {(!data.people_and_entities?.phone_numbers || data.people_and_entities.phone_numbers.length === 0) && <span className="text-xs text-neutral-400 italic">None</span>}
                 </div>
               </div>
 
@@ -259,16 +261,17 @@ export function CaseUnderstandingView({ data }: Props): React.ReactElement {
                   <CreditCard size={14} /> Bank Accounts & UPI IDs
                 </h4>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {data.people_and_entities.upi_ids.map((u, i) => (
+                  {(data.people_and_entities?.upi_ids || []).map((u, i) => (
                     <span key={i} className="px-2.5 py-1 text-xs font-mono bg-purple-50 text-purple-700 border border-purple-200 rounded-md">
                       UPI: {u.value}
                     </span>
                   ))}
-                  {data.people_and_entities.bank_accounts.map((b, i) => (
+                  {(data.people_and_entities?.bank_accounts || []).map((b, i) => (
                     <span key={i} className="px-2.5 py-1 text-xs font-mono bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md">
                       {b.value}
                     </span>
                   ))}
+                  {(!data.people_and_entities?.upi_ids?.length && !data.people_and_entities?.bank_accounts?.length) && <span className="text-xs text-neutral-400 italic">None</span>}
                 </div>
               </div>
             </div>
@@ -280,16 +283,20 @@ export function CaseUnderstandingView({ data }: Props): React.ReactElement {
           <Card className="p-6">
             <CardHeader title="4. Individual Evidence Analysis" />
             <div className="mt-4 space-y-4">
-              {data.evidence_analysis.map((ev, idx) => (
-                <div key={idx} className="p-4 border border-neutral-200 rounded-lg space-y-2 bg-neutral-50/50">
-                  <div className="flex justify-between items-center">
-                    <span className="font-bold text-sm text-slate-900">{ev.filename} (ID: {ev.evidence_id})</span>
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-200 text-slate-800 uppercase">{ev.importance}</span>
+              {(!data.evidence_analysis || data.evidence_analysis.length === 0) ? (
+                <p className="text-sm text-neutral-500 italic">No individual evidence items analyzed.</p>
+              ) : (
+                data.evidence_analysis.map((ev, idx) => (
+                  <div key={idx} className="p-4 border border-neutral-200 rounded-lg space-y-2 bg-neutral-50/50">
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-sm text-slate-900">{ev.filename} (ID: {ev.evidence_id})</span>
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-200 text-slate-800 uppercase">{ev.importance}</span>
+                    </div>
+                    <p className="text-xs font-semibold text-slate-700">{ev.summary}</p>
+                    <p className="text-xs text-neutral-600">{ev.extracted_information}</p>
                   </div>
-                  <p className="text-xs font-semibold text-slate-700">{ev.summary}</p>
-                  <p className="text-xs text-neutral-600">{ev.extracted_information}</p>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </Card>
         )}
@@ -299,18 +306,24 @@ export function CaseUnderstandingView({ data }: Props): React.ReactElement {
           <Card className="p-6">
             <CardHeader title="5. Evidence Correlation & Corroboration" />
             <div className="mt-4 space-y-4">
-              {data.evidence_correlation.map((corr, idx) => (
-                <div key={idx} className={`p-4 border rounded-lg space-y-2 ${corr.contradicts_claim ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200'}`}>
-                  <div className="flex justify-between items-center">
-                    <span className="font-bold text-sm text-neutral-900">Allegation: "{corr.allegation}"</span>
-                    <span className="text-xs font-bold px-2 py-0.5 rounded bg-white shadow-xs">
-                      {(corr.confidence * 100).toFixed(0)}% Confidence
-                    </span>
+              {(!data.evidence_correlation || data.evidence_correlation.length === 0) ? (
+                <p className="text-sm text-neutral-500 italic">No evidence correlations found.</p>
+              ) : (
+                data.evidence_correlation.map((corr, idx) => (
+                  <div key={idx} className={`p-4 border rounded-lg space-y-2 ${corr.contradicts_claim ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200'}`}>
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-sm text-neutral-900">Allegation: "{corr.allegation}"</span>
+                      <span className="text-xs font-bold px-2 py-0.5 rounded bg-white shadow-xs">
+                        {(corr.confidence * 100).toFixed(0)}% Confidence
+                      </span>
+                    </div>
+                    <p className="text-xs text-neutral-700">{corr.explanation}</p>
+                    {corr.supporting_evidence_ids && (
+                      <p className="text-xs text-neutral-500">Supporting Evidence IDs: {corr.supporting_evidence_ids.join(', ')}</p>
+                    )}
                   </div>
-                  <p className="text-xs text-neutral-700">{corr.explanation}</p>
-                  <p className="text-xs text-neutral-500">Supporting Evidence IDs: {corr.supporting_evidence_ids.join(', ')}</p>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </Card>
         )}
@@ -322,12 +335,12 @@ export function CaseUnderstandingView({ data }: Props): React.ReactElement {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <p className="text-xs font-bold text-neutral-400 uppercase">Modus Operandi</p>
-                <p className="text-sm font-medium text-neutral-800 mt-1 leading-relaxed">{data.crime_analysis.modus_operandi}</p>
+                <p className="text-sm font-medium text-neutral-800 mt-1 leading-relaxed">{data.crime_analysis?.modus_operandi || 'N/A'}</p>
               </div>
               <div>
                 <p className="text-xs font-bold text-neutral-400 uppercase">Estimated Financial Loss</p>
                 <p className="text-xl font-bold text-emerald-600 mt-1">
-                  {data.crime_analysis.estimated_financial_loss != null 
+                  {data.crime_analysis?.estimated_financial_loss != null 
                     ? `₹${data.crime_analysis.estimated_financial_loss.toLocaleString('en-IN')}` 
                     : 'N/A'}
                 </p>
@@ -341,14 +354,14 @@ export function CaseUnderstandingView({ data }: Props): React.ReactElement {
           <Card className="p-6">
             <CardHeader title="7. Contradictions & Discrepancies" />
             <div className="mt-4 space-y-3">
-              {data.contradictions.length === 0 ? (
+              {(!data.contradictions || data.contradictions.length === 0) ? (
                 <p className="text-sm text-emerald-700 bg-emerald-50 p-3 rounded-lg border border-emerald-200">
                   No contradictions or conflicts detected across complaint and evidence.
                 </p>
               ) : (
                 data.contradictions.map((c, i) => (
                   <div key={i} className="p-3 border border-red-200 bg-red-50 rounded-lg text-xs text-red-900 font-medium">
-                    • {c.description} (Evidence: {c.involved_evidence_ids.join(', ')})
+                    • {c.description} (Evidence: {c.involved_evidence_ids?.join(', ') || 'N/A'})
                   </div>
                 ))
               )}
@@ -361,15 +374,19 @@ export function CaseUnderstandingView({ data }: Props): React.ReactElement {
           <Card className="p-6">
             <CardHeader title="8. Missing Complaint Information" />
             <div className="mt-4 space-y-3">
-              {data.missing_information.map((mi, i) => (
-                <div key={i} className="p-3 border border-amber-200 bg-amber-50 rounded-lg text-xs space-y-1">
-                  <div className="flex justify-between font-bold text-amber-900">
-                    <span>{mi.item}</span>
-                    <span className="uppercase text-[10px] bg-amber-200 px-1.5 py-0.5 rounded">{mi.importance}</span>
+              {(!data.missing_information || data.missing_information.length === 0) ? (
+                <p className="text-sm text-neutral-500 italic">No missing information flags recorded.</p>
+              ) : (
+                data.missing_information.map((mi, i) => (
+                  <div key={i} className="p-3 border border-amber-200 bg-amber-50 rounded-lg text-xs space-y-1">
+                    <div className="flex justify-between font-bold text-amber-900">
+                      <span>{mi.item}</span>
+                      <span className="uppercase text-[10px] bg-amber-200 px-1.5 py-0.5 rounded">{mi.importance}</span>
+                    </div>
+                    <p className="text-amber-800">{mi.reason}</p>
                   </div>
-                  <p className="text-amber-800">{mi.reason}</p>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </Card>
         )}
@@ -379,16 +396,20 @@ export function CaseUnderstandingView({ data }: Props): React.ReactElement {
           <Card className="p-6">
             <CardHeader title="9. Recommended Corroborating Evidence Gaps" />
             <div className="mt-4 space-y-3">
-              {data.missing_evidence.map((me, i) => (
-                <div key={i} className="p-3 border border-slate-200 bg-slate-50 rounded-lg text-xs space-y-1">
-                  <div className="flex justify-between font-bold text-slate-900">
-                    <span>{me.evidence_name}</span>
-                    <span className="uppercase text-[10px] bg-slate-200 px-1.5 py-0.5 rounded">{me.importance}</span>
+              {(!data.missing_evidence || data.missing_evidence.length === 0) ? (
+                <p className="text-sm text-neutral-500 italic">No missing evidence recommendations recorded.</p>
+              ) : (
+                data.missing_evidence.map((me, i) => (
+                  <div key={i} className="p-3 border border-slate-200 bg-slate-50 rounded-lg text-xs space-y-1">
+                    <div className="flex justify-between font-bold text-slate-900">
+                      <span>{me.evidence_name}</span>
+                      <span className="uppercase text-[10px] bg-slate-200 px-1.5 py-0.5 rounded">{me.importance}</span>
+                    </div>
+                    <p className="text-slate-700">{me.reason_relevant}</p>
+                    <p className="text-slate-500 italic">Allegation: {me.related_allegation}</p>
                   </div>
-                  <p className="text-slate-700">{me.reason_relevant}</p>
-                  <p className="text-slate-500 italic">Allegation: {me.related_allegation}</p>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </Card>
         )}
