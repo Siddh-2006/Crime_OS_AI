@@ -6,7 +6,7 @@ import { cleanEnv, str, num, bool, port } from 'envalid';
  */
 const env = cleanEnv(process.env, {
   NODE_ENV: str({ choices: ['development', 'test', 'production'] }),
-  PORT: port({ default: 5000 }),
+  PORT: port({ default: 5001 }),
 
   MONGODB_URI: str(),
 
@@ -38,14 +38,15 @@ const env = cleanEnv(process.env, {
   CLOUDINARY_CLOUD_NAME: str(),
   CLOUDINARY_API_KEY: str(),
   CLOUDINARY_API_SECRET: str(),
-  AI_SERVICE_URL: str({ default: 'http://localhost:8000' }),
+  COMPLAINT_INTELLIGENCE_URL: str({ default: 'http://localhost:8001' }),
+  // AI_SERVICE_URL: str({ default: 'http://localhost:8000' }),
   LEGAL_AGENT_URL: str({ default: 'http://localhost:8001' }),
-  IO_RECOMMENDATION_URL: str({ default: 'http://localhost:8002' }),
+  IO_RECOMMENDATION_URL: str({ default: 'http://localhost:8003' }),
 
   // ── LLM — Ollama (primary, local) ────────────────────────────────────────────
   OLLAMA_BASE_URL:        str({ default: 'http://localhost:11434' }),
   OLLAMA_NUM_CTX:         num({ default: 32768 }),
-  OLLAMA_REQUIRED_MODELS: str({ default: 'gemma4:e2b' }),
+  OLLAMA_REQUIRED_MODELS: str({ default: 'gemma4:e4b' }),
 
   // ── LLM — Gemini (cloud fallback when Ollama is unavailable) ─────────────────
   GEMINI_API_KEY:   str({ default: '' }),   // set to enable Gemini fallback

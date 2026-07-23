@@ -10,13 +10,23 @@ import { IJwtPayload } from '../../shared/interfaces/IJwtPayload';
  * Does NOT validate refresh tokens — that is done in the token service.
  */
 export function authenticate(req: Request, _res: Response, next: NextFunction): void {
+  // Try Authorization header first (standard REST calls)
+  // Fall back to ?token= query param for EventSource (SSE) connections —
+  // the browser's EventSource API cannot send custom headers.
   const authHeader = req.headers.authorization;
+  const queryToken = req.query?.token as string | undefined;
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return next(new AuthenticationError('Missing or malformed Authorization header'));
+  let token: string | null = null;
+
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+  } else if (queryToken) {
+    token = queryToken;
   }
 
-  const token = authHeader.split(' ')[1];
+  if (!token) {
+    return next(new AuthenticationError('Missing or malformed Authorization header'));
+  }
 
   try {
     const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as IJwtPayload;

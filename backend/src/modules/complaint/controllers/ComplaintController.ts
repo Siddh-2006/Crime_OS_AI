@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { ComplaintService } from '../services/ComplaintService';
 import { sendSuccess } from '../../../shared/utils/response.util';
 import { HttpStatusCode } from '../../../common/enums/httpStatus.enum';
+import logger from '../../../config/logger';
 
 export class ComplaintController {
   constructor(private readonly complaintService: ComplaintService) {}
@@ -19,9 +20,17 @@ export class ComplaintController {
   searchPoliceStations = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const query = String(req.query.q ?? '');
+      logger.info('[ComplaintController] GET /police-stations/search', {
+        query,
+        hasQuery: query.trim().length > 0,
+      });
       const stations = await this.complaintService.searchPoliceStations(query);
+      logger.info('[ComplaintController] Police stations response prepared', {
+        count: stations.length,
+      });
       sendSuccess(res, HttpStatusCode.OK, 'Police stations retrieved successfully', stations);
     } catch (err) {
+      logger.error('[ComplaintController] Failed to fetch police stations', { error: err });
       next(err);
     }
   };
@@ -133,6 +142,10 @@ export class ComplaintController {
     try {
       const officerId = req.user!.sub;
       const complaintId = req.query.complaintId ? String(req.query.complaintId) : undefined;
+      logger.info('[ComplaintController] GET /police/ios', {
+        officerId,
+        complaintId,
+      });
       const ios = await this.complaintService.getStationIOs(officerId, complaintId);
       sendSuccess(res, HttpStatusCode.OK, 'Investigation Officers retrieved successfully', ios);
     } catch (err) {

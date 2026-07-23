@@ -60,6 +60,13 @@ class RecommendationService:
             detailed_description=complaint.detailedDescription,
             incident_date=complaint.incidentDate,
             evidence_summary=complaint.evidenceSummary,
+            incident_time=complaint.incidentTime,
+            address=complaint.address,
+            approximate_date_text=complaint.approximateDateText,
+            complaint_intelligence_summary=complaint.complaintIntelligenceSummary,
+            crime_summary=complaint.crimeSummary,
+            legal_sections=complaint.legalSections,
+            investigation_notes=complaint.investigationNotes,
         )
 
         # ── Step 2: Embed as query ────────────────────────────────────────────

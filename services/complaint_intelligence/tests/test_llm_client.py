@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
+from app.core.config import settings
 from app.core.exceptions import LLMError
 from app.llm.client import MockLLMClient, OllamaLLMClient
 
@@ -106,3 +107,18 @@ async def test_ollama_client_generic_error():
         with pytest.raises(LLMError) as exc_info:
             await client.generate("my prompt")
         assert "Unexpected error calling Ollama" in str(exc_info.value)
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_ollama_client_falls_back_to_gemini():
+    client = OllamaLLMClient(base_url="http://localhost:11434", model="gemma4:e2b")
+
+    request = httpx.Request("POST", "http://localhost:11434/api/generate")
+
+    with patch.object(settings, "GEMINI_API_KEY", "test-key"):
+        with patch("httpx.AsyncClient.post", side_effect=httpx.RequestError("Connection failed", request=request)):
+            with patch.object(client, "_generate_with_gemini", return_value="fallback output") as mock_gemini:
+                res = await client.generate("my prompt", system_prompt="sys")
+                assert res == "fallback output"
+                mock_gemini.assert_called_once_with("my prompt", "sys")

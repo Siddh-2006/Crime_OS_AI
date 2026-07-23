@@ -17,7 +17,9 @@ from __future__ import annotations
 
 import base64
 import io
+import logging
 import sys
+import time
 import types
 
 # ── flash_attn: combined CPU-safe patch ──────────────────────────────────────
@@ -58,6 +60,14 @@ from transformers import AutoModelForCausalLM, AutoProcessor
 
 MODEL_ID = "microsoft/Florence-2-base"
 
+logger = logging.getLogger("florence-service")
+if not logger.handlers:
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s"))
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+logger.propagate = False
+
 # ── Model loading ─────────────────────────────────────────────────────────────
 
 class _ModelState:
@@ -71,7 +81,7 @@ _state = _ModelState()
 def load_model():
     if _state.model is not None:
         return
-    print(f"[florence-service] Loading {MODEL_ID}...", flush=True)
+    logger.info("Loading Florence-2 model", extra={"model_id": MODEL_ID})
     device = "cuda" if torch.cuda.is_available() else "cpu"
     dtype = torch.float16 if device == "cuda" else torch.float32
     _state.device = device
@@ -81,7 +91,7 @@ def load_model():
         trust_remote_code=True,
     ).to(device)
     _state.processor = AutoProcessor.from_pretrained(MODEL_ID, trust_remote_code=True)
-    print(f"[florence-service] Model loaded on {device}", flush=True)
+    logger.info("Florence-2 model loaded", extra={"device": device, "model_id": MODEL_ID})
 
 
 # ── FastAPI app ───────────────────────────────────────────────────────────────
@@ -112,12 +122,20 @@ class PredictResponse(BaseModel):
 
 @app.get("/health")
 def health():
+    logger.info("Florence health check requested")
     return {"status": "ok", "model": MODEL_ID, "device": _state.device}
 
 
 @app.post("/predict", response_model=PredictResponse)
 def predict(req: PredictRequest) -> PredictResponse:
+    started_at = time.perf_counter()
+    logger.info(
+        "Incoming Florence inference request",
+        extra={"task": req.task, "image_bytes": len(req.image_base64)},
+    )
+
     if _state.model is None:
+        logger.error("Florence inference requested before model is loaded")
         raise HTTPException(status_code=503, detail="Model not loaded yet")
 
     # Decode image
@@ -125,11 +143,16 @@ def predict(req: PredictRequest) -> PredictResponse:
         image_bytes = base64.b64decode(req.image_base64)
         image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     except Exception as exc:
+        logger.error("Florence image decode failed", extra={"error": str(exc)})
         raise HTTPException(status_code=400, detail=f"Invalid image: {exc}")
 
     # Run inference
     try:
         assert _state.processor is not None and _state.model is not None
+        logger.info(
+            "Running Florence inference",
+            extra={"task": req.task, "image_size": f"{image.width}x{image.height}"},
+        )
         inputs = _state.processor(
             text=req.task,
             images=image,
@@ -164,8 +187,14 @@ def predict(req: PredictRequest) -> PredictResponse:
             result_text = str(raw)
 
     except Exception as exc:
+        logger.error("Florence inference failed", extra={"error": str(exc), "task": req.task})
         raise HTTPException(status_code=500, detail=f"Inference error: {exc}")
 
+    duration_ms = round((time.perf_counter() - started_at) * 1000, 2)
+    logger.info(
+        "Florence inference completed",
+        extra={"task": req.task, "duration_ms": duration_ms, "result_length": len(result_text)},
+    )
     return PredictResponse(result=result_text, task=req.task)
 
 

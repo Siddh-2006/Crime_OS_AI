@@ -286,13 +286,10 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
           <AnalysisPanel
             caseId={caseId}
             snapshot={snapshot}
-            participants={participants}
             loading={actionLoading && !snapshot}
             onCorrectSnapshot={handleCorrectSnapshot}
             onTriggerAnalysis={handleTriggerAnalysis}
             onAnalysisComplete={fetchWorkspaceData}
-            onAttachSectionsToParticipant={handleAttachSectionsToParticipant}
-            onAcceptRecommendedSection={handleAcceptRecommendedSection}
             actionLoading={actionLoading}
           />
         )}
@@ -337,8 +334,7 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
       <EvidenceViewerModal
         isOpen={!!viewingEvidenceId}
         onClose={() => setViewingEvidenceId(null)}
-        caseId={caseId}
-        evidenceId={viewingEvidenceId || ''}
+        evidence={evidence.find((e: any) => e.evidence_id === viewingEvidenceId) ?? null}
       />
 
       <ThreadViewerModal

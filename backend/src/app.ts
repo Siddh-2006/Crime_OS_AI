@@ -71,7 +71,7 @@ export function createApp(): Application {
   // DEPT PORTAL DISABLED — replaced by email-based flow (GmailService + GmailPollWorker)
   // app.use('/api/v1/department-portal', departmentPortalRoutes);
   app.use('/api/v1/citizen-request', citizenRequestRoutes);
-  app.use('/api/v1', complaintRoutes);
+  // NOTE: complaintRoutes was previously also mounted at '/api/v1' (duplicate) — removed
 
   // ─── 404 handler ──────────────────────────────────────────────────────────────
   app.use((_req: Request, res: Response) => {

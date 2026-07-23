@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -25,7 +25,7 @@ interface ResetPasswordFormValues {
  * Reset password page — accepts OTP and new password.
  * Email is read from query params.
  */
-export default function ResetPasswordPage(): React.ReactElement {
+function ResetPasswordPageContent(): React.ReactElement {
   const { toasts, showToast, removeToast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -133,5 +133,13 @@ export default function ResetPasswordPage(): React.ReactElement {
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </>
+  );
+}
+
+export default function ResetPasswordPage(): React.ReactElement {
+  return (
+    <Suspense fallback={<div className="text-center text-sm text-neutral-500">Loading...</div>}>
+      <ResetPasswordPageContent />
+    </Suspense>
   );
 }

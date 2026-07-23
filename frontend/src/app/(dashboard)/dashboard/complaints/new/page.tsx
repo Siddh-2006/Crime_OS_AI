@@ -971,6 +971,47 @@ export default function NewComplaintPage(): React.ReactElement {
                 placeholder="Selected address (detect, search, or drop pin above to populate)"
                 required
               />
+
+              {!selectedStation && (
+                <div className="border border-amber-200 bg-amber-50 rounded-lg p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <label className="block text-sm font-semibold text-neutral-800">Manual Jurisdiction Selection</label>
+                      <p className="text-xs text-neutral-600">Auto-detection did not resolve a police station. Please choose one from the list below.</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={handleStationSearchChange}
+                      placeholder="Search police station by name, city, or district"
+                      className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg outline-none focus:ring-2 focus:ring-primary-500 bg-white text-neutral-900"
+                    />
+
+                    <select
+                      value={selectedStation?._id ?? ''}
+                      onChange={(e) => {
+                        const chosen = stations.find((station) => station._id === e.target.value);
+                        setSelectedStation(chosen ?? null);
+                      }}
+                      className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg outline-none focus:ring-2 focus:ring-primary-500 bg-white text-neutral-900"
+                    >
+                      <option value="">Select a police station</option>
+                      {stations.map((station) => (
+                        <option key={station._id} value={station._id}>
+                          {station.name} — {station.city}, {station.district} ({station.code})
+                        </option>
+                      ))}
+                    </select>
+
+                    {loadingStations && (
+                      <p className="text-xs text-neutral-500">Loading police stations…</p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
 

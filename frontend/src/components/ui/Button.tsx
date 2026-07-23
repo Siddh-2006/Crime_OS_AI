@@ -9,6 +9,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   isLoading?: boolean;
   fullWidth?: boolean;
   leftIcon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
 }
 
 const variantClasses: Record<ButtonVariant, string> = {
@@ -37,6 +38,7 @@ export function Button({
   isLoading = false,
   fullWidth = false,
   leftIcon,
+  rightIcon,
   children,
   className = '',
   disabled,
@@ -76,6 +78,7 @@ export function Button({
         leftIcon
       )}
       {children}
+      {rightIcon}
     </button>
   );
 }

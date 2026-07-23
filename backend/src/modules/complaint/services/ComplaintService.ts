@@ -1,6 +1,3 @@
-import { spawn } from 'child_process';
-import path from 'path';
-import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import { IComplaintRepository } from '../repositories/IComplaintRepository';
 import { Complaint, IComplaint, IEvidenceMetadata } from '../models/Complaint.model';
@@ -65,24 +62,52 @@ export class ComplaintService {
   async searchPoliceStations(query: string): Promise<any[]> {
     const redis = getRedisClient();
     let stations: any[] = [];
+    const trimmedQuery = query?.trim() ?? '';
 
-    // Try fetching from cache
-    const cached = await redis.get(REDIS_KEYS.POLICE_STATIONS_LIST);
-    if (cached) {
-      stations = JSON.parse(cached);
-    } else {
-      // DB Fallback
-      stations = await PoliceStation.find({ isActive: true }).lean().exec();
-      // Cache list for 24 hours
-      await redis.set(
-        REDIS_KEYS.POLICE_STATIONS_LIST,
-        JSON.stringify(stations),
-        'EX',
-        REDIS_TTL.POLICE_STATIONS
-      );
+    logger.info('[ComplaintService] Searching police stations', {
+      queryLength: trimmedQuery.length,
+      hasQuery: trimmedQuery.length > 0,
+    });
+
+    try {
+      const cached = await redis.get(REDIS_KEYS.POLICE_STATIONS_LIST);
+      if (cached) {
+        stations = JSON.parse(cached);
+        logger.info('[ComplaintService] Police stations loaded from Redis cache', {
+          count: stations.length,
+        });
+      }
+    } catch (err: any) {
+      logger.warn('[ComplaintService] Redis police-station cache unavailable, falling back to MongoDB', {
+        error: err?.message,
+      });
     }
 
-    if (!query || !query.trim()) {
+    if (stations.length === 0) {
+      stations = await PoliceStation.find({ isActive: true }).lean().exec();
+      logger.info('[ComplaintService] Police stations loaded from MongoDB', {
+        count: stations.length,
+      });
+
+      try {
+        await redis.set(
+          REDIS_KEYS.POLICE_STATIONS_LIST,
+          JSON.stringify(stations),
+          'EX',
+          REDIS_TTL.POLICE_STATIONS
+        );
+        logger.debug('[ComplaintService] Police station cache refreshed', {
+          count: stations.length,
+        });
+      } catch (err: any) {
+        logger.warn('[ComplaintService] Failed to refresh police-station cache', {
+          error: err?.message,
+        });
+      }
+    }
+
+    if (!trimmedQuery) {
+      logger.info('[ComplaintService] Returning full police-station list', { count: stations.length });
       return stations;
     }
 
@@ -97,7 +122,7 @@ export class ComplaintService {
         .filter(Boolean);
     };
 
-    const queryWords = normalize(query);
+    const queryWords = normalize(trimmedQuery);
 
     const scored = stations.map((station) => {
       const targetText = `${station.name} ${station.city} ${station.district} ${station.code}`;
@@ -114,10 +139,17 @@ export class ComplaintService {
       return { station, score: matchCount };
     });
 
-    return scored
+    const filtered = scored
       .filter((item) => item.score > 0)
       .sort((a, b) => b.score - a.score)
       .map((item) => item.station);
+
+    logger.info('[ComplaintService] Police station search completed', {
+      queryLength: trimmedQuery.length,
+      resultCount: filtered.length,
+    });
+
+    return filtered;
   }
 
   // ─── Create Complaint ───────────────────────────────────────────────────────
@@ -239,23 +271,32 @@ export class ComplaintService {
 
   // ─── Automated Pipeline Trigger ─────────────────────────────────────────────
   private triggerComplaintIntelligencePipeline(complaintNumber: string): void {
-    try {
-      const scriptPath = path.resolve(__dirname, '../../../../../services/complaint_intelligence/run_full_pipeline.py');
-      const venvPython = path.resolve(__dirname, '../../../../../services/complaint_intelligence/.venv/Scripts/python.exe');
-      const pythonExec = process.platform === 'win32' && fs.existsSync(venvPython) ? venvPython : 'python';
+    const complaintIntelligenceUrl = env.COMPLAINT_INTELLIGENCE_URL.replace(/\/$/, '');
 
-      logger.info(`[ComplaintIntelligence] Triggering full pipeline for ${complaintNumber}`);
+    logger.info('[ComplaintIntelligence] Triggering pipeline via HTTP', {
+      complaintNumber,
+      url: `${complaintIntelligenceUrl}/trigger-full-pipeline`,
+    });
 
-      const pyProcess = spawn(pythonExec, [scriptPath, complaintNumber], {
-        detached: true,
-        stdio: 'ignore',
-        env: { ...process.env, PYTHONUTF8: '1' }
+    void axios
+      .post(
+        `${complaintIntelligenceUrl}/trigger-full-pipeline`,
+        { complaint_number: complaintNumber },
+        { timeout: 5_000 },
+      )
+      .then((response) => {
+        logger.info('[ComplaintIntelligence] Pipeline launch accepted', {
+          complaintNumber,
+          status: response.status,
+          data: response.data,
+        });
+      })
+      .catch((err: any) => {
+        logger.error('[ComplaintIntelligence] Failed to trigger pipeline over HTTP', {
+          complaintNumber,
+          error: err?.response?.data || err?.message,
+        });
       });
-
-      pyProcess.unref();
-    } catch (err: any) {
-      logger.error(`[ComplaintIntelligence] Failed to trigger pipeline for ${complaintNumber}`, { error: err?.message });
-    }
   }
 
   // ─── Get Citizen's Complaints ──────────────────────────────────────────────
@@ -675,11 +716,24 @@ export class ComplaintService {
     if (!officer) {
       throw new AuthorizationError('Officer not found.');
     }
+
+    logger.info('Fetching station IOs', {
+      officerId,
+      policeStation: officer.policeStation?.toString(),
+    });
+
     const ios = await Officer.find({
       policeStation: officer.policeStation,
       role: 'IO',
       isActive: true,
     }).select('officerName badgeNumber email phone').lean().exec();
+
+    logger.info('Station IO query completed', {
+      officerId,
+      policeStation: officer.policeStation?.toString(),
+      resultCount: ios.length,
+      complaintId,
+    });
 
     if (complaintId && ios.length > 0) {
       try {
@@ -691,22 +745,33 @@ export class ComplaintService {
             badgeNumber: io.badgeNumber
           }));
 
+          const latestCrimeSummary = complaint.crimeSummaryHistory?.slice(-1)[0]?.content || '';
+          const latestLegalSections = complaint.legalSectionsHistory?.slice(-1)[0]?.content || '';
+          const latestInvestigationNotes = complaint.investigationNotesHistory?.slice(-1)[0]?.content || '';
+
           const payload = {
             complaint: {
               complaintId: complaint._id.toString(),
               stationId: (complaint.policeStation as any)?._id?.toString() ?? complaint.policeStation.toString(),
-              category: complaint.category,
+              category: complaint.category || complaint.crimeCategory || '',
               subCategory: complaint.crimeCategory || '',
               shortDescription: complaint.shortDescription,
               detailedDescription: complaint.detailedDescription,
               incidentPlace: complaint.incidentPlace,
-              incidentDate: complaint.incidentDate.toISOString(),
-              evidenceSummary: complaint.evidence?.map(e => e.originalFilename).join(', ') || ''
+              incidentDate: complaint.incidentDate ? complaint.incidentDate.toISOString() : '',
+              incidentTime: complaint.incidentTime || '',
+              address: complaint.address || '',
+              approximateDateText: complaint.approximateDateText || '',
+              evidenceSummary: complaint.evidence?.map(e => e.originalFilename).join(', ') || '',
+              complaintIntelligenceSummary: complaint.complaintIntelligence?.summary || '',
+              crimeSummary: latestCrimeSummary,
+              legalSections: latestLegalSections,
+              investigationNotes: latestInvestigationNotes,
             },
             availableOfficers
           };
 
-          const aiUrl = `${env.AI_SERVICE_URL}/recommend-officers`;
+          const aiUrl = `${env.IO_RECOMMENDATION_URL}/recommend-officers`;
           logger.info('Calling AI Service for IO recommendations', { aiUrl, complaintId });
           const aiResponse = await axios.post(aiUrl, payload);
           const recommendations = aiResponse.data.recommendations || [];
@@ -872,7 +937,7 @@ export class ComplaintService {
 
     // Fire-and-forget or async call to FastAPI recommendation service
     try {
-      const aiUrl = `${env.AI_SERVICE_URL}/embed-case`;
+      const aiUrl = `${env.IO_RECOMMENDATION_URL}/embed-case`;
       logger.info('Sending closed FIR payload to AI service', { aiUrl, firId: payload.firId });
       axios.post(aiUrl, payload).catch((err) => {
         logger.error('Background AI embedding request failed', { error: err.message });

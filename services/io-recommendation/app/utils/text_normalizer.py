@@ -65,6 +65,13 @@ def build_complaint_text(
     detailed_description: str,
     incident_date: str,
     evidence_summary: Optional[str],
+    incident_time: Optional[str] = None,
+    address: Optional[str] = None,
+    approximate_date_text: Optional[str] = None,
+    complaint_intelligence_summary: Optional[str] = None,
+    crime_summary: Optional[str] = None,
+    legal_sections: Optional[str] = None,
+    investigation_notes: Optional[str] = None,
 ) -> str:
     """
     Converts an open (not-yet-closed) complaint into structured text
@@ -78,9 +85,23 @@ def build_complaint_text(
 
     parts.append(f"Location: {location}")
     parts.append(f"Incident Date: {incident_date}")
+    if incident_time:
+        parts.append(f"Incident Time: {incident_time}")
+    if address:
+        parts.append(f"Address: {address}")
+    if approximate_date_text:
+        parts.append(f"Approximate Date: {approximate_date_text}")
     parts.append(f"Brief Description: {short_description}")
     parts.append(f"Detailed Description: {detailed_description}")
 
+    if complaint_intelligence_summary:
+        parts.append(f"AI Summary: {complaint_intelligence_summary}")
+    if crime_summary:
+        parts.append(f"Investigation Summary: {crime_summary}")
+    if legal_sections:
+        parts.append(f"Legal Sections: {legal_sections}")
+    if investigation_notes:
+        parts.append(f"Investigation Notes: {investigation_notes}")
     if evidence_summary:
         parts.append(f"Evidence Available: {evidence_summary}")
 

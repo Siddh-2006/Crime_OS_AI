@@ -25,32 +25,32 @@ router.get('/police-stations/search', authenticate, complaintController.searchPo
 
 // ─── Citizen Routes ──────────────────────────────────────────────────────────
 router.post(
-  '/complaints/upload-signature',
+  '/upload-signature',
   authenticate,
   authorize(Role.USER),
   complaintController.getUploadSignature,
 );
 router.post(
-  '/complaints',
+  '/',
   authenticate,
   authorize(Role.USER),
   validate(createComplaintSchema),
   complaintController.createComplaint,
 );
 router.get(
-  '/complaints',
+  '/',
   authenticate,
   authorize(Role.USER),
   complaintController.getCitizenComplaints,
 );
 router.get(
-  '/complaints/:id',
+  '/:id',
   authenticate,
   authorize(Role.USER, Role.SHO, Role.IO),
   complaintController.getComplaintById,
 );
 router.post(
-  '/complaints/:id/evidence',
+  '/:id/evidence',
   authenticate,
   authorize(Role.USER),
   validate(addEvidenceSchema),
@@ -65,7 +65,7 @@ router.get(
   complaintController.getStationIOs,
 );
 router.get(
-  '/complaints/station/list',
+  '/station/list',
   authenticate,
   authorize(Role.SHO, Role.IO),
   complaintController.getStationComplaints,
@@ -73,14 +73,14 @@ router.get(
 
 // ─── SHO Actions ─────────────────────────────────────────────────────────────
 router.patch(
-  '/complaints/:id/approve',
+  '/:id/approve',
   authenticate,
   authorize(Role.SHO),
   validate(approveComplaintSchema),
   complaintController.approveComplaint,
 );
 router.patch(
-  '/complaints/:id/reject',
+  '/:id/reject',
   authenticate,
   authorize(Role.SHO),
   validate(rejectComplaintSchema),
@@ -89,20 +89,20 @@ router.patch(
 
 // ─── IO Actions ──────────────────────────────────────────────────────────────
 router.patch(
-  '/complaints/:id/update',
+  '/:id/update',
   authenticate,
   authorize(Role.IO),
   validate(updateComplaintSchema),
   complaintController.updateComplaint,
 );
 router.patch(
-  '/complaints/:id/register-fir',
+  '/:id/register-fir',
   authenticate,
   authorize(Role.IO),
   complaintController.registerFir,
 );
 router.patch(
-  '/complaints/:id/close',
+  '/:id/close',
   authenticate,
   authorize(Role.IO, Role.SHO),
   complaintController.closeComplaint,

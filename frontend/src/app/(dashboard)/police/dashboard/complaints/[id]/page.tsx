@@ -227,7 +227,8 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
 
   const fetchIOs = async () => {
     try {
-      const res = await apiClient.get('/police/ios');
+      const res = await apiClient.get(API_ROUTES.COMPLAINTS.IO_LIST);
+      console.debug('fetchIOs response', res.data);
       setIos(res.data.data || []);
     } catch (err) {
       console.error('Failed to load IOs', err);
@@ -238,9 +239,10 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
     setRecLoading(true);
     try {
       const id = params.id as string;
-      const res = await apiClient.get('/police/ios', {
+      const res = await apiClient.get(API_ROUTES.COMPLAINTS.IO_LIST, {
         params: { complaintId: id }
       });
+      console.debug('fetchRecommendations response', res.data);
       setRecommendedIos(res.data.data || []);
     } catch (err) {
       console.error('Failed to fetch recommendations', err);
@@ -694,8 +696,8 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
 
           {/* ── TAB: AI COMPLAINT INTELLIGENCE ── */}
           {activeTab === 'ai' && (() => {
-            const ci = complaint.complaintIntelligence;
-            const snap = snapshot;
+            const ci = complaint.complaintIntelligence as any;
+            const snap = snapshot as any;
             const hasAI = !!(ci || snap);
 
             if (snapshotLoading) {
@@ -902,11 +904,11 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                     {/* Fallback: show m3Entities from complaintIntelligence */}
                     {Object.keys(entities).length === 0 && ci?.m3Entities && ci.m3Entities.length > 0 && (
                       <div className="space-y-4">
-                        {Array.from(new Set(ci.m3Entities.map(e => e.type || (e as any).entity_type || (e as any).entityType))).filter(Boolean).map(type => (
+                        {Array.from(new Set(ci.m3Entities.map((e: any) => e.type || e.entity_type || e.entityType))).filter(Boolean).map((type: any) => (
                           <div key={type as string}>
                             <p className="text-[10.5px] text-indigo-600 uppercase tracking-widest font-extrabold mb-2">{type as string}</p>
                             <div className="flex flex-wrap gap-2">
-                              {ci.m3Entities!.filter(e => (e.type || (e as any).entity_type || (e as any).entityType) === type).map((ent, ei) => (
+                              {ci.m3Entities!.filter((e: any) => (e.type || e.entity_type || e.entityType) === type).map((ent: any, ei: number) => (
                                 <span key={ei} className="flex items-center gap-2 bg-indigo-50 border border-indigo-100 text-indigo-900 text-[12.5px] font-semibold px-3 py-1.5 rounded-full">
                                   {ent.value || (ent as any).name || (ent as any).canonical_value}
                                 </span>
@@ -1267,8 +1269,12 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                           Matched Cases: {io.aiRecommendation.matchedCases} (Avg Similarity: {io.aiRecommendation.averageSimilarity.toFixed(3)})
                         </p>
                         <ul className="list-disc pl-4 space-y-0.5">
-                          {io.aiRecommendation.reasons.map((reason, idx) => (
-                            <li key={idx} className="text-[10px] text-neutral-500 leading-normal">{reason}</li>
+                          {io.aiRecommendation.reasons.map((reason: any, idx: number) => (
+                            <li key={idx} className="text-[10px] text-neutral-500 leading-normal">
+                              {typeof reason === 'string'
+                                ? reason
+                                : (reason.title ?? reason.reason ?? JSON.stringify(reason))}
+                            </li>
                           ))}
                         </ul>
                       </div>

@@ -15,60 +15,65 @@ router.use(authenticate, authorize(Role.SHO, Role.IO));
 router.use(caseParticipantRoutes);
 router.use(chargeSheetRoutes);
 
-// Endpoint to trigger async analysis
-router.post('/:id/analyze', InvestigationController.analyzeCase);
+// ── STATIC routes — MUST be registered before /:id dynamic routes ─────────────
+// Express matches routes top-down; a dynamic /:id would capture 'departments'
+// and 'threads' as caseIds if registered first.
 
-// SSE: real-time progress stream (open AFTER fetching /status)
-router.get('/:id/analysis/progress', InvestigationController.streamAnalysisProgress);
-
-// State-recovery: current stage on page load / reload
-router.get('/:id/analysis/status', InvestigationController.getAnalysisStatus);
-
-// Public department list (used by IO for request composer)
+// Department list (IO uses this in the request composer dropdown)
 router.get('/departments', async (_req, res) => {
   try {
-    const depts = await DepartmentRegistry.find({ isActive: true }, { entity_id: 1, entity_name: 1, category: 1 }).sort({ entity_name: 1 }).lean();
+    const depts = await DepartmentRegistry
+      .find({ isActive: true }, { entity_id: 1, entity_name: 1, category: 1 })
+      .sort({ entity_name: 1 })
+      .lean();
     res.json({ success: true, data: depts });
-  } catch (e) {
+  } catch {
     res.status(500).json({ success: false, message: 'Failed to fetch departments' });
   }
 });
 
-// Copilot
-router.post('/:id/copilot/ask', InvestigationController.askCopilot);
+// Thread endpoints — /threads prefix must precede /:id
+router.get('/threads/:threadId',             InvestigationController.getThreadById);
+router.post('/threads/:threadId/reply',      InvestigationController.replyToThread);
+router.post('/threads/:threadId/format-response', InvestigationController.formatThreadResponse);
 
-// Endpoint to get the latest analysis snapshot
-router.get('/:id/analysis/latest', InvestigationController.getLatestSnapshot);
-router.get('/:id/analysis/:snapshotId', InvestigationController.getSnapshotById);
+// ── DYNAMIC /:id routes ────────────────────────────────────────────────────────
 
-// Officer manual overrides
+// Analysis
+router.post('/:id/analyze',                  InvestigationController.analyzeCase);
+router.get('/:id/analysis/progress',         InvestigationController.streamAnalysisProgress); // SSE
+router.get('/:id/analysis/status',           InvestigationController.getAnalysisStatus);       // state-recovery
+router.get('/:id/analysis/latest',           InvestigationController.getLatestSnapshot);
+router.get('/:id/analysis/:snapshotId',      InvestigationController.getSnapshotById);
 router.post('/:id/analysis/:snapshotId/correct', InvestigationController.correctSnapshot);
-router.post('/:id/analysis/manual', InvestigationController.createManualSnapshot);
+router.post('/:id/analysis/manual',          InvestigationController.createManualSnapshot);
 
-// Request Composer endpoints
-router.post('/:id/requests/draft', InvestigationController.generateDraftRequest);
-router.patch('/:id/requests/:reqId', InvestigationController.updateRequestDraft);
-router.post('/:id/requests/:reqId/send', InvestigationController.sendRequest);
-router.post('/:id/citizen-request', CitizenRequestController.createCitizenRequest);
+// Copilot
+router.post('/:id/copilot/ask',              InvestigationController.askCopilot);
+
+// Request Composer
+router.post('/:id/requests/draft',           InvestigationController.generateDraftRequest);
+router.patch('/:id/requests/:reqId',         InvestigationController.updateRequestDraft);
+router.post('/:id/requests/:reqId/send',     InvestigationController.sendRequest);
+
+// Citizen request
+router.post('/:id/citizen-request',          CitizenRequestController.createCitizenRequest);
 
 // Escalation
-router.post('/:id/escalate', InvestigationController.escalateCase);
+router.post('/:id/escalate',                 InvestigationController.escalateCase);
 
 // State fetchers
-router.get('/:id/diary', InvestigationController.getCaseDiary);
-router.get('/:id/checklist', InvestigationController.getCaseChecklist);
-router.post('/:id/checklist/steps', InvestigationController.addManualStep);
+router.get('/:id/diary',                     InvestigationController.getCaseDiary);
+router.get('/:id/checklist',                 InvestigationController.getCaseChecklist);
+router.post('/:id/checklist/steps',          InvestigationController.addManualStep);
 router.post('/:id/checklist/:stepId/complete', InvestigationController.completeStep);
-router.get('/:id/requests', InvestigationController.getDepartmentRequests);
-router.get('/:id/evidence', InvestigationController.getEvidence);
-router.post('/:id/evidence', InvestigationController.addEvidence);
+router.get('/:id/requests',                  InvestigationController.getDepartmentRequests);
+router.get('/:id/evidence',                  InvestigationController.getEvidence);
+router.post('/:id/evidence',                 InvestigationController.addEvidence);
 router.post('/:id/evidence/:evidenceId/transfer', InvestigationController.transferEvidence);
 
-// Thread endpoints
-router.get('/:id/threads', InvestigationController.getThreads);
-router.get('/threads/:threadId', InvestigationController.getThreadById);
-router.post('/threads/:threadId/reply', InvestigationController.replyToThread);
-router.post('/threads/:threadId/format-response', InvestigationController.formatThreadResponse);
+// Per-case thread list (distinct from /threads/:threadId above)
+router.get('/:id/threads',                   InvestigationController.getThreads);
 router.post('/:id/threads/:thread_id/export-pdf', InvestigationController.exportThreadToPdf);
 
 export default router;

@@ -28,10 +28,20 @@ class ComplaintData(BaseModel):
     detailedDescription: str = Field(..., description="Full narrative of the incident")
     incidentPlace: str = Field(..., description="Place of occurrence")
     incidentDate: str = Field(..., description="ISO date of incident")
+    incidentTime: Optional[str] = Field(None, description="Optional time of incident")
+    address: Optional[str] = Field(None, description="Optional address or locality")
+    approximateDateText: Optional[str] = Field(None, description="Optional human-readable date description")
     evidenceSummary: Optional[str] = Field(
         None,
         description="Optional comma-separated list of evidence types submitted by citizen",
     )
+    complaintIntelligenceSummary: Optional[str] = Field(
+        None,
+        description="Optional AI-generated complaint summary from the newer complaint schema",
+    )
+    crimeSummary: Optional[str] = Field(None, description="Optional latest crime summary history entry")
+    legalSections: Optional[str] = Field(None, description="Optional latest legal sections history entry")
+    investigationNotes: Optional[str] = Field(None, description="Optional latest investigation notes history entry")
 
 
 class RecommendOfficersRequest(BaseModel):

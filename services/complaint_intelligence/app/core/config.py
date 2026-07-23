@@ -34,17 +34,24 @@ class Settings(BaseSettings):
     REDIS_PASSWORD: str = ""
     REDIS_DB: int = Field(default=0, ge=0, le=15)
 
+    # ── MongoDB ───────────────────────────────────────────────────────────────
+    MONGODB_URI: str = "mongodb://localhost:27017/crime_os"
+    MONGODB_DB: str = "crime_os"
+
     # ── Logging ───────────────────────────────────────────────────────────────
     LOG_LEVEL: str = Field(default="INFO", pattern="^(DEBUG|INFO|WARNING|ERROR|CRITICAL)$")
     LOG_FORMAT: str = "json"  # "json" | "text"
 
-    # ── LLM (Ollama) ──────────────────────────────────────────────────────────
+    # ── LLM (Ollama primary, Gemini fallback) ───────────────────────────────
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "gemma4:e2b"
     TIMELINE_INTELLIGENCE_MODEL: str = "gemma4:e2b"
     INVESTIGATION_INTELLIGENCE_MODEL: str = "gemma4:e2b"
     OLLAMA_TIMEOUT_SECONDS: int = 120
     OLLAMA_NUM_CTX: int = 4096
+
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-3.5-flash-lite"
 
     # ── Queue ─────────────────────────────────────────────────────────────────
     QUEUE_MAX_JOBS: int = 10          # arq worker concurrency

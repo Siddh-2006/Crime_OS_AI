@@ -69,9 +69,11 @@ async def download_bytes(url: str) -> bytes:
 
 async def main() -> None:
     # ── DB ────────────────────────────────────────────────────────────────────
-    mongo = MongoClient(os.getenv("MONGODB_URI"))
-    db    = mongo["test"]
-    doc   = db["complaints"].find_one({"complaintNumber": COMPLAINT_NUMBER})
+    mongo_uri = settings.MONGODB_URI or os.getenv("MONGODB_URI")
+    db_name = settings.MONGODB_DB or "crime_os"
+    mongo = MongoClient(mongo_uri)
+    db = mongo[db_name]
+    doc = db["complaints"].find_one({"complaintNumber": COMPLAINT_NUMBER})
     if not doc:
         print(f"ERROR: Complaint {COMPLAINT_NUMBER} not found in MongoDB.")
         return

@@ -18,7 +18,7 @@ export default function DepartmentDashboard() {
   const [replyContent, setReplyContent] = useState('');
   const [replying, setReplying] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
-  const { toast, showToast, removeToast } = useToast();
+  const { toasts, showToast, removeToast } = useToast();
 
   useEffect(() => {
     const token = localStorage.getItem('dept_token');
@@ -227,7 +227,7 @@ export default function DepartmentDashboard() {
           )}
         </div>
       </main>
-      <ToastContainer toasts={toast ? [toast] : []} onClose={removeToast} />
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );
 }

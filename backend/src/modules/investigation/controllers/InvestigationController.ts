@@ -544,7 +544,7 @@ export class InvestigationController {
     try {
       const { id } = req.params;
       const { type, title, description, tags, linked_step_id } = req.body;
-      const ioId = (req as any).user?.id || '6a5b60a5774e86b7dd85ca7a'; // fallback for mock
+      const ioId = (req as any).user?.sub ?? 'anonymous'; // fallback for mock
       
       const evidence = await Evidence.create({
         case_id: id,
@@ -686,7 +686,7 @@ export class InvestigationController {
       await step.save();
 
       // Log in diary
-      const ioId = (req as any).user?.id || '6a5b60a5774e86b7dd85ca7a';
+      const ioId = (req as any).user?.sub ?? 'anonymous';
       await DiaryEntry.create({
         case_id: id,
         entry_id: `DIARY-${Date.now()}`,
@@ -825,7 +825,7 @@ export class InvestigationController {
 
       // Log in diary
       const actorType = sender === 'io' ? 'officer' : 'department';
-      const actorId = sender === 'io' ? ((req as any).user?.id || '6a5b60a5774e86b7dd85ca7a') : thread.department_entity_id;
+      const actorId = sender === 'io' ? ((req as any).user?.sub ?? 'anonymous') : 'system';
       const eventType = sender === 'io' ? 'request_sent' : 'evidence_collected';
 
       await DiaryEntry.create({
@@ -907,7 +907,7 @@ export class InvestigationController {
         uploadStream.end(pdfBuffer);
       });
 
-      const ioId = (req as any).user?.id || '6a5b60a5774e86b7dd85ca7a';
+      const ioId = (req as any).user?.sub ?? 'anonymous';
       
       // Save as Evidence
       const newEvidence = new Evidence({

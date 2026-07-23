@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -22,7 +22,7 @@ interface VerifyEmailFormValues {
  * Email OTP verification page.
  * Email is passed as a query param from register page.
  */
-export default function VerifyEmailPage(): React.ReactElement {
+function VerifyEmailPageContent(): React.ReactElement {
   const { toasts, showToast, removeToast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -115,5 +115,13 @@ export default function VerifyEmailPage(): React.ReactElement {
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </>
+  );
+}
+
+export default function VerifyEmailPage(): React.ReactElement {
+  return (
+    <Suspense fallback={<div className="text-center text-sm text-neutral-500">Loading...</div>}>
+      <VerifyEmailPageContent />
+    </Suspense>
   );
 }

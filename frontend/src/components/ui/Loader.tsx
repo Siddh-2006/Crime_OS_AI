@@ -1,9 +1,10 @@
 import React from 'react';
 
 interface LoaderProps {
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | number;
   label?: string;
   fullPage?: boolean;
+  color?: string;
 }
 
 const sizeMap = {
@@ -15,11 +16,16 @@ const sizeMap = {
 /**
  * Spinner loader with optional label and full-page overlay.
  */
-export function Loader({ size = 'md', label = 'Loading...', fullPage = false }: LoaderProps): React.ReactElement {
+export function Loader({ size = 'md', label = 'Loading...', fullPage = false, color }: LoaderProps): React.ReactElement {
+  const resolvedSizeClass = typeof size === 'number' ? '' : sizeMap[size as 'sm' | 'md' | 'lg'];
+  const resolvedStyle = typeof size === 'number'
+    ? { width: size, height: size, color }
+    : { color };
   const spinner = (
     <div className="flex flex-col items-center gap-3" role="status" aria-label={label}>
       <svg
-        className={['animate-spin text-primary-700', sizeMap[size]].join(' ')}
+        className={['animate-spin', color ? '' : 'text-primary-700', resolvedSizeClass].join(' ')}
+        style={resolvedStyle}
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
         viewBox="0 0 24 24"

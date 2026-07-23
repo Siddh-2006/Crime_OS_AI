@@ -29,7 +29,7 @@ export function startAnalysisWorker(): void {
           const { publishProgress } = await import('../utils/analysisProgress');
           await publishProgress(job.data.caseId, 'analysis_error', {
             error: `Analysis failed: ${error?.message ?? 'Unknown error'}`,
-          } as any);
+          });
         } catch { /* swallow */ }
         throw error;
       }
@@ -55,3 +55,4 @@ export function startAnalysisWorker(): void {
 
   logger.info('[AnalysisWorker] Started — listening for analyze_case jobs');
 }
+
