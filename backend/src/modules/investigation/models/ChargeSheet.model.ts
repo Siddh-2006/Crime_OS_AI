@@ -20,6 +20,7 @@ export interface IChargeSheet extends Document {
   victimIds: Types.ObjectId[];
   witnessIds: Types.ObjectId[];
   accusedIds: Types.ObjectId[];
+  suspectIds: Types.ObjectId[];
   applicableLegalSections: ILegalSectionSuggestion[];
   appliedSectionsByAccused: IAccusedAppliedSections[];
   evidenceIds: Types.ObjectId[];
@@ -60,6 +61,7 @@ const ChargeSheetSchema = new Schema<IChargeSheet>(
     victimIds: { type: [{ type: Schema.Types.ObjectId, ref: 'CaseParticipant' }], default: [] },
     witnessIds: { type: [{ type: Schema.Types.ObjectId, ref: 'CaseParticipant' }], default: [] },
     accusedIds: { type: [{ type: Schema.Types.ObjectId, ref: 'CaseParticipant' }], default: [] },
+    suspectIds: { type: [{ type: Schema.Types.ObjectId, ref: 'CaseParticipant' }], default: [] },
     applicableLegalSections: { type: [LegalSectionSuggestionSchema], default: [] },
     appliedSectionsByAccused: { type: [AccusedAppliedSectionsSchema], default: [] },
     evidenceIds: { type: [{ type: Schema.Types.ObjectId, ref: 'Evidence' }], default: [] },

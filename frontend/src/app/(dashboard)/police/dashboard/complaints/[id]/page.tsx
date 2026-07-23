@@ -218,7 +218,12 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
       await apiClient.patch(`/complaints/${id}/close`);
       await fetchComplaint();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to close case.');
+      const msg: string = err.response?.data?.message || err.message || 'Failed to close case.';
+      if (msg.includes('NO_ACCUSED')) {
+        alert('⚠️ Cannot close investigation: At least one suspect must be promoted to Accused in the Case Participants tab before closing.');
+      } else {
+        alert(msg);
+      }
     } finally {
       setActionLoading(false);
     }

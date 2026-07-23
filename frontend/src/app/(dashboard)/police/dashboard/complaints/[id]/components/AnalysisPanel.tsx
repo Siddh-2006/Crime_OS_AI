@@ -50,7 +50,6 @@ interface Snapshot {
   timestamp: string;
   narrative_summary: string;
   participant_recommendations?: ParticipantRecommendation[];
-  suspect_candidates: Suspect[];
   ranked_next_steps: NextStep[];
   confidence_breakdown?: {
     evidence_coverage: number;
@@ -72,6 +71,7 @@ interface AnalysisPanelProps {
   onTriggerAnalysis: () => Promise<void>;
   onAttachSectionsToParticipant: (participantId: string, sections: SuggestedLegalSection[]) => Promise<void>;
   onAcceptRecommendedSection: (recommendation: ParticipantRecommendation, section: SuggestedLegalSection) => Promise<void>;
+  onApproveParticipant?: (recommendation: ParticipantRecommendation) => Promise<void>;
   actionLoading: boolean;
 }
 
@@ -83,13 +83,12 @@ export function AnalysisPanel({
   onTriggerAnalysis,
   onAttachSectionsToParticipant,
   onAcceptRecommendedSection,
+  onApproveParticipant,
   actionLoading,
 }: AnalysisPanelProps) {
   const [correctionMsg, setCorrectionMsg] = useState('');
-  const [attachModalOpen, setAttachModalOpen] = useState(false);
-  const [selectedParticipantId, setSelectedParticipantId] = useState('');
-  const [selectedSectionCodes, setSelectedSectionCodes] = useState<string[]>([]);
   const [dismissedRecommendationKeys, setDismissedRecommendationKeys] = useState<string[]>([]);
+  const [loadingItemKey, setLoadingItemKey] = useState<string | null>(null);
 
   const handleCorrect = async () => {
     if (!correctionMsg.trim()) return;
@@ -97,45 +96,25 @@ export function AnalysisPanel({
     setCorrectionMsg('');
   };
 
-  const eligibleParticipants = useMemo(
-    () => participants.filter((participant) => participant.roles.some((role) => role === 'Suspect' || role === 'Accused')),
-    [participants],
-  );
-
-  const openAttachModal = (preselectedCodes: string[] = []) => {
-    setSelectedSectionCodes(preselectedCodes);
-    setSelectedParticipantId('');
-    setAttachModalOpen(true);
-  };
-
-  const toggleSectionSelection = (code: string) => {
-    setSelectedSectionCodes((current) => (
-      current.includes(code)
-        ? current.filter((item) => item !== code)
-        : [...current, code]
-    ));
-  };
-
-  const handleAttachSelectedSections = async () => {
-    if (!snapshot || !selectedParticipantId || selectedSectionCodes.length === 0) return;
-
-    const sections = (snapshot.suggested_legal_sections || []).filter((section) => selectedSectionCodes.includes(section.code));
-    if (sections.length === 0) return;
-
-    await onAttachSectionsToParticipant(selectedParticipantId, sections);
-    setAttachModalOpen(false);
-    setSelectedParticipantId('');
-    setSelectedSectionCodes([]);
-  };
-
-  const attachableRecommendations = (snapshot?.participant_recommendations || []).filter(
-    (recommendation) =>
-      recommendation.roles.some((role) => role === 'Suspect' || role === 'Accused') &&
-      (recommendation.recommended_sections?.length || 0) > 0,
-  );
+  const allRecommendations = snapshot?.participant_recommendations || [];
 
   const isRecommendationDismissed = (recommendationName: string, sectionCode: string) =>
     dismissedRecommendationKeys.includes(`${recommendationName}:${sectionCode}`);
+
+  const handleApproveParticipantWrap = async (recommendation: ParticipantRecommendation) => {
+    if (!onApproveParticipant) return;
+    const key = `participant:${recommendation.name}`;
+    setLoadingItemKey(key);
+    await onApproveParticipant(recommendation);
+    setLoadingItemKey(null);
+  };
+
+  const handleAcceptSectionWrap = async (recommendation: ParticipantRecommendation, section: SuggestedLegalSection) => {
+    const key = `section:${recommendation.name}:${section.code}`;
+    setLoadingItemKey(key);
+    await onAcceptRecommendedSection(recommendation, section);
+    setLoadingItemKey(null);
+  };
 
   if (loading) {
     return (
@@ -218,111 +197,113 @@ export function AnalysisPanel({
             </div>
           </div>
 
-          {/* Legal Advisor Section */}
-          {snapshot.suggested_legal_sections && snapshot.suggested_legal_sections.length > 0 && (
-            <div className="mt-4 border border-indigo-100 rounded-lg overflow-hidden shadow-sm">
-              <div className="bg-indigo-50 px-4 py-2 flex items-center justify-between gap-2 border-b border-indigo-100">
-                <div className="flex items-center gap-2">
-                  <Scale className="text-indigo-600 h-4 w-4" />
-                  <h4 className="text-xs font-bold text-indigo-900 uppercase tracking-wider">Legal Advisor (Applicable Sections)</h4>
-                </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => openAttachModal((snapshot.suggested_legal_sections || []).map((section) => section.code))}
-                  disabled={actionLoading || eligibleParticipants.length === 0}
-                  leftIcon={<Plus size={12} />}
-                  className="!px-2 !py-1 text-[11px]"
-                >
-                  Attach Sections
-                </Button>
-              </div>
-              <div className="p-4 bg-white">
-                <ul className="space-y-2">
-                  {snapshot.suggested_legal_sections.map((section, idx) => (
-                    <li key={idx} className="flex items-start gap-2 text-sm text-neutral-700 bg-indigo-50/30 p-2 rounded border border-indigo-50">
-                      <span className="text-indigo-400 mt-0.5">•</span>
-                      <div className="flex-1 min-w-0">
-                        <strong>{section.code}</strong>: {section.title}
-                        {section.reason && <span className="block mt-1 text-xs text-neutral-500">{section.reason}</span>}
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => openAttachModal([section.code])}
-                        disabled={actionLoading || eligibleParticipants.length === 0}
-                        className="!px-2 !py-1 text-[11px] flex-shrink-0"
-                      >
-                        Attach
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          )}
 
-          {attachableRecommendations.length > 0 && (
+
+          {allRecommendations.length > 0 && (
             <div className="mt-4 border border-emerald-100 rounded-lg overflow-hidden shadow-sm">
               <div className="bg-emerald-50 px-4 py-2 flex items-center gap-2 border-b border-emerald-100">
-                <Users className="text-emerald-600 h-4 w-4" />
-                <h4 className="text-xs font-bold text-emerald-900 uppercase tracking-wider">Participant Section Suggestions</h4>
+                <Scale className="text-emerald-600 h-4 w-4" />
+                <h4 className="text-xs font-bold text-emerald-900 uppercase tracking-wider">Legal Advisor</h4>
               </div>
               <div className="p-4 bg-white space-y-4">
-                {attachableRecommendations.map((recommendation) => (
-                  <div key={`${recommendation.name}-${recommendation.roles.join(',')}`} className="rounded-lg border border-neutral-200 p-3 bg-neutral-50/40">
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      <div>
-                        <p className="text-sm font-bold text-neutral-900">{recommendation.name}</p>
-                        <p className="text-xs text-neutral-500 mt-0.5">
-                          {recommendation.roles.join(', ')} • {(recommendation.confidence * 100).toFixed(0)}% confidence
-                        </p>
+                {allRecommendations.map((recommendation) => {
+                  const participantKey = `participant:${recommendation.name}`;
+                  // Check if participant is already approved (in participants list with same name)
+                  const isApproved = participants.some(
+                    (p) => p.name.trim().toLowerCase() === recommendation.name.trim().toLowerCase()
+                  );
+
+                  return (
+                    <div key={`${recommendation.name}-${recommendation.roles.join(',')}`} className="rounded-lg border border-neutral-200 p-3 bg-neutral-50/40">
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div>
+                          <p className="text-sm font-bold text-neutral-900">{recommendation.name}</p>
+                          <p className="text-xs text-neutral-500 mt-0.5">
+                            {recommendation.roles.join(', ')} • {(recommendation.confidence * 100).toFixed(0)}% confidence
+                          </p>
+                          <p className="text-xs text-neutral-600 mt-1">{recommendation.reason}</p>
+                        </div>
+                        <div className="flex flex-col gap-2 items-end">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+                            AI Suggestion
+                          </span>
+                          {!isApproved && onApproveParticipant && (
+                            <Button
+                              size="sm"
+                              onClick={() => handleApproveParticipantWrap(recommendation)}
+                              isLoading={loadingItemKey === participantKey}
+                              disabled={actionLoading && loadingItemKey !== participantKey}
+                              className="!px-2.5 !py-1 text-[11px]"
+                            >
+                              Add Participant
+                            </Button>
+                          )}
+                          {isApproved && (
+                            <span className="text-[10px] font-bold text-green-700">Added ✓</span>
+                          )}
+                        </div>
                       </div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
-                        Suggested Attachments
-                      </span>
-                    </div>
 
-                    <div className="space-y-2">
-                      {recommendation.recommended_sections?.map((section) => {
-                        const dismissalKey = `${recommendation.name}:${section.code}`;
-                        if (isRecommendationDismissed(recommendation.name, section.code)) return null;
+                      {recommendation.recommended_sections && recommendation.recommended_sections.length > 0 && (
+                        <div className="space-y-2 mt-3 pt-3 border-t border-neutral-200">
+                          <p className="text-xs font-semibold text-neutral-600 mb-2">Suggested Sections</p>
+                          {recommendation.recommended_sections.map((section) => {
+                            const dismissalKey = `${recommendation.name}:${section.code}`;
+                            const sectionKey = `section:${recommendation.name}:${section.code}`;
+                            if (isRecommendationDismissed(recommendation.name, section.code)) return null;
 
-                        return (
-                          <div key={dismissalKey} className="flex items-start justify-between gap-3 rounded-md border border-emerald-100 bg-white p-3">
-                            <div className="min-w-0">
-                              <p className="text-sm font-semibold text-neutral-800">
-                                <strong>{section.code}</strong>: {section.title}
-                              </p>
-                              {section.reason && <p className="text-xs text-neutral-500 mt-1">{section.reason}</p>}
-                            </div>
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                              <Button
-                                size="sm"
-                                onClick={() => onAcceptRecommendedSection(recommendation, section)}
-                                isLoading={actionLoading}
-                                disabled={actionLoading}
-                                className="!px-2.5 !py-1 text-[11px]"
-                              >
-                                Accept
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => setDismissedRecommendationKeys((current) => [...current, dismissalKey])}
-                                disabled={actionLoading}
-                                leftIcon={<XCircle size={12} />}
-                                className="!px-2.5 !py-1 text-[11px]"
-                              >
-                                Reject
-                              </Button>
-                            </div>
-                          </div>
-                        );
-                      })}
+                            // Check if this section is already applied to this participant
+                            const participantObj = participants.find((p) => p.name.trim().toLowerCase() === recommendation.name.trim().toLowerCase());
+                            const appliedSections = participantObj
+                              ? (participantObj.roles.includes('Accused') ? (participantObj as any).accusedProfile?.appliedSections : (participantObj as any).suspectProfile?.appliedSections) || []
+                              : [];
+                            const isSectionAccepted = appliedSections.some((s: any) => s.code === section.code);
+
+                            return (
+                              <div key={dismissalKey} className="flex items-start justify-between gap-3 rounded-md border border-emerald-100 bg-white p-3">
+                                <div className="min-w-0">
+                                  <p className="text-sm font-semibold text-neutral-800">
+                                    <strong>{section.code}</strong>: {section.title}
+                                  </p>
+                                  {section.reason && <p className="text-xs text-neutral-500 mt-1">{section.reason}</p>}
+                                </div>
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  {isSectionAccepted ? (
+                                    <span className="text-[10px] font-bold text-green-700 bg-green-50 px-2 py-1 rounded border border-green-200">
+                                      Attached ✓
+                                    </span>
+                                  ) : (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        onClick={() => handleAcceptSectionWrap(recommendation, section)}
+                                        isLoading={loadingItemKey === sectionKey}
+                                        disabled={actionLoading && loadingItemKey !== sectionKey}
+                                        className="!px-2.5 !py-1 text-[11px]"
+                                      >
+                                        Accept
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => setDismissedRecommendationKeys((current) => [...current, dismissalKey])}
+                                        disabled={actionLoading}
+                                        leftIcon={<XCircle size={12} />}
+                                        className="!px-2.5 !py-1 text-[11px]"
+                                      >
+                                        Reject
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -353,38 +334,9 @@ export function AnalysisPanel({
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1">
-        {/* Suspects */}
-        <Card className="flex flex-col">
-          <CardHeader title="Suspect Candidates" />
-          <div className="mt-3 space-y-3 overflow-y-auto max-h-[300px] pr-2">
-            {snapshot.suspect_candidates.length === 0 ? (
-              <p className="text-sm text-neutral-400 italic">No suspects identified yet.</p>
-            ) : (
-              snapshot.suspect_candidates.map((s, idx) => (
-                <div key={idx} className="p-3 border border-neutral-200 rounded-lg bg-white shadow-sm flex items-start gap-3">
-                  <UserCircle className="text-neutral-400 h-8 w-8 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-center mb-1">
-                      <p className="text-sm font-bold text-neutral-900 truncate">{s.entity}</p>
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded ${s.confidence > 0.7 ? 'bg-red-100 text-red-700' : s.confidence > 0.4 ? 'bg-yellow-100 text-yellow-700' : 'bg-neutral-100 text-neutral-600'}`}>
-                        {(s.confidence * 100).toFixed(0)}%
-                      </span>
-                    </div>
-                    {s.contradicting_evidence_ids.length > 0 && (
-                      <p className="text-[10px] text-red-600 font-semibold flex items-center gap-1 mt-1">
-                        <AlertTriangle size={12} /> Contradictory evidence found
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </Card>
-
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 mt-4">
         {/* Next Steps */}
-        <Card className="flex flex-col">
+        <Card className="flex flex-col lg:col-span-2">
           <CardHeader title="Ranked Next Steps" />
           <div className="mt-3 space-y-3 overflow-y-auto max-h-[300px] pr-2">
             {snapshot.ranked_next_steps.length === 0 ? (
@@ -415,80 +367,7 @@ export function AnalysisPanel({
         </Card>
       </div>
 
-      <Modal
-        isOpen={attachModalOpen}
-        onClose={() => setAttachModalOpen(false)}
-        title="Attach Case Sections"
-        size="lg"
-        footer={
-          <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setAttachModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleAttachSelectedSections}
-              disabled={!selectedParticipantId || selectedSectionCodes.length === 0 || actionLoading}
-              isLoading={actionLoading}
-            >
-              Attach Selected Sections
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-4">
-          <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3">
-            <p className="text-xs font-bold uppercase tracking-wider text-neutral-500 mb-2">Select Accused / Suspect</p>
-            {eligibleParticipants.length > 0 ? (
-              <Select
-                value={selectedParticipantId}
-                onChange={(e) => setSelectedParticipantId(e.target.value)}
-                placeholder="Choose participant"
-                options={eligibleParticipants.map((participant) => ({
-                  value: participant.participant_id,
-                  label: `${participant.name} (${participant.roles.join(', ')})`,
-                }))}
-              />
-            ) : (
-              <p className="text-sm text-neutral-500 italic">No approved Suspect or Accused participants are available yet.</p>
-            )}
-          </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-bold uppercase tracking-wider text-neutral-500">Applicable Sections</p>
-              <p className="text-[10px] text-neutral-400">Select one or more sections to attach.</p>
-            </div>
-            <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
-              {(snapshot?.suggested_legal_sections || []).map((section) => {
-                const checked = selectedSectionCodes.includes(section.code);
-                return (
-                  <label
-                    key={section.code}
-                    className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors ${checked ? 'border-indigo-300 bg-indigo-50/40' : 'border-neutral-200 bg-white hover:border-neutral-300'}`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => toggleSectionSelection(section.code)}
-                      className="mt-1 h-4 w-4 rounded border-neutral-300 text-primary-700 focus:ring-primary-500"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-neutral-800">
-                        <strong>{section.code}</strong>: {section.title}
-                      </p>
-                      {section.reason && <p className="text-xs text-neutral-500 mt-1">{section.reason}</p>}
-                    </div>
-                  </label>
-                );
-              })}
-              {(snapshot?.suggested_legal_sections || []).length === 0 && (
-                <p className="text-sm text-neutral-500 italic">No case-level applicable sections are available to attach.</p>
-              )}
-            </div>
-          </div>
-        </div>
-      </Modal>
 
       {/* Correction Chat Box */}
       <Card className="mt-auto">

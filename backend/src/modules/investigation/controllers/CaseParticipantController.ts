@@ -87,4 +87,17 @@ export class CaseParticipantController {
       });
     }
   }
+
+  static async promoteToAccused(req: Request, res: Response): Promise<void> {
+    try {
+      const { id, participantId } = req.params;
+      const participant = await CaseParticipantService.promoteToAccused(id, participantId);
+      sendSuccess(res, HttpStatusCode.OK, 'Participant promoted to Accused', participant);
+    } catch (error) {
+      sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, {
+        code: 'PROMOTE_ACCUSED_FAILED',
+        message: error instanceof Error ? error.message : 'Failed to promote participant to Accused',
+      });
+    }
+  }
 }

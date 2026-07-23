@@ -12,7 +12,7 @@ import { CopilotSidebar } from './CopilotSidebar';
 import { Loader } from '@/components/ui/Loader';
 import { useToast } from '@/hooks/useToast';
 import { ToastContainer } from '@/components/ui/Toast';
-import { Bot, BookOpen, ClipboardList, Send, FolderOpen, Sparkles } from 'lucide-react';
+import { Bot, BookOpen, ClipboardList, Send, FolderOpen, Sparkles, Users } from 'lucide-react';
 import ThreadViewerModal from './ThreadViewerModal';
 import SnapshotDetailModal from './SnapshotDetailModal';
 import StepDetailModal from './StepDetailModal';
@@ -24,7 +24,7 @@ interface InvestigationWorkspaceProps {
   caseId: string;
 }
 
-type WorkspaceTab = 'analysis' | 'diary' | 'checklist' | 'requests' | 'evidence';
+type WorkspaceTab = 'analysis' | 'diary' | 'checklist' | 'requests' | 'evidence' | 'participants';
 
 export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) {
   const { toasts, showToast, removeToast } = useToast();
@@ -47,7 +47,7 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
   const [composerDeptId, setComposerDeptId] = useState('');
 
   // Diary Modals State
-  const [viewingEvidenceId, setViewingEvidenceId] = useState<string | null>(null);
+  const [viewingEvidence, setViewingEvidence] = useState<any | null>(null);
   const [viewingThreadId, setViewingThreadId] = useState<string | null>(null);
   const [viewingSnapshotId, setViewingSnapshotId] = useState<string | null>(null);
   const [viewingStepId, setViewingStepId] = useState<string | null>(null);
@@ -120,7 +120,10 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
 
     switch (entry.event_type) {
       case 'evidence_added':
-        if (entry.ref_ids?.evidence_id) setViewingEvidenceId(entry.ref_ids.evidence_id);
+        if (entry.ref_ids?.evidence_id) {
+          const found = evidence.find((e: any) => e.evidence_id === entry.ref_ids.evidence_id || e._id === entry.ref_ids.evidence_id);
+          if (found) setViewingEvidence(found);
+        }
         break;
       case 'request_drafted':
         if (entry.ref_ids?.request_id) setViewingThreadId(entry.ref_ids.request_id);
@@ -228,6 +231,29 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
     }
   };
 
+  const handleApproveParticipant = async (recommendation: any) => {
+    setActionLoading(true);
+    try {
+      const participant = findMatchingParticipant(recommendation);
+      if (participant) {
+        showToast('Participant is already approved.', 'info');
+        return;
+      }
+      
+      await apiClient.post(`/cases/${caseId}/participants/recommendations/approve`, {
+        recommendation,
+        snapshot_id: snapshot?.snapshot_id,
+      });
+
+      showToast(`Added ${recommendation.name} to the case.`, 'success');
+      await fetchWorkspaceData();
+    } catch (error: any) {
+      showToast(error.response?.data?.message || 'Failed to approve the participant.', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const openComposer = (stepId: string, deptId: string) => {
     setComposerStepId(stepId);
     setComposerDeptId(deptId);
@@ -240,6 +266,7 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
     { id: 'diary', label: 'Case Diary', icon: <BookOpen size={15} />, badge: diaryEntries.length },
     { id: 'requests', label: 'Department Requests', icon: <Send size={15} />, badge: requests.filter((r: any) => r.status === 'response_received').length || undefined },
     { id: 'evidence', label: 'Evidence', icon: <FolderOpen size={15} />, badge: evidence.length || undefined },
+    { id: 'participants', label: 'Case Participants', icon: <Users size={15} />, badge: participants.length || undefined },
   ];
 
   if (loading && !snapshot && !checklist && diaryEntries.length === 0) {
@@ -298,6 +325,7 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
             onTriggerAnalysis={handleTriggerAnalysis}
             onAttachSectionsToParticipant={handleAttachSectionsToParticipant}
             onAcceptRecommendedSection={handleAcceptRecommendedSection}
+            onApproveParticipant={handleApproveParticipant}
             actionLoading={actionLoading}
           />
         )}
@@ -323,6 +351,10 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
         {activeTab === 'evidence' && (
           <EvidencePanel evidence={evidence} caseId={caseId} onRefresh={fetchWorkspaceData} />
         )}
+
+        {activeTab === 'participants' && (
+          <ParticipantsPanel participants={participants} caseId={caseId} onRefresh={fetchWorkspaceData} />
+        )}
       </div>
 
       <RequestComposerModal
@@ -340,10 +372,9 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
       />
 
       <EvidenceViewerModal
-        isOpen={!!viewingEvidenceId}
-        onClose={() => setViewingEvidenceId(null)}
-        caseId={caseId}
-        evidenceId={viewingEvidenceId || ''}
+        isOpen={!!viewingEvidence}
+        onClose={() => setViewingEvidence(null)}
+        evidence={viewingEvidence}
       />
 
       <ThreadViewerModal
@@ -510,3 +541,255 @@ function EvidencePanel({ evidence, caseId, onRefresh }: { evidence: any[]; caseI
     </>
   );
 }
+
+// ─── Participants Panel ──────────────────────────────────────────────────────
+
+function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: any[]; caseId: string; onRefresh: () => void }) {
+  const [roleFilter, setRoleFilter] = React.useState<string>('All');
+  const [selectedParticipant, setSelectedParticipant] = React.useState<any | null>(null);
+  const [promotingId, setPromotingId] = React.useState<string | null>(null);
+
+  const uniqueRoles = Array.from(new Set(participants.flatMap((p) => p.roles || [])));
+
+  const filteredParticipants = roleFilter === 'All'
+    ? participants
+    : participants.filter((p) => (p.roles || []).includes(roleFilter));
+
+  const handlePromote = async (e: React.MouseEvent, p: any) => {
+    e.stopPropagation(); // don't open the detail modal
+    setPromotingId(p.participant_id);
+    try {
+      await apiClient.patch(`/cases/${caseId}/participants/${p.participant_id}/promote-to-accused`);
+      onRefresh();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to promote participant.');
+    } finally {
+      setPromotingId(null);
+    }
+  };
+
+  if (participants.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
+        <Users className="h-10 w-10 text-neutral-300" />
+        <p className="text-sm font-semibold text-neutral-600">No participants found</p>
+        <p className="text-xs text-neutral-400 max-w-xs">
+          Participants approved via the AI analysis will appear here.
+        </p>
+      </div>
+    );
+  }
+
+  const roleBadgeColor = (role: string) => {
+    switch (role) {
+      case 'Accused': return 'bg-red-50 text-red-700 border-red-200';
+      case 'Suspect': return 'bg-orange-50 text-orange-700 border-orange-200';
+      case 'Victim': return 'bg-green-50 text-green-700 border-green-200';
+      case 'Witness': return 'bg-purple-50 text-purple-700 border-purple-200';
+      case 'Complainant': return 'bg-blue-50 text-blue-700 border-blue-200';
+      default: return 'bg-neutral-50 text-neutral-700 border-neutral-200';
+    }
+  };
+
+  return (
+    <>
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-bold text-neutral-800">Case Participants</h3>
+        <select
+          value={roleFilter}
+          onChange={(e) => setRoleFilter(e.target.value)}
+          className="text-sm border border-neutral-300 rounded px-3 py-1.5 bg-white text-neutral-700"
+        >
+          <option value="All">All Roles</option>
+          {uniqueRoles.map(r => <option key={r} value={r}>{r}</option>)}
+        </select>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {filteredParticipants.map((p: any) => {
+          const isSuspect = (p.roles || []).includes('Suspect');
+          const isAccused = (p.roles || []).includes('Accused');
+          const promoting = promotingId === p.participant_id;
+
+          return (
+            <div
+              key={p.participant_id || p._id}
+              onClick={() => setSelectedParticipant(p)}
+              className="bg-white border border-neutral-200 rounded-xl p-4 shadow-sm cursor-pointer hover:border-blue-300 hover:shadow-md transition-all group"
+            >
+              <div className="flex justify-between items-start gap-2">
+                <h4 className="text-base font-bold text-neutral-900 group-hover:text-blue-700 transition-colors">{p.name}</h4>
+                {isSuspect && !isAccused && (
+                  <button
+                    onClick={(e) => handlePromote(e, p)}
+                    disabled={promoting}
+                    className="flex-shrink-0 text-[10px] font-bold px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-60 transition-colors whitespace-nowrap"
+                  >
+                    {promoting ? '...' : '⚖️ Promote to Accused'}
+                  </button>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-1 mt-1.5">
+                {(p.roles || []).map((role: string) => (
+                  <span key={role} className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${roleBadgeColor(role)}`}>
+                    {role}
+                  </span>
+                ))}
+              </div>
+
+              {(p.contact?.phone || p.contact?.email) && (
+                <p className="text-[11px] text-neutral-500 mt-2">
+                  {p.contact.phone && `📞 ${p.contact.phone}`}
+                  {p.contact.phone && p.contact.email && ' · '}
+                  {p.contact.email && `✉️ ${p.contact.email}`}
+                </p>
+              )}
+
+              <p className="text-[10px] text-blue-500 mt-2 group-hover:underline">Click for full details →</p>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Participant Detail Modal */}
+      {selectedParticipant && (
+        <ParticipantDetailModal
+          participant={selectedParticipant}
+          onClose={() => setSelectedParticipant(null)}
+        />
+      )}
+    </>
+  );
+}
+
+// ─── Participant Detail Modal ────────────────────────────────────────────────
+
+function ParticipantDetailModal({ participant: p, onClose }: { participant: any; onClose: () => void }) {
+  const roleBadgeColor = (role: string) => {
+    switch (role) {
+      case 'Accused': return 'bg-red-50 text-red-700 border-red-200';
+      case 'Suspect': return 'bg-orange-50 text-orange-700 border-orange-200';
+      case 'Victim': return 'bg-green-50 text-green-700 border-green-200';
+      case 'Witness': return 'bg-purple-50 text-purple-700 border-purple-200';
+      case 'Complainant': return 'bg-blue-50 text-blue-700 border-blue-200';
+      default: return 'bg-neutral-50 text-neutral-700 border-neutral-200';
+    }
+  };
+
+  const appliedSections: any[] = [
+    ...(p.accusedProfile?.appliedSections || []),
+    ...(p.suspectProfile?.appliedSections || []),
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={onClose}>
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[85vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between p-6 border-b border-neutral-100">
+          <div>
+            <h2 className="text-xl font-bold text-neutral-900">{p.name}</h2>
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {(p.roles || []).map((role: string) => (
+                <span key={role} className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${roleBadgeColor(role)}`}>
+                  {role}
+                </span>
+              ))}
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1 text-neutral-400 hover:text-neutral-700 transition-colors text-2xl leading-none">×</button>
+        </div>
+
+        <div className="p-6 space-y-5">
+          {/* Contact */}
+          {(p.contact?.phone || p.contact?.email || p.contact?.address) && (
+            <section>
+              <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">Contact Information</h3>
+              <div className="bg-neutral-50 rounded-lg p-3 text-sm text-neutral-700 space-y-1 border border-neutral-100">
+                {p.contact.phone && <p>📞 {p.contact.phone}</p>}
+                {p.contact.email && <p>✉️ {p.contact.email}</p>}
+                {p.contact.address && <p>📍 {p.contact.address}</p>}
+              </div>
+            </section>
+          )}
+
+          {/* Identifiers */}
+          {p.identifiers?.length > 0 && (
+            <section>
+              <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">Identifiers</h3>
+              <div className="flex flex-wrap gap-2">
+                {p.identifiers.map((id: any, i: number) => (
+                  <span key={i} className="text-xs bg-neutral-100 text-neutral-700 px-2 py-1 rounded border border-neutral-200">
+                    <span className="font-semibold">{id.type}:</span> {id.value}
+                  </span>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Victim Profile */}
+          {p.victimProfile && (p.victimProfile.injuryDetails || p.victimProfile.lossDetails) && (
+            <section>
+              <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">Victim Profile</h3>
+              <div className="bg-green-50 border border-green-100 rounded-lg p-3 text-sm text-neutral-700 space-y-1">
+                {p.victimProfile.injuryDetails && <p><span className="font-semibold">Injury:</span> {p.victimProfile.injuryDetails}</p>}
+                {p.victimProfile.lossDetails && <p><span className="font-semibold">Loss:</span> {p.victimProfile.lossDetails}</p>}
+              </div>
+            </section>
+          )}
+
+          {/* Witness Profile */}
+          {p.witnessProfile?.statement && (
+            <section>
+              <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">Witness Statement</h3>
+              <div className="bg-purple-50 border border-purple-100 rounded-lg p-3 text-sm text-neutral-700">
+                <p>{p.witnessProfile.statement}</p>
+                {p.witnessProfile.statementRecordedAt && (
+                  <p className="text-xs text-neutral-400 mt-1">Recorded: {new Date(p.witnessProfile.statementRecordedAt).toLocaleString('en-IN')}</p>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* Suspect Profile (only show if not also accused) */}
+          {p.suspectProfile && !(p.roles || []).includes('Accused') && (
+            <section>
+              <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">Suspect Profile</h3>
+              <div className="bg-orange-50 border border-orange-100 rounded-lg p-3 text-sm text-neutral-700 space-y-1">
+                {p.suspectProfile.motive && <p><span className="font-semibold">Motive:</span> {p.suspectProfile.motive}</p>}
+                {p.suspectProfile.alibi && <p><span className="font-semibold">Alibi:</span> {p.suspectProfile.alibi}</p>}
+              </div>
+            </section>
+          )}
+
+          {/* Applied Legal Sections */}
+          {appliedSections.length > 0 && (
+            <section>
+              <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">Applied Legal Sections</h3>
+              <div className="space-y-2">
+                {appliedSections.map((sec: any, i: number) => (
+                  <div key={i} className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm">
+                    <p className="font-bold text-blue-800">{sec.code} — {sec.title}</p>
+                    {sec.reason && <p className="text-xs text-neutral-600 mt-1">{sec.reason}</p>}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Complainant Profile */}
+          {p.complainantProfile?.relationshipToIncident && (
+            <section>
+              <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">Complainant</h3>
+              <p className="text-sm text-neutral-700">Relation to Incident: {p.complainantProfile.relationshipToIncident}</p>
+            </section>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+

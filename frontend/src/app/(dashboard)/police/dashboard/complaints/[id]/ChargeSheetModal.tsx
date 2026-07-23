@@ -190,7 +190,7 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
                   <div className="text-sm">
                     <ul className="list-disc pl-5 space-y-1">
                       {data.section6_applicableLegalSections.map((sec: any, idx: number) => (
-                        <li key={idx}><span className="font-semibold">{sec.section_code}</span> - {sec.short_title}</li>
+                        <li key={idx}><span className="font-semibold">{sec.code || sec.section_code}</span> - {sec.title || sec.short_title}</li>
                       ))}
                     </ul>
                   </div>
@@ -225,7 +225,7 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
                   <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">9. Evidence Collected</h3>
                   <ul className="list-disc pl-5 text-sm space-y-1">
                     {data.section9_evidenceCollected.map((ev: any, idx: number) => (
-                      <li key={idx}><span className="font-semibold">{ev.title}:</span> {ev.description}</li>
+                      <li key={idx}><span className="font-semibold">{ev.title || ev.evidence_id || ev.type}:</span> {ev.description || ev.ai_description || ev.storage_ref}</li>
                     ))}
                   </ul>
                 </section>
@@ -262,7 +262,7 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
                           <p><span className="font-semibold text-neutral-500">Sections:</span></p>
                           <ul className="list-disc pl-5">
                             {entry.sections?.map((sec: any, sIdx: number) => (
-                              <li key={sIdx}>{sec.section_code} - {sec.short_title}</li>
+                              <li key={sIdx}>{sec.code || sec.section_code} - {sec.title || sec.short_title}</li>
                             ))}
                           </ul>
                         </div>
@@ -279,14 +279,14 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
               </section>
 
               {/* 14. Annexures */}
-              <section>
+              {/* <section>
                 <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">14. Annexures</h3>
                 <ul className="list-disc pl-5 text-sm space-y-1">
                   {data.section14_annexures?.map((annex: any, idx: number) => (
                     <li key={idx}><span className="font-semibold">{annex.type}:</span> {annex.title}</li>
                   ))}
                 </ul>
-              </section>
+              </section> */}
 
             </div>
           ) : null}

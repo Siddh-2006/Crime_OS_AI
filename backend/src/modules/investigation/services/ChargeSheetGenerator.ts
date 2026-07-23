@@ -40,13 +40,18 @@ export class ChargeSheetGenerator {
     // Extract arrays of ObjectIds for point-in-time preservation
     const victimIds = participants.filter((p: any) => p.roles.includes('Victim')).map((p: any) => p._id);
     const witnessIds = participants.filter((p: any) => p.roles.includes('Witness')).map((p: any) => p._id);
-    const accusedIds = participants.filter((p: any) => p.roles.includes('Accused') || p.roles.includes('Suspect')).map((p: any) => p._id);
+    // Only participants explicitly marked Accused go into accusedIds (NOT suspects)
+    const accusedIds = participants.filter((p: any) => p.roles.includes('Accused')).map((p: any) => p._id);
+    // Suspects only (those without Accused role)
+    const suspectIds = participants
+      .filter((p: any) => p.roles.includes('Suspect') && !p.roles.includes('Accused'))
+      .map((p: any) => p._id);
     const evidenceIds = evidence.map((e: any) => e._id);
     const departmentRequestIds = departmentRequests.map((d: any) => d._id);
     const diaryEntryIds = diaryEntries.map((d: any) => d._id);
     const applicableLegalSections = latestSnapshot?.suggested_legal_sections ?? [];
     const appliedSectionsByAccused = participants
-      .filter((participant: any) => participant.roles.includes('Accused') || participant.roles.includes('Suspect'))
+      .filter((participant: any) => participant.roles.includes('Accused'))
       .map((participant: any) => {
         const appliedSections = (participant.accusedProfile?.appliedSections ||
           participant.suspectProfile?.appliedSections ||
@@ -100,6 +105,7 @@ export class ChargeSheetGenerator {
       victimIds,
       witnessIds,
       accusedIds,
+      suspectIds,
       applicableLegalSections,
       appliedSectionsByAccused,
       evidenceIds,
