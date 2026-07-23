@@ -5,7 +5,7 @@ import { ComplaintCategory } from '../enums/complaintCategory.enum';
 export interface IHistoryEntry {
   version: number;
   editedBy: 'Citizen' | 'SHO' | 'IO';
-  editorId: Types.ObjectId;
+  editorId?: Types.ObjectId;
   content: string;
   timestamp: Date;
 }
@@ -120,7 +120,7 @@ export interface IComplaint extends Document {
 const HistoryEntrySchema = new Schema<IHistoryEntry>({
   version: { type: Number, required: true },
   editedBy: { type: String, enum: ['Citizen', 'SHO', 'IO'], required: true },
-  editorId: { type: Schema.Types.ObjectId, required: true },
+  editorId: { type: Schema.Types.ObjectId, required: false },
   content: { type: String, required: true },
   timestamp: { type: Date, default: Date.now },
 });

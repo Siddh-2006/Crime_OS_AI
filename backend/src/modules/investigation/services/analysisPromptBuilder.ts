@@ -49,8 +49,8 @@ REQUIREMENTS:
 - reason
 - supporting_evidence_ids
 - contradicting_evidence_ids
-Only include recommended_sections when the roles include Suspect or Accused, and every code in recommended_sections must be a BNS code from the retrieved legal context. These are AI suggestions only and must NOT update CaseParticipants automatically.
-5. suggested_legal_sections MUST ONLY contain statutory provisions present in the provided Legal Context. Select only the provisions applicable to the current case facts. Do NOT invent statutory sections. Each section must contain:
+Only include recommended_sections when the roles include Suspect or Accused. EVERY code in recommended_sections MUST come strictly from the retrieved legal context (e.g. BNS). DO NOT use external knowledge. Do NOT suggest IT Act, IPC, or any other laws unless they are explicitly present in the provided Legal Context.
+5. suggested_legal_sections MUST ONLY contain statutory provisions explicitly present in the provided Legal Context. Select only the provisions applicable to the current case facts. DO NOT invent statutory sections. DO NOT suggest sections from the IT Act, IPC, or any other external laws. If it's not in the provided Legal Context, you CANNOT use it. Each section must contain:
 - code
 - title
 - reason
@@ -78,24 +78,14 @@ JSON SCHEMA:
       "reason": "...",
       "supporting_evidence_ids": ["ev1"],
       "contradicting_evidence_ids": [],
-      "recommended_sections": []
+      "recommended_sections": [
+        {
+          "code": "BNS-117",
+          "title": "Cheating",
+          "reason": "Specific reason why this section applies to this participant..."
+        }
+      ]
     }
-  ],
-  "suspect_candidates": [
-    {
-  "entity": "Rahul",
-
-  "confidence": 85,
-
-  "supporting_evidence_ids": ["ev1"],
-
-  "contradicting_evidence_ids": [],
-
-  "recommended_sections": [
-    "BNS-117",
-    "BNS-304"
-  ]
-}
   ],
   "suggested_legal_sections": [
   {
@@ -118,8 +108,6 @@ ${JSON.stringify(confidenceBreakdown, null, 2)}
 === LEGAL / SOP CONTEXT ===
 ${JSON.stringify(legalAgentResult, null, 2)}
 
-=== SIMILAR CASE RECOMMENDATIONS ===
-
 Produce the JSON object now.`;
 
   return { system, user };
@@ -140,7 +128,7 @@ REQUIREMENTS:
 3. DO NOT contradict facts that you have no reason to doubt. Focus on integrating the officer's correction gracefully.
 4. ranked_next_steps MUST ONLY use steps from the provided SOPs (from the original facts or previous steps).
 5. participant_recommendations MUST be updated only as a recommendation set. Do not create or modify CaseParticipants in the output narrative or reasoning.
-6. For participant_recommendations, only include recommended_sections for Suspect or Accused roles, and only use BNS codes.
+6. For participant_recommendations, only include recommended_sections for Suspect or Accused roles. EVERY code MUST come strictly from the retrieved legal context (e.g. BNS). DO NOT use external knowledge (no IT Act, IPC, etc. unless provided).
 7. For ranked_next_steps, if a step requires an external department, set "target" to "department_entity" and "department_entity_id" to the name of the department (e.g., BANK, ISP, TELECOM). If it requires the complainant to provide info, set "target" to "complainant". Otherwise leave target blank for IO internal tasks.
 8. Do not wrap JSON in markdown \`\`\` blocks, just return raw JSON text.
 
@@ -164,17 +152,12 @@ JSON SCHEMA:
     "reason": "...",
     "supporting_evidence_ids": [...],
     "contradicting_evidence_ids": [...],
-    "recommended_sections": []
-}
-  ],
-  "suspect_candidates": [
-    {
-    "entity": "...",
-    "confidence": ...,
-    "supporting_evidence_ids": [...],
-    "contradicting_evidence_ids": [...],
     "recommended_sections": [
-        "BNS-117"
+      {
+        "code": "BNS-117",
+        "title": "Cheating",
+        "reason": "Specific reason..."
+      }
     ]
 }
   ],
@@ -189,7 +172,6 @@ ${JSON.stringify(facts, null, 2)}
 === PREVIOUS ANALYSIS OUTPUT ===
 ${JSON.stringify({
     ranked_next_steps: originalSnapshot.ranked_next_steps,
-    suspect_candidates: originalSnapshot.suspect_candidates,
     suggested_legal_sections: originalSnapshot.suggested_legal_sections,
     participant_recommendations: originalSnapshot.participant_recommendations,
     narrative_summary: originalSnapshot.narrative_summary
