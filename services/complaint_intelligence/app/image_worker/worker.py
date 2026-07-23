@@ -125,10 +125,26 @@ class ImageWorker(BaseWorker[dict, dict]):
             extra={"job_id": job_id, "text_detected": text_detected},
         )
 
-        # ── Step 5a: Text detected → enqueue OCR job ──────────────────────────
+        # ── Step 5: Florence captioning ───────────────────────────────────────
+        self.report_progress(
+            ProgressUpdate(job_id=job_id, step="florence_inference", percent=0.60, message="Running Florence-2 inference")
+        )
+        logger.info("[image_worker] Florence inference started", extra={"job_id": job_id})
+        try:
+            analysis = await self.captioner.caption(preprocessed_bytes)
+            logger.info(
+                "[image_worker] Florence inference completed",
+                extra={"job_id": job_id, "scene_type": analysis.scene_type, "tags": analysis.tags},
+            )
+        except Exception as exc:
+            logger.warning(f"[image_worker] Florence captioning failed (fallback to None): {exc}")
+            analysis = None
+
+        # ── Step 6: Text detected → enqueue OCR job ──────────────────────────
+        ocr_job_id = None
         if text_detected:
             self.report_progress(
-                ProgressUpdate(job_id=job_id, step="ocr_enqueue", percent=0.70, message="Enqueueing OCR job")
+                ProgressUpdate(job_id=job_id, step="ocr_enqueue", percent=0.80, message="Enqueueing OCR job")
             )
             ocr_job = Job(
                 job_type=JobType.OCR_WORKER,
@@ -140,40 +156,13 @@ class ImageWorker(BaseWorker[dict, dict]):
                 correlation_id=job_id,
             )
             await self.queue.enqueue(ocr_job)
+            ocr_job_id = ocr_job.job_id
             logger.info(
                 "[image_worker] OCR job queued",
                 extra={"job_id": job_id, "ocr_job_id": ocr_job.job_id},
             )
 
-            duration_ms = (time.perf_counter() - t_start) * 1000
-            profile = self.evidence_builder.build(
-                file_name=file_name,
-                metadata=metadata,
-                analysis=None,
-                text_detected=True,
-                ocr_job_id=ocr_job.job_id,
-                status="pending_ocr",
-                processing_duration_ms=duration_ms,
-            )
-            logger.info(
-                "[image_worker] EvidenceProfile generated (pending_ocr)",
-                extra={"job_id": job_id, "evidence_id": profile.evidence_id, "duration_ms": round(duration_ms, 2)},
-            )
-            logger.info("[image_worker] Processing completed", extra={"job_id": job_id, "duration_ms": round(duration_ms, 2)})
-            return profile.model_dump(mode="json")
-
-        # ── Step 5b: No text → Florence captioning ────────────────────────────
-        self.report_progress(
-            ProgressUpdate(job_id=job_id, step="florence_inference", percent=0.70, message="Running Florence-2 inference")
-        )
-        logger.info("[image_worker] Florence inference started", extra={"job_id": job_id})
-        analysis = await self.captioner.caption(preprocessed_bytes)
-        logger.info(
-            "[image_worker] Florence inference completed",
-            extra={"job_id": job_id, "scene_type": analysis.scene_type, "tags": analysis.tags},
-        )
-
-        # ── Step 6: Build EvidenceProfile ─────────────────────────────────────
+        # ── Step 7: Build EvidenceProfile ─────────────────────────────────────
         self.report_progress(
             ProgressUpdate(job_id=job_id, step="build_evidence", percent=0.90, message="Building EvidenceProfile")
         )
@@ -182,9 +171,9 @@ class ImageWorker(BaseWorker[dict, dict]):
             file_name=file_name,
             metadata=metadata,
             analysis=analysis,
-            text_detected=False,
-            ocr_job_id=None,
-            status="complete",
+            text_detected=text_detected,
+            ocr_job_id=ocr_job_id,
+            status="pending_ocr" if text_detected else "complete",
             processing_duration_ms=duration_ms,
         )
 
@@ -192,7 +181,7 @@ class ImageWorker(BaseWorker[dict, dict]):
             ProgressUpdate(job_id=job_id, step="completed", percent=1.0, message="Image processing complete")
         )
         logger.info(
-            "[image_worker] EvidenceProfile generated (complete)",
+            "[image_worker] EvidenceProfile generated",
             extra={"job_id": job_id, "evidence_id": profile.evidence_id, "duration_ms": round(duration_ms, 2)},
         )
         logger.info("[image_worker] Processing completed", extra={"job_id": job_id, "duration_ms": round(duration_ms, 2)})
