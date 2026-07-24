@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { DepartmentRequest } from '../models/DepartmentRequest.model';
+import { RequestThread } from '../models/RequestThread.model';
 import { Complaint } from '../../complaint/models/Complaint.model';
 import { CaseChecklist } from '../models/CaseChecklist.model';
 import { Evidence } from '../models/Evidence.model';
@@ -129,6 +130,18 @@ export class CitizenRequestController {
       request.response_ref = evidenceIds.length > 0 ? evidenceIds[0] : undefined;
       await request.save();
 
+      const thread = await RequestThread.findOne({ request_id: request.request_id });
+      if (thread) {
+        thread.messages.push({
+          sender: 'citizen',
+          content: message || 'Citizen submitted a response.',
+          timestamp: new Date(),
+          attachments: evidenceIds,
+        });
+        thread.unread_by_io = true;
+        await thread.save();
+      }
+
       // Complete the checklist step
       const step = await CaseChecklist.findOne({ case_id: request.case_id, step_id: request.step_id });
       if (step) {
@@ -174,16 +187,25 @@ export class CitizenRequestController {
         return sendError(res, HttpStatusCode.NOT_FOUND, 'Checklist step not found');
       }
 
-      const caseDoc = await Complaint.findById(id).lean();
+      const caseDoc = await Complaint.findById(id)
+        .populate('citizen', 'firstName lastName email')
+        .lean();
       if (!caseDoc) {
         return sendError(res, HttpStatusCode.NOT_FOUND, 'Case not found');
       }
 
+      const citizen = (caseDoc as any).citizen as any;
+      const citizenEmail = citizen?.email ?? 'citizen@example.com';
+      const citizenName = [citizen?.firstName, citizen?.lastName].filter(Boolean).join(' ') || 'Complainant';
+      if (!citizen?.email) {
+        logger.warn(`Citizen email missing for case ${id}; falling back to placeholder address`);
+      }
+
       // Generate a plain-language draft using fastCall
-      const systemPrompt = `You are a helpful police assistant. Draft a short, professional, plain-language message to the citizen requesting specific information based on the step description. Instruct them to log into the Citizen Portal using their credentials to provide the requested information and evidence. Keep it concise (1-2 sentences).`;
+      const systemPrompt = `You are a helpful police assistant. Draft a short, professional, plain-language message to the citizen requesting specific information based on the step description. Instruct them to reply to this email with the requested information and include the Complaint ID in the reply. Keep it concise (1-2 sentences).`;
       const userPrompt = `Task: ${step.title}\nRequired Evidence: ${(step.required_evidence || []).join(', ')}`;
       
-      let draftContent = 'Please log into the Citizen Portal to provide the requested information to help us proceed with your case.';
+      let draftContent = 'Please reply to this email with the requested information so we can proceed with your case.';
       try {
         draftContent = await fastCall(systemPrompt, userPrompt) as string;
       } catch (err) {
@@ -194,7 +216,7 @@ export class CitizenRequestController {
         case_id: id,
         request_id: uuidv4(),
         step_id: step.step_id,
-        request_type: 'external_department',
+        request_type: 'citizen_request',
         recipient_type: 'citizen',
         draft_content: draftContent,
         status: 'sent', // we send it immediately
@@ -204,16 +226,35 @@ export class CitizenRequestController {
 
       await request.save();
 
+      await RequestThread.create({
+        case_id: request.case_id,
+        request_id: request.request_id,
+        department_entity_id: citizenName,
+        step_title: step.title,
+        request_type: request.request_type,
+        recipient_type: request.recipient_type,
+        unread_by_io: false,
+        messages: [
+          {
+            sender: 'io',
+            content: request.draft_content,
+            timestamp: new Date(),
+            attachments: []
+          }
+        ]
+      });
+
       // Update step status to blocked
       step.status = 'blocked';
       step.locked_by_request_id = request.request_id;
       await step.save();
 
-      // Enqueue email
+      // Enqueue email to the actual complainant inbox
       const payload = {
-        to: 'citizen@example.com',
-        name: 'Complainant',
-        caseId: caseDoc.complaintNumber,
+        to: citizenEmail,
+        name: citizenName,
+        caseId: caseDoc._id.toString(),
+        requestId: request.request_id,
         content: draftContent,
       };
       

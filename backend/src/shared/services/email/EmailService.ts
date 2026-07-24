@@ -40,6 +40,7 @@ export interface CitizenRequestEmailPayload {
   to: string;
   name: string;
   caseId: string;
+  requestId: string;
   content: string;
 }
 
@@ -199,15 +200,17 @@ export class EmailService {
                 ⚠️ IMPORTANT — Reply Instructions
               </p>
               <p style="margin: 0 0 8px; color: #333; font-size: 13px;">
-                When replying to this email, you <strong>MUST</strong> include the following line
+                When replying to this email, you <strong>MUST</strong> include the following lines
                 at the very beginning of your reply body (before any other content):
               </p>
               <div style="background: #fff3e0; border: 1px dashed #fb8c00; padding: 10px 14px; border-radius: 4px; font-family: monospace; font-size: 14px; color: #bf360c; font-weight: bold;">
-                Complaint ID: ${payload.caseId}
+                Complaint ID: ${payload.caseId}<br />
+                Request ID: ${payload.requestId}<br />
+                Reply Origin: department
               </div>
               <p style="margin: 8px 0 0; color: #555; font-size: 12px;">
-                This line allows our system to automatically link your response to the correct case.
-                Responses without this line will not be processed automatically.
+                This line allows our system to automatically link your response to the correct case and request.
+                Responses without these lines may not be processed automatically.
                 You may attach documents, images, audio, or video files to your reply.
               </p>
             </div>
@@ -239,8 +242,22 @@ export class EmailService {
             <p>Dear ${payload.name},</p>
             <div style="background: white; border: 1px solid #ccc; padding: 20px; white-space: pre-wrap;">${payload.content}</div>
             <br/>
-            <p>Please submit the requested information securely by logging into your official Citizen Portal dashboard:</p>
-            <a href="http://localhost:3000/dashboard" style="display: inline-block; padding: 10px 20px; background-color: #1a237e; color: white; text-decoration: none; border-radius: 5px;">Login to Citizen Portal</a>
+            <p>Please reply to this email with the requested information.</p>
+            <div style="background: #fff8e1; border: 2px solid #f9a825; border-radius: 8px; padding: 16px; margin-top: 24px; font-family: monospace; font-size: 14px; color: #bf360c;">
+              Complaint ID: ${payload.caseId}<br />
+              Request ID: ${payload.requestId}
+            </div>
+            <p style="color: #666; font-size: 12px; margin-top: 24px;">
+              Attach any supporting documents directly to your reply. Include both IDs and the responder type in your response so our system can match it automatically.
+            </p>
+            <div style="background: #fff8e1; border: 2px solid #f9a825; border-radius: 8px; padding: 16px; margin-top: 24px; font-family: monospace; font-size: 14px; color: #bf360c;">
+              Complaint ID: ${payload.caseId}<br />
+              Request ID: ${payload.requestId}<br />
+              Responder: complainant
+            </div>
+            <p style="color: #666; font-size: 12px; margin-top: 24px;">
+              Attach any supporting documents directly to your reply. Include both IDs and the responder type in your response so our system can match it automatically.
+            </p>
             <p style="color: #666; font-size: 12px; margin-top: 32px;">Gujarat Police — Serving with Integrity | This is a system-generated email.</p>
           </div>
         </body>

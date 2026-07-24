@@ -225,3 +225,39 @@ class InvestigationIntelligence(BaseModel):
         default=0.0,
         validation_alias=AliasChoices("processing_duration_ms", "processingDurationMs"),
     )
+
+
+class InvestigationContext(BaseModel):
+    """Aggregated investigation state used throughout timeline and analysis stages."""
+    model_config = ConfigDict(populate_by_name=True)
+
+    context_id: str = Field(
+        validation_alias=AliasChoices("context_id", "contextId"),
+        description="Unique identifier for the fused investigation context.",
+    )
+    complaint_profile: ComplaintProfile = Field(
+        validation_alias=AliasChoices("complaint_profile", "complaintProfile"),
+    )
+    evidence_profiles: list[EvidenceProfile] = Field(
+        default_factory=list,
+        validation_alias=AliasChoices("evidence_profiles", "evidenceProfiles"),
+    )
+    timeline_intelligence: TimelineIntelligence = Field(
+        validation_alias=AliasChoices("timeline_intelligence", "timelineIntelligence"),
+    )
+    total_entities_fused: int = Field(
+        default=0,
+        validation_alias=AliasChoices("total_entities_fused", "totalEntitiesFused"),
+    )
+    total_events_fused: int = Field(
+        default=0,
+        validation_alias=AliasChoices("total_events_fused", "totalEventsFused"),
+    )
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        validation_alias=AliasChoices("created_at", "createdAt"),
+    )
+    notes: str = Field(
+        default="",
+        description="Optional summary notes about the investigation context and fusion results.",
+    )

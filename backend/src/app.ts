@@ -16,6 +16,7 @@ import investigationRoutes from './modules/investigation/routes/investigation.ro
 import citizenRequestRoutes from './modules/investigation/routes/citizenRequest.routes';
 // DEPT PORTAL DISABLED — replaced by email-based flow (GmailService + GmailPollWorker)
 // import departmentPortalRoutes from './modules/departmentPortal/routes/departmentPortal.routes';
+import caseUnderstandingRoutes from './modules/caseUnderstanding/routes/caseUnderstanding.routes';
 import { sendError } from './shared/utils/response.util';
 import { HttpStatusCode } from './common/enums/httpStatus.enum';
 
@@ -71,7 +72,7 @@ export function createApp(): Application {
   // DEPT PORTAL DISABLED — replaced by email-based flow (GmailService + GmailPollWorker)
   // app.use('/api/v1/department-portal', departmentPortalRoutes);
   app.use('/api/v1/citizen-request', citizenRequestRoutes);
-  // NOTE: complaintRoutes was previously also mounted at '/api/v1' (duplicate) — removed
+  app.use('/api/v1/case-understanding', caseUnderstandingRoutes);
 
   // ─── 404 handler ──────────────────────────────────────────────────────────────
   app.use((_req: Request, res: Response) => {

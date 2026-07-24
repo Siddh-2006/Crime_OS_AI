@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import apiClient from '@/lib/axios';
 
 interface ThreadMessage {
-  sender: 'io' | 'department';
+  sender: 'io' | 'department' | 'citizen';
   content: string;
   timestamp: string;
   attachments?: string[];
@@ -15,19 +15,35 @@ interface ThreadMessage {
 interface RequestThread {
   _id: string;
   request_id: string;
-  department_entity_id: string;
+  request_type: 'external_department' | 'inter_station_assignment' | 'citizen_request';
+  recipient_type: string;
+  department_entity_id?: string;
   step_title: string;
   unread_by_io: boolean;
   messages: ThreadMessage[];
   updatedAt: string;
 }
 
-export function DepartmentInboxPanel({ threads, onRefresh, caseId }: { threads: RequestThread[]; onRefresh: () => void; caseId: string }) {
+interface DepartmentInboxPanelProps {
+  threads: RequestThread[];
+  onRefresh: () => void;
+  caseId: string;
+  filter: 'all' | 'department' | 'citizen';
+  onFilterChange: (value: 'all' | 'department' | 'citizen') => void;
+}
+
+export function DepartmentInboxPanel({ threads, onRefresh, caseId, filter, onFilterChange }: DepartmentInboxPanelProps) {
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState('');
   const [replyLoading, setReplyLoading] = useState(false);
 
-  const selectedThread = threads.find(t => t._id === selectedThreadId);
+  const filteredThreads = threads.filter((thread) => {
+    if (filter === 'department') return thread.request_type !== 'citizen_request';
+    if (filter === 'citizen') return thread.request_type === 'citizen_request';
+    return true;
+  });
+
+  const selectedThread = filteredThreads.find(t => t._id === selectedThreadId);
 
   const handleReply = async () => {
     if (!selectedThread || !replyContent.trim()) return;
@@ -46,13 +62,13 @@ export function DepartmentInboxPanel({ threads, onRefresh, caseId }: { threads: 
     }
   };
 
-  if (threads.length === 0) {
+  if (filteredThreads.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center space-y-3 bg-white border border-neutral-200 rounded-xl shadow-sm">
         <Send className="h-10 w-10 text-neutral-300" />
-        <p className="text-sm font-semibold text-neutral-600">No department requests yet</p>
+        <p className="text-sm font-semibold text-neutral-600">No requests found</p>
         <p className="text-xs text-neutral-400 max-w-xs">
-          Run AI analysis to get suggested steps, then send department requests from the Checklist tab.
+          Send a request from the Checklist tab or refresh to load the latest department and citizen threads.
         </p>
       </div>
     );
@@ -63,32 +79,59 @@ export function DepartmentInboxPanel({ threads, onRefresh, caseId }: { threads: 
       
       {/* LEFT PANE: Inbox List */}
       <div className="w-1/3 border-r border-neutral-200 bg-neutral-50/30 flex flex-col">
-        <div className="p-4 border-b border-neutral-200 flex justify-between items-center bg-white">
-          <h3 className="text-sm font-bold text-neutral-800">Inbox ({threads.length})</h3>
-          <button onClick={onRefresh} className="text-xs text-blue-600 hover:underline">Refresh</button>
+        <div className="p-4 border-b border-neutral-200 bg-white">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-sm font-bold text-neutral-800">Requests ({filteredThreads.length})</h3>
+            <button onClick={onRefresh} className="text-xs text-blue-600 hover:underline">Refresh</button>
+          </div>
+          <div className="flex gap-2">
+            {(['all', 'department', 'citizen'] as const).map((option) => (
+              <button
+                key={option}
+                onClick={() => onFilterChange(option)}
+                className={`text-xs font-semibold px-3 py-2 rounded-lg transition-colors ${
+                  filter === option ? 'bg-blue-600 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                }`}
+              >
+                {option === 'all' ? 'All' : option === 'department' ? 'Department' : 'Citizen'}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto">
-          {threads.map(thread => {
+          {filteredThreads.map(thread => {
             const lastMsg = thread.messages[thread.messages.length - 1];
             const isSelected = selectedThreadId === thread._id;
             return (
               <div 
                 key={thread._id} 
                 onClick={() => setSelectedThreadId(thread._id)}
-                className={`p-4 border-b border-neutral-100 cursor-pointer transition-colors hover:bg-blue-50 ${
+                className={`relative p-4 border-b border-neutral-100 cursor-pointer transition-colors hover:bg-blue-50 ${
                   isSelected ? 'bg-blue-50 border-l-4 border-l-blue-600' : 'border-l-4 border-l-transparent'
                 }`}
               >
                 <div className="flex justify-between items-start mb-1">
-                  <h4 className={`text-sm ${thread.unread_by_io ? 'font-bold text-neutral-900' : 'font-semibold text-neutral-700'}`}>
-                    {thread.department_entity_id}
-                  </h4>
+                  {thread.request_type === 'citizen_request' && (
+                    <span className="text-[10px] uppercase tracking-[.2em] text-sky-600 bg-sky-100 px-2 py-0.5 rounded-full mr-2">
+                      Citizen
+                    </span>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <h4 className={`text-sm ${thread.unread_by_io ? 'font-bold text-neutral-900' : 'font-semibold text-neutral-700'}`}>
+                      {thread.request_type === 'citizen_request' ? 'Citizen Request' : thread.department_entity_id || 'Department Request'}
+                    </h4>
+                    {thread.request_type === 'citizen_request' && (
+                      <span className="text-[10px] uppercase tracking-[.2em] text-sky-600 bg-sky-100 px-2 py-0.5 rounded-full">
+                        Citizen
+                      </span>
+                    )}
+                  </div>
                   <span className="text-[10px] text-neutral-400 whitespace-nowrap ml-2">
                     {new Date(thread.updatedAt).toLocaleDateString()}
                   </span>
                 </div>
                 <p className={`text-xs ${thread.unread_by_io ? 'font-semibold text-blue-700' : 'font-medium text-neutral-600'} mb-1 truncate`}>
-                  {thread.step_title}
+                  {thread.step_title} · {thread.request_type === 'citizen_request' ? 'Citizen' : 'Department'}
                 </p>
                 <p className="text-xs text-neutral-500 line-clamp-2">
                   {lastMsg?.sender === 'io' ? 'You: ' : ''}{lastMsg?.content}

@@ -82,23 +82,151 @@ export async function generateChargeSheetPdfStream(chargeSheetData: any, res: Re
     addTextRow('Place of Occurrence', cPart.placeOfOccurrence);
     addTextRow('Nature of Offence', cPart.natureOfOffence);
 
+    // 3. Complainant / Informant Details
+if (chargeSheetData.section3_complainantDetails) {
+  addSectionHeader('3. Complainant / Informant Details');
+
+  const complainant = chargeSheetData.section3_complainantDetails;
+
+  addTextRow(
+    'Name',
+    `${complainant.firstName || ''} ${complainant.lastName || ''}`.trim()
+  );
+
+  addTextRow(
+    'Contact',
+    `${complainant.phone || 'N/A'} | ${complainant.email || 'N/A'}`
+  );
+
+  addTextRow(
+    'Address',
+    complainant.address || 'N/A'
+  );
+}
+
+    // 4. Victim Details
+if (chargeSheetData.section4_victimDetails?.length > 0) {
+  addSectionHeader('4. Victim Details');
+
+  chargeSheetData.section4_victimDetails.forEach((victim: any, idx: number) => {
+    addTextRow(`Victim ${idx + 1}`, ' ');
+    addTextRow('Name', victim.name || 'N/A');
+    addTextRow('Contact', `${victim.contact?.phone || 'N/A'} | ${victim.contact?.email || 'N/A'}`);
+    addTextRow('Address', victim.contact?.address || 'N/A');
+
+    if (victim.victimProfile?.injuryDetails) {
+      addTextRow('Injuries', victim.victimProfile.injuryDetails);
+    }
+
+    if (victim.victimProfile?.lossDetails) {
+      addTextRow('Loss', victim.victimProfile.lossDetails);
+    }
+  });
+}
+
+// 5. Accused Details
+if (chargeSheetData.section5_accusedDetails?.length > 0) {
+  addSectionHeader('5. Accused Details');
+
+  chargeSheetData.section5_accusedDetails.forEach((accused: any, idx: number) => {
+    addTextRow(`Accused ${idx + 1}`, ' ');
+    addTextRow('Name', accused.name || 'N/A');
+    addTextRow('Contact', `${accused.contact?.phone || 'N/A'} | ${accused.contact?.address || 'N/A'}`);
+  });
+}
+
+// 6. Applicable Legal Sections
+if (chargeSheetData.section6_applicableLegalSections?.length > 0) {
+  addSectionHeader('6. Applicable Legal Sections');
+
+  chargeSheetData.section6_applicableLegalSections.forEach((sec: any) => {
+    addTextRow(
+      sec.code || sec.section_code || 'Section',
+      sec.title || sec.short_title || 'N/A'
+    );
+  });
+}
+
     // 7. Investigation Summary
     addSectionHeader('7. Investigation Summary');
     addLongText(chargeSheetData.section7_investigationSummary);
+
+// 8. Witnesses
+if (chargeSheetData.section8_witnesses?.length > 0) {
+  addSectionHeader('8. Witnesses');
+
+  chargeSheetData.section8_witnesses.forEach((witness: any, idx: number) => {
+    addTextRow(`Witness ${idx + 1}`, ' ');
+    addTextRow('Name', witness.name || 'N/A');
+    addTextRow('Contact', `${witness.contact?.phone || 'N/A'} | ${witness.contact?.address || 'N/A'}`);
+
+    if (witness.witnessProfile?.statement) {
+      addTextRow('Statement', witness.witnessProfile.statement);
+    }
+  });
+}
+
+// 9. Evidence Collected
+if (chargeSheetData.section9_evidenceCollected?.length > 0) {
+  addSectionHeader('9. Evidence Collected');
+
+  chargeSheetData.section9_evidenceCollected.forEach((ev: any, idx: number) => {
+    addTextRow(
+      `${idx + 1}. ${ev.title || ev.evidence_id || ev.type || 'Evidence'}`,
+      ev.description || ev.ai_description || ev.storage_ref || 'N/A'
+    );
+  });
+}
+
+// 10. Department Reports
+if (chargeSheetData.section10_departmentReports?.length > 0) {
+  addSectionHeader('10. Department Reports');
+
+  chargeSheetData.section10_departmentReports.forEach((req: any, idx: number) => {
+    addTextRow(
+      `${idx + 1}. ${req.department || 'Department'}`,
+      `${req.request_type || 'N/A'} - ${(req.status || 'N/A').toUpperCase()}`
+    );
+  });
+}
 
     // 11. Investigation Findings
     addSectionHeader('11. Investigation Findings');
     addLongText(chargeSheetData.section11_investigationFindings);
 
+    // 12. Sections Applied to Accused
+if (chargeSheetData.section12_accusedAppliedSections?.length > 0) {
+  addSectionHeader('12. Sections Applied to Accused');
+
+  chargeSheetData.section12_accusedAppliedSections.forEach((entry: any, idx: number) => {
+    const accused = chargeSheetData.section5_accusedDetails?.find(
+      (a: any) => a._id === entry.accusedId || a.id === entry.accusedId
+    );
+
+    addTextRow(`Accused ${idx + 1}`, accused?.name || 'Unknown');
+
+    if (entry.sections?.length > 0) {
+      entry.sections.forEach((sec: any, sIdx: number) => {
+        addTextRow(
+          `Section ${sIdx + 1}`,
+          `${sec.code || sec.section_code || 'N/A'} - ${sec.title || sec.short_title || 'N/A'}`
+        );
+      });
+    } else {
+      addTextRow('Sections', 'N/A');
+    }
+  });
+}
+
     // 13. Final Report
     addSectionHeader('13. Final Report / Prayer');
     addLongText(chargeSheetData.section13_finalReport);
 
-    // 14. Annexures
-    addSectionHeader('14. Annexures');
-    chargeSheetData.section14_annexures.forEach((annex: any, idx: number) => {
-      addTextRow(`${idx + 1}. ${annex.type}`, annex.title);
-    });
+    // // 14. Annexures
+    // addSectionHeader('14. Annexures');
+    // chargeSheetData.section14_annexures.forEach((annex: any, idx: number) => {
+    //   addTextRow(`${idx + 1}. ${annex.type}`, annex.title);
+    // });
 
     doc.end();
   });

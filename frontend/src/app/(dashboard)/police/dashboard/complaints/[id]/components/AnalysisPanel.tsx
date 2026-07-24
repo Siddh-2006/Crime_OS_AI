@@ -4,7 +4,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Loader } from '@/components/ui/Loader';
-import { Bot, UserCircle, Send, AlertTriangle, ShieldAlert, RefreshCw, Scale } from 'lucide-react';
+import { Bot, UserCircle, Send, AlertTriangle, ShieldAlert, RefreshCw, Scale, XCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import apiClient from '@/lib/axios';
 
@@ -24,11 +24,26 @@ interface NextStep {
   evidence_needed: string[];
 }
 
+interface SuggestedLegalSection {
+  code: string;
+  title: string;
+  reason?: string;
+}
+
+interface ParticipantRecommendation {
+  name: string;
+  roles: string[];
+  confidence: number;
+  reason: string;
+  recommended_sections?: SuggestedLegalSection[];
+}
+
 interface Snapshot {
   snapshot_id: string;
   timestamp: string;
   narrative_summary: string;
   suspect_candidates: Suspect[];
+  participant_recommendations?: ParticipantRecommendation[];
   ranked_next_steps: NextStep[];
   confidence_breakdown?: {
     evidence_coverage: number;
@@ -55,12 +70,38 @@ interface AnalysisPanelProps {
   caseId: string;
   snapshot: Snapshot | null;
   loading: boolean;
+  participants: any[];
   onCorrectSnapshot: (message: string) => Promise<void>;
   onTriggerAnalysis: () => Promise<void>;
   /** Called when SSE delivers 'done' so the workspace can refresh the snapshot */
   onAnalysisComplete: () => void;
+  onAttachSectionsToParticipant: (participantId: string, sections: SuggestedLegalSection[]) => Promise<void>;
+  onAcceptRecommendedSection: (recommendation: ParticipantRecommendation, section: SuggestedLegalSection) => Promise<void>;
+  onApproveParticipant?: (recommendation: ParticipantRecommendation) => Promise<void>;
   actionLoading: boolean;
 }
+
+const safeText = (value: unknown): string => {
+  if (value === undefined || value === null) return '';
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) return value.map(safeText).join(', ');
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+};
+
+const safeArray = (value: unknown): string[] => {
+  if (Array.isArray(value)) return value.map(safeText).filter((item) => item.length > 0);
+  if (value === undefined || value === null) return [];
+  return [safeText(value)];
+};
+
+const safeMarkdown = (value: unknown): string => {
+  const text = safeText(value);
+  return text.trim().length > 0 ? text : '*No summary generated yet.*';
+};
 
 // ─── SSE helper ───────────────────────────────────────────────────────────────
 
@@ -70,16 +111,16 @@ function openSSE(
   onDone: () => void,
   onError: (msg: string) => void,
 ): () => void {
-  const base  = (apiClient.defaults.baseURL ?? '').replace(/\/$/, '');
+  const base = (apiClient.defaults.baseURL ?? '').replace(/\/$/, '');
   const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
-  const url   = `${base}/cases/${caseId}/analysis/progress?token=${encodeURIComponent(token ?? '')}`;
-  const es    = new EventSource(url);
+  const url = `${base}/cases/${caseId}/analysis/progress?token=${encodeURIComponent(token ?? '')}`;
+  const es = new EventSource(url);
 
   es.onmessage = (ev) => {
     try {
       const data: ProgressStage = JSON.parse(ev.data);
       onStage(data);
-      if (data.done)  { es.close(); onDone(); }
+      if (data.done) { es.close(); onDone(); }
       if (data.error) { es.close(); onError(data.error); }
     } catch { /* ignore malformed frames */ }
   };
@@ -95,17 +136,22 @@ export function AnalysisPanel({
   caseId,
   snapshot,
   loading,
+  participants,
   onCorrectSnapshot,
   onTriggerAnalysis,
+  onAttachSectionsToParticipant,
+  onAcceptRecommendedSection,
+  onApproveParticipant,
   onAnalysisComplete,
   actionLoading,
 }: AnalysisPanelProps) {
   const [correctionMsg, setCorrectionMsg] = useState('');
-  const [progress,  setProgress]  = useState<ProgressStage | null>(null);
-  const [sseError,  setSseError]  = useState<string | null>(null);
-
-  const sseCleanupRef    = useRef<(() => void) | null>(null);
-  const onCompleteRef    = useRef(onAnalysisComplete);
+  const [progress, setProgress] = useState<ProgressStage | null>(null);
+  const [sseError, setSseError] = useState<string | null>(null);
+  const [dismissedRecommendationKeys, setDismissedRecommendationKeys] = useState<string[]>([]);
+  const [loadingItemKey, setLoadingItemKey] = useState<string | null>(null);
+  const sseCleanupRef = useRef<(() => void) | null>(null);
+  const onCompleteRef = useRef(onAnalysisComplete);
   const sseErrorCountRef = useRef(0);
 
   useEffect(() => { onCompleteRef.current = onAnalysisComplete; }, [onAnalysisComplete]);
@@ -156,9 +202,34 @@ export function AnalysisPanel({
   };
 
   const isAnalysing = !!progress && !progress.done && !progress.error;
-  const hasFailed   = !!progress?.error;
+  const hasFailed = !!progress?.error;
 
   // ── Loading ──────────────────────────────────────────────────────────────
+  const allRecommendations = snapshot?.participant_recommendations || [];
+
+  const isRecommendationDismissed = (recommendationName: string, sectionCode: string) =>
+    dismissedRecommendationKeys.includes(`${recommendationName}:${sectionCode}`);
+
+  const handleApproveParticipantWrap = async (recommendation: ParticipantRecommendation) => {
+    if (!onApproveParticipant) return;
+    const key = `participant:${recommendation.name}`;
+    setLoadingItemKey(key);
+    await onApproveParticipant(recommendation);
+    setLoadingItemKey(null);
+  };
+
+  const handleAcceptSectionWrap = async (recommendation: ParticipantRecommendation, section: SuggestedLegalSection) => {
+    const key = `section:${recommendation.name}:${section.code}`;
+    setLoadingItemKey(key);
+    await onAcceptRecommendedSection(recommendation, section);
+    setLoadingItemKey(null);
+  };
+
+  useEffect(() => {
+    if (!snapshot) return;
+    console.debug('AnalysisPanel snapshot', snapshot);
+  }, [snapshot]);
+
   if (loading) {
     return (
       <Card className="h-full flex items-center justify-center min-h-[400px]">
@@ -247,10 +318,6 @@ export function AnalysisPanel({
   // ── Snapshot loaded ──────────────────────────────────────────────────────
   if (!snapshot) return null;
 
-  useEffect(() => {
-    console.debug('AnalysisPanel snapshot', snapshot);
-  }, [snapshot]);
-
   return (
     <div className="flex flex-col space-y-4">
 
@@ -292,7 +359,7 @@ export function AnalysisPanel({
           <div>
             <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">Narrative Summary</p>
             <div className="text-sm text-neutral-700 leading-relaxed bg-neutral-50 p-4 rounded-lg border border-neutral-200 prose prose-sm max-w-none">
-              <ReactMarkdown>{snapshot.narrative_summary || '*No summary generated yet.*'}</ReactMarkdown>
+              <ReactMarkdown>{safeMarkdown(snapshot.narrative_summary)}</ReactMarkdown>
             </div>
           </div>
 
@@ -309,10 +376,121 @@ export function AnalysisPanel({
                 {snapshot.suggested_legal_sections.map((section: any, idx) => (
                   <li key={idx} className="flex items-start gap-2 text-sm text-neutral-700 bg-indigo-50/30 p-2 rounded border border-indigo-50">
                     <span className="text-indigo-400 mt-0.5">•</span>
-                    <span>{typeof section === 'string' ? section : (section.title ?? section.code ?? section.reason ?? JSON.stringify(section))}</span>
+                    <span>{typeof section === 'string' ? section : safeText(section.title ?? section.code ?? section.reason ?? section)}</span>
                   </li>
                 ))}
               </ul>
+            </div>
+          )}
+
+          {allRecommendations.length > 0 && (
+            <div className="mt-4 border border-emerald-100 rounded-lg overflow-hidden shadow-sm">
+              <div className="bg-emerald-50 px-4 py-2 flex items-center gap-2 border-b border-emerald-100">
+                <Scale className="text-emerald-600 h-4 w-4" />
+                <h4 className="text-xs font-bold text-emerald-900 uppercase tracking-wider">Legal Advisor</h4>
+              </div>
+              <div className="p-4 bg-white space-y-4">
+                {allRecommendations.map((recommendation) => {
+                  const participantKey = `participant:${safeText(recommendation.name)}`;
+                  // Check if participant is already approved (in participants list with same name)
+                  const isApproved = participants.some(
+                    (p) => safeText(p.name).trim().toLowerCase() === safeText(recommendation.name).trim().toLowerCase()
+                  );
+
+                  return (
+                    <div key={`${safeText(recommendation.name)}-${safeArray(recommendation.roles).join(',')}`} className="rounded-lg border border-neutral-200 p-3 bg-neutral-50/40">
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div>
+                          <p className="text-sm font-bold text-neutral-900">{safeText(recommendation.name)}</p>
+                          <p className="text-xs text-neutral-500 mt-0.5">
+                            {safeArray(recommendation.roles).join(', ')} • {(Number(recommendation.confidence) * 100).toFixed(0)}% confidence
+                          </p>
+                          <p className="text-xs text-neutral-600 mt-1">{safeText(recommendation.reason)}</p>
+                        </div>
+                        <div className="flex flex-col gap-2 items-end">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+                            AI Suggestion
+                          </span>
+                          {!isApproved && onApproveParticipant && (
+                            <Button
+                              size="sm"
+                              onClick={() => handleApproveParticipantWrap(recommendation)}
+                              isLoading={loadingItemKey === participantKey}
+                              disabled={actionLoading && loadingItemKey !== participantKey}
+                              className="!px-2.5 !py-1 text-[11px]"
+                            >
+                              Add Participant
+                            </Button>
+                          )}
+                          {isApproved && (
+                            <span className="text-[10px] font-bold text-green-700">Added ✓</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {recommendation.recommended_sections && recommendation.recommended_sections.length > 0 && (
+                        <div className="space-y-2 mt-3 pt-3 border-t border-neutral-200">
+                          <p className="text-xs font-semibold text-neutral-600 mb-2">Suggested Sections</p>
+                          {recommendation.recommended_sections.map((section) => {
+                            const dismissalKey = `${safeText(recommendation.name)}:${safeText(section.code)}`;
+                            const sectionKey = `section:${safeText(recommendation.name)}:${safeText(section.code)}`;
+                            if (isRecommendationDismissed(safeText(recommendation.name), safeText(section.code))) return null;
+
+                            // Check if this section is already applied to this participant
+                            const participantObj = participants.find((p) => safeText(p.name).trim().toLowerCase() === safeText(recommendation.name).trim().toLowerCase());
+                            const appliedSections = participantObj
+                              ? (safeArray((participantObj as any).roles).includes('Accused')
+                                ? ((participantObj as any).accusedProfile?.appliedSections || [])
+                                : ((participantObj as any).suspectProfile?.appliedSections || []))
+                              : [];
+                            const isSectionAccepted = appliedSections.some((s: any) => safeText(s.code) === safeText(section.code));
+
+                            return (
+                              <div key={dismissalKey} className="flex items-start justify-between gap-3 rounded-md border border-emerald-100 bg-white p-3">
+                                <div className="min-w-0">
+                                  <p className="text-sm font-semibold text-neutral-800">
+                                    <strong>{safeText(section.code)}</strong>: {safeText(section.title)}
+                                  </p>
+                                  {safeText(section.reason) && <p className="text-xs text-neutral-500 mt-1">{safeText(section.reason)}</p>}
+                                </div>
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  {isSectionAccepted ? (
+                                    <span className="text-[10px] font-bold text-green-700 bg-green-50 px-2 py-1 rounded border border-green-200">
+                                      Attached ✓
+                                    </span>
+                                  ) : (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        onClick={() => handleAcceptSectionWrap(recommendation, section)}
+                                        isLoading={loadingItemKey === sectionKey}
+                                        disabled={actionLoading && loadingItemKey !== sectionKey}
+                                        className="!px-2.5 !py-1 text-[11px]"
+                                      >
+                                        Accept
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => setDismissedRecommendationKeys((current) => [...current, dismissalKey])}
+                                        disabled={actionLoading}
+                                        leftIcon={<XCircle size={12} />}
+                                        className="!px-2.5 !py-1 text-[11px]"
+                                      >
+                                        Reject
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
 
@@ -361,58 +539,63 @@ export function AnalysisPanel({
           </div>
         </Card>
 
-        <Card className="flex flex-col">
-          <CardHeader title="Ranked Next Steps" />
-          <div className="mt-3 space-y-3 overflow-y-auto max-h-[300px] pr-2">
-            {snapshot.ranked_next_steps.length === 0 ? (
-              <p className="text-sm text-neutral-400 italic">No further steps suggested.</p>
-            ) : (
-              snapshot.ranked_next_steps.map((step, idx) => (
-                <div key={idx} className="p-3 border border-primary-100 rounded-lg bg-primary-50/30 flex gap-3 items-start">
-                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold">
-                    {idx + 1}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 mt-4">
+          {/* Next Steps */}
+          <Card className="flex flex-col lg:col-span-2">
+            <CardHeader title="Ranked Next Steps" />
+            <div className="mt-3 space-y-3 overflow-y-auto max-h-[300px] pr-2">
+              {snapshot.ranked_next_steps.length === 0 ? (
+                <p className="text-sm text-neutral-400 italic">No further steps suggested.</p>
+              ) : (
+                snapshot.ranked_next_steps.map((step, idx) => (
+                  <div key={idx} className="p-3 border border-primary-100 rounded-lg bg-primary-50/30 flex gap-3 items-start">
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold">
+                      {idx + 1}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-neutral-800">{safeText(step.step_id).replace(/_/g, ' ')}</p>
+                      <p className="text-xs text-neutral-600 mt-1">{safeText(step.reason)}</p>
+                      {step.evidence_needed.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {step.evidence_needed.map((ev: any) => (
+                            <span key={safeText(ev)} className="text-[9px] uppercase tracking-wider bg-white border border-neutral-200 text-neutral-500 px-1.5 py-0.5 rounded">
+                              Requires: {safeText(ev)}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-bold text-neutral-800">{step.step_id.replace(/_/g, ' ')}</p>
-                    <p className="text-xs text-neutral-600 mt-1">{typeof step.reason === 'string' ? step.reason : (step.reason?.title ?? step.reason?.reason ?? JSON.stringify(step.reason))}</p>
-                    {step.evidence_needed.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {step.evidence_needed.map((ev: any) => (
-                          <span key={typeof ev === 'string' ? ev : JSON.stringify(ev)} className="text-[9px] uppercase tracking-wider bg-white border border-neutral-200 text-neutral-500 px-1.5 py-0.5 rounded">
-                            Requires: {typeof ev === 'string' ? ev : (ev.name ?? ev.type ?? JSON.stringify(ev))}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
+          </Card>
+        </div>
+
+
+
+        {/* Correction Chat Box */}
+        <Card className="mt-auto">
+          <div className="flex items-center gap-2 mb-2">
+            <ShieldAlert className="text-orange-500 h-4 w-4" />
+            <h4 className="text-xs font-bold text-neutral-700 uppercase">Officer Override & Correction</h4>
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={correctionMsg}
+              onChange={(e) => setCorrectionMsg(e.target.value)}
+              placeholder="Tell the AI to correct an assumption, ignore a suspect, or prioritise a step…"
+              className="flex-1 px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              onKeyDown={(e) => e.key === 'Enter' && handleCorrect()}
+              disabled={actionLoading}
+            />
+            <Button onClick={handleCorrect} isLoading={actionLoading} disabled={!correctionMsg.trim()}>
+              <Send size={16} />
+            </Button>
           </div>
         </Card>
       </div>
-
-      {/* Officer Override */}
-      <Card>
-        <div className="flex items-center gap-2 mb-2">
-          <ShieldAlert className="text-orange-500 h-4 w-4" />
-          <h4 className="text-xs font-bold text-neutral-700 uppercase">Officer Override & Correction</h4>
-        </div>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={correctionMsg}
-            onChange={(e) => setCorrectionMsg(e.target.value)}
-            placeholder="Tell the AI to correct an assumption, ignore a suspect, or prioritise a step…"
-            className="flex-1 px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-            onKeyDown={(e) => e.key === 'Enter' && handleCorrect()}
-            disabled={actionLoading}
-          />
-          <Button onClick={handleCorrect} isLoading={actionLoading} disabled={!correctionMsg.trim()}>
-            <Send size={16} />
-          </Button>
-        </div>
-      </Card>
-    </div>
-  );
+    </div>  
+      );
 }

@@ -9,8 +9,8 @@ export interface IDepartmentRequest extends Document {
   case_id: Types.ObjectId;
   request_id: string;
   step_id: string;                     // checklist step this request satisfies
-  request_type: 'external_department' | 'inter_station_assignment';
-  recipient_type: string;              // e.g., 'Bank', 'Cyber Cell', 'Police Station'
+  request_type: 'external_department' | 'inter_station_assignment' | 'citizen_request';
+  recipient_type: string;              // e.g., 'Bank', 'Cyber Cell', 'Police Station', 'citizen'
   department_entity_id?: string;        // references DeptRegistry entity (optional for citizen)
   draft_content: string;
   attachments: string[];               // evidence_ids attached
@@ -28,7 +28,7 @@ const DepartmentRequestSchema = new Schema<IDepartmentRequest>(
     case_id:              { type: Schema.Types.ObjectId, ref: 'Complaint', required: true, index: true },
     request_id:           { type: String, required: true, unique: true },
     step_id:              { type: String, required: true },
-    request_type:         { type: String, enum: ['external_department', 'inter_station_assignment'], default: 'external_department', required: true },
+    request_type:         { type: String, enum: ['external_department', 'inter_station_assignment', 'citizen_request'], default: 'external_department', required: true },
     recipient_type:       { type: String, required: true },
     department_entity_id: { type: String }, // not required for 'citizen'
     draft_content:        { type: String, required: true },

@@ -46,6 +46,15 @@ class EmbedService:
             evidence_summary=request.evidenceSummary,
             investigation_summary=request.investigationSummary,
             sections=request.sections,
+            created_at=request.createdAt,
+            closed_date=request.closedDate,
+            complaint_intelligence=request.complaintIntelligence,
+            diary_entries=request.diaryEntries,
+            case_checklist=request.caseChecklist,
+            case_entities=request.caseEntities,
+            analysis_snapshots=request.analysisSnapshots,
+            department_requests=request.departmentRequests,
+            charge_sheet=request.chargeSheet,
         )
 
         logger.info(

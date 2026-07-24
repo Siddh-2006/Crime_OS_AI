@@ -162,10 +162,10 @@ async def main() -> None:
         db["complaints"].update_one(
             {"_id": doc["_id"]},
             {"$set": {
-                "complaintIntelligence.crimeType":           profile_dict["crime_type"],
-                "complaintIntelligence.priority":            profile_dict["priority"],
-                "complaintIntelligence.confidence":          profile_dict["confidence"],
-                "complaintIntelligence.summary":             profile_dict["summary"],
+                "complaintIntelligence.crimeType":           profile_dict.get("crime_type", "unknown"),
+                "complaintIntelligence.priority":            profile_dict.get("priority", "medium"),
+                "complaintIntelligence.confidence":          profile_dict.get("confidence", 0.0),
+                "complaintIntelligence.summary":             profile_dict.get("summary", ""),
                 "complaintIntelligence.missingInformation":  profile_dict.get("missing_information", []),
                 "complaintIntelligence.recommendations":     profile_dict.get("recommendations", []),
                 "complaintIntelligence.m2ProcessedAt":       datetime.now(timezone.utc).isoformat(),

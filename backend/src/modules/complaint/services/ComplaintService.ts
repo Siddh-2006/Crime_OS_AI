@@ -22,6 +22,7 @@ import axios from 'axios';
 import env from '../../../config/env';
 import { InvestigationOrchestrator } from '../../investigation/services/investigationOrchestrator';
 import { ChargeSheetGenerator } from '../../investigation/services/ChargeSheetGenerator';
+import { CaseParticipant } from '../../investigation/models/CaseParticipant.model';
 
 export class ComplaintService {
   constructor(private readonly complaintRepository: IComplaintRepository) {}
@@ -889,6 +890,17 @@ export class ComplaintService {
       newValue: ComplaintStatus.CLOSED,
       action: 'CASE_CLOSURE',
     });
+
+    // ── Accused check ─────────────────────────────────────────────
+    const accusedCount = await CaseParticipant.countDocuments({
+      case_id: complaint._id,
+      roles: 'Accused',
+    });
+    if (accusedCount === 0) {
+      throw new ValidationError(
+        'NO_ACCUSED: At least one suspect must be promoted to Accused before closing the investigation.',
+      );
+    }
 
     // ── ChargeSheet Generation ─────────────────────────────────
     try {

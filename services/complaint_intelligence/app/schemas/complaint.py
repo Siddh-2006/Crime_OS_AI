@@ -1,40 +1,38 @@
-"""
-Pydantic schemas for complaint profiling.
-Supports aliases to allow flexible parsing of both camelCase and snake_case representations.
+"""Complaint Profile schema for synchronous complaint analysis.
+
+This schema accepts both the detailed, deterministic profiling fields used by
+internal workers (`original_text`, `text_length`, etc.) and the LLM-produced
+fields (`crime_type`, `priority`, `confidence`, `summary`, `missing_information`,
+`recommendations`). This makes the schema resilient when the pipeline builds a
+`ComplaintProfile` from either source.
 """
 from __future__ import annotations
 
-from pydantic import BaseModel, Field, ConfigDict, AliasChoices
+from typing import List
+
+from pydantic import BaseModel, Field
 
 
 class ComplaintProfile(BaseModel):
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
+    """Structured profile of a complaint after analysis.
 
-    crime_type: str = Field(
-        validation_alias=AliasChoices("crime_type", "crimeType"),
-        description="The classified type of crime (e.g. cyber_financial_fraud, missing_person).",
-    )
-    priority: str = Field(
-        validation_alias=AliasChoices("priority"),
-        description="The priority level of the complaint (low, medium, high, critical).",
-    )
-    summary: str = Field(
-        validation_alias=AliasChoices("summary"),
-        description="A concise summary of the complaint.",
-    )
-    missing_information: list[str] = Field(
-        default_factory=list,
-        validation_alias=AliasChoices("missing_information", "missingInformation"),
-        description="Critical information missing from the complaint text.",
-    )
-    recommendations: list[str] = Field(
-        default_factory=list,
-        validation_alias=AliasChoices("recommendations"),
-        description="Recommended next steps for the investigation.",
-    )
-    confidence: float = Field(
-        validation_alias=AliasChoices("confidence"),
-        description="Confidence score between 0.0 and 1.0.",
-    )
+    Fields are backwards-compatible: deterministic extractors may populate the
+    left-side fields while the LLM worker populates the right-side fields.
+    """
+
+    # Deterministic/local extractor fields (optional)
+    original_text: str | None = Field(default=None, description="Original complaint text provided")
+    language: str = Field(default="en", description="Detected language code (e.g., 'en', 'hi')")
+    text_length: int | None = Field(default=None, description="Length of the complaint text in characters")
+    word_count: int | None = Field(default=None, description="Number of words in the complaint")
+    key_entities: List[str] = Field(default_factory=list, description="Extracted entities (people, places, etc.)")
+    severity_score: float | None = Field(default=None, ge=0.0, le=1.0, description="Severity score from 0.0 to 1.0")
+    case_type: str | None = Field(default=None, description="Detected case type or category")
+
+    # LLM-produced fields (also optional)
+    crime_type: str = Field(default="unknown", description="LLM-derived crime type/category")
+    priority: str = Field(default="medium", description="LLM-derived priority: low|medium|high|critical")
+    confidence: float = Field(default=0.0, description="LLM confidence (0.0 - 1.0)")
+    summary: str = Field(default="", description="LLM short summary of the complaint")
+    missing_information: List[str] = Field(default_factory=list, description="Missing information items identified by LLM")
+    recommendations: List[str] = Field(default_factory=list, description="LLM-generated recommendations or hints")

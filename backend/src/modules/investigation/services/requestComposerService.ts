@@ -143,6 +143,8 @@ Return JSON.`;
       request_id: request.request_id,
       department_entity_id: request.department_entity_id,
       step_title: stepTitle,
+      request_type: request.request_type,
+      recipient_type: request.recipient_type,
       unread_by_io: false,
       messages: [{
         sender: 'io',

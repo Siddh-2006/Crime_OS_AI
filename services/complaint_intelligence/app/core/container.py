@@ -13,12 +13,6 @@ from app.core.logging import logger
 
 if TYPE_CHECKING:
     from app.llm.client import ILLMClient
-    from app.text_intelligence.interfaces import (
-        IEntityLinker,
-        IEventExtractor,
-        INERExtractor,
-        IRegexExtractor,
-    )
     from app.image_worker.interfaces import (
         IEvidenceBuilder,
         IImageCaptioner,
@@ -43,18 +37,6 @@ if TYPE_CHECKING:
         IPDFMetadataExtractor,
     )
     from app.pdf_worker.worker import PDFWorker
-    from app.fusion.interfaces import (
-        IEntityMerger,
-        IEventMerger,
-        IFusionEngine,
-    )
-    from app.timeline.interfaces import (
-        ITimestampNormalizer,
-        ITimelineDeduplicator,
-        ITimelineEngine,
-    )
-    from app.timeline_intelligence.interfaces import ITimelineIntelligenceEngine
-    from app.investigation_intelligence.interfaces import IInvestigationIntelligenceEngine
 
 
 class Container:
@@ -67,10 +49,6 @@ class Container:
     def __init__(self, cfg: Settings) -> None:
         self._cfg = cfg
         self._ollama_client: ILLMClient | None = None
-        self._ner_extractor: INERExtractor | None = None
-        self._regex_extractor: IRegexExtractor | None = None
-        self._event_extractor: IEventExtractor | None = None
-        self._entity_linker: IEntityLinker | None = None
         # Image worker
         self._metadata_extractor: IMetadataExtractor | None = None
         self._image_preprocessor: IImagePreprocessor | None = None
@@ -96,17 +74,10 @@ class Container:
         self._pdf_page_renderer: IPDFPageRenderer | None = None
         self._pdf_metadata_extractor: IPDFMetadataExtractor | None = None
         self._pdf_worker: PDFWorker | None = None
-        # Fusion engine
-        self._entity_merger: IEntityMerger | None = None
-        self._event_merger: IEventMerger | None = None
-        self._fusion_engine: IFusionEngine | None = None
-        # Timeline engine
-        self._timestamp_normalizer: ITimestampNormalizer | None = None
-        self._timeline_deduplicator: ITimelineDeduplicator | None = None
-        self._timeline_engine: ITimelineEngine | None = None
-        # Timeline Intelligence engine (M11)
-        self._timeline_intelligence_engine: ITimelineIntelligenceEngine | None = None
-        self._investigation_intelligence_engine: IInvestigationIntelligenceEngine | None = None
+        # Case Understanding Single Engine
+        self._case_context_builder = None
+        self._case_understanding_engine = None
+        self._case_repository = None
 
     @property
     def config(self) -> Settings:
@@ -127,50 +98,6 @@ class Container:
     @llm_client.setter
     def llm_client(self, client: ILLMClient) -> None:
         self._ollama_client = client
-
-    @property
-    def ner_extractor(self) -> INERExtractor:
-        if self._ner_extractor is None:
-            from app.text_intelligence.ner_extractor import SpacyNERExtractor
-            self._ner_extractor = SpacyNERExtractor()
-        return self._ner_extractor
-
-    @ner_extractor.setter
-    def ner_extractor(self, extractor: INERExtractor) -> None:
-        self._ner_extractor = extractor
-
-    @property
-    def regex_extractor(self) -> IRegexExtractor:
-        if self._regex_extractor is None:
-            from app.text_intelligence.regex_extractor import IndianRegexExtractor
-            self._regex_extractor = IndianRegexExtractor()
-        return self._regex_extractor
-
-    @regex_extractor.setter
-    def regex_extractor(self, extractor: IRegexExtractor) -> None:
-        self._regex_extractor = extractor
-
-    @property
-    def event_extractor(self) -> IEventExtractor:
-        if self._event_extractor is None:
-            from app.text_intelligence.event_extractor import TemporalEventExtractor
-            self._event_extractor = TemporalEventExtractor()
-        return self._event_extractor
-
-    @event_extractor.setter
-    def event_extractor(self, extractor: IEventExtractor) -> None:
-        self._event_extractor = extractor
-
-    @property
-    def entity_linker(self) -> IEntityLinker:
-        if self._entity_linker is None:
-            from app.text_intelligence.entity_linker import PassthroughEntityLinker
-            self._entity_linker = PassthroughEntityLinker()
-        return self._entity_linker
-
-    @entity_linker.setter
-    def entity_linker(self, linker: IEntityLinker) -> None:
-        self._entity_linker = linker
 
     # ── Image Worker ──────────────────────────────────────────────────────────
 
@@ -444,112 +371,43 @@ class Container:
     def pdf_worker(self, worker: PDFWorker) -> None:
         self._pdf_worker = worker
 
-    # ── Intelligence Fusion ───────────────────────────────────────────
+    # ── Single Case Understanding Engine ─────────────────────────────────────
 
     @property
-    def entity_merger(self) -> IEntityMerger:
-        if self._entity_merger is None:
-            from app.fusion.entity_merger import DeterministicEntityMerger
-            self._entity_merger = DeterministicEntityMerger()
-        return self._entity_merger
+    def case_context_builder(self):
+        if self._case_context_builder is None:
+            from app.case_understanding.context_builder import CaseContextBuilder
+            self._case_context_builder = CaseContextBuilder()
+        return self._case_context_builder
 
-    @entity_merger.setter
-    def entity_merger(self, merger: IEntityMerger) -> None:
-        self._entity_merger = merger
-
-    @property
-    def event_merger(self) -> IEventMerger:
-        if self._event_merger is None:
-            from app.fusion.event_merger import DeterministicEventMerger
-            self._event_merger = DeterministicEventMerger()
-        return self._event_merger
-
-    @event_merger.setter
-    def event_merger(self, merger: IEventMerger) -> None:
-        self._event_merger = merger
+    @case_context_builder.setter
+    def case_context_builder(self, builder) -> None:
+        self._case_context_builder = builder
 
     @property
-    def fusion_engine(self) -> IFusionEngine:
-        if self._fusion_engine is None:
-            from app.fusion.fusion_engine import IntelligenceFusionEngine
-            self._fusion_engine = IntelligenceFusionEngine(
-                entity_merger=self.entity_merger,
-                event_merger=self.event_merger,
-            )
-        return self._fusion_engine
-
-    @fusion_engine.setter
-    def fusion_engine(self, engine: IFusionEngine) -> None:
-        self._fusion_engine = engine
-
-    # ── Deterministic Timeline Engine ─────────────────────────────────
-
-    @property
-    def timestamp_normalizer(self) -> ITimestampNormalizer:
-        if self._timestamp_normalizer is None:
-            from app.timeline.normalizer import DeterministicTimestampNormalizer
-            self._timestamp_normalizer = DeterministicTimestampNormalizer()
-        return self._timestamp_normalizer
-
-    @timestamp_normalizer.setter
-    def timestamp_normalizer(self, normalizer: ITimestampNormalizer) -> None:
-        self._timestamp_normalizer = normalizer
-
-    @property
-    def timeline_deduplicator(self) -> ITimelineDeduplicator:
-        if self._timeline_deduplicator is None:
-            from app.timeline.deduplicator import DeterministicTimelineDeduplicator
-            self._timeline_deduplicator = DeterministicTimelineDeduplicator()
-        return self._timeline_deduplicator
-
-    @timeline_deduplicator.setter
-    def timeline_deduplicator(self, deduplicator: ITimelineDeduplicator) -> None:
-        self._timeline_deduplicator = deduplicator
-
-    @property
-    def timeline_engine(self) -> ITimelineEngine:
-        if self._timeline_engine is None:
-            from app.timeline.engine import DeterministicTimelineEngine
-            self._timeline_engine = DeterministicTimelineEngine(
-                normalizer=self.timestamp_normalizer,
-                deduplicator=self.timeline_deduplicator,
-            )
-        return self._timeline_engine
-
-    @timeline_engine.setter
-    def timeline_engine(self, engine: ITimelineEngine) -> None:
-        self._timeline_engine = engine
-
-    # ── Timeline Intelligence Engine (M11) ───────────────────────────────────
-
-    @property
-    def timeline_intelligence_engine(self) -> ITimelineIntelligenceEngine:
-        if self._timeline_intelligence_engine is None:
-            from app.timeline_intelligence.engine import TimelineIntelligenceEngine
-            self._timeline_intelligence_engine = TimelineIntelligenceEngine(
+    def case_understanding_engine(self):
+        if self._case_understanding_engine is None:
+            from app.case_understanding.engine import CaseUnderstandingEngine
+            self._case_understanding_engine = CaseUnderstandingEngine(
                 llm_client=self.llm_client,
+                max_retries=self._cfg.LLM_MAX_RETRIES,
             )
-        return self._timeline_intelligence_engine
+        return self._case_understanding_engine
 
-    @timeline_intelligence_engine.setter
-    def timeline_intelligence_engine(self, engine: ITimelineIntelligenceEngine) -> None:
-        self._timeline_intelligence_engine = engine
-
-    # ── Investigation Intelligence Engine (M12) ──────────────────────────────
+    @case_understanding_engine.setter
+    def case_understanding_engine(self, engine) -> None:
+        self._case_understanding_engine = engine
 
     @property
-    def investigation_intelligence_engine(self) -> IInvestigationIntelligenceEngine:
-        if self._investigation_intelligence_engine is None:
-            from app.investigation_intelligence.engine import InvestigationIntelligenceEngine
-            self._investigation_intelligence_engine = InvestigationIntelligenceEngine(
-                llm_client=self.llm_client,
-                model_name=self._cfg.INVESTIGATION_INTELLIGENCE_MODEL,
-            )
-        return self._investigation_intelligence_engine
+    def case_repository(self):
+        if self._case_repository is None:
+            from app.case_understanding.repository import MongoCaseRepository
+            self._case_repository = MongoCaseRepository()
+        return self._case_repository
 
-    @investigation_intelligence_engine.setter
-    def investigation_intelligence_engine(self, engine: IInvestigationIntelligenceEngine) -> None:
-        self._investigation_intelligence_engine = engine
+    @case_repository.setter
+    def case_repository(self, repository) -> None:
+        self._case_repository = repository
 
 
 @lru_cache(maxsize=1)

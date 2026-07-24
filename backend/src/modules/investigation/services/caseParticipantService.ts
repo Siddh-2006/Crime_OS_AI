@@ -237,4 +237,44 @@ export class CaseParticipantService {
 
     return participant;
   }
+
+  static async promoteToAccused(caseId: string, participantId: string): Promise<ICaseParticipant> {
+    const caseObjectId = new Types.ObjectId(caseId);
+    const participant = await CaseParticipant.findOne({ case_id: caseObjectId, participant_id: participantId }).exec();
+
+    if (!participant) {
+      throw new Error('Participant not found');
+    }
+
+    if (!participant.roles.includes('Suspect')) {
+      throw new Error('Only participants with the Suspect role can be promoted to Accused');
+    }
+
+    if (!participant.roles.includes('Accused')) {
+      participant.roles.push('Accused');
+    }
+
+    // Carry over applied sections from suspectProfile to accusedProfile
+    if (!participant.accusedProfile) {
+      participant.accusedProfile = {
+        appliedSections: participant.suspectProfile?.appliedSections ?? [],
+      };
+    }
+
+    await participant.save();
+
+    await DiaryEntry.create({
+      case_id: caseId,
+      entry_id: uuidv4(),
+      actor: { type: 'officer', id: 'system' },
+      event_type: 'participant_promoted_to_accused',
+      payload: {
+        participant_id: participant.participant_id,
+        participant_name: participant.name,
+      },
+      ref_ids: { participant_id: participant.participant_id },
+    });
+
+    return participant;
+  }
 }

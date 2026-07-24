@@ -73,7 +73,7 @@ async def profile_complaint(
 ) -> ComplaintProfile:
     # Run the profiling logic synchronously by invoking the worker
     worker = ComplaintProfileWorker(container.llm_client)
-    result = await worker.run({"text": body.text}, job_id="sync-profile")
+    result = await worker.run(payload={"text": body.text}, job_id="sync-profile")
 
     if not result.succeeded:
         raise LLMError(f"Complaint profiling failed: {result.error}")

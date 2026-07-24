@@ -45,10 +45,10 @@ class Settings(BaseSettings):
     # ── LLM (Ollama primary, Gemini fallback) ───────────────────────────────
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "gemma4:e2b"
-    TIMELINE_INTELLIGENCE_MODEL: str = "gemma4:e2b"
-    INVESTIGATION_INTELLIGENCE_MODEL: str = "gemma4:e2b"
-    OLLAMA_TIMEOUT_SECONDS: int = 120
+    CASE_UNDERSTANDING_MODEL: str = "gemma4:e2b"
+    OLLAMA_TIMEOUT_SECONDS: int = 600
     OLLAMA_NUM_CTX: int = 4096
+    LLM_MAX_RETRIES: int = 3
 
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-3.5-flash-lite"

@@ -9,6 +9,7 @@ export class ChargeSheetService {
       .populate('victimIds')
       .populate('witnessIds')
       .populate('accusedIds')
+      .populate('suspectIds')
       .populate('evidenceIds')
       .populate('departmentRequestIds')
       .exec();
@@ -68,6 +69,7 @@ export class ChargeSheetService {
       section3_complainantDetails: complaint.citizen,
       section4_victimDetails: chargeSheet.victimIds,
       section5_accusedDetails: chargeSheet.accusedIds,
+      section5b_suspectDetails: chargeSheet.suspectIds,
       section6_applicableLegalSections: chargeSheet.applicableLegalSections,
       section7_investigationSummary: chargeSheet.investigationSummary,
       section8_witnesses: chargeSheet.witnessIds,

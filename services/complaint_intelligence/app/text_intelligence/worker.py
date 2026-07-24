@@ -1,117 +1,91 @@
 """
-TextIntelligenceWorker — orchestrates the full text intelligence pipeline.
-
-Steps:
-  1. NER extraction (via INERExtractor)
-  2. Regex extraction (via IRegexExtractor)
-  3. Merge + deduplicate entities
-  4. Event extraction (via IEventExtractor)
-  5. Entity linking (via IEntityLinker)
-  6. Build & validate TextIntelligenceResult
+Text Intelligence Worker - M3 & M6 Text Analysis.
+Orchestrates NER, regex extraction, temporal event detection, and entity linking.
 """
 from __future__ import annotations
 
-import time
+from dataclasses import dataclass
+from typing import Any
 
-from app.base.worker import BaseWorker, ProgressUpdate
-from app.schemas.text_intelligence import ExtractedEntity, TextIntelligenceResult
-from app.text_intelligence.interfaces import (
-    IEntityLinker,
-    IEventExtractor,
-    INERExtractor,
-    IRegexExtractor,
-)
+from app.core.logging import logger
 
 
-class TextIntelligenceWorker(BaseWorker[dict, dict]):
-    """
-    Worker that runs the complete text intelligence pipeline.
+@dataclass
+class TextIntelligenceResult:
+    """Result of text intelligence processing."""
+    succeeded: bool
+    entities: list[Any] = None
+    regex_matches: list[Any] = None
+    temporal_events: list[Any] = None
+    linked_entities: list[Any] = None
+    error: str | None = None
 
-    Accepts payload:
-        {"text": "...", "source_type": "complaint|ocr|audio|pdf"}
 
-    Returns:
-        TextIntelligenceResult as a dict.
-    """
-
-    worker_name = "text_intelligence_worker"
-
-    def __init__(
-        self,
-        ner_extractor: INERExtractor,
-        regex_extractor: IRegexExtractor,
-        event_extractor: IEventExtractor,
-        entity_linker: IEntityLinker,
-    ) -> None:
-        super().__init__()
+class TextIntelligenceWorker:
+    """Worker for text intelligence processing."""
+    
+    def __init__(self, ner_extractor, regex_extractor, event_extractor, entity_linker):
+        """Initialize text intelligence worker."""
         self.ner_extractor = ner_extractor
         self.regex_extractor = regex_extractor
         self.event_extractor = event_extractor
         self.entity_linker = entity_linker
-
-    async def process(self, *, job_id: str, payload: dict, attempt: int) -> dict:
-        text = payload.get("text")
-        if not text:
-            raise ValueError("Payload must contain 'text'")
-
-        source_type = payload.get("source_type", "complaint")
-        t_start = time.perf_counter()
-
-        # Step 1: NER extraction
-        self.report_progress(
-            ProgressUpdate(job_id=job_id, step="ner_extraction", percent=0.1, message="Running NER extraction")
-        )
-        ner_entities = await self.ner_extractor.extract(text)
-
-        # Step 2: Regex extraction
-        self.report_progress(
-            ProgressUpdate(job_id=job_id, step="regex_extraction", percent=0.3, message="Running regex extraction")
-        )
-        regex_entities = await self.regex_extractor.extract(text)
-
-        # Step 3: Merge + deduplicate
-        self.report_progress(
-            ProgressUpdate(job_id=job_id, step="deduplication", percent=0.5, message="Merging and deduplicating entities")
-        )
-        merged = self._deduplicate(ner_entities + regex_entities)
-
-        # Step 4: Event extraction
-        self.report_progress(
-            ProgressUpdate(job_id=job_id, step="event_extraction", percent=0.7, message="Extracting events")
-        )
-        events = await self.event_extractor.extract(text, merged)
-
-        # Step 5: Entity linking
-        self.report_progress(
-            ProgressUpdate(job_id=job_id, step="entity_linking", percent=0.85, message="Linking entities")
-        )
-        linked = await self.entity_linker.link(merged)
-
-        # Step 6: Build result
-        duration_ms = (time.perf_counter() - t_start) * 1000
-        result = TextIntelligenceResult(
-            entities=linked,
-            events=events,
-            source_type=source_type,
-            input_text_length=len(text),
-            processing_duration_ms=round(duration_ms, 2),
-        )
-
-        self.report_progress(
-            ProgressUpdate(job_id=job_id, step="completed", percent=1.0, message="Text intelligence complete")
-        )
-        return result.model_dump()
-
-    @staticmethod
-    def _deduplicate(entities: list[ExtractedEntity]) -> list[ExtractedEntity]:
+    
+    async def run(self, payload: dict[str, Any], job_id: str) -> TextIntelligenceResult:
         """
-        Remove duplicate entities that share the same value and type.
-        When a duplicate exists, prefer the one with the higher confidence.
+        Run text intelligence analysis.
+        
+        Args:
+            payload: Dictionary with 'text' key containing complaint text
+            job_id: Unique job identifier
+            
+        Returns:
+            TextIntelligenceResult with analysis results
         """
-        seen: dict[tuple[str, str], ExtractedEntity] = {}
-        for ent in entities:
-            key = (ent.entity_type, ent.value)
-            existing = seen.get(key)
-            if existing is None or ent.confidence > existing.confidence:
-                seen[key] = ent
-        return list(seen.values())
+        try:
+            text = payload.get("text", "").strip()
+            if not text:
+                return TextIntelligenceResult(
+                    succeeded=False,
+                    error="No text provided"
+                )
+            
+            # Extract entities using NER
+            entities = await self.ner_extractor.extract(text)
+            
+            # Extract regex patterns
+            regex_matches = await self.regex_extractor.extract(text)
+            
+            # Extract temporal events
+            temporal_events = await self.event_extractor.extract(text)
+            
+            # Link entities
+            linked_entities = await self.entity_linker.link(entities)
+            
+            logger.info(
+                "Text intelligence analysis completed",
+                extra={
+                    "job_id": job_id,
+                    "entities": len(entities),
+                    "regex_matches": len(regex_matches),
+                    "temporal_events": len(temporal_events),
+                }
+            )
+            
+            return TextIntelligenceResult(
+                succeeded=True,
+                entities=entities,
+                regex_matches=regex_matches,
+                temporal_events=temporal_events,
+                linked_entities=linked_entities,
+            )
+        
+        except Exception as e:
+            logger.error(
+                "Text intelligence analysis failed",
+                extra={"job_id": job_id, "error": str(e)}
+            )
+            return TextIntelligenceResult(
+                succeeded=False,
+                error=str(e)
+            )

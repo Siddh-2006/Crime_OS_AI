@@ -13,17 +13,14 @@ from pydantic import BaseModel, Field
 
 
 class JobType(str, Enum):
-    COMPLAINT_PROFILE = "complaint_profile"
-    TEXT_INTELLIGENCE = "text_intelligence"
     IMAGE_WORKER = "image_worker"
     OCR_WORKER = "ocr_worker"
     AUDIO_WORKER = "audio_worker"
     VIDEO_WORKER = "video_worker"
     PDF_WORKER = "pdf_worker"
-    INTELLIGENCE_FUSION = "intelligence_fusion"
-    TIMELINE_ENGINE = "timeline_engine"
-    TIMELINE_INTELLIGENCE = "timeline_intelligence"
-    INVESTIGATION_INTELLIGENCE = "investigation_intelligence"
+    CASE_UNDERSTANDING = "case_understanding"
+    COMPLAINT_PROFILE = "complaint_profile"
+    TEXT_INTELLIGENCE = "text_intelligence"
 
 
 class JobStatus(str, Enum):

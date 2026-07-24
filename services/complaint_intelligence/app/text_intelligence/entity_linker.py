@@ -1,18 +1,48 @@
 """
-PassthroughEntityLinker — stub IEntityLinker for future milestone.
-
-Returns entities unchanged. Exists so the pipeline always wires a
-linker without conditional None-checks. Replaced in a future milestone
-with a real knowledge-base linker.
+Entity linking component for connecting extracted entities to knowledge bases.
+Passthrough version for now - can be extended later.
 """
 from __future__ import annotations
 
-from app.schemas.text_intelligence import ExtractedEntity
-from app.text_intelligence.interfaces import IEntityLinker
+from dataclasses import dataclass
+from typing import Any
 
 
-class PassthroughEntityLinker(IEntityLinker):
-    """No-op entity linker — returns entities unchanged."""
+@dataclass
+class LinkedEntity:
+    """Represents a linked entity with metadata."""
+    text: str
+    entity_type: str
+    knowledge_base_id: str | None = None
+    confidence: float = 0.0
 
-    async def link(self, entities: list[ExtractedEntity]) -> list[ExtractedEntity]:
-        return list(entities)
+
+class PassthroughEntityLinker:
+    """Simple passthrough entity linker."""
+    
+    async def link(self, entities: list[Any]) -> list[LinkedEntity]:
+        """
+        Link entities to knowledge bases.
+        
+        Args:
+            entities: List of entities to link
+            
+        Returns:
+            List of linked entities
+        """
+        linked = []
+        
+        try:
+            for entity in entities:
+                linked.append(
+                    LinkedEntity(
+                        text=getattr(entity, 'text', str(entity)),
+                        entity_type=getattr(entity, 'label', 'UNKNOWN'),
+                        knowledge_base_id=None,
+                        confidence=0.0
+                    )
+                )
+        except Exception:
+            pass
+        
+        return linked

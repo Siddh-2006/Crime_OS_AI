@@ -92,24 +92,14 @@ JSON SCHEMA:
       "reason": "...",
       "supporting_evidence_ids": ["ev1"],
       "contradicting_evidence_ids": [],
-      "recommended_sections": []
+      "recommended_sections": [
+        {
+          "code": "BNS-117",
+          "title": "Cheating",
+          "reason": "Specific reason why this section applies to this participant..."
+        }
+      ]
     }
-  ],
-  "suspect_candidates": [
-    {
-  "entity": "Rahul",
-
-  "confidence": 85,
-
-  "supporting_evidence_ids": ["ev1"],
-
-  "contradicting_evidence_ids": [],
-
-  "recommended_sections": [
-    "BNS-117",
-    "BNS-304"
-  ]
-}
   ],
   "suggested_legal_sections": [
   {
@@ -131,8 +121,6 @@ ${JSON.stringify(confidenceBreakdown, null, 2)}
 
 === LEGAL / SOP CONTEXT ===
 ${JSON.stringify(legalAgentResult, null, 2)}
-
-=== SIMILAR CASE RECOMMENDATIONS ===
 
 Produce the JSON object now.`;
 
@@ -181,17 +169,12 @@ JSON SCHEMA:
     "reason": "...",
     "supporting_evidence_ids": [...],
     "contradicting_evidence_ids": [...],
-    "recommended_sections": []
-}
-  ],
-  "suspect_candidates": [
-    {
-    "entity": "...",
-    "confidence": ...,
-    "supporting_evidence_ids": [...],
-    "contradicting_evidence_ids": [...],
     "recommended_sections": [
-        "BNS-117"
+      {
+        "code": "BNS-117",
+        "title": "Cheating",
+        "reason": "Specific reason..."
+      }
     ]
 }
   ],
@@ -206,7 +189,6 @@ ${JSON.stringify(facts, null, 2)}
 === PREVIOUS ANALYSIS OUTPUT ===
 ${JSON.stringify({
     ranked_next_steps: originalSnapshot.ranked_next_steps,
-    suspect_candidates: originalSnapshot.suspect_candidates,
     suggested_legal_sections: originalSnapshot.suggested_legal_sections,
     participant_recommendations: originalSnapshot.participant_recommendations,
     narrative_summary: originalSnapshot.narrative_summary

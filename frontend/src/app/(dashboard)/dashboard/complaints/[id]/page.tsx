@@ -68,26 +68,39 @@ interface Complaint {
   createdAt: string;
 }
 
+import { CaseUnderstandingView, CaseUnderstandingData } from '@/components/case-understanding/CaseUnderstandingView';
+
 export default function CitizenComplaintDetailPage(): React.ReactElement {
   const params = useParams();
   const router = useRouter();
   const [complaint, setComplaint] = useState<Complaint | null>(null);
+  const [caseUnderstanding, setCaseUnderstanding] = useState<CaseUnderstandingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchComplaint() {
+    async function fetchComplaintAndIntelligence() {
       try {
         const id = params.id as string;
         const res = await apiClient.get(API_ROUTES.COMPLAINTS.DETAIL(id));
         setComplaint(res.data.data);
+
+        // Fetch Case Understanding JSON if available
+        try {
+          const cuRes = await apiClient.get(API_ROUTES.CASE_UNDERSTANDING.DETAIL(id));
+          if (cuRes.data?.data) {
+            setCaseUnderstanding(cuRes.data.data);
+          }
+        } catch {
+          // Non-blocking if case understanding not yet processed
+        }
       } catch (err: any) {
         setError(err.response?.data?.message || 'Failed to fetch complaint details.');
       } finally {
         setLoading(false);
       }
     }
-    fetchComplaint();
+    fetchComplaintAndIntelligence();
   }, [params.id]);
 
   if (loading) return <Loader fullPage />;
@@ -157,6 +170,11 @@ export default function CitizenComplaintDetailPage(): React.ReactElement {
           </div>
         )}
       </div>
+
+      {/* Single Case Understanding Engine Dashboard */}
+      {caseUnderstanding && (
+        <CaseUnderstandingView data={caseUnderstanding} />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left/Middle: Case Details */}

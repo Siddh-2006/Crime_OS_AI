@@ -120,9 +120,10 @@ async function uploadBufferToCloudinary(
   _filename: string,
   mimeType: string,
   caseId: string,
+  subfolder: 'department_responses' | 'complainant_responses',
 ): Promise<{ secureUrl: string; publicId: string }> {
   const resourceType = mimeToCloudinaryResourceType(mimeType);
-  const folder = `crime-os/department_responses/${caseId}`;
+  const folder = `crime-os/${subfolder}/${caseId}`;
 
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
@@ -149,8 +150,9 @@ async function ingestResponse(opts: {
   departmentEntityId: string;
   responseContent: string;
   attachments: Array<{ filename: string; mimeType: string; secureUrl: string; publicId: string }>;
+  sender: 'department' | 'citizen';
 }): Promise<void> {
-  const { caseId, requestId, departmentEntityId, responseContent, attachments } = opts;
+  const { caseId, requestId, departmentEntityId, responseContent, attachments, sender } = opts;
 
   // 1. Find the DepartmentRequest
   const request = await DepartmentRequest.findOne({ request_id: requestId });
@@ -169,30 +171,12 @@ async function ingestResponse(opts: {
   request.response_at = new Date();
   await request.save();
 
-  // 3. Ingest each attachment as an Evidence document
+  // 3. Ingest file attachments as Evidence documents only
   const evidenceIds: string[] = [];
 
   // System ObjectId used as uploader for auto-ingested evidence (no real officer)
-  // Using a well-known zero ObjectId as a "system" actor sentinel
   const SYSTEM_UPLOADER_ID = '000000000000000000000000';
 
-  // Always ingest the text body as a document evidence
-  const textEvidenceId = uuidv4();
-  evidenceIds.push(textEvidenceId);
-  await Evidence.create({
-    case_id:            request.case_id,
-    evidence_id:        textEvidenceId,
-    type:               'document',
-    storage_ref:        `email-body-${requestId}`,
-    ai_description:     `Email response from ${departmentEntityId} via Gmail.`,
-    ai_tags:            ['department_response', 'email'],
-    uploader_id:        SYSTEM_UPLOADER_ID,
-    status:             'verified',
-    source:             'department',
-    linked_request_id:  requestId,
-  });
-
-  // Ingest file attachments
   for (const att of attachments) {
     const evidenceId = uuidv4();
     evidenceIds.push(evidenceId);
@@ -201,11 +185,11 @@ async function ingestResponse(opts: {
       evidence_id:        evidenceId,
       type:               mimeToEvidenceType(att.mimeType),
       storage_ref:        att.secureUrl,
-      ai_description:     `Attachment "${att.filename}" from department email response.`,
-      ai_tags:            ['department_response', 'email_attachment'],
+      ai_description:     `Attachment "${att.filename}" from ${sender === 'citizen' ? 'citizen' : 'department'} email response.`,
+      ai_tags:            [sender === 'citizen' ? 'citizen_response' : 'department_response', 'email_attachment'],
       uploader_id:        SYSTEM_UPLOADER_ID,
       status:             'verified',
-      source:             'department',
+      source:             sender === 'citizen' ? 'complainant' : 'department',
       linked_request_id:  requestId,
     });
   }
@@ -265,7 +249,7 @@ async function ingestResponse(opts: {
 export class GmailService {
   /**
    * Poll the police Gmail inbox for unread department reply emails.
-   * Only processes emails that contain "Complaint ID:" in the body.
+   * Processes emails that contain either "Complaint ID:" or "Request ID:" in the body.
    * Marks each processed email as READ to prevent double-processing.
    */
   static async pollAndIngestReplies(): Promise<void> {
@@ -320,29 +304,89 @@ export class GmailService {
     // Extract plain-text body
     const body = extractBody(msg.payload ?? undefined);
 
-    // Must contain "Complaint ID:" — otherwise not a department response
     const complaintIdMatch = body.match(/complaint\s+id\s*:\s*([^\s\n\r,]+)/i);
-    if (!complaintIdMatch) {
-      logger.debug(`[GmailService] Message ${messageId} has no "Complaint ID:" — skipping.`);
-      // Still mark as read so we don't re-check it
+    const requestIdMatch = body.match(/request\s+id\s*:\s*([^\s\n\r,]+)/i);
+    const responseOriginMatch = body.match(/(?:reply\s+origin|responder)\s*:\s*([^\s\n\r,]+)/i);
+
+    if (!complaintIdMatch && !requestIdMatch) {
+      logger.debug(`[GmailService] Message ${messageId} has no "Complaint ID:" or "Request ID:" — skipping.`);
       await GmailService._markAsRead(gmail, messageId);
       return;
     }
 
-    const caseId = complaintIdMatch[1].trim();
-    logger.info(`[GmailService] Processing reply for case: ${caseId}, message: ${messageId}`);
+    const caseId = complaintIdMatch?.[1]?.trim();
+    const requestId = requestIdMatch?.[1]?.trim();
+    const responseOrigin = responseOriginMatch?.[1]?.trim().toLowerCase();
+    const isDepartmentReply = responseOrigin === 'department';
+    const isCitizenReply = responseOrigin === 'complainant' || responseOrigin === 'citizen';
 
-    // Find the DepartmentRequest for this case that is in 'sent' status
-    const request = await DepartmentRequest.findOne({
-      case_id: caseId,
-      status:  'sent',
-    }).sort({ sent_at: -1 }); // most recent sent request for this case
+    logger.info(
+      `[GmailService] Processing reply for case: ${caseId ?? '<unknown>'}, request: ${requestId ?? '<none>'}, origin: ${responseOrigin ?? '<unknown>'}, message: ${messageId}`,
+    );
+
+    let request = null as any;
+    if (requestId) {
+      const requestFilter: Record<string, unknown> = { request_id: requestId, status: 'sent' };
+      if (isDepartmentReply) {
+        requestFilter.request_type = { $in: ['external_department', 'inter_station_assignment'] };
+        requestFilter.recipient_type = { $ne: 'citizen' };
+      }
+      if (isCitizenReply) {
+        requestFilter.request_type = 'citizen_request';
+        requestFilter.recipient_type = 'citizen';
+      }
+      request = await DepartmentRequest.findOne(requestFilter);
+    } else if (caseId) {
+      if (!responseOrigin) {
+        logger.warn(`[GmailService] Reply origin is missing for case-only match on case ${caseId}; requestId is required.`);
+      } else {
+        const requestFilter: Record<string, unknown> = { case_id: caseId, status: 'sent' };
+        if (isDepartmentReply) {
+          requestFilter.request_type = { $in: ['external_department', 'inter_station_assignment'] };
+          requestFilter.recipient_type = { $ne: 'citizen' };
+        }
+        if (isCitizenReply) {
+          requestFilter.request_type = 'citizen_request';
+          requestFilter.recipient_type = 'citizen';
+        }
+        const candidateRequests = await DepartmentRequest.find(requestFilter).sort({ sent_at: -1 }).limit(2);
+        if (candidateRequests.length === 1) {
+          request = candidateRequests[0];
+        } else if (candidateRequests.length > 1) {
+          logger.warn(`[GmailService] Ambiguous sent request match for case ${caseId}; requestId is required when multiple requests are open.`);
+        }
+      }
+    }
 
     if (!request) {
-      logger.warn(`[GmailService] No 'sent' DepartmentRequest found for case ${caseId} — skipping ingestion.`);
+      logger.warn(
+        `[GmailService] No matching 'sent' DepartmentRequest found for case ${caseId ?? '<unknown>'}` +
+        `${requestId ? ` and request ${requestId}` : ''} — skipping ingestion.`,
+      );
       await GmailService._markAsRead(gmail, messageId);
       return;
     }
+
+    if (responseOrigin && request.recipient_type === 'citizen' && !isCitizenReply) {
+      logger.warn(`[GmailService] Reply origin mismatch: expected complainant response for request ${request.request_id}.`);
+      await GmailService._markAsRead(gmail, messageId);
+      return;
+    }
+    if (responseOrigin && request.recipient_type !== 'citizen' && isCitizenReply) {
+      logger.warn(`[GmailService] Reply origin mismatch: expected department response for request ${request.request_id}.`);
+      await GmailService._markAsRead(gmail, messageId);
+      return;
+    }
+
+    const resolvedCaseId = request?.case_id?.toString() ?? caseId;
+    if (!resolvedCaseId) {
+      logger.error(`[GmailService] Unable to resolve caseId for request ${request?.request_id ?? '<unknown>'}. Aborting ingestion.`);
+      await GmailService._markAsRead(gmail, messageId);
+      return;
+    }
+
+    const responseFolder = request.recipient_type === 'citizen' ? 'complainant_responses' : 'department_responses';
+  const senderType = isCitizenReply ? 'citizen' : 'department';
 
     // Download and upload all attachments
     const uploadedAttachments: Array<{
@@ -368,7 +412,8 @@ export class GmailService {
           buffer,
           part.filename,
           part.mimeType,
-          caseId,
+          resolvedCaseId,
+          responseFolder,
         );
 
         uploadedAttachments.push({
@@ -386,11 +431,12 @@ export class GmailService {
 
     // Ingest everything into the investigation workflow
     await ingestResponse({
-      caseId,
+      caseId:              resolvedCaseId,
       requestId:          request.request_id,
-      departmentEntityId: request.department_entity_id ?? 'unknown_department',
+      departmentEntityId: request.department_entity_id ?? (senderType === 'citizen' ? 'Complainant' : 'unknown_department'),
       responseContent:    body,
       attachments:        uploadedAttachments,
+      sender:             senderType,
     });
 
     // Mark email as READ — prevents double-processing
