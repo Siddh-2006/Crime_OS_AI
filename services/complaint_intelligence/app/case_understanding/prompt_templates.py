@@ -77,9 +77,9 @@ Return a JSON object with EXACTLY these top-level keys:
     "crime_category": "<category>",
     "crime_subtype": "<subtype>",
     "modus_operandi": "<observed method from evidence>",
-    "estimated_financial_loss": 25000.0,
-    "digital_assets_involved": [],
-    "physical_assets_involved": []
+    "estimated_financial_loss": <REQUIRED: total amount in INR as a number, e.g. 185000.0. Sum ALL \u20b9/Rs monetary amounts mentioned in complaint or OCR. If no amount mentioned, use 0.0. NEVER use null.>,
+    "digital_assets_involved": ["<UPI IDs, bank accounts, wallets, apps mentioned>"],
+    "physical_assets_involved": ["<phones, vehicles, jewellery, cash mentioned>"]
   },
   "contradictions": [
     {
@@ -111,7 +111,15 @@ Return a JSON object with EXACTLY these top-level keys:
 3. You MUST NEVER recommend legal action, IPC or BNS statutory sections, or FIR registration.
 4. You MUST NEVER recommend prosecution strategy or direct what the Investigating Officer (IO) should do.
 5. Your responsibility ends after understanding, organizing, correlating, and identifying missing evidence/facts.
-6. Never speculate or invent facts not grounded in the complaint or evidence.
+6. NEVER speculate or invent facts not grounded in the complaint or evidence provided below.
+
+### STRICT GROUNDING RULES — ZERO HALLUCINATION TOLERANCE
+- ALL fields you populate MUST be derived exclusively from the COMPLAINT TEXT and EVIDENCE OCR/descriptions provided in this prompt.
+- DO NOT import knowledge from other cases, training data, or general crime patterns.
+- For `missing_information`: ONLY list items that are directly referenced or strongly implied by THIS complaint's text (e.g., if a UPI ID is mentioned, its full beneficiary name may be missing). Do NOT suggest items from unrelated crime types (e.g., do NOT mention motorcycles, CCTV, or locations not mentioned in this complaint).
+- For `missing_evidence`: ONLY suggest evidence types that are logically implied by what THIS complaint describes (e.g., if a phone call is mentioned, call records are relevant; if no motorcycle is mentioned, do NOT suggest CCTV of a motorcycle).
+- For `people_and_entities`: Extract ONLY names, numbers, IDs, locations explicitly stated in the complaint text or OCR. Do NOT invent or infer entities.
+- If you are uncertain whether a fact appears in the provided text, OMIT it entirely rather than guessing.
 
 Analyze the case context below and return the JSON object:
 """
@@ -166,9 +174,14 @@ def build_case_understanding_user_prompt(case_context_json: str) -> str:
         lines.append("\n--- NO EVIDENCE PROVIDED ---")
 
     lines.append("\n=== TASK ===")
-    lines.append("Analyze the complaint text and all evidence items above.")
+    lines.append("Analyze ONLY the complaint text and evidence items listed above. Do NOT use knowledge from other complaints or your training data.")
     lines.append("Return ONLY valid raw JSON matching the exact schema. No markdown. No explanations.")
     lines.append("ENSURE: evidence_analysis[] has one entry per evidence item using its exact evidence_id.")
-    lines.append("ENSURE: people_and_entities is fully populated from complaint text and OCR text.")
+    lines.append("ENSURE: people_and_entities is fully populated from complaint text and OCR text ONLY.")
+    lines.append("ENSURE: missing_information contains ONLY gaps directly implied by THIS complaint's facts — no items from unrelated crime types.")
+    lines.append("ENSURE: missing_evidence contains ONLY evidence types logically relevant to what THIS complaint describes.")
+    lines.append("CRITICAL: If a fact (person, vehicle, location, phone number) is NOT mentioned in the text above, do NOT include it anywhere in your response.")
+    lines.append("CRITICAL: For crime_analysis.estimated_financial_loss — you MUST scan the complaint text and all OCR text for any monetary amounts (₹, Rs, INR). Sum ALL debited/transferred/lost amounts and set the field to that total as a float (e.g. 185000.0). If no amount is found, set to 0.0. NEVER leave this as null or a placeholder number.")
+    lines.append("CRITICAL: For people_and_entities — extract victim name from complaint text, extract phone numbers, UPI IDs (format: name@bank), bank account numbers from OCR. Populate victims[], suspects[], upi_ids[], phone_numbers[], bank_accounts[] arrays.")
 
     return "\n".join(lines)

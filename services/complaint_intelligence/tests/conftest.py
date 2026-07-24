@@ -54,11 +54,6 @@ def app(mock_queue: MockQueue, mock_llm_client: MockLLMClient):
 
     container = get_container()
     container.llm_client = mock_llm_client
-    # Override text intelligence extractors — no spaCy required in tests
-    container.ner_extractor = MockNERExtractor()
-    container.regex_extractor = IndianRegexExtractor()
-    container.event_extractor = TemporalEventExtractor()
-    container.entity_linker = PassthroughEntityLinker()
     # Override image worker — no Florence required in unit tests
     container.metadata_extractor = PILMetadataExtractor()
     container.image_preprocessor = PILImagePreprocessor()

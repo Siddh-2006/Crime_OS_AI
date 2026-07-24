@@ -72,6 +72,32 @@ class CaseUnderstandingEngine(ICaseUnderstandingEngine):
 
         data = result.model_dump()
 
+        # --- Enrich timeline if empty ---
+        if not result.timeline:
+            from app.schemas.case_understanding import TimelineEvent
+            timeline_events = []
+            if context.complaint_text:
+                timeline_events.append(
+                    TimelineEvent(
+                        timestamp="Incident Date",
+                        description=result.overview.complaint_summary or context.complaint_text[:200],
+                        supporting_evidence_ids=[],
+                        confidence=0.9,
+                    ).model_dump()
+                )
+            for ev in context.evidence:
+                if ev.ocr_text or ev.florence_description:
+                    desc = (ev.florence_description[:150] if ev.florence_description else f"Evidence extracted: {ev.ocr_text[:150]}")
+                    timeline_events.append(
+                        TimelineEvent(
+                            timestamp="Evidence Date",
+                            description=f"Evidence '{ev.filename}': {desc}",
+                            supporting_evidence_ids=[ev.id],
+                            confidence=0.85,
+                        ).model_dump()
+                    )
+            data["timeline"] = timeline_events
+
         # --- Enrich evidence_analysis ---
         if not result.evidence_analysis and context.evidence:
             enriched = []
@@ -131,8 +157,8 @@ class CaseUnderstandingEngine(ICaseUnderstandingEngine):
 
         # --- Sync crime_analysis from overview ---
         ca = result.crime_analysis
+        new_ca = ca.model_dump()
         if ca.crime_category == "Uncategorized" and result.overview.crime_category:
-            new_ca = ca.model_dump()
             new_ca["crime_category"] = result.overview.crime_category
             new_ca["crime_subtype"] = result.overview.crime_subtype
             # Infer modus operandi from timeline if not set
@@ -143,44 +169,132 @@ class CaseUnderstandingEngine(ICaseUnderstandingEngine):
             vehicles = [v.value for v in result.people_and_entities.vehicles]
             if vehicles and not new_ca["physical_assets_involved"]:
                 new_ca["physical_assets_involved"] = vehicles
-            data["crime_analysis"] = new_ca
+
+        # --- Regex fallback: extract financial loss if LLM left it as 0 or None ---
+        if not new_ca.get("estimated_financial_loss"):
+            # Collect complaint text first (most reliable), then OCR
+            complaint_only = context.complaint_text or ""
+            ocr_corpus = ""
+            for ev in context.evidence:
+                if ev.ocr_text:
+                    ocr_corpus += " " + ev.ocr_text
+
+            # ── Pass 1: Look for explicit total/loss context in complaint text ──
+            # e.g. "total amount of ₹1,85,000" / "fraud of Rs. 48,000" / "lost ₹75,000"
+            total_pattern = re.compile(
+                r"(?:total|loss|fraud|cheated|defraud|stolen|debited|amount)\s+(?:of\s+)?(?:₹|Rs\.?|INR)\s*([\d,]+(?:\.\d+)?)",
+                re.IGNORECASE,
+            )
+            # Also match standalone ₹ amounts in complaint text
+            currency_pattern = re.compile(
+                r"(?:₹|Rs\.?|INR)\s*([\d,]+(?:\.\d+)?)",
+                re.IGNORECASE,
+            )
+
+            def parse_amount(raw: str) -> float:
+                try:
+                    val = float(raw.replace(",", ""))
+                    # Plausible fraud amount: ₹1 to ₹1 crore
+                    # Exclude obvious account numbers / timestamps
+                    if 1.0 <= val <= 10_000_000.0:
+                        return val
+                except ValueError:
+                    pass
+                return 0.0
+
+            # Try explicit total-context match first (complaint only)
+            total_amounts = [parse_amount(m.group(1)) for m in total_pattern.finditer(complaint_only)]
+            total_amounts = [a for a in total_amounts if a > 0]
+
+            if total_amounts:
+                # Use the largest explicitly stated total
+                loss = max(total_amounts)
+            else:
+                # Pass 2: collect all plausible ₹ amounts from complaint text
+                all_amounts = [parse_amount(m.group(1)) for m in currency_pattern.finditer(complaint_only)]
+                all_amounts = [a for a in all_amounts if a > 0]
+                if not all_amounts:
+                    # Last resort: scan OCR too
+                    all_amounts = [parse_amount(m.group(1)) for m in currency_pattern.finditer(ocr_corpus)]
+                    all_amounts = [a for a in all_amounts if a > 0]
+                # Take the maximum single amount (avoids double-counting)
+                loss = max(all_amounts) if all_amounts else 0.0
+
+            if loss > 0:
+                new_ca["estimated_financial_loss"] = loss
+                logger.info(
+                    "[enrich] Regex extracted financial loss: %.2f from complaint text",
+                    loss,
+                )
+
+        data["crime_analysis"] = new_ca
+
+        # --- Entity Extraction Fallback for people_and_entities ---
+        pe_dict = data.get("people_and_entities", {})
+        search_corpus = (context.complaint_text or "") + " "
+        for ev in context.evidence:
+            if ev.ocr_text:
+                search_corpus += ev.ocr_text + " "
+
+        # 1. UPI IDs (e.g. rahultraders@okaxis, user@ybl, etc.)
+        if not pe_dict.get("upi_ids"):
+            upi_matches = set(re.findall(r"\b[a-zA-Z0-9\.\-_]+@[a-zA-Z]{2,}\b", search_corpus))
+            if upi_matches:
+                pe_dict["upi_ids"] = [{"value": u, "source_evidence_ids": [], "confidence": 0.95} for u in upi_matches]
+
+        # 2. Phone Numbers (e.g. +919034567812, 9034567812)
+        if not pe_dict.get("phone_numbers"):
+            phone_matches = set(re.findall(r"\b(?:\+91[\s\-]?)?[6-9]\d{9}\b", search_corpus))
+            if phone_matches:
+                pe_dict["phone_numbers"] = [{"value": p, "source_evidence_ids": [], "confidence": 0.9} for p in phone_matches]
+
+        # 3. Bank Account numbers / Masked accounts (e.g. Account XX4582 or A/C 9876543210)
+        if not pe_dict.get("bank_accounts"):
+            acct_matches = set(re.findall(r"\b(?:A/C|Account|Acct|Acc)\b\s*[:\.\-]?\s*([X\*\d]{4,18})\b", search_corpus, re.IGNORECASE))
+            if acct_matches:
+                pe_dict["bank_accounts"] = [{"value": a, "source_evidence_ids": [], "confidence": 0.9} for a in acct_matches if len(a) >= 4]
+
+        data["people_and_entities"] = pe_dict
 
         # --- Add basic missing_information if empty ---
+        # Only add a truly generic placeholder — NEVER hardcode complaint-specific entities here.
         if not result.missing_information:
             data["missing_information"] = [
                 MissingInfoItem(
-                    item="Names or physical descriptions of the accused",
-                    reason="Required for FIR and suspect identification",
-                    importance="high",
-                ).model_dump(),
-                MissingInfoItem(
-                    item="Vehicle registration number of suspects' motorcycle",
-                    reason="Black KTM Duke motorcycle used in the crime — plate number not recorded",
-                    importance="high",
-                ).model_dump(),
-                MissingInfoItem(
-                    item="CCTV footage from ISCON Cross Road area",
-                    reason="Would help identify suspects and corroborate timeline",
+                    item="Identity details of the accused",
+                    reason="Required for FIR registration and suspect identification",
                     importance="high",
                 ).model_dump(),
             ]
 
         # --- Add basic missing_evidence if empty ---
+        # Derive sensible defaults from the complaint category/overview only.
         if not result.missing_evidence:
-            data["missing_evidence"] = [
-                MissingEvidenceItem(
-                    evidence_name="CCTV Footage",
-                    reason_relevant="Verify incident location, suspect vehicles, and timeline",
-                    related_allegation="Robbery with assault near ISCON Cross Road",
-                    importance="high",
-                ).model_dump(),
-                MissingEvidenceItem(
-                    evidence_name="Eyewitness Statements",
-                    reason_relevant="Bystander who called victim's brother may corroborate assault",
-                    related_allegation="Physical assault by suspects",
-                    importance="medium",
-                ).model_dump(),
-            ]
+            category_lower = (result.overview.crime_category or "").lower()
+            if "cyber" in category_lower or "fraud" in category_lower or "upi" in category_lower or "banking" in category_lower:
+                data["missing_evidence"] = [
+                    MissingEvidenceItem(
+                        evidence_name="Call Detail Records (CDR)",
+                        reason_relevant="Trace the phone number used by the accused to contact the victim",
+                        related_allegation="Accused contacted victim via phone to perpetrate the fraud",
+                        importance="high",
+                    ).model_dump(),
+                    MissingEvidenceItem(
+                        evidence_name="Bank Transaction Statement",
+                        reason_relevant="Official statement confirming all unauthorized debits and beneficiary details",
+                        related_allegation="Unauthorized financial transactions from victim's account",
+                        importance="high",
+                    ).model_dump(),
+                ]
+            else:
+                data["missing_evidence"] = [
+                    MissingEvidenceItem(
+                        evidence_name="Supporting Documentary Evidence",
+                        reason_relevant="Additional documentation to corroborate the complaint",
+                        related_allegation="As described in the complaint",
+                        importance="medium",
+                    ).model_dump(),
+                ]
 
         return result.model_validate(data)
 

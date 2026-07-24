@@ -9,9 +9,13 @@ MongoDB Atlas Complaint Pipeline Runner.
 6. Retrieves and displays the verified CaseUnderstanding output from Atlas.
 """
 import asyncio
+import io
 import json
 import sys
 from pathlib import Path
+
+# Force UTF-8 output on Windows terminal
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 ROOT = Path(__file__).parent
 sys.path.insert(0, str(ROOT))
@@ -22,6 +26,7 @@ from app.case_understanding.pipeline_orchestrator import CasePipelineOrchestrato
 from app.case_understanding.repository import MongoCaseRepository
 from app.core.config import settings
 from app.core.container import get_container
+from app.core.florence_autostart import ensure_florence_running
 from app.llm.client import ILLMClient, OllamaLLMClient
 from app.schemas.case_context import EvidenceItem
 from app.schemas.case_understanding import CaseUnderstanding
@@ -149,10 +154,13 @@ async def main():
         print(f"  [Error] MongoDB Atlas connection failed: {exc}")
         return
 
+    # Auto-start Florence-2 captioning service if not already running
+    await ensure_florence_running(florence_base_url=settings.FLORENCE_BASE_URL)
+
     db = client[settings.MONGODB_DB_NAME]
 
     # Fetch specific complaint from Atlas 'complaints' collection
-    TARGET_ID = "COMP-88958b14-18a5-47b9-ab40-5fc1bc220581"
+    TARGET_ID = sys.argv[1] if len(sys.argv) > 1 else "COMP-7d3ea8bc-841a-4fe8-b543-78282832385c"
     target_complaint = await db.complaints.find_one({"$or": [{"complaintNumber": TARGET_ID}, {"_id": TARGET_ID}]})
     
     if not target_complaint:
@@ -181,24 +189,97 @@ async def main():
     print(f"  Short Summary   : {short_desc}")
     print(f"  Detailed Length : {len(detailed_desc)} chars")
 
-    # Fetch associated evidences from Atlas 'evidences' collection
-    atlas_evidences = await db.evidences.find({"case_id": case_id}).to_list(length=20)
-    print(f"  Atlas Evidences : {len(atlas_evidences)} attached item(s)")
+    # Gather embedded evidence items from complaint doc's 'evidence' array (Cloudinary URLs)
+    raw_evidence = target_complaint.get("evidence", [])
+    if not isinstance(raw_evidence, list):
+        raw_evidence = []
 
     evidence_items = []
-    for ev in atlas_evidences:
-        ev_id = str(ev.get("_id") or ev.get("evidence_id"))
-        ev_type = ev.get("type", "image")
-        ev_desc = ev.get("ai_description", "")
-        evidence_items.append(
-            EvidenceItem(
-                id=ev_id,
-                filename=f"evidence_{ev_id[:8]}.png",
-                type=ev_type if ev_type in ("image", "audio", "video", "pdf") else "image",
-                florence_description=ev_desc,
-                ocr_text=ev_desc if "text" in ev_desc.lower() else None,
+    import httpx
+    from app.ocr_worker.engine import PaddleOCREngine
+    ocr_engine = PaddleOCREngine()
+
+    async with httpx.AsyncClient(timeout=30, follow_redirects=True) as http_client:
+        for i, ev in enumerate(raw_evidence):
+            if not isinstance(ev, dict):
+                continue
+            ev_id = str(ev.get("publicId") or ev.get("_id") or f"ev-{i+1}")
+            fname = str(ev.get("originalFilename") or ev.get("filename") or f"evidence_{i+1}")
+            rtype = str(ev.get("resourceType") or ev.get("type") or "image").lower()
+            cloudinary_url = str(ev.get("secureUrl") or ev.get("url") or ev.get("cloudinaryUrl") or "")
+            ai_meta = ev.get("aiMetadata") or {}
+
+            ocr_txt = ai_meta.get("ocrText") or ev.get("ocrText")
+            florence_desc = ai_meta.get("m4Caption") or ai_meta.get("aiSummary") or ev.get("aiSummary") or ev.get("description")
+            transcript = ai_meta.get("speechTranscript") or ai_meta.get("audioTranscript") or ev.get("transcript")
+            pdf_txt = ai_meta.get("pdfText") or ev.get("pdfText")
+
+            # 1. Florence-2 Visual Captioning (if missing) — send image_base64
+            if not florence_desc and cloudinary_url and rtype in ("image", "png", "jpeg", "jpg"):
+                try:
+                    img_res = await http_client.get(cloudinary_url)
+                    if img_res.status_code == 200:
+                        import base64 as _b64
+                        img_b64 = _b64.b64encode(img_res.content).decode("utf-8")
+                        res_florence = await http_client.post(
+                            f"{settings.FLORENCE_BASE_URL}/predict",
+                            json={"image_base64": img_b64, "task": "<MORE_DETAILED_CAPTION>"},
+                            timeout=30.0
+                        )
+                        if res_florence.status_code == 200:
+                            florence_desc = res_florence.json().get("result", "")
+                            if florence_desc:
+                                print(f"  ✓ Florence-2 visual caption generated for: {fname}")
+                    else:
+                        logger.warning("[Florence] Could not download image for captioning: %s (status %s)", fname, img_res.status_code)
+                except Exception as exc:
+                    logger.warning(
+                        "[SERVICE UNREACHABLE] Florence-2 microservice (%s) is NOT running or failed: %s",
+                        settings.FLORENCE_BASE_URL,
+                        exc
+                    )
+                    print(f"  ⚠️ [SERVICE UNREACHABLE] Florence-2 vision service ({settings.FLORENCE_BASE_URL}) is NOT running!")
+
+            # 2. PaddleOCR Text Extraction (if missing)
+            if not ocr_txt and cloudinary_url and rtype in ("image", "png", "jpeg", "jpg"):
+                print(f"  [OCR] Downloading & running PaddleOCR for {fname}...")
+                try:
+                    res = await http_client.get(cloudinary_url)
+                    if res.status_code == 200:
+                        ocr_res = await ocr_engine.run(res.content)
+                        if ocr_res.raw_text and ocr_res.raw_text.strip():
+                            ocr_txt = ocr_res.raw_text.strip()
+                            print(f"  ✓ Extracted {len(ocr_txt)} chars of text via PaddleOCR!")
+                            if not florence_desc:
+                                florence_desc = f"Evidence screenshot '{fname}'. Extracted OCR Text: {ocr_txt[:300]}"
+                        else:
+                            logger.info("[OCR SERVICE] PaddleOCR completed with 0 text detected for '%s'", fname)
+                    else:
+                        logger.error("[DOWNLOAD ERROR] Cloudinary returned status %s for '%s'", res.status_code, fname)
+                        print(f"  ❌ [DOWNLOAD ERROR] Cloudinary status {res.status_code} for {fname}")
+                except Exception as exc:
+                    logger.error("[OCR SERVICE ERROR] PaddleOCR extraction failed for '%s': %s", fname, exc)
+                    print(f"  ❌ [OCR SERVICE ERROR] Could not process {fname}: {exc}")
+
+            metadata = {
+                "url": cloudinary_url,
+                "public_id": str(ev.get("publicId") or ""),
+                "mime_type": str(ev.get("mimeType") or "")
+            }
+
+            evidence_items.append(
+                EvidenceItem(
+                    id=ev_id,
+                    filename=fname,
+                    type=rtype if rtype in ("image", "audio", "video", "pdf", "document") else "image",
+                    florence_description=florence_desc or f"Evidence document '{fname}'",
+                    ocr_text=ocr_txt,
+                    transcript=transcript,
+                    pdf_text=pdf_txt,
+                    metadata=metadata,
+                )
             )
-        )
+    print(f"  Atlas Evidences : {len(evidence_items)} embedded item(s)")
 
     # If no evidence items attached, construct representative items from complaint details
     if not evidence_items:
