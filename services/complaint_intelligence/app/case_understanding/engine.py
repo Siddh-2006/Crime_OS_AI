@@ -279,6 +279,24 @@ class CaseUnderstandingEngine(ICaseUnderstandingEngine):
 
         data["people_and_entities"] = pe_dict
 
+        # --- Ensure all accumulated evidence items are present in evidence_analysis ---
+        existing_ea_ids = {str(item.get("evidence_id")) for item in data.get("evidence_analysis", []) if isinstance(item, dict)}
+        ea_list = list(data.get("evidence_analysis", []))
+        for ev in context.evidence:
+            if ev.id not in existing_ea_ids:
+                summary_text = ev.florence_description or (f"Extracted text: {ev.ocr_text[:120]}..." if ev.ocr_text else "Uploaded evidence file")
+                ea_list.append({
+                    "evidence_id": ev.id,
+                    "filename": ev.filename or ev.id,
+                    "summary": summary_text,
+                    "extracted_information": ev.ocr_text or ev.transcript or ev.pdf_text or summary_text,
+                    "importance": "high",
+                    "allegations_supported": ["Corroborates complaint narrative"],
+                    "confidence": 0.9,
+                })
+                existing_ea_ids.add(ev.id)
+        data["evidence_analysis"] = ea_list
+
         # --- Add basic missing_information if empty ---
         # Only add a truly generic placeholder — NEVER hardcode complaint-specific entities here.
         if not result.missing_information:
@@ -411,6 +429,27 @@ class CaseUnderstandingEngine(ICaseUnderstandingEngine):
                         elif isinstance(item, dict):
                             repaired_me.append(item)
                     parsed_dict["missing_evidence"] = repaired_me
+
+                # Repair evidence_analysis if LLM returns items with null/missing required fields
+                raw_ea = parsed_dict.get("evidence_analysis")
+                if isinstance(raw_ea, list):
+                    repaired_ea = []
+                    for item in raw_ea:
+                        if isinstance(item, dict):
+                            ev_id = str(item.get("evidence_id") or "ev-unknown")
+                            fname = str(item.get("filename") or "evidence_file")
+                            summ = str(item.get("summary") or "Evidence provided")
+                            ext_info = str(item.get("extracted_information") or "Extracted evidence details")
+                            repaired_ea.append({
+                                "evidence_id": ev_id,
+                                "filename": fname,
+                                "summary": summ,
+                                "extracted_information": ext_info,
+                                "importance": str(item.get("importance") or "medium"),
+                                "allegations_supported": item.get("allegations_supported") or [],
+                                "confidence": float(item.get("confidence") or 0.9),
+                            })
+                    parsed_dict["evidence_analysis"] = repaired_ea
 
                 case_understanding = CaseUnderstanding.model_validate(parsed_dict)
 

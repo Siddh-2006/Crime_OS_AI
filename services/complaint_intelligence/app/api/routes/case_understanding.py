@@ -1,6 +1,7 @@
 """
-FastAPI router for Case Understanding Engine.
-Provides endpoints for single-pass analysis and section-by-section frontend retrieval.
+FastAPI router for Case Understanding Engine & Incremental Evidence Processing.
+Provides endpoints for complaint registration, incremental evidence upload,
+single-pass analysis, and section-by-section frontend retrieval.
 """
 from __future__ import annotations
 
@@ -8,9 +9,11 @@ from typing import Any, Dict, List, Optional, Tuple
 from fastapi import APIRouter, Depends, Form, File, HTTPException, UploadFile, status
 from pydantic import BaseModel, Field
 
+from app.case_understanding.incremental_orchestrator import IncrementalPipelineOrchestrator
 from app.case_understanding.pipeline_orchestrator import CasePipelineOrchestrator
 from app.core.container import Container, get_container
 from app.schemas.case_context import CaseContext, EvidenceItem
+from app.schemas.case_profile import ComplaintProfile, EvidenceProfile
 from app.schemas.case_understanding import (
     CaseUnderstanding,
     ContradictionItem,
@@ -27,6 +30,14 @@ from app.schemas.case_understanding import (
 router = APIRouter(prefix="/case-understanding", tags=["Case Understanding Engine"])
 
 
+class RegisterComplaintRequest(BaseModel):
+    """Payload for registering a complaint once into an immutable ComplaintProfile."""
+    case_id: str = Field(description="Unique Case ID")
+    complaint_text: str = Field(description="Original complaint text as submitted by complainant")
+    complaint_number: Optional[str] = Field(default=None, description="Complaint tracking number")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Metadata such as category, date, complainant info")
+
+
 class AnalyzeCaseRequest(BaseModel):
     """Payload for analyzing a case with pre-extracted textual evidence items."""
     complaint_text: str = Field(description="Original complaint text")
@@ -35,17 +46,105 @@ class AnalyzeCaseRequest(BaseModel):
     evidence: List[EvidenceItem] = Field(default_factory=list, description="Extracted textual evidence representations")
 
 
+# ─── 1. INCREMENTAL COMPLAINT REGISTRATION ───────────────────────────────────
+
+@router.post(
+    "/register-complaint",
+    status_code=status.HTTP_201_CREATED,
+    summary="Register a new complaint once into an immutable ComplaintProfile",
+    description="Processes original complaint text, translates if needed, creates immutable ComplaintProfile, and initializes living CaseIntelligence.",
+)
+async def register_complaint(
+    req: RegisterComplaintRequest,
+    container: Container = Depends(get_container),
+) -> Dict[str, Any]:
+    if not req.complaint_text.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Complaint text cannot be empty.",
+        )
+
+    orchestrator = container.incremental_pipeline_orchestrator
+    try:
+        profile, case_understanding = await orchestrator.register_complaint(
+            case_id=req.case_id,
+            complaint_text=req.complaint_text,
+            complaint_number=req.complaint_number,
+            metadata=req.metadata,
+        )
+        return {
+            "status": "success",
+            "message": "Complaint registered successfully",
+            "complaint_profile": profile.model_dump(mode="json"),
+            "case_intelligence": case_understanding.model_dump(mode="json"),
+        }
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Complaint registration failed: {exc}",
+        ) from exc
+
+
+# ─── 2. INCREMENTAL EVIDENCE UPLOAD ──────────────────────────────────────────
+
+@router.post(
+    "/upload-evidence",
+    status_code=status.HTTP_200_OK,
+    summary="Upload single new evidence item for incremental processing",
+    description=(
+        "Processes ONLY the uploaded file through its specific worker (Image, Video, Audio, PDF) "
+        "to generate a permanent EvidenceProfile. Then triggers living CaseIntelligence fusion "
+        "using ComplaintProfile + ALL accumulated EvidenceProfiles. Existing workers are NOT re-run."
+    ),
+)
+async def upload_evidence(
+    case_id: str = Form(...),
+    evidence_id: Optional[str] = Form(None),
+    file: UploadFile = File(...),
+    container: Container = Depends(get_container),
+) -> Dict[str, Any]:
+    if not file.filename:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Uploaded file must have a filename.",
+        )
+
+    content = await file.read()
+    if not content:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Uploaded file is empty.",
+        )
+
+    orchestrator = container.incremental_pipeline_orchestrator
+    try:
+        ev_profile, case_understanding = await orchestrator.process_incremental_evidence(
+            case_id=case_id,
+            filename=file.filename,
+            content_type=file.content_type or "",
+            file_bytes=content,
+            evidence_id=evidence_id,
+        )
+        return {
+            "status": "success",
+            "message": f"Evidence '{file.filename}' processed incrementally",
+            "evidence_profile": ev_profile.model_dump(mode="json"),
+            "case_intelligence": case_understanding.model_dump(mode="json"),
+        }
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Incremental evidence processing failed: {exc}",
+        ) from exc
+
+
+# ─── 3. BATCH CASE SUBMISSION (Backwards Compatible) ──────────────────────────
+
 @router.post(
     "/submit-case",
     response_model=CaseUnderstanding,
     status_code=status.HTTP_200_OK,
     summary="Submit complaint with evidence files for full end-to-end processing",
-    description=(
-        "Upload complaint text and raw evidence files (images, audio, video, PDF, text). "
-        "Runs deterministic media extractors in parallel (Florence-2, PaddleOCR, Whisper, PDF), "
-        "builds CaseContext, executes the Single-Pass Case Understanding LLM Engine, "
-        "saves to MongoDB, and returns the 9-section Case Understanding JSON."
-    ),
 )
 async def submit_case(
     complaint_text: str = Form(...),
@@ -86,11 +185,6 @@ async def submit_case(
     response_model=CaseUnderstanding,
     status_code=status.HTTP_200_OK,
     summary="Analyze a case in a single LLM pass",
-    description=(
-        "Receives complaint text and evidence extractions, constructs a CaseContext, "
-        "runs the Single-Pass Case Understanding Engine, persists to MongoDB, "
-        "and returns the complete 9-section Case Understanding JSON."
-    ),
 )
 async def analyze_case(
     req: AnalyzeCaseRequest,
@@ -118,6 +212,27 @@ async def analyze_case(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Case understanding analysis failed: {exc}",
         ) from exc
+
+
+# ─── 4. PROFILES & INTELLIGENCE RETRIEVAL ─────────────────────────────────────
+
+@router.get(
+    "/{case_id}/profiles",
+    summary="Get ComplaintProfile and all EvidenceProfiles for a case",
+)
+async def get_case_profiles(
+    case_id: str,
+    container: Container = Depends(get_container),
+) -> Dict[str, Any]:
+    c_profile = await container.complaint_profile_repository.get_by_case_id(case_id)
+    ev_profiles = await container.evidence_profile_repository.get_all_for_case(case_id)
+    
+    return {
+        "case_id": case_id,
+        "complaint_profile": c_profile.model_dump(mode="json") if c_profile else None,
+        "evidence_profiles": [ep.model_dump(mode="json") for ep in ev_profiles],
+        "evidence_count": len(ev_profiles),
+    }
 
 
 @router.get(

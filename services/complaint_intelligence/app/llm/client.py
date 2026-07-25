@@ -114,7 +114,7 @@ class OllamaLLMClient(ILLMClient):
             "format": "json",
             "options": {
                 "num_ctx": self.num_ctx,
-                "num_predict": 4096,
+                "num_predict": 2048,
                 "num_thread": 8,
                 "temperature": 0.1,
             },

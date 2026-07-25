@@ -74,10 +74,13 @@ class Container:
         self._pdf_page_renderer: IPDFPageRenderer | None = None
         self._pdf_metadata_extractor: IPDFMetadataExtractor | None = None
         self._pdf_worker: PDFWorker | None = None
-        # Case Understanding Single Engine
+        # Case Understanding Single Engine & Profile Repositories
         self._case_context_builder = None
         self._case_understanding_engine = None
         self._case_repository = None
+        self._complaint_profile_repository = None
+        self._evidence_profile_repository = None
+        self._incremental_pipeline_orchestrator = None
 
     @property
     def config(self) -> Settings:
@@ -408,6 +411,39 @@ class Container:
     @case_repository.setter
     def case_repository(self, repository) -> None:
         self._case_repository = repository
+
+    @property
+    def complaint_profile_repository(self):
+        if self._complaint_profile_repository is None:
+            from app.case_understanding.profile_repository import MongoComplaintProfileRepository
+            self._complaint_profile_repository = MongoComplaintProfileRepository()
+        return self._complaint_profile_repository
+
+    @complaint_profile_repository.setter
+    def complaint_profile_repository(self, repository) -> None:
+        self._complaint_profile_repository = repository
+
+    @property
+    def evidence_profile_repository(self):
+        if self._evidence_profile_repository is None:
+            from app.case_understanding.profile_repository import MongoEvidenceProfileRepository
+            self._evidence_profile_repository = MongoEvidenceProfileRepository()
+        return self._evidence_profile_repository
+
+    @evidence_profile_repository.setter
+    def evidence_profile_repository(self, repository) -> None:
+        self._evidence_profile_repository = repository
+
+    @property
+    def incremental_pipeline_orchestrator(self):
+        if self._incremental_pipeline_orchestrator is None:
+            from app.case_understanding.incremental_orchestrator import IncrementalPipelineOrchestrator
+            self._incremental_pipeline_orchestrator = IncrementalPipelineOrchestrator(container=self)
+        return self._incremental_pipeline_orchestrator
+
+    @incremental_pipeline_orchestrator.setter
+    def incremental_pipeline_orchestrator(self, orchestrator) -> None:
+        self._incremental_pipeline_orchestrator = orchestrator
 
 
 @lru_cache(maxsize=1)

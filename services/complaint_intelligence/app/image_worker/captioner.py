@@ -21,7 +21,7 @@ from app.core.logging import logger
 from app.image_worker.interfaces import IImageCaptioner
 from app.schemas.evidence import ImageAnalysisResult
 
-_MAX_RETRIES = 3
+_MAX_RETRIES = 1
 
 # Keyword sets for boolean flags (checked against caption in lower case)
 _PEOPLE_KEYWORDS = frozenset({"person", "people", "man", "woman", "child", "crowd", "officer", "suspect"})
@@ -98,7 +98,7 @@ class FlorenceCaptioner(IImageCaptioner):
 
     async def caption(self, image_bytes: bytes) -> ImageAnalysisResult:
         image_b64 = base64.b64encode(image_bytes).decode("utf-8")
-        payload = {"image_base64": image_b64, "task": "<MORE_DETAILED_CAPTION>"}
+        payload = {"image_base64": image_b64, "task": "<CAPTION>"}
 
         logger.info("Florence inference started")
 

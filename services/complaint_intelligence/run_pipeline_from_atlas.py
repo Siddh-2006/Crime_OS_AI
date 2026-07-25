@@ -33,109 +33,7 @@ from app.schemas.case_context import EvidenceItem
 from app.schemas.case_understanding import CaseUnderstanding
 
 
-class MockLLMClientForAtlasDemo(ILLMClient):
-    """Mock LLM client producing structured 9-section JSON when local Ollama is offline."""
-    async def generate(self, prompt: str, system_prompt: str | None = None) -> str:
-        data = {
-            "overview": {
-                "complaint_summary": "Complainant cheated during CG Road mobile theft and unauthorized ₹48,000 UPI transfer.",
-                "incident_overview": (
-                    "On 18 July 2026 at 7:45 PM near CG Road, Navrangpura, Ahmedabad, complainant was accosted by a suspect on a motorcycle "
-                    "who snatched his phone. Simultaneously, an unauthorized UPI transaction of ₹48,000 was debited from his SBI account "
-                    "to suspect UPI ID 'rajesh@ybl'. Corroborated by bank SMS screenshot and CCTV footage."
-                ),
-                "crime_category": "Cyber & Street Crime",
-                "crime_subtype": "Mobile Theft / Unauthorized UPI Debit",
-                "priority": "critical",
-                "confidence": 0.97,
-            },
-            "timeline": [
-                {
-                    "timestamp": "18 July 2026, 07:45 PM",
-                    "description": "Suspect on motorcycle snatches complainant's smartphone on CG Road, Ahmedabad.",
-                    "supporting_evidence_ids": ["ev-cctv-01"],
-                    "confidence": 0.95,
-                },
-                {
-                    "timestamp": "18 July 2026, 07:48 PM",
-                    "description": "Unauthorized ₹48,000 UPI collect request accepted, debiting victim's SBI account.",
-                    "supporting_evidence_ids": ["ev-upi-01", "ev-sms-01"],
-                    "confidence": 0.99,
-                },
-            ],
-            "people_and_entities": {
-                "victims": [{"value": "Rakesh Patel", "source_evidence_ids": ["ev-sms-01"], "confidence": 0.99}],
-                "suspects": [
-                    {"value": "Motorcycle Rider (Unidentified)", "source_evidence_ids": ["ev-cctv-01"], "confidence": 0.9},
-                    {"value": "Rajesh Kumar", "source_evidence_ids": ["ev-upi-01"], "confidence": 0.98},
-                ],
-                "witnesses": [],
-                "other_persons": [],
-                "organizations": [{"value": "State Bank of India", "source_evidence_ids": ["ev-sms-01"], "confidence": 0.99}],
-                "locations": [
-                    {"value": "CG Road, Navrangpura, Ahmedabad", "source_evidence_ids": ["ev-cctv-01"], "confidence": 0.98}
-                ],
-                "vehicles": [{"value": "Black Pulsar Motorcycle (GJ-01)", "source_evidence_ids": ["ev-cctv-01"], "confidence": 0.9}],
-                "phone_numbers": [{"value": "+919825012345", "source_evidence_ids": ["ev-sms-01"], "confidence": 0.95}],
-                "emails": [],
-                "upi_ids": [{"value": "rajesh@ybl", "source_evidence_ids": ["ev-upi-01"], "confidence": 0.99}],
-                "bank_accounts": [{"value": "State Bank of India A/c 42687129420", "source_evidence_ids": ["ev-sms-01"], "confidence": 0.99}],
-                "documents": [{"value": "Complaint COMP-55333382-6280-494a-ab79-4665d3dcb3f0", "source_evidence_ids": [], "confidence": 0.99}],
-                "money": [{"value": "₹48,000", "source_evidence_ids": ["ev-sms-01", "ev-upi-01"], "confidence": 0.99}],
-                "digital_assets": [],
-                "physical_assets": [{"value": "iPhone 15 Pro (Black)", "source_evidence_ids": ["ev-cctv-01"], "confidence": 0.95}],
-            },
-            "evidence_analysis": [
-                {
-                    "evidence_id": "ev-upi-01",
-                    "filename": "upi_debit_screenshot.png",
-                    "summary": "Screenshot of UPI transaction showing ₹48,000 debit.",
-                    "extracted_information": "Transaction ID 418925639847 to rajesh@ybl at 07:48 PM on 18 July 2026.",
-                    "importance": "critical",
-                    "allegations_supported": ["Unauthorized debit of ₹48,000"],
-                    "confidence": 0.99,
-                },
-                {
-                    "evidence_id": "ev-cctv-01",
-                    "filename": "cg_road_cctv_frame.jpg",
-                    "summary": "CCTV camera frame from CG Road intersection.",
-                    "extracted_information": "Shows suspect on black motorcycle snatching victim's phone at 7:45 PM.",
-                    "importance": "high",
-                    "allegations_supported": ["Mobile theft on CG Road"],
-                    "confidence": 0.92,
-                },
-            ],
-            "evidence_correlation": [
-                {
-                    "allegation": "Unauthorized ₹48,000 debited from complainant's SBI account after mobile snatching.",
-                    "supporting_evidence_ids": ["ev-upi-01", "ev-cctv-01"],
-                    "confidence": 0.98,
-                    "contradicts_claim": False,
-                    "explanation": "UPI transaction screenshot and bank SMS corroborate the debit occurring within 3 minutes of phone snatching.",
-                }
-            ],
-            "crime_analysis": {
-                "crime_category": "Cyber & Street Crime",
-                "crime_subtype": "Mobile Theft / Unauthorized UPI Debit",
-                "modus_operandi": "Physical snatching of unlocked phone followed by rapid unauthorized UPI transaction.",
-                "estimated_financial_loss": 48000.0,
-                "digital_assets_involved": ["UPI rajesh@ybl"],
-                "physical_assets_involved": ["iPhone 15 Pro", "Black Pulsar Motorcycle"],
-            },
-            "contradictions": [],
-            "missing_information": [
-                {"item": "Motorcycle Registration Number", "reason": "Needed for vehicle tracking & RTO identification", "importance": "high"}
-            ],
-            "missing_evidence": [
-                {
-                    "evidence_name": "Call Detail Records (CDR)",
-                    "reason_relevant": "To trace tower location of snatched SIM card at 7:48 PM",
-                    "related_allegation": "Location of phone at time of UPI debit",
-                    "importance": "high",
-                }
-            ],
-        }
-        return json.dumps(data)
+
 
 
 async def main():
@@ -224,7 +122,7 @@ async def main():
                         img_b64 = _b64.b64encode(img_res.content).decode("utf-8")
                         res_florence = await http_client.post(
                             f"{settings.FLORENCE_BASE_URL}/predict",
-                            json={"image_base64": img_b64, "task": "<MORE_DETAILED_CAPTION>"},
+                            json={"image_base64": img_b64, "task": "<CAPTION>"},
                             timeout=30.0
                         )
                         if res_florence.status_code == 200:
@@ -280,50 +178,63 @@ async def main():
                     metadata=metadata,
                 )
             )
-    print(f"  Atlas Evidences : {len(evidence_items)} embedded item(s)")
-
-    # If no evidence items attached, construct representative items from complaint details
-    if not evidence_items:
-        evidence_items = [
-            EvidenceItem(
-                id="ev-upi-01",
-                filename="upi_debit_screenshot.png",
-                type="image",
-                florence_description="Screenshot of Google Pay showing Payment Successful of ₹48,000 to rajesh@ybl.",
-                ocr_text="GPay Payment Successful ₹48,000 Paid to rajesh@ybl SBI A/c 42687129420 18 July 2026",
-            ),
-            EvidenceItem(
-                id="ev-cctv-01",
-                filename="cg_road_cctv_frame.jpg",
-                type="image",
-                florence_description="CCTV frame showing suspect on black motorcycle snatching phone near CG Road, Ahmedabad.",
-            ),
-        ]
-
-    print(f"{'-'*75}\n")
-
-    # Build CaseContext
+    # ── Incremental Pipeline Execution ──────────────────────────────────────────
     container = get_container()
-    context = container.case_context_builder.build(
-        complaint_text=detailed_desc,
-        evidence_items=evidence_items,
+    orchestrator = container.incremental_pipeline_orchestrator
+
+    # 1. Register Complaint Profile (Instant <10ms creation, defers LLM call until evidence processing)
+    print("  [1/2] Registering ComplaintProfile (Fast <10ms)...")
+    complaint_profile, _ = await orchestrator.register_complaint(
         case_id=case_id,
-        complaint_metadata={"complaint_number": complaint_num, "category": category},
+        complaint_text=detailed_desc,
+        complaint_number=complaint_num,
+        metadata={"category": category, "short_summary": short_desc},
+        skip_llm=True,
     )
+    print(f"  ✓ Saved ComplaintProfile for Case ID: {case_id}")
 
-    # Run CaseUnderstandingEngine & save to MongoDB Atlas 'cases' collection
-    # Using 100% REALTIME live Ollama LLM Client (model: gemma4:e2b)
-    llm_client = OllamaLLMClient(
-        base_url=settings.OLLAMA_BASE_URL,
-        model=settings.OLLAMA_MODEL,
-        timeout=settings.OLLAMA_TIMEOUT_SECONDS,
-    )
-    engine = CaseUnderstandingEngine(llm_client=llm_client)
-    repo = MongoCaseRepository(collection_name="cases")
-    case_understanding = await engine.analyze(context)
+    # 2. Process Evidence Items Incrementally
+    print("\n  [2/2] Processing Evidence Profiles Incrementally...")
+    valid_evidences = [ev for ev in raw_evidence if isinstance(ev, dict)]
+    async with httpx.AsyncClient(timeout=30, follow_redirects=True) as http_client:
+        for i, ev in enumerate(valid_evidences):
+            ev_id = str(ev.get("publicId") or ev.get("_id") or f"ev-{i+1}")
+            fname = str(ev.get("originalFilename") or ev.get("filename") or f"evidence_{i+1}")
+            rtype = str(ev.get("resourceType") or ev.get("type") or "image").lower()
+            cloudinary_url = str(ev.get("secureUrl") or ev.get("url") or ev.get("cloudinaryUrl") or "")
 
-    # Persist to Atlas
-    await repo.save(case_understanding)
+            file_bytes = b""
+            if cloudinary_url:
+                try:
+                    res = await http_client.get(cloudinary_url)
+                    if res.status_code == 200:
+                        file_bytes = res.content
+                except Exception as exc:
+                    logger.warning("[run_pipeline] Could not download file '%s': %s", fname, exc)
+
+            if not file_bytes:
+                file_bytes = fname.encode("utf-8")
+
+            # Trigger LLM ONLY ONCE on the final evidence item of the batch
+            is_last_item = (i == len(valid_evidences) - 1)
+            ev_profile, case_understanding = await orchestrator.process_incremental_evidence(
+                case_id=case_id,
+                filename=fname,
+                content_type=f"image/{rtype}" if rtype in ("png", "jpeg", "jpg") else rtype,
+                file_bytes=file_bytes,
+                evidence_id=ev_id,
+                trigger_llm=is_last_item,
+            )
+            print(f"  ✓ EvidenceProfile processed: '{fname}' (ID: {ev_id}, Type: {ev_profile.media_type})")
+
+    # Fetch living CaseIntelligence from Atlas 'cases' collection
+    case_understanding = await container.case_repository.get_by_id(case_id)
+    if not case_understanding:
+        # Fallback to direct analyze if initial run
+        all_evs = await container.evidence_profile_repository.get_all_for_case(case_id)
+        ctx = CaseContext.from_profiles(complaint_profile, all_evs)
+        case_understanding = await container.case_understanding_engine.analyze(ctx)
+        await container.case_repository.save(case_understanding)
 
     # Retrieve directly from Atlas 'cases' collection to verify persistence
     atlas_saved_doc = await db.cases.find_one({"_id": case_id})

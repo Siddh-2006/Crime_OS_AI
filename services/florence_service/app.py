@@ -112,7 +112,7 @@ app = FastAPI(
 
 class PredictRequest(BaseModel):
     image_base64: str
-    task: str = "<MORE_DETAILED_CAPTION>"
+    task: str = "<CAPTION>"
 
 
 class PredictResponse(BaseModel):

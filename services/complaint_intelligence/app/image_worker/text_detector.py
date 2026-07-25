@@ -20,7 +20,7 @@ from app.image_worker.interfaces import ITextDetector
 
 # Text is considered present if Florence returns more than this many characters
 _TEXT_PRESENCE_THRESHOLD = 5
-_MAX_RETRIES = 3
+_MAX_RETRIES = 1
 
 
 class FlorenceTextDetector(ITextDetector):
