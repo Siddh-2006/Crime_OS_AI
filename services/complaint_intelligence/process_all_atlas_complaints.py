@@ -175,14 +175,14 @@ async def main():
     print("=========================================================================\n")
 
     print("Connecting to MongoDB Atlas...")
-    client = AsyncIOMotorClient(settings.MONGODB_URL, serverSelectionTimeoutMS=30000)
+    client = AsyncIOMotorClient(settings.MONGODB_URI, serverSelectionTimeoutMS=30000)
     await client.admin.command("ping")
     print("✓ Connected to MongoDB Atlas!\n")
 
     # Auto-start Florence-2 captioning service if not already running
     await ensure_florence_running(florence_base_url=settings.FLORENCE_BASE_URL)
 
-    db = client[settings.MONGODB_DB_NAME]
+    db = client[settings.MONGODB_DB]
 
     complaints = await db.complaints.find({}).to_list(length=100)
     print(f"Found {len(complaints)} total complaints in database.\n")

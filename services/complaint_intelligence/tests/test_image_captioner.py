@@ -27,7 +27,7 @@ def _mock_florence(result_text: str):
     mock_client = MagicMock()
     mock_client.__aenter__ = AsyncMock(return_value=mock_client)
     mock_client.__aexit__ = AsyncMock(return_value=None)
-    mock_client.post = MagicMock(return_value=mock_response)
+    mock_client.post = AsyncMock(return_value=mock_response)
     return mock_client
 
 

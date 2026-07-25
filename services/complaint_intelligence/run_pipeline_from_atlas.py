@@ -27,6 +27,7 @@ from app.case_understanding.repository import MongoCaseRepository
 from app.core.config import settings
 from app.core.container import get_container
 from app.core.florence_autostart import ensure_florence_running
+from app.core.logging import logger
 from app.llm.client import ILLMClient, OllamaLLMClient
 from app.schemas.case_context import EvidenceItem
 from app.schemas.case_understanding import CaseUnderstanding
@@ -143,10 +144,10 @@ async def main():
     print(f"{'='*75}\n")
 
     print(f"  Connecting to MongoDB Atlas...")
-    print(f"  URI : {settings.MONGODB_URL[:45]}...")
-    print(f"  DB  : {settings.MONGODB_DB_NAME}\n")
+    print(f"  URI : {settings.MONGODB_URI[:45]}...")
+    print(f"  DB  : {settings.MONGODB_DB}\n")
 
-    client = AsyncIOMotorClient(settings.MONGODB_URL, serverSelectionTimeoutMS=5000)
+    client = AsyncIOMotorClient(settings.MONGODB_URI, serverSelectionTimeoutMS=30000)
     try:
         await client.admin.command('ping')
         print(f"  ✓ Connected to MongoDB Atlas cluster successfully!\n")
@@ -157,7 +158,7 @@ async def main():
     # Auto-start Florence-2 captioning service if not already running
     await ensure_florence_running(florence_base_url=settings.FLORENCE_BASE_URL)
 
-    db = client[settings.MONGODB_DB_NAME]
+    db = client[settings.MONGODB_DB]
 
     # Fetch specific complaint from Atlas 'complaints' collection
     TARGET_ID = sys.argv[1] if len(sys.argv) > 1 else "COMP-7d3ea8bc-841a-4fe8-b543-78282832385c"

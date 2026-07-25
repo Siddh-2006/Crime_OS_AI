@@ -183,5 +183,6 @@ def build_case_understanding_user_prompt(case_context_json: str) -> str:
     lines.append("CRITICAL: If a fact (person, vehicle, location, phone number) is NOT mentioned in the text above, do NOT include it anywhere in your response.")
     lines.append("CRITICAL: For crime_analysis.estimated_financial_loss — you MUST scan the complaint text and all OCR text for any monetary amounts (₹, Rs, INR). Sum ALL debited/transferred/lost amounts and set the field to that total as a float (e.g. 185000.0). If no amount is found, set to 0.0. NEVER leave this as null or a placeholder number.")
     lines.append("CRITICAL: For people_and_entities — extract victim name from complaint text, extract phone numbers, UPI IDs (format: name@bank), bank account numbers from OCR. Populate victims[], suspects[], upi_ids[], phone_numbers[], bank_accounts[] arrays.")
+    lines.append("CRITICAL: For timeline[] — you MUST extract 3 to 6 chronological event items describing the sequence of events (e.g. initial call received, app installation, code shared, debit transactions, complaint filing). Use exact dates/timestamps from complaint text and OCR. Do NOT describe visual UI screenshot elements; describe what HAPPENED in the investigation.")
 
     return "\n".join(lines)

@@ -19,7 +19,7 @@ export default function DepartmentLogin() {
     setLoading(true);
 
     try {
-      const res = await axios.post('http://localhost:5000/api/v1/department-portal/login', {
+      const res = await axios.post('http://localhost:5001/api/v1/department-portal/login', {
         username,
         password
       });

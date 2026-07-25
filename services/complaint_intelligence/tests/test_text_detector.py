@@ -45,7 +45,7 @@ async def test_florence_text_detector_returns_true_when_text_found():
         mock_client = MagicMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
-        mock_client.post = MagicMock(return_value=mock_response)
+        mock_client.post = AsyncMock(return_value=mock_response)
         mock_client_cls.return_value = mock_client
 
         result = await detector.detect(make_jpeg_bytes())
@@ -64,7 +64,7 @@ async def test_florence_text_detector_returns_false_when_empty_response():
         mock_client = MagicMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
-        mock_client.post = MagicMock(return_value=mock_response)
+        mock_client.post = AsyncMock(return_value=mock_response)
         mock_client_cls.return_value = mock_client
 
         result = await detector.detect(make_jpeg_bytes())

@@ -32,7 +32,7 @@ export default function CitizenResponsePage() {
   useEffect(() => {
     async function fetchRequest() {
       try {
-        const res = await fetch(`http://localhost:5000/api/v1/citizen-request/${token}`);
+        const res = await fetch(`http://localhost:5001/api/v1/citizen-request/${token}`);
         const data = await res.json();
         
         if (!res.ok) {
@@ -81,7 +81,7 @@ export default function CitizenResponsePage() {
         formData.append('files', file);
       });
 
-      const res = await fetch(`http://localhost:5000/api/v1/citizen-request/${token}/response`, {
+      const res = await fetch(`http://localhost:5001/api/v1/citizen-request/${token}/response`, {
         method: 'POST',
         body: formData,
       });

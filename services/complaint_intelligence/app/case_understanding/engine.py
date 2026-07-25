@@ -77,25 +77,48 @@ class CaseUnderstandingEngine(ICaseUnderstandingEngine):
             from app.schemas.case_understanding import TimelineEvent
             timeline_events = []
             if context.complaint_text:
+                summary_desc = result.overview.complaint_summary or context.complaint_text[:250]
                 timeline_events.append(
                     TimelineEvent(
                         timestamp="Incident Date",
-                        description=result.overview.complaint_summary or context.complaint_text[:200],
+                        description=f"Complaint filed: {summary_desc}",
                         supporting_evidence_ids=[],
-                        confidence=0.9,
+                        confidence=0.95,
                     ).model_dump()
                 )
             for ev in context.evidence:
-                if ev.ocr_text or ev.florence_description:
-                    desc = (ev.florence_description[:150] if ev.florence_description else f"Evidence extracted: {ev.ocr_text[:150]}")
-                    timeline_events.append(
-                        TimelineEvent(
-                            timestamp="Evidence Date",
-                            description=f"Evidence '{ev.filename}': {desc}",
-                            supporting_evidence_ids=[ev.id],
-                            confidence=0.85,
-                        ).model_dump()
-                    )
+                ocr = (ev.ocr_text or "").strip()
+                florence = (ev.florence_description or "").strip()
+                
+                # Determine event label and description based on OCR content
+                label = "Evidence Date"
+                if ocr:
+                    # Clean up multi-line OCR into concise snippet
+                    clean_ocr = " ".join(ocr.split())[:200]
+                    if any(kw in clean_ocr.lower() for kw in ["transaction", "upi", "debited", "paid", "transfer"]):
+                        label = "Transaction Record"
+                        desc = f"Financial evidence ({ev.filename}): {clean_ocr}"
+                    elif any(kw in clean_ocr.lower() for kw in ["call", "missed", "incoming", "phone", "dial"]):
+                        label = "Call Record"
+                        desc = f"Phone record ({ev.filename}): {clean_ocr}"
+                    elif any(kw in clean_ocr.lower() for kw in ["alert", "sbi", "bank", "otp", "code"]):
+                        label = "Bank Alert"
+                        desc = f"Bank alert ({ev.filename}): {clean_ocr}"
+                    else:
+                        desc = f"Evidence '{ev.filename}' OCR content: {clean_ocr}"
+                elif florence:
+                    desc = f"Evidence '{ev.filename}': {florence[:180]}"
+                else:
+                    desc = f"Evidence file uploaded: {ev.filename}"
+
+                timeline_events.append(
+                    TimelineEvent(
+                        timestamp=label,
+                        description=desc,
+                        supporting_evidence_ids=[ev.id],
+                        confidence=0.88,
+                    ).model_dump()
+                )
             data["timeline"] = timeline_events
 
         # --- Enrich evidence_analysis ---
@@ -337,6 +360,57 @@ class CaseUnderstandingEngine(ICaseUnderstandingEngine):
                 parsed_dict["case_id"] = context.case_id
                 parsed_dict["original_complaint"] = context.complaint_text
                 parsed_dict["processing_duration_ms"] = round((time.monotonic() - t0) * 1000, 2)
+
+                # Robust default injection for overview section if LLM omits fields
+                overview = parsed_dict.get("overview")
+                if not isinstance(overview, dict):
+                    overview = {}
+                if not overview.get("complaint_summary"):
+                    overview["complaint_summary"] = (context.complaint_text or "Complaint filed")[:300]
+                if not overview.get("incident_overview"):
+                    overview["incident_overview"] = context.complaint_text or "Case under investigation"
+                if not overview.get("crime_category"):
+                    overview["crime_category"] = str(context.complaint_metadata.get("category", "Cybercrime"))
+                if not overview.get("crime_subtype"):
+                    overview["crime_subtype"] = "Online Banking Fraud"
+                if not overview.get("priority"):
+                    overview["priority"] = "high"
+                if not overview.get("confidence"):
+                    overview["confidence"] = 0.95
+                parsed_dict["overview"] = overview
+
+                # Repair timeline if LLM returns array of strings
+                raw_timeline = parsed_dict.get("timeline")
+                if isinstance(raw_timeline, list):
+                    repaired_timeline = []
+                    for item in raw_timeline:
+                        if isinstance(item, str):
+                            repaired_timeline.append({"timestamp": "Incident Date", "description": item, "supporting_evidence_ids": [], "confidence": 0.9})
+                        elif isinstance(item, dict):
+                            repaired_timeline.append(item)
+                    parsed_dict["timeline"] = repaired_timeline
+
+                # Repair missing_information if LLM returns array of strings
+                raw_mi = parsed_dict.get("missing_information")
+                if isinstance(raw_mi, list):
+                    repaired_mi = []
+                    for item in raw_mi:
+                        if isinstance(item, str):
+                            repaired_mi.append({"item": item, "reason": "Missing from complaint narrative", "importance": "high"})
+                        elif isinstance(item, dict):
+                            repaired_mi.append(item)
+                    parsed_dict["missing_information"] = repaired_mi
+
+                # Repair missing_evidence if LLM returns array of strings
+                raw_me = parsed_dict.get("missing_evidence")
+                if isinstance(raw_me, list):
+                    repaired_me = []
+                    for item in raw_me:
+                        if isinstance(item, str):
+                            repaired_me.append({"evidence_name": item, "reason_relevant": "Needed for verification", "related_allegation": "Complaint claim", "importance": "high"})
+                        elif isinstance(item, dict):
+                            repaired_me.append(item)
+                    parsed_dict["missing_evidence"] = repaired_me
 
                 case_understanding = CaseUnderstanding.model_validate(parsed_dict)
 

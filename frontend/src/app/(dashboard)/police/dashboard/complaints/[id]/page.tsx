@@ -712,17 +712,12 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
 
           {/* ── TAB: AI COMPLAINT INTELLIGENCE ── */}
           {activeTab === 'ai' && (() => {
-<<<<<<< HEAD
-            const ci = complaint.complaintIntelligence as any;
-            const snap = snapshot as any;
-=======
             if (caseUnderstanding) {
               return <CaseUnderstandingView data={caseUnderstanding} />;
             }
 
-            const ci = complaint.complaintIntelligence;
-            const snap = snapshot;
->>>>>>> 825bbc76d83be912138b2c49ea93788b7871ca8f
+            const ci = complaint.complaintIntelligence as any;
+            const snap = snapshot as any;
             const hasAI = !!(ci || snap);
 
             if (snapshotLoading) {

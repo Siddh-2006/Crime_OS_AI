@@ -18,14 +18,14 @@ async def get_mongo_db() -> Any:
     if _mongo_client is None:
         try:
             from motor.motor_asyncio import AsyncIOMotorClient
-            _mongo_client = AsyncIOMotorClient(settings.MONGODB_URL, serverSelectionTimeoutMS=30000)
+            _mongo_client = AsyncIOMotorClient(settings.MONGODB_URI, serverSelectionTimeoutMS=30000)
             await _mongo_client.admin.command('ping')
-            logger.info("Connected to MongoDB successfully", extra={"url": settings.MONGODB_URL})
+            logger.info("Connected to MongoDB successfully", extra={"url": settings.MONGODB_URI})
         except Exception as exc:
             logger.warning("MongoDB unreachable or Motor not available", extra={"error": str(exc)})
             _mongo_client = None
             return None
-    return _mongo_client[settings.MONGODB_DB_NAME] if _mongo_client else None
+    return _mongo_client[settings.MONGODB_DB] if _mongo_client else None
 
 
 async def close_mongo() -> None:

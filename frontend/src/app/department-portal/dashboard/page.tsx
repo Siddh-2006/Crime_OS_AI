@@ -32,7 +32,7 @@ export default function DepartmentDashboard() {
 
   const fetchRequests = async (entity: string) => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/v1/department-portal/requests?department_entity_id=${encodeURIComponent(entity)}`);
+      const res = await axios.get(`http://localhost:5001/api/v1/department-portal/requests?department_entity_id=${encodeURIComponent(entity)}`);
       setRequests(res.data.data);
     } catch (err) {
       console.error('Failed to fetch requests', err);
@@ -83,7 +83,7 @@ export default function DepartmentDashboard() {
           tags: ['attachment']
         };
       }
-      await axios.post(`http://localhost:5000/api/v1/department-portal/requests/${selectedReq.request_id}/respond`, payload);
+      await axios.post(`http://localhost:5001/api/v1/department-portal/requests/${selectedReq.request_id}/respond`, payload);
       
       // Refresh list
       setSelectedReq(null);
@@ -208,7 +208,7 @@ export default function DepartmentDashboard() {
                   if (!responseContent) return;
                   setSubmitting(true);
                   try {
-                    const res = await axios.post(`http://localhost:5000/api/v1/department-portal/requests/${selectedReq.request_id}/format-response`, {
+                    const res = await axios.post(`http://localhost:5001/api/v1/department-portal/requests/${selectedReq.request_id}/format-response`, {
                       response_content: responseContent
                     });
                     setResponseContent(res.data.data.formattedContent);

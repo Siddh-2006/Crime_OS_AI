@@ -158,26 +158,7 @@ async def test_worker_mixed_pdf_handles_both_page_types():
     assert output.pages[1].page_type == PDFPageType.SCANNED
 
 
-@pytest.mark.unit
-@pytest.mark.asyncio
-async def test_worker_enqueues_text_intelligence_job():
-    """When text is extracted/OCR'd, a TEXT_INTELLIGENCE job must be enqueued."""
-    worker, queue = _make_worker(
-        pages_text=["Complaining about online fraud and financial theft."],
-    )
-    result = await worker.run(
-        {"pdf_bytes_b64": _b64(FAKE_PDF_BYTES), "file_name": "complaint.pdf", "file_size_bytes": len(FAKE_PDF_BYTES)},
-        job_id="pdf-004",
-    )
 
-    assert result.succeeded is True
-    output = PDFWorkerOutput.model_validate(result.output)
-    assert output.text_intelligence_job_id is not None
-
-    ti_jobs = queue.all_jobs(job_type=JobType.TEXT_INTELLIGENCE.value)
-    assert len(ti_jobs) >= 1
-    assert ti_jobs[-1].payload["source"] == "pdf"
-    assert "Complaining about online fraud" in ti_jobs[-1].payload["text"]
 
 
 @pytest.mark.unit

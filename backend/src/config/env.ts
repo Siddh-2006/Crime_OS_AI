@@ -1,3 +1,5 @@
+import dotenv from 'dotenv';
+dotenv.config();
 import { cleanEnv, str, num, bool, port } from 'envalid';
 
 /**
@@ -59,11 +61,11 @@ const env = cleanEnv(process.env, {
   SARVAM_TIMEOUT_MS: num({ default: 600000 }),
 
   // ── Gmail OAuth2 (for sending department request emails + polling responses) ──
-  GMAIL_CLIENT_ID: str(),
-  GMAIL_CLIENT_SECRET: str(),
-  GMAIL_REFRESH_TOKEN: str(),
+  GMAIL_CLIENT_ID: str({ default: '' }),
+  GMAIL_CLIENT_SECRET: str({ default: '' }),
+  GMAIL_REFRESH_TOKEN: str({ default: '' }),
   // The Gmail address that sends requests and receives department responses
-  GMAIL_POLICE_EMAIL: str(),
+  GMAIL_POLICE_EMAIL: str({ default: '' }),
   // How often to poll for new department reply emails (milliseconds, default 60s)
   GMAIL_POLL_INTERVAL_MS: num({ default: 60000 }),
 });

@@ -20,6 +20,9 @@ import { Types } from 'mongoose';
 import logger from '../../../config/logger';
 import axios from 'axios';
 import env from '../../../config/env';
+import { spawn } from 'child_process';
+import * as path from 'path';
+import * as fs from 'fs';
 import { InvestigationOrchestrator } from '../../investigation/services/investigationOrchestrator';
 import { ChargeSheetGenerator } from '../../investigation/services/ChargeSheetGenerator';
 import { CaseParticipant } from '../../investigation/models/CaseParticipant.model';
@@ -272,32 +275,23 @@ export class ComplaintService {
 
   // ─── Automated Pipeline Trigger ─────────────────────────────────────────────
   private triggerComplaintIntelligencePipeline(complaintNumber: string): void {
-    const complaintIntelligenceUrl = env.COMPLAINT_INTELLIGENCE_URL.replace(/\/$/, '');
+    try {
+      const scriptPath = path.resolve(__dirname, '../../../../../services/complaint_intelligence/run_pipeline_from_atlas.py');
+      const venvPython = path.resolve(__dirname, '../../../../../services/complaint_intelligence/.venv/Scripts/python.exe');
+      const pythonExec = process.platform === 'win32' && fs.existsSync(venvPython) ? venvPython : 'python';
 
-    logger.info('[ComplaintIntelligence] Triggering pipeline via HTTP', {
-      complaintNumber,
-      url: `${complaintIntelligenceUrl}/trigger-full-pipeline`,
-    });
+      logger.info(`[ComplaintIntelligence] Triggering full pipeline for ${complaintNumber}`);
 
-    void axios
-      .post(
-        `${complaintIntelligenceUrl}/trigger-full-pipeline`,
-        { complaint_number: complaintNumber },
-        { timeout: 5_000 },
-      )
-      .then((response) => {
-        logger.info('[ComplaintIntelligence] Pipeline launch accepted', {
-          complaintNumber,
-          status: response.status,
-          data: response.data,
-        });
-      })
-      .catch((err: any) => {
-        logger.error('[ComplaintIntelligence] Failed to trigger pipeline over HTTP', {
-          complaintNumber,
-          error: err?.response?.data || err?.message,
-        });
+      const pyProcess = spawn(pythonExec, [scriptPath, complaintNumber], {
+        detached: true,
+        stdio: 'ignore',
+        env: { ...process.env, PYTHONUTF8: '1' }
       });
+
+      pyProcess.unref();
+    } catch (err: any) {
+      logger.error(`[ComplaintIntelligence] Failed to trigger pipeline for ${complaintNumber}`, { error: err?.message });
+    }
   }
 
   // ─── Get Citizen's Complaints ──────────────────────────────────────────────
