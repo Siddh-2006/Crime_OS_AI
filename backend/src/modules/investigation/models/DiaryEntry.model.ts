@@ -18,7 +18,8 @@ export type DiaryEventType =
   | 'override_correction'
   | 'escalation_raised'
   | 'participant_recommendation_approved'
-  | 'participant_sections_attached';
+  | 'participant_sections_attached'
+  | 'participant_promoted_to_accused';
 
 export interface IDiaryEntry extends Document {
   case_id: Types.ObjectId;
@@ -31,6 +32,7 @@ export interface IDiaryEntry extends Document {
     evidence_id?: string;
     request_id?: string;
     step_id?: string;
+    participant_id?: string;
     snapshot_id?: string;
   };
 }
@@ -52,6 +54,7 @@ const DiaryEntrySchema = new Schema<IDiaryEntry>(
         'analysis_run', 'suggestion_generated', 'officer_note',
         'manual_step_added', 'override_correction', 'escalation_raised',
         'participant_recommendation_approved', 'participant_sections_attached',
+        'participant_promoted_to_accused',
       ],
       required: true,
     },
@@ -60,6 +63,7 @@ const DiaryEntrySchema = new Schema<IDiaryEntry>(
       evidence_id: { type: String },
       request_id:  { type: String },
       step_id:     { type: String },
+      participant_id: { type: String },
       snapshot_id: { type: String },
     },
   },

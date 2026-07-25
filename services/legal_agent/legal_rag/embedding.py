@@ -197,7 +197,7 @@ def build_embedding_text(record: ParsedRecord) -> str:
 @dataclass(slots=True)
 class BGEEmbeddingConfig:
     """Configuration for BGEEmbedder. Ignored when falling back to NomicEmbedder."""
-    model_name: str = "BAAI/bge-large-en-v1.5"
+    model_name: str = "BAAI/bge-base-en-v1.5"
     device: str | None = None
     batch_size: int = 16
     normalize_embeddings: bool = True
@@ -300,7 +300,7 @@ def _is_model_cached(model_name: str) -> bool:
         hub_dir = hf_home / "hub"
 
         # Model repos are stored as "models--{org}--{name}"
-        # e.g. BAAI/bge-large-en-v1.5 → models--BAAI--bge-large-en-v1.5
+        # e.g. BAAI/bge-base-en-v1.5 → models--BAAI--bge-base-en-v1.5
         safe_name = model_name.replace("/", "--")
         model_dir = hub_dir / f"models--{safe_name}"
 

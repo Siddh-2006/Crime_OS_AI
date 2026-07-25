@@ -272,14 +272,7 @@ export class ComplaintService {
 
   // ─── Automated Pipeline Trigger ─────────────────────────────────────────────
   private triggerComplaintIntelligencePipeline(complaintNumber: string): void {
-<<<<<<< HEAD
     const complaintIntelligenceUrl = env.COMPLAINT_INTELLIGENCE_URL.replace(/\/$/, '');
-=======
-    try {
-      const scriptPath = path.resolve(__dirname, '../../../../../services/complaint_intelligence/run_pipeline_from_atlas.py');
-      const venvPython = path.resolve(__dirname, '../../../../../services/complaint_intelligence/.venv/Scripts/python.exe');
-      const pythonExec = process.platform === 'win32' && fs.existsSync(venvPython) ? venvPython : 'python';
->>>>>>> 825bbc76d83be912138b2c49ea93788b7871ca8f
 
     logger.info('[ComplaintIntelligence] Triggering pipeline via HTTP', {
       complaintNumber,
