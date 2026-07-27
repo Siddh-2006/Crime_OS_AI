@@ -58,6 +58,9 @@ export const API_ROUTES = {
     MISSING_INFO: (id: string) => `/case-understanding/${id}/missing-information`,
     MISSING_EVIDENCE: (id: string) => `/case-understanding/${id}/missing-evidence`,
   },
+  TRANSLATION: {
+    BATCH: '/translation/batch',
+  },
 } as const;
 
 export const APP_ROUTES = {

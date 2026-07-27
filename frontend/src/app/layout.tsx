@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
+import { TranslationProvider } from '@/context/TranslationContext';
 
 export const metadata: Metadata = {
   title: 'Crime OS — Gujarat Police',
@@ -25,7 +26,9 @@ export default function RootLayout({ children }: RootLayoutProps): React.ReactEl
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body className="min-h-screen font-sans antialiased">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <TranslationProvider>{children}</TranslationProvider>
+        </AuthProvider>
       </body>
     </html>
   );

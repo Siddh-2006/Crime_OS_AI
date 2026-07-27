@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { ShieldCheck, Building2, Users, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { APP_ROUTES } from '@/lib/constants';
+import { LanguageSelector } from '@/components/common/LanguageSelector';
 
 const NAV_ITEMS = [
   {
@@ -42,13 +43,16 @@ export default function AdminNavbar(): React.ReactElement {
           </div>
         </div>
 
-        <button
-          onClick={logout}
-          className="flex items-center gap-2 text-sm text-blue-200 hover:text-white transition-colors"
-        >
-          <LogOut size={15} />
-          Logout
-        </button>
+        <div className="flex items-center gap-3">
+          <LanguageSelector />
+          <button
+            onClick={logout}
+            className="flex items-center gap-2 text-sm text-blue-200 hover:text-white transition-colors"
+          >
+            <LogOut size={15} />
+            Logout
+          </button>
+        </div>
       </div>
 
       {/* Nav tabs */}

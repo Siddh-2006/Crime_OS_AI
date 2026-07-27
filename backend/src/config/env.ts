@@ -44,6 +44,8 @@ const env = cleanEnv(process.env, {
   // AI_SERVICE_URL: str({ default: 'http://localhost:8000' }),
   LEGAL_AGENT_URL: str({ default: 'http://localhost:8001' }),
   IO_RECOMMENDATION_URL: str({ default: 'http://localhost:8003' }),
+  TRANSLATION_SERVICE_URL: str({ default: '' }),
+  TRANSLATION_TIMEOUT_MS: num({ default: 30000 }),
 
   // ── LLM — Ollama (primary, local) ────────────────────────────────────────────
   OLLAMA_BASE_URL:        str({ default: 'http://localhost:11434' }),

@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { ROLE } from '@/lib/constants';
 import { Button } from '@/components/ui/Button';
 import { Loader } from '@/components/ui/Loader';
+import { LanguageSelector } from '@/components/common/LanguageSelector';
 
 interface NavItem {
   label: string;
@@ -89,6 +90,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* User footer */}
         <div className="border-t border-primary-800 p-4 space-y-3">
+          <LanguageSelector />
           <div>
             <p className="text-xs text-primary-400 truncate">{displayName}</p>
             <p className="text-xs font-semibold text-secondary-400 uppercase tracking-wide">
@@ -118,6 +120,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
           <div className="hidden lg:block" />
           <div className="flex items-center gap-4">
+            <div className="text-neutral-700">
+              <LanguageSelector />
+            </div>
             <button
               className="relative rounded-full p-2 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
               aria-label="Notifications"

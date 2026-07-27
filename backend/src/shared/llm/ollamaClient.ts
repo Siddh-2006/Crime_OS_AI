@@ -236,7 +236,7 @@ interface OllamaGenerateResponse {
 
 const FAST_MODEL    = env.OLLAMA_REQUIRED_MODELS.split(',')[0].trim(); // reads from env — stays in sync
 const FAST_DEFAULTS = { temperature: 0.2, maxTokens: 512  };
-const DEEP_DEFAULTS = { temperature: 0.1, maxTokens: 2048 };
+const DEEP_DEFAULTS = { temperature: 0.1, maxTokens: 8192 };
 
 // Gemma 4 chat-template control token that activates extended thinking
 const THINK_TOKEN = '<|think|>';
