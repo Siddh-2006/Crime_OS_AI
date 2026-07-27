@@ -145,15 +145,25 @@ class AnalysisWorker:
         content_type: str = payload.get("content_type", "")
         file_bytes: bytes = base64.b64decode(payload["file_bytes_b64"])
 
+        print(f"\n=======================================================================")
+        print(f" [PYTHON BACKGROUND WORKER] EXECUTING INCREMENTAL AI PIPELINE")
+        print(f"    Job ID      : {job.job_id}")
+        print(f"    Case ID     : {case_id}")
+        print(f"    Evidence ID : {evidence_id}")
+        print(f"    Filename    : {filename} ({len(file_bytes)} bytes)")
+        print(f"    Content-Type: {content_type}")
+        print(f"=======================================================================\n")
+
         logger.info(
             "EVIDENCE_UPLOADED job starting",
             extra={"job_id": job.job_id, "evidence_id": evidence_id, "case_id": case_id},
         )
 
+        evidence_record_repo = self.container.evidence_record_repository
+
         # Update EvidenceRecord status → processing
         try:
             from app.schemas.upload_token import EvidenceProcessingStatus
-            evidence_record_repo = self.container.evidence_record_repository
             await evidence_record_repo.update_status(evidence_id, EvidenceProcessingStatus.PROCESSING)
         except Exception as exc:
             logger.warning(
@@ -184,6 +194,16 @@ class AnalysisWorker:
 
             await self.queue.set_result(job.job_id, {"evidence_id": evidence_id, "case_id": case_id, "url": ev_profile.url})
             await self.queue.ack(job.job_id)
+
+            print(f"\n=======================================================================")
+            print(f" [DONE] [PYTHON BACKGROUND WORKER] PIPELINE JOB COMPLETED SUCCESSFULLY")
+            print(f"    Job ID      : {job.job_id}")
+            print(f"    Case ID     : {case_id}")
+            print(f"    Media Type  : {ev_profile.media_type}")
+            print(f"    Cloudinary  : {ev_profile.url}")
+            print(f"    Status      : Living CaseIntelligence updated & saved in MongoDB Atlas")
+            print(f"=======================================================================\n")
+
             logger.info(
                 "EVIDENCE_UPLOADED job completed",
                 extra={
@@ -197,7 +217,6 @@ class AnalysisWorker:
             # Update EvidenceRecord status → failed
             try:
                 from app.schemas.upload_token import EvidenceProcessingStatus
-                evidence_record_repo = self.container.evidence_record_repository
                 await evidence_record_repo.update_status(
                     evidence_id, EvidenceProcessingStatus.FAILED, error=str(exc)
                 )

@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from app.case_understanding.interfaces import ICaseContextBuilder, ICaseRepository, ICaseUnderstandingEngine
 from app.case_understanding.profile_repository import IComplaintProfileRepository, IEvidenceProfileRepository
+from app.core.config import settings
 from app.core.container import Container
 from app.core.logging import logger
 from app.schemas.case_context import CaseContext, EvidenceItem
@@ -178,6 +179,7 @@ class IncrementalPipelineOrchestrator:
             )
 
         if not trigger_llm:
+            print(f"  ✓ EvidenceProfile saved for '{filename}' (ID: {ev_id}, Type: {ev_profile.media_type}) [LLM Fusion deferred]")
             return ev_profile, None
 
         case_understanding = await self.fuse_case_intelligence(case_id)
@@ -195,6 +197,12 @@ class IncrementalPipelineOrchestrator:
 
         all_evidence_profiles = await self.evidence_profile_repo.get_all_for_case(case_id)
 
+        print(f"\n  [PIPELINE STEP 3/3: LLM CASE FUSION]")
+        print(f"     Case ID              : {case_id}")
+        print(f"     Accumulated Evidences: {len(all_evidence_profiles)} item(s)")
+        print(f"     LLM Model            : {getattr(settings, 'PRIMARY_LLM_PROVIDER', 'ollama').upper()} / {getattr(settings, 'OLLAMA_MODEL', getattr(settings, 'GEMINI_MODEL', 'gemma4:e4b'))}")
+        print(f"     Status               : Running Single-Pass LLM Fusion Engine...")
+
         logger.info(
             "[incremental_orchestrator] Triggering living CaseIntelligence fusion",
             extra={"case_id": case_id, "total_accumulated_evidence": len(all_evidence_profiles)},
@@ -203,6 +211,11 @@ class IncrementalPipelineOrchestrator:
         context = CaseContext.from_profiles(complaint_profile, all_evidence_profiles)
         case_understanding = await self.engine.analyze(context)
         await self.case_repo.save(case_understanding)
+
+        print(f"  [DONE] [PIPELINE COMPLETE] CaseIntelligence updated & saved to MongoDB Atlas collection 'cases' for Case ID: '{case_id}'!")
+        print(f"     Summary : {case_understanding.overview.complaint_summary[:100]}...")
+        print(f"     Priority: {case_understanding.overview.priority.upper()} (Confidence: {case_understanding.overview.confidence:.0%})\n")
+
         return case_understanding
 
     # ── PRIVATE: Dispatch Single File to Worker ───────────────────────────────
@@ -217,6 +230,10 @@ class IncrementalPipelineOrchestrator:
         ext = filename.split(".")[-1].lower() if "." in filename else ""
         b64 = base64.b64encode(file_bytes).decode("utf-8")
 
+        print(f"\n  [PIPELINE STEP 1/3: CLOUDINARY UPLOAD]")
+        print(f"     File        : {filename}")
+        print(f"     Target Path : crime-os/evidence/{case_id}/")
+
         # ── Cloudinary Upload ──────────────────────────────────────────────────
         cloudinary_url: Optional[str] = None
         try:
@@ -226,11 +243,18 @@ class IncrementalPipelineOrchestrator:
                 media_type=content_type or ext,
                 case_id=case_id,
             )
+            if cloudinary_url:
+                print(f"  ✓ Uploaded to Cloudinary: {cloudinary_url}")
         except Exception as exc:
             logger.warning(
                 "[incremental_orchestrator] Cloudinary upload failed",
                 extra={"file_name": filename, "error": str(exc)},
             )
+
+        print(f"\n  [PIPELINE STEP 2/3: MEDIA PERCEPTION WORKER]")
+        print(f"     File        : {filename}")
+        print(f"     Media Type  : {ext.upper() or content_type}")
+        print(f"     Processing  : Extracting features & descriptions...")
 
         # ── Image ─────────────────────────────────────────────────────────────
         if ext in ("png", "jpg", "jpeg", "webp", "bmp", "tiff") or content_type.startswith("image/"):

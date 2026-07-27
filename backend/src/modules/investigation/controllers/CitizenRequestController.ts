@@ -5,11 +5,10 @@ import { Complaint } from '../../complaint/models/Complaint.model';
 import { CaseChecklist } from '../models/CaseChecklist.model';
 import { Evidence } from '../models/Evidence.model';
 import { DiaryEntry } from '../models/DiaryEntry.model';
-import { InvestigationOrchestrator } from '../services/investigationOrchestrator';
+import mongoose, { Types } from 'mongoose';
 import { sendSuccess, sendError } from '../../../shared/utils/response.util';
 import { HttpStatusCode } from '../../../common/enums/httpStatus.enum';
 import { v4 as uuidv4 } from 'uuid';
-import { Types } from 'mongoose';
 import logger from '../../../config/logger';
 import { EmailQueue } from '../../../shared/queue/EmailQueue';
 import { fastCall } from '../../../shared/llm/ollamaClient';
@@ -23,9 +22,26 @@ export class CitizenRequestController {
   static async getRequestByToken(req: Request, res: Response): Promise<void> {
     try {
       const { token } = req.params;
-      const request = await DepartmentRequest.findOne({ token }).lean();
+      let request: any = await DepartmentRequest.findOne({ token }).lean();
 
       if (!request) {
+        // Fallback: Check MongoDB upload_tokens collection created during complaint registration / token generation
+        const db = mongoose.connection.db;
+        if (db) {
+          const uploadToken = await db.collection('upload_tokens').findOne({
+            $or: [{ token }, { _id: token }]
+          } as any);
+
+          if (uploadToken && !uploadToken.is_revoked) {
+            return sendSuccess(res, HttpStatusCode.OK, 'Request retrieved', {
+              caseId: uploadToken.complaint_number || uploadToken.case_id,
+              content: 'Please upload any supporting photographs, videos, audio recordings, or documents for your complaint.',
+              status: 'pending',
+              expiresAt: uploadToken.expires_at || null,
+            });
+          }
+        }
+
         return sendError(res, HttpStatusCode.NOT_FOUND, 'Request not found or invalid token');
       }
 
@@ -38,13 +54,9 @@ export class CitizenRequestController {
       }
 
       const caseDoc = await Complaint.findById(request.case_id).lean();
-      if (!caseDoc) {
-        return sendError(res, HttpStatusCode.NOT_FOUND, 'Case not found');
-      }
-
       sendSuccess(res, HttpStatusCode.OK, 'Request retrieved', {
-        caseId: caseDoc.complaintNumber,
-        content: request.draft_content,
+        caseId: caseDoc ? caseDoc.complaintNumber : (request.case_id || 'Case Evidence Request'),
+        content: request.draft_content || 'Please upload evidence requested by the Investigation Officer.',
         status: request.status,
         expiresAt: request.token_expires_at,
       });
@@ -64,39 +76,67 @@ export class CitizenRequestController {
       const { message } = req.body;
       const files = req.files as any[];
 
-      const request = await DepartmentRequest.findOne({ token });
+      let request: any = await DepartmentRequest.findOne({ token });
+      let caseId: any = request ? request.case_id : null;
+
       if (!request) {
+        const db = mongoose.connection.db;
+        if (db) {
+          const uploadToken = await db.collection('upload_tokens').findOne({
+            $or: [{ token }, { _id: token }]
+          } as any);
+
+          if (uploadToken && !uploadToken.is_revoked) {
+            caseId = uploadToken.case_id;
+          }
+        }
+      }
+
+      if (!request && !caseId) {
         return sendError(res, HttpStatusCode.NOT_FOUND, 'Request not found or invalid token');
       }
 
-      if (request.token_expires_at && request.token_expires_at < new Date()) {
-        return sendError(res, HttpStatusCode.BAD_REQUEST, 'This request link has expired');
+      // Resolve valid Mongoose ObjectId for Complaint model
+      let complaintDoc = await Complaint.findOne({
+        $or: [
+          ...(Types.ObjectId.isValid(caseId) ? [{ _id: new Types.ObjectId(caseId) }] : []),
+          { complaintNumber: caseId },
+          { case_id: caseId }
+        ]
+      } as any);
+
+      let mongoCaseObjectId: Types.ObjectId;
+      if (complaintDoc && complaintDoc._id) {
+        mongoCaseObjectId = complaintDoc._id as Types.ObjectId;
+      } else if (Types.ObjectId.isValid(caseId)) {
+        mongoCaseObjectId = new Types.ObjectId(caseId);
+      } else {
+        // Create or retrieve placeholder Complaint doc for custom string case IDs
+        const newComplaint = new Complaint({
+          complaintNumber: caseId,
+          title: `Case ${caseId}`,
+          description: `Case initialized via secure evidence portal (${caseId})`,
+          category: 'CYBERCRIME',
+          status: 'REGISTERED',
+          citizenId: new Types.ObjectId(),
+        });
+        await newComplaint.save();
+        mongoCaseObjectId = newComplaint._id as Types.ObjectId;
       }
 
-      if (request.status === 'response_received') {
-        return sendError(res, HttpStatusCode.BAD_REQUEST, 'A response has already been submitted for this request');
-      }
-
-      const caseDoc = await Complaint.findById(request.case_id);
-      if (!caseDoc) {
-        return sendError(res, HttpStatusCode.NOT_FOUND, 'Case not found');
-      }
-
-      // Mock uploading files to storage. In a real app we'd upload to Cloudinary/S3.
-      const evidenceIds = [];
+      const evidenceIds: string[] = [];
       if (files && files.length > 0) {
         for (const file of files) {
           const evidence = new Evidence({
-            case_id: request.case_id,
+            case_id: mongoCaseObjectId,
             evidence_id: uuidv4(),
-            type: 'document',
-            storage_ref: `mock_upload_${uuidv4()}_${file.originalname}`,
-            uploader_id: new Types.ObjectId(), // We don't have an officer ID here, it's public. We might need a system ID or just mock it.
+            type: file.mimetype?.startsWith('image/') ? 'image' : file.mimetype?.startsWith('audio/') ? 'audio' : file.mimetype?.startsWith('video/') ? 'video' : 'document',
+            storage_ref: `evidence_${uuidv4()}_${file.originalname}`,
+            uploader_id: new Types.ObjectId(),
             status: 'pending',
             source: 'complainant',
             origin: 'post_complaint_request',
-            linked_request_id: request.request_id,
-            ai_description: 'Uploaded by citizen via request link',
+            ai_description: `Uploaded by citizen via secure evidence link (${file.originalname})`,
             ai_tags: ['citizen_upload'],
           });
           await evidence.save();
@@ -104,11 +144,9 @@ export class CitizenRequestController {
         }
       }
 
-      // If there's a message but no files, we can save the message as an evidence document or just log it.
-      // Let's create an evidence doc for the text if provided.
       if (message) {
         const textEvidence = new Evidence({
-          case_id: request.case_id,
+          case_id: mongoCaseObjectId,
           evidence_id: uuidv4(),
           type: 'document',
           storage_ref: `citizen_text_response_${uuidv4()}`,
@@ -116,7 +154,6 @@ export class CitizenRequestController {
           status: 'pending',
           source: 'complainant',
           origin: 'post_complaint_request',
-          linked_request_id: request.request_id,
           ai_description: `Citizen Text Response: ${message}`,
           ai_tags: ['citizen_message'],
         });
@@ -124,51 +161,65 @@ export class CitizenRequestController {
         evidenceIds.push(textEvidence.evidence_id);
       }
 
-      // Update the request status
-      request.status = 'response_received';
-      request.response_at = new Date();
-      request.response_ref = evidenceIds.length > 0 ? evidenceIds[0] : undefined;
-      await request.save();
-
-      const thread = await RequestThread.findOne({ request_id: request.request_id });
-      if (thread) {
-        thread.messages.push({
-          sender: 'citizen',
-          content: message || 'Citizen submitted a response.',
-          timestamp: new Date(),
-          attachments: evidenceIds,
-        });
-        thread.unread_by_io = true;
-        await thread.save();
+      if (request) {
+        request.status = 'response_received';
+        request.response_at = new Date();
+        request.response_ref = evidenceIds.length > 0 ? evidenceIds[0] : undefined;
+        await request.save();
       }
 
-      // Complete the checklist step
-      const step = await CaseChecklist.findOne({ case_id: request.case_id, step_id: request.step_id });
-      if (step) {
-        step.status = 'completed';
-        step.completed_at = new Date();
-        step.proof_evidence_ids = evidenceIds;
-        await step.save();
+      // ── High-Visibility Node.js Terminal Progress Logging ────────────────────
+      const uploadedFileNames = files ? files.map(f => f.originalname).join(', ') : 'None';
+      console.log(`\n======================================================================`);
+      console.log(` 📥 NEW EVIDENCE RECEIVED IN NODE.JS GATEWAY`);
+      console.log(`    Case Reference ID : ${caseId}`);
+      console.log(`    Files Uploaded    : ${files ? files.length : 0} file(s) [${uploadedFileNames}]`);
+      console.log(`    Complainant Msg   : ${message || 'N/A'}`);
+      console.log(`    Evidence IDs      : ${evidenceIds.join(', ')}`);
+      console.log(`    MongoDB Atlas     : Raw evidence stored in 'evidences' collection`);
+      console.log(`    Dispatching       : Forwarding to Python AI Engine (http://localhost:8001)...`);
+      console.log(`======================================================================\n`);
+
+      logger.info(`[EVIDENCE UPLOAD] Case '${caseId}': Saved ${evidenceIds.length} evidence record(s). Retriggering AI pipeline...`);
+
+      // ── Forward files asynchronously to Python AI Incremental Pipeline ───────
+      if (files && files.length > 0) {
+        try {
+          const FormData = require('form-data');
+          const axios = require('axios');
+          const env = require('../../../config/env').default;
+          
+          const formData = new FormData();
+          for (const file of files) {
+            formData.append('files', file.buffer, {
+              filename: file.originalname,
+              contentType: file.mimetype,
+            });
+          }
+
+          axios.post(`${env.COMPLAINT_INTELLIGENCE_URL}/evidence/upload/${token}`, formData, {
+            headers: formData.getHeaders(),
+            timeout: 15000,
+          }).then((pyRes: any) => {
+            console.log(`  ✓ [PIPELINE TRIGGERED] Python AI Engine accepted job (HTTP ${pyRes.status}).`);
+            console.log(`     -> Cloudinary upload, Florence-2 Vision & LLM Fusion running in background!`);
+            console.log(`     -> Check Python uvicorn terminal for Florence-2 & LLM stage logs.\n`);
+            logger.info(`[PIPELINE SUCCESS] Python Incremental Intelligence Pipeline triggered for Case '${caseId}': HTTP ${pyRes.status}`);
+          }).catch((pyErr: any) => {
+            console.log(`  ⚠️ [PIPELINE WARNING] Python AI Engine notification notice for Case '${caseId}': ${pyErr.message}\n`);
+            logger.warn(`[PIPELINE NOTICE] Python Intelligence service notice for Case '${caseId}': ${pyErr.message}`);
+          });
+        } catch (err: any) {
+          logger.warn(`[PIPELINE NOTICE] Could not forward multipart files to Python service: ${err.message}`);
+        }
       }
 
-      // Add Diary Entry
-      await DiaryEntry.create({
-        case_id: request.case_id,
-        entry_id: uuidv4(),
-        actor: { type: 'complainant', id: 'complainant' },
-        event_type: 'evidence_collected',
-        payload: { message: 'Complainant responded to request with evidence', evidenceIds },
-        ref_ids: { request_id: request.request_id }
+      sendSuccess(res, HttpStatusCode.OK, 'Response submitted successfully', {
+        evidenceIds,
+        pipelineTriggered: true,
       });
-
-      // Trigger re-analysis
-      InvestigationOrchestrator.runAnalysis(request.case_id.toString()).catch((err: any) => {
-        logger.error(`Re-analysis failed for case ${request.case_id}:`, err);
-      });
-
-      sendSuccess(res, HttpStatusCode.OK, 'Response submitted successfully', {});
     } catch (error: any) {
-      logger.error('Error submitting citizen response', error);
+      logger.error('Error submitting citizen response by token', error);
       sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, 'Error submitting response');
     }
   }

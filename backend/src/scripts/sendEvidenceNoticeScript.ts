@@ -1,5 +1,4 @@
 import crypto from 'crypto';
-import os from 'os';
 import mongoose from 'mongoose';
 import QRCode from 'qrcode';
 import axios from 'axios';
@@ -7,20 +6,6 @@ import env from '../config/env';
 import { NodemailerProvider } from '../shared/services/email/NodemailerProvider';
 import { EmailService } from '../shared/services/email/EmailService';
 import logger from '../config/logger';
-
-function getLocalIpAddress(): string {
-  const interfaces = os.networkInterfaces();
-  for (const name of Object.keys(interfaces)) {
-    for (const net of interfaces[name] || []) {
-      if (net.family === 'IPv4' && !net.internal) {
-        if (net.address.startsWith('10.') || net.address.startsWith('192.168.') || net.address.startsWith('172.')) {
-          return net.address;
-        }
-      }
-    }
-  }
-  return 'localhost';
-}
 
 export async function sendEvidenceNoticeForCase(
   caseId: string,
@@ -68,12 +53,8 @@ export async function sendEvidenceNoticeForCase(
   let uploadUrl = '';
   let qrCodeBase64 = '';
 
-  // Construct public frontend upload URL (uses Wi-Fi IP e.g. 10.42.76.38 so phones on same Wi-Fi can open it)
-  let publicBase = process.env.PUBLIC_EVIDENCE_UPLOAD_URL || process.env.PUBLIC_BASE_URL;
-  if (!publicBase) {
-    const localIp = getLocalIpAddress();
-    publicBase = `http://${localIp}:3000`;
-  }
+  // Construct frontend upload URL for local development environment (http://localhost:3000/citizen-response/...)
+  let publicBase = process.env.PUBLIC_EVIDENCE_UPLOAD_URL || env.FRONTEND_URL || 'http://localhost:3000';
   publicBase = publicBase.replace(/\/$/, '');
 
   try {
