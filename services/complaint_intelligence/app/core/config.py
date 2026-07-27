@@ -79,6 +79,25 @@ class Settings(BaseSettings):
     PDF_DIGITAL_CHAR_THRESHOLD: int = 20  # min non-whitespace chars to classify page as digital
     PDF_PAGE_RENDER_DPI: int = 150        # DPI for rendering scanned pages to JPEG
 
+    # ── Secure Evidence Upload ────────────────────────────────────────────────
+    EVIDENCE_UPLOAD_BASE_URL: str = "http://localhost:8001"
+    # Public-facing base URL (e.g. https://crimeos.example.com in production)
+    # Used to build upload URLs embedded in QR codes and emails.
+    # Must NOT end with a trailing slash.
+
+    UPLOAD_TOKEN_EXPIRY_DAYS: int = 0
+    # 0 = permanent (tokens never expire while case is active).
+    # Set to a positive integer to auto-expire tokens after N days.
+
+    EVIDENCE_MAX_FILE_SIZE_MB: int = 50
+    # Maximum accepted file size per upload in megabytes.
+
+    # ── Cloudinary ────────────────────────────────────────────────────────────
+    CLOUDINARY_CLOUD_NAME: str = ""
+    CLOUDINARY_API_KEY: str = ""
+    CLOUDINARY_API_SECRET: str = ""
+    CLOUDINARY_FOLDER: str = "crime-os/evidence"
+
     @property
     def redis_url(self) -> str:
         if self.REDIS_PASSWORD:

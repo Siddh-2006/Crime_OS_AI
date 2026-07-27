@@ -21,6 +21,8 @@ class JobType(str, Enum):
     CASE_UNDERSTANDING = "case_understanding"
     COMPLAINT_PROFILE = "complaint_profile"
     TEXT_INTELLIGENCE = "text_intelligence"
+    # Secure Evidence Upload System
+    EVIDENCE_UPLOADED = "evidence_uploaded"  # Dispatched by upload endpoint; runs worker + LLM fusion
 
 
 class JobStatus(str, Enum):

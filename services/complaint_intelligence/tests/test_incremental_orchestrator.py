@@ -70,7 +70,7 @@ def mock_container():
 @pytest.mark.asyncio
 async def test_register_complaint_creates_profile(mock_container):
     orchestrator = IncrementalPipelineOrchestrator(container=mock_container)
-    profile, case_cu = await orchestrator.register_complaint(
+    profile, case_cu, token_info = await orchestrator.register_complaint(
         case_id="case-100",
         complaint_text="I lost 50000 rupees to scammer via fake customer care call",
         complaint_number="COMP-001",

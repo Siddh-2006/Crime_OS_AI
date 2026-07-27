@@ -66,23 +66,32 @@ async def register_complaint(
 
     orchestrator = container.incremental_pipeline_orchestrator
     try:
-        profile, case_understanding = await orchestrator.register_complaint(
+        profile, case_understanding, token_info = await orchestrator.register_complaint(
             case_id=req.case_id,
             complaint_text=req.complaint_text,
             complaint_number=req.complaint_number,
             metadata=req.metadata,
+            skip_llm=True,
         )
-        return {
+        response: Dict[str, Any] = {
             "status": "success",
             "message": "Complaint registered successfully",
             "complaint_profile": profile.model_dump(mode="json"),
-            "case_intelligence": case_understanding.model_dump(mode="json"),
+            "case_intelligence": case_understanding.model_dump(mode="json") if case_understanding else None,
         }
+        if token_info:
+            response["upload_token"] = {
+                "token": token_info.token,
+                "upload_url": token_info.upload_url,
+                "qr_code_base64": token_info.qr_code_base64,
+            }
+        return response
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Complaint registration failed: {exc}",
         ) from exc
+
 
 
 # ─── 2. INCREMENTAL EVIDENCE UPLOAD ──────────────────────────────────────────

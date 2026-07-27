@@ -52,6 +52,14 @@ export interface EscalationEmailPayload {
   summary: string;
 }
 
+export interface EvidenceUploadNoticeEmailPayload {
+  to: string;
+  complainantName: string;
+  uploadUrl: string;
+  qrCodeBase64?: string;
+  suggestedEvidence: string[];
+}
+
 /**
  * High-level email service.
  * Uses IEmailProvider to send emails — agnostic to the underlying transport.
@@ -287,6 +295,101 @@ export class EmailService {
         </body>
         </html>
       `,
+    });
+  }
+
+  async sendEvidenceUploadNoticeEmail(payload: EvidenceUploadNoticeEmailPayload): Promise<void> {
+    logger.debug('Sending additional evidence upload notice email', { to: payload.to });
+
+    const suggestedItemsText = payload.suggestedEvidence.length > 0
+      ? payload.suggestedEvidence.map((item) => `• ${item}`).join('\n')
+      : '• Any relevant receipts, transaction records, or screenshots\n• CCTV or photo evidence if available\n• Call recordings or message logs';
+
+    const suggestedItemsHtml = payload.suggestedEvidence.length > 0
+      ? payload.suggestedEvidence.map((item) => `<li style="margin-bottom: 6px;">${item}</li>`).join('')
+      : '<li style="margin-bottom: 6px;">Any relevant receipts, transaction records, or screenshots</li><li style="margin-bottom: 6px;">CCTV or photo evidence if available</li><li style="margin-bottom: 6px;">Call recordings or message logs</li>';
+
+    const plainText = `Subject: Additional Evidence Upload Request
+
+Dear ${payload.complainantName},
+
+Based on the information available in your complaint, the following supporting evidence, if available, may assist the investigation:
+
+${suggestedItemsText}
+
+You may also upload any other photographs, videos, audio recordings, PDFs, screenshots, medical reports, or other documents relevant to your complaint.
+
+Secure Evidence Upload:
+${payload.uploadUrl}
+
+Alternatively, scan the attached QR Code to access the secure evidence upload portal.
+
+This upload link and QR Code are unique to your complaint and should not be shared with unauthorized persons.
+
+Regards,
+
+Gujarat Police
+Crime OS Intelligence Platform
+Government of Gujarat`;
+
+    const hasQr = !!payload.qrCodeBase64;
+    const attachments = hasQr
+      ? [
+          {
+            filename: 'qrcode.png',
+            content: Buffer.from(payload.qrCodeBase64!.replace(/^data:image\/\w+;base64,/, ''), 'base64'),
+            cid: 'qrcode_cid',
+            contentType: 'image/png',
+          },
+        ]
+      : undefined;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+        <div style="background: #1a237e; padding: 24px; border-radius: 8px 8px 0 0; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 22px;">Gujarat Police — Crime OS</h1>
+          <p style="color: #b0bec5; margin: 4px 0 0; font-size: 13px;">Additional Evidence Upload Request</p>
+        </div>
+        <div style="background: #ffffff; border: 1px solid #e0e0e0; padding: 24px; border-radius: 0 0 8px 8px;">
+          <p>Dear <strong>${payload.complainantName}</strong>,</p>
+          <p>Based on the information available in your complaint, the following supporting evidence, if available, may assist the investigation:</p>
+          <ul style="background: #f8f9fa; border-left: 4px solid #1a237e; padding: 16px 16px 16px 36px; border-radius: 4px; margin: 16px 0;">
+            ${suggestedItemsHtml}
+          </ul>
+          <p>You may also upload any other photographs, videos, audio recordings, PDFs, screenshots, medical reports, or other documents relevant to your complaint.</p>
+          
+          <div style="text-align: center; margin: 28px 0;">
+            <a href="${payload.uploadUrl}" style="background-color: #1a237e; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 15px;">Secure Evidence Upload Portal</a>
+            <p style="font-size: 12px; color: #666; margin-top: 8px; word-break: break-all;">Link: <a href="${payload.uploadUrl}" style="color: #1a237e;">${payload.uploadUrl}</a></p>
+          </div>
+
+          <div style="text-align: center; background: #fafafa; border: 1px dashed #bbb; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0 0 10px; font-weight: bold; font-size: 14px; color: #1a237e;">Alternatively, scan the QR Code below using your mobile phone camera:</p>
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(payload.uploadUrl)}" alt="Upload QR Code" style="width: 180px; height: 180px; border: 4px solid #ffffff; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);" />
+            <p style="font-size: 11px; color: #777; margin-top: 8px;">Scan with any mobile camera or QR scanner app</p>
+          </div>
+
+          <p style="color: #d32f2f; font-size: 12px; margin-top: 24px;">⚠️ This upload link and QR Code are unique to your complaint and should not be shared with unauthorized persons.</p>
+          
+          <div style="margin-top: 32px; border-top: 1px solid #eee; padding-top: 16px; font-size: 13px; color: #555;">
+            <p style="margin: 0;">Regards,</p>
+            <p style="margin: 4px 0 0; font-weight: bold; color: #1a237e;">Gujarat Police</p>
+            <p style="margin: 2px 0 0; color: #666;">Crime OS Intelligence Platform</p>
+            <p style="margin: 2px 0 0; color: #888; font-size: 12px;">Government of Gujarat</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    await this.provider.sendMail({
+      to: payload.to,
+      subject: 'Additional Evidence Upload Request — Gujarat Police',
+      text: plainText,
+      html: html,
+      attachments: attachments,
     });
   }
 

@@ -29,6 +29,7 @@ export class NodemailerProvider implements IEmailProvider {
       subject: options.subject,
       html: options.html,
       text: options.text,
+      attachments: options.attachments,
     });
 
     logger.info('Email sent successfully', { to: options.to, subject: options.subject });

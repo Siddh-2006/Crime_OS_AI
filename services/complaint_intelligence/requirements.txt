@@ -46,3 +46,8 @@ python-dateutil
 # ── Dev / linting (not installed in production image) ─────────────────────────
 # ruff==0.8.6
 # mypy==1.13.0
+
+# ── Secure Evidence Upload ────────────────────────────────────────────────────
+qrcode[pil]>=7.4            # QR code PNG generation (pure Python, wraps Pillow)
+python-magic-bin>=0.4.14    # Magic-byte MIME detection (libmagic binaries bundled for Windows)
+cloudinary>=2.0.0           # Cloudinary cloud storage SDK

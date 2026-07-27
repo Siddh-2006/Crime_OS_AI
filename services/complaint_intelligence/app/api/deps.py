@@ -17,11 +17,14 @@ from app.queue.interface import IQueue
 from app.queue.redis_queue import RedisQueue
 
 
-async def get_queue(
-    redis_client: Annotated[aioredis.Redis, Depends(get_redis)],
-) -> IQueue:
-    """Provides the production RedisQueue. Override in tests with MockQueue."""
-    return RedisQueue(redis_client)
+async def get_queue() -> IQueue:
+    """Provides production RedisQueue if Redis is alive, or MockQueue fallback."""
+    from app.core.redis import ping_redis, get_redis
+    from app.queue.mock_queue import MockQueue
+    if await ping_redis():
+        redis_client = await get_redis()
+        return RedisQueue(redis_client)
+    return MockQueue()
 
 
 def get_settings() -> Settings:

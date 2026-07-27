@@ -81,6 +81,12 @@ class Container:
         self._complaint_profile_repository = None
         self._evidence_profile_repository = None
         self._incremental_pipeline_orchestrator = None
+        # Secure Evidence Upload
+        self._upload_token_repository = None
+        self._evidence_record_repository = None
+        self._file_validator = None
+        self._cloudinary_service = None
+
 
     @property
     def config(self) -> Settings:
@@ -444,6 +450,55 @@ class Container:
     @incremental_pipeline_orchestrator.setter
     def incremental_pipeline_orchestrator(self, orchestrator) -> None:
         self._incremental_pipeline_orchestrator = orchestrator
+
+    # ── Secure Evidence Upload ─────────────────────────────────────────────────
+
+    @property
+    def upload_token_repository(self):
+        if self._upload_token_repository is None:
+            from app.case_understanding.upload_token_repository import MongoUploadTokenRepository
+            self._upload_token_repository = MongoUploadTokenRepository()
+        return self._upload_token_repository
+
+    @upload_token_repository.setter
+    def upload_token_repository(self, repository) -> None:
+        self._upload_token_repository = repository
+
+    @property
+    def evidence_record_repository(self):
+        if self._evidence_record_repository is None:
+            from app.case_understanding.upload_token_repository import MongoEvidenceRecordRepository
+            self._evidence_record_repository = MongoEvidenceRecordRepository()
+        return self._evidence_record_repository
+
+    @evidence_record_repository.setter
+    def evidence_record_repository(self, repository) -> None:
+        self._evidence_record_repository = repository
+
+    @property
+    def file_validator(self):
+        if self._file_validator is None:
+            from app.case_understanding.file_validator import FileValidator
+            self._file_validator = FileValidator(
+                max_size_bytes=self._cfg.EVIDENCE_MAX_FILE_SIZE_MB * 1024 * 1024
+            )
+        return self._file_validator
+
+    @file_validator.setter
+    def file_validator(self, validator) -> None:
+        self._file_validator = validator
+
+    @property
+    def cloudinary_service(self):
+        if self._cloudinary_service is None:
+            from app.case_understanding.cloudinary_service import CloudinaryService
+            self._cloudinary_service = CloudinaryService()
+        return self._cloudinary_service
+
+    @cloudinary_service.setter
+    def cloudinary_service(self, service) -> None:
+        self._cloudinary_service = service
+
 
 
 @lru_cache(maxsize=1)
