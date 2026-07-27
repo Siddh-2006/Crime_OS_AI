@@ -29,7 +29,7 @@ from app.core.container import get_container
 from app.core.florence_autostart import ensure_florence_running
 from app.core.logging import logger
 from app.llm.client import ILLMClient, OllamaLLMClient
-from app.schemas.case_context import EvidenceItem
+from app.schemas.case_context import CaseContext, EvidenceItem
 from app.schemas.case_understanding import CaseUnderstanding
 
 
@@ -184,7 +184,7 @@ async def main():
 
     # 1. Register Complaint Profile (Instant <10ms creation, defers LLM call until evidence processing)
     print("  [1/2] Registering ComplaintProfile (Fast <10ms)...")
-    complaint_profile, _ = await orchestrator.register_complaint(
+    complaint_profile, _, upload_token = await orchestrator.register_complaint(
         case_id=case_id,
         complaint_text=detailed_desc,
         complaint_number=complaint_num,

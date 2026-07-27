@@ -78,13 +78,13 @@ async def ensure_florence_running(
     except (httpx.ConnectError, httpx.TimeoutException):
         pass   # not running yet — fall through to auto-start
 
-    # ── 2. Not running — spawn it ────────────────────────────────────────────
+    # -- 2. Not running — spawn it --------------------------------------------
     if not _FLORENCE_DIR.exists():
         logger.error(
-            "[Florence] florence_service directory not found at %s — cannot auto-start.",
+            "[Florence] Directory does not exist: %s",
             _FLORENCE_DIR,
         )
-        print(f"  ❌ [Florence] Directory not found: {_FLORENCE_DIR}")
+        print(f"  [ERROR] [Florence] Directory not found: {_FLORENCE_DIR}")
         return False
 
     python_exe = _pick_python()
@@ -94,11 +94,11 @@ async def ensure_florence_running(
         "[Florence] Service NOT running. Auto-starting: %s %s",
         python_exe, app_script,
     )
-    print(f"\n  ⚡ [Florence] Service is NOT running — auto-starting...")
-    print(f"     → python : {python_exe}")
-    print(f"     → script : {app_script}")
-    print(f"     → cwd    : {_FLORENCE_DIR}")
-    print(f"     (Model will download ~450 MB on first run — please wait)\n")
+    print(f"\n  [Florence] Service is NOT running - auto-starting...")
+    print(f"     -> python : {python_exe}")
+    print(f"     -> script : {app_script}")
+    print(f"     -> cwd    : {_FLORENCE_DIR}")
+    print(f"     (Model will download ~450 MB on first run - please wait)\n")
 
     try:
         _florence_proc = subprocess.Popen(
@@ -112,11 +112,11 @@ async def ensure_florence_running(
         )
     except Exception as exc:
         logger.error("[Florence] Failed to start process: %s", exc)
-        print(f"  ❌ [Florence] Could not launch process: {exc}")
+        print(f"  [ERROR] [Florence] Could not launch process: {exc}")
         return False
 
-    # ── 3. Poll until healthy ────────────────────────────────────────────────
-    print(f"  ⏳ [Florence] Waiting up to {max_wait_seconds}s for service to become ready...")
+    # -- 3. Poll until healthy ------------------------------------------------
+    print(f"  [Florence] Waiting up to {max_wait_seconds}s for service to become ready...")
     elapsed = 0.0
     dots = 0
     async with httpx.AsyncClient(timeout=4.0) as client:
@@ -129,7 +129,7 @@ async def ensure_florence_running(
             if _florence_proc.poll() is not None:
                 out, _ = _florence_proc.communicate()
                 logger.error("[Florence] Process exited early. Output:\n%s", out)
-                print(f"\n  ❌ [Florence] Process crashed on startup. Output:\n{out[:800]}")
+                print(f"\n  [ERROR] [Florence] Process crashed on startup. Output:\n{out[:800]}")
                 return False
 
             try:
@@ -139,15 +139,15 @@ async def ensure_florence_running(
                         "[Florence] Service became ready after %.0fs at %s",
                         elapsed, florence_base_url,
                     )
-                    print(f"\n  ✅ [Florence] Service is ready! (took {elapsed:.0f}s)")
+                    print(f"\n  [SUCCESS] [Florence] Service is ready! (took {elapsed:.0f}s)")
                     return True
             except (httpx.ConnectError, httpx.TimeoutException):
-                print(f"  ⏳ [Florence] Still starting... ({elapsed:.0f}s elapsed)", end="\r")
+                print(f"  [Florence] Still starting... ({elapsed:.0f}s elapsed)", end="\r")
 
-    # ── 4. Timeout ───────────────────────────────────────────────────────────
+    # -- 4. Timeout -----------------------------------------------------------
     logger.error(
         "[Florence] Service did not become ready within %ds. "
-        "Continuing without Florence — OCR (PaddleOCR) will be used as fallback.",
+        "Continuing without Florence - OCR (PaddleOCR) will be used as fallback.",
         max_wait_seconds,
     )
     print(

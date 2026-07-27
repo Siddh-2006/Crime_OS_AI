@@ -28,6 +28,22 @@ async def get_mongo_db() -> Any:
     return _mongo_client[settings.MONGODB_DB] if _mongo_client else None
 
 
+async def ensure_mongo_indexes() -> None:
+    """Ensure B-Tree indexes on case_id and token fields across all collections for O(log N) sub-ms lookups."""
+    db = await get_mongo_db()
+    if db is None:
+        return
+    try:
+        await db["complaint_profiles"].create_index([("case_id", 1)], unique=True, background=True)
+        await db["evidence_profiles"].create_index([("case_id", 1)], background=True)
+        await db["evidence_records"].create_index([("case_id", 1)], background=True)
+        await db["upload_tokens"].create_index([("token", 1)], unique=True, background=True)
+        await db["upload_tokens"].create_index([("case_id", 1)], unique=True, background=True)
+        logger.info("MongoDB B-Tree indexes verified across all collections")
+    except Exception as exc:
+        logger.warning("Failed to create MongoDB indexes", extra={"error": str(exc)})
+
+
 async def close_mongo() -> None:
     """Close MongoDB connection pool."""
     global _mongo_client

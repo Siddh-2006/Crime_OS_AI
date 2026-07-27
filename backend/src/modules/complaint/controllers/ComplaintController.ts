@@ -10,7 +10,8 @@ export class ComplaintController {
   getUploadSignature = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const citizenId = req.user!.sub;
-      const signatureData = await this.complaintService.getUploadSignature(citizenId);
+      const caseId = req.query.caseId as string | undefined;
+      const signatureData = await this.complaintService.getUploadSignature(citizenId, caseId);
       sendSuccess(res, HttpStatusCode.OK, 'Upload signature generated successfully', signatureData);
     } catch (err) {
       next(err);

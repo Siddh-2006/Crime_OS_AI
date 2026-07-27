@@ -38,10 +38,10 @@ export class ComplaintService {
   }
 
   // ─── Direct Cloudinary Upload Parameter Generation ──────────────────────────
-  async getUploadSignature(citizenId: string): Promise<any> {
+  async getUploadSignature(citizenId: string, caseId?: string): Promise<any> {
     const timestamp = Math.round(new Date().getTime() / 1000);
     const publicId = `evidence_${uuidv4()}`;
-    const folder = `crime-os/complaints/${citizenId}`;
+    const folder = caseId ? `crime-os/evidence/${caseId}` : `crime-os/evidence/${citizenId}`;
 
     const signature = cloudinary.utils.api_sign_request(
       {

@@ -7,9 +7,17 @@ export interface IEmailProvider {
   sendMail(options: SendMailOptions): Promise<void>;
 }
 
+export interface EmailAttachment {
+  filename: string;
+  content: Buffer | string;
+  cid?: string;
+  contentType?: string;
+}
+
 export interface SendMailOptions {
   to: string;
   subject: string;
   html: string;
   text?: string;
+  attachments?: EmailAttachment[];
 }

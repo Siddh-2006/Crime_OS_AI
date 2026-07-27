@@ -19,7 +19,7 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import complaint, health, jobs, image, ocr, audio, video, pdf, case_understanding
+from app.api.routes import complaint, health, jobs, image, ocr, audio, video, pdf, case_understanding, evidence_upload
 from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import logger
@@ -34,6 +34,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         "Starting service",
         extra={"service": settings.APP_NAME, "version": settings.APP_VERSION, "env": settings.APP_ENV},
     )
+
+    # Ensure MongoDB B-Tree indexes for sub-ms queries
+    from app.core.mongo import ensure_mongo_indexes
+    await ensure_mongo_indexes()
 
     redis_ok = await ping_redis()
     if redis_ok:
@@ -103,6 +107,7 @@ def create_app() -> FastAPI:
     app.include_router(video.router)
     app.include_router(pdf.router)
     app.include_router(case_understanding.router)
+    app.include_router(evidence_upload.router)
 
     # ── Exception handlers ────────────────────────────────────────────────────
     register_exception_handlers(app)
