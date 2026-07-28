@@ -22,7 +22,7 @@ function normalizeSuggestedLegalSections(sections: unknown): ILegalSectionSugges
     if (typeof section === 'string') {
       return [{ code: section, title: section }];
     }
-    
+
     if (!section || typeof section !== 'object') return [];
 
     const candidate = section as Record<string, unknown>;
@@ -128,8 +128,8 @@ export class InvestigationOrchestrator {
   /**
    * Executes the full orchestrator loop for a given case.
    */
-  static async runAnalysis(caseId: string): Promise<any> {
-    logger.info(`[Orchestrator] ▶ Starting analysis for caseId: ${caseId}`);
+  static async runAnalysis(caseId: string, trigger: string = 'manual'): Promise<any> {
+    logger.info(`[Orchestrator] ▶ Starting analysis for caseId: ${caseId}, trigger: ${trigger}`);
 
     // 1. Facts Assembly
     logger.info(`[Orchestrator] [1/7] Assembling facts from MongoDB for caseId: ${caseId}`);
@@ -140,7 +140,7 @@ export class InvestigationOrchestrator {
     // 2. Retrieval
     const queryStr = `Blocked Steps: ${factsObject.checklist.summary.blocked}. Pending High Criticality: ${factsObject.checklist.summary.high_criticality_pending}.`;
     logger.info(`[Orchestrator] [2/7] Dispatching concurrent retrieval calls — legal agent + IO recommendation`);
-    
+
     const [legalAgentResult] = await Promise.all([
       callLegalAgent(queryStr),
       // callIoRecommendation(queryStr)
@@ -177,6 +177,7 @@ export class InvestigationOrchestrator {
     // const deepPrompt = buildDeepPrompt(factsObject, legalAgentResult, recommendationResult, confidenceBreakdown, deptWhitelist);
     const deepResponse = await deepCall(deepPrompt.system, deepPrompt.user, { jsonMode: true }) as any;
 
+
     if (!deepResponse || !deepResponse.ranked_next_steps) {
       logger.error(`[Orchestrator] [5/7] Deep model returned invalid/empty JSON. Response: ${JSON.stringify(deepResponse)?.slice(0, 200)}`);
       throw new Error(`[Orchestrator] Deep model failed to return valid JSON structure.`);
@@ -208,7 +209,7 @@ export class InvestigationOrchestrator {
     const newSnapshot = new AnalysisSnapshot({
       case_id: caseId,
       snapshot_id: uuidv4(),
-      trigger: 'manual',
+      trigger,
       facts_used: factsObject,
       ranked_next_steps,
       suspect_candidates: normalizedSuspectCandidates,
@@ -229,7 +230,7 @@ export class InvestigationOrchestrator {
       entry_id: uuidv4(),
       actor: { type: 'system', id: 'orchestrator' },
       event_type: 'analysis_run',
-      payload: { 
+      payload: {
         snapshot_id: savedSnapshot._id.toString(),
         narrative_summary: savedSnapshot.narrative_summary,
         ranked_next_steps: savedSnapshot.ranked_next_steps
@@ -260,11 +261,11 @@ export class InvestigationOrchestrator {
         existingStep.criticality = step.confidence > 0.8 ? 'high' : (step.confidence > 0.5 ? 'medium' : 'low');
         existingStep.target = step.target || existingStep.target;
         existingStep.department_entity_id = step.department_entity_id || existingStep.department_entity_id;
-        
+
         // Merge evidence needed (avoid duplicates)
         const newEvidence = step.evidence_needed || [];
         existingStep.required_evidence = Array.from(new Set([...existingStep.required_evidence, ...newEvidence]));
-        
+
         await existingStep.save();
       }
     }
@@ -273,8 +274,8 @@ export class InvestigationOrchestrator {
       const { Complaint } = await import('../../complaint/models/Complaint.model');
       const complaintDoc = await Complaint.findById(caseId);
       if (complaintDoc) {
-        const lastVersion = complaintDoc.legalSectionsHistory?.length 
-          ? complaintDoc.legalSectionsHistory[complaintDoc.legalSectionsHistory.length - 1].version 
+        const lastVersion = complaintDoc.legalSectionsHistory?.length
+          ? complaintDoc.legalSectionsHistory[complaintDoc.legalSectionsHistory.length - 1].version
           : 0;
         await Complaint.findByIdAndUpdate(caseId, {
           $push: {
@@ -304,7 +305,7 @@ export class InvestigationOrchestrator {
    */
   private static async runEscalationCheck(caseId: string, latestSnapshot: any): Promise<void> {
     logger.debug(`[Orchestrator] Running escalation check for caseId: ${caseId}`);
-    
+
     // Check if an unresolved escalation already exists
     const existing = await Escalation.findOne({ case_id: caseId, status: { $in: ['pending', 'sent'] } });
     if (existing) {
@@ -313,7 +314,7 @@ export class InvestigationOrchestrator {
     }
 
     const last3 = await AnalysisSnapshot.find({ case_id: caseId }).sort({ timestamp: -1 }).limit(3).lean();
-    
+
     let shouldEscalate = false;
     let reason = '';
 
@@ -327,10 +328,10 @@ export class InvestigationOrchestrator {
       const completedCount = s1Facts.checklist.summary.completed;
 
       const noChange = (s2Facts.evidence.summary.total === evidenceCount &&
-                        s2Facts.checklist.summary.completed === completedCount &&
-                        s3Facts.evidence.summary.total === evidenceCount &&
-                        s3Facts.checklist.summary.completed === completedCount);
-      
+        s2Facts.checklist.summary.completed === completedCount &&
+        s3Facts.evidence.summary.total === evidenceCount &&
+        s3Facts.checklist.summary.completed === completedCount);
+
       if (noChange) {
         shouldEscalate = true;
         reason = '3 consecutive analysis runs with no new evidence and no completed checklist steps.';
@@ -359,7 +360,7 @@ export class InvestigationOrchestrator {
     // Fast LLM call to draft a short summary
     const system = 'You are a police escalation agent. Draft a short 2-3 sentence summary of why this case is stuck based on the provided facts and reason.';
     const user = `Reason for escalation: ${reason}\n\nFacts:\n${JSON.stringify(factsUsed, null, 2)}\n\nDraft a concise professional summary for the Station House Officer (SHO).`;
-    
+
     let summary = '';
     try {
       summary = await fastCall(system, user) as string;
@@ -449,7 +450,7 @@ export class InvestigationOrchestrator {
       officer_authored: false,
       parent_snapshot_id: snapshotId,
     });
-    
+
     const savedSnapshot = await newSnapshot.save();
 
     await DiaryEntry.create({
@@ -457,7 +458,7 @@ export class InvestigationOrchestrator {
       entry_id: uuidv4(),
       actor: { type: 'officer', id: 'officer' },
       event_type: 'override_correction',
-      payload: { 
+      payload: {
         snapshot_id: savedSnapshot._id.toString(),
         parent_snapshot_id: snapshotId,
         correction_message: correctionMessage
@@ -481,7 +482,7 @@ export class InvestigationOrchestrator {
     logger.info(`[Orchestrator] Creating manual officer snapshot for caseId: ${caseId}`);
 
     const factsObject = await buildFactsObject(caseId);
-    
+
     // Find previous snapshot to set parent chain
     const previousSnapshot = await AnalysisSnapshot.findOne({ case_id: caseId }).sort({ timestamp: -1 });
 
@@ -499,7 +500,7 @@ export class InvestigationOrchestrator {
       officer_authored: true,
       parent_snapshot_id: previousSnapshot?._id || undefined,
     });
-    
+
     const savedSnapshot = await newSnapshot.save();
 
     await DiaryEntry.create({

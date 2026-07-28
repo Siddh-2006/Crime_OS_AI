@@ -19,7 +19,6 @@ async function refreshAnalysis() {
 
   console.log('Old snapshots and checklists cleared.');
   console.log('Running fresh AI Analysis (this will take ~10 seconds)...');
-
   try {
     const snapshot = await InvestigationOrchestrator.runAnalysis(caseId);
     console.log('✅ Analysis complete! New Snapshot ID:', snapshot.snapshot_id);

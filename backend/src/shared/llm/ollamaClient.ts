@@ -214,28 +214,28 @@ export interface OllamaCallOptions {
 // ─── Ollama API shapes ────────────────────────────────────────────────────────
 
 interface OllamaGenerateRequest {
-  model:   string;
-  prompt:  string;
+  model: string;
+  prompt: string;
   system?: string;
-  stream:  false;
+  stream: false;
   options: {
     temperature: number;
     num_predict: number;
-    num_ctx:     number;
+    num_ctx: number;
   };
 }
 
 interface OllamaGenerateResponse {
-  response:           string;
+  response: string;
   prompt_eval_count?: number;
-  eval_count?:        number;
-  total_duration?:    number; // nanoseconds
+  eval_count?: number;
+  total_duration?: number; // nanoseconds
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const FAST_MODEL    = env.OLLAMA_REQUIRED_MODELS.split(',')[0].trim(); // reads from env — stays in sync
-const FAST_DEFAULTS = { temperature: 0.2, maxTokens: 512  };
+const FAST_MODEL = env.OLLAMA_REQUIRED_MODELS.split(',')[0].trim(); // reads from env — stays in sync
+const FAST_DEFAULTS = { temperature: 0.2, maxTokens: 512 };
 const DEEP_DEFAULTS = { temperature: 0.1, maxTokens: 8192 };
 
 // Gemma 4 chat-template control token that activates extended thinking
@@ -244,25 +244,25 @@ const THINK_TOKEN = '<|think|>';
 // ─── Core Ollama request ──────────────────────────────────────────────────────
 
 async function _ollamaCall(
-  systemPrompt:  string,
-  userPrompt:    string,
-  temperature:   number,
-  maxTokens:     number,
-  thinkingMode:  boolean,
-  options:       OllamaCallOptions = {},
+  systemPrompt: string,
+  userPrompt: string,
+  temperature: number,
+  maxTokens: number,
+  thinkingMode: boolean,
+  options: OllamaCallOptions = {},
 ): Promise<string> {
 
   const finalPrompt = thinkingMode ? `${THINK_TOKEN}\n${userPrompt}` : userPrompt;
 
   const body: OllamaGenerateRequest = {
-    model:  FAST_MODEL,
+    model: FAST_MODEL,
     prompt: finalPrompt,
     system: systemPrompt,
     stream: false,
     options: {
       temperature: options.temperature ?? temperature,
-      num_predict: options.maxTokens  ?? maxTokens,
-      num_ctx:     env.OLLAMA_NUM_CTX,
+      num_predict: options.maxTokens ?? maxTokens,
+      num_ctx: env.OLLAMA_NUM_CTX,
     },
   };
 
@@ -271,8 +271,8 @@ async function _ollamaCall(
   logger.debug('[ollama] Sending request', {
     model: FAST_MODEL,
     thinkingMode,
-    temperature:  body.options.temperature,
-    num_predict:  body.options.num_predict,
+    temperature: body.options.temperature,
+    num_predict: body.options.num_predict,
   });
 
   const res = await axios.post<OllamaGenerateResponse>(
@@ -288,7 +288,7 @@ async function _ollamaCall(
     model: FAST_MODEL,
     thinkingMode,
     latencyMs,
-    promptTokens:     prompt_eval_count,
+    promptTokens: prompt_eval_count,
     completionTokens: eval_count,
     ollamaReportedMs: total_duration ? Math.round(total_duration / 1e6) : undefined,
   });
@@ -306,20 +306,20 @@ async function _ollamaCall(
 
 async function _ollamaCallJson(
   systemPrompt: string,
-  userPrompt:   string,
-  temperature:  number,
-  maxTokens:    number,
+  userPrompt: string,
+  temperature: number,
+  maxTokens: number,
   thinkingMode: boolean,
-  options:      OllamaCallOptions,
+  options: OllamaCallOptions,
 ): Promise<unknown> {
-  const raw   = await _ollamaCall(systemPrompt, userPrompt, temperature, maxTokens, thinkingMode, options);
+  const raw = await _ollamaCall(systemPrompt, userPrompt, temperature, maxTokens, thinkingMode, options);
   const clean = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
 
   try {
     return JSON.parse(clean);
   } catch {
     logger.warn('[ollama] JSON parse failed — retrying with explicit reminder');
-    const retryRaw   = await _ollamaCall(
+    const retryRaw = await _ollamaCall(
       systemPrompt,
       `${userPrompt}\n\nIMPORTANT: Return valid JSON only. No markdown, no explanation.`,
       temperature, maxTokens, thinkingMode, options,
@@ -342,8 +342,8 @@ async function _ollamaCallJson(
  */
 export async function fastCall(
   systemPrompt: string,
-  userPrompt:   string,
-  options:      OllamaCallOptions = {},
+  userPrompt: string,
+  options: OllamaCallOptions = {},
 ): Promise<string | unknown> {
   try {
     if (options.jsonMode) {
@@ -368,29 +368,29 @@ export async function fastCall(
 }
 
 /**
- * Deep lane — thinking ON (<|think|>), temp 0.1, 2048 tokens.
- * Primary: Ollama (gemma4:e2b).  Fallback: Gemini 2.5 Flash Lite with thinking budget 8192.
+ * Deep lane — thinking OFF (GPU-optimised), temp 0.1, 8192 tokens.
+ * Primary: Ollama (local GPU).  Fallback: Gemini 2.5 Flash.
  */
 export async function deepCall(
   systemPrompt: string,
-  userPrompt:   string,
-  options:      OllamaCallOptions = {},
+  userPrompt: string,
+  options: OllamaCallOptions = {},
 ): Promise<string | unknown> {
   try {
     if (options.jsonMode) {
       return await _ollamaCallJson(
         systemPrompt, userPrompt,
         DEEP_DEFAULTS.temperature, DEEP_DEFAULTS.maxTokens,
-        true, options,
+        false, options, // No <|think|> token — GPU handles speed natively
       );
     }
     return await _ollamaCall(
       systemPrompt, userPrompt,
       DEEP_DEFAULTS.temperature, DEEP_DEFAULTS.maxTokens,
-      true, options,
+      false, options, // No <|think|> token — GPU handles speed natively
     );
   } catch (ollamaErr: any) {
-    logger.warn('[ollama] deepCall failed — falling back to Gemini 2.5 Flash Lite (thinking budget: 8192)', {
+    logger.warn('[ollama] deepCall failed — falling back to Gemini 2.5 Flash', {
       error: ollamaErr?.message,
       hint: 'Ensure Ollama is running: ollama serve',
     });

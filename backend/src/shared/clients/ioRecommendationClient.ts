@@ -5,14 +5,21 @@ import logger from '../../config/logger';
 const TIMEOUT_MS = 15000; // 15s timeout
 
 /**
- * Thin client wrapper for the io-recommendation FastAPI service.
  * Handles timeouts and degrades gracefully so the orchestrator can continue.
  */
-export async function callIoRecommendation(query: string): Promise<Record<string, any>> {
+export async function callIoRecommendation(query: any): Promise<Record<string, any>> {
   try {
+    // The Python io-recommendation service expects a complex RecommendOfficersRequest
+    // (with complaint and availableOfficers). If the orchestrator is passing a simple
+    // string query to find similar cases, the Python endpoint will reject it with a 422.
+    // For now, bypass the call for simple string queries to avoid the 422 error log.
+    if (typeof query === 'string') {
+       throw new Error('Not implemented: The Python service does not yet support string-based similar case search.');
+    }
+
     const response = await axios.post(
-      `${env.IO_RECOMMENDATION_URL}/recommend`,
-      { query },
+      `${env.IO_RECOMMENDATION_URL}/recommend-officers`,
+      query, // Assuming when it's not a string, it's the correct RecommendOfficersRequest payload
       { timeout: TIMEOUT_MS }
     );
     return response.data;

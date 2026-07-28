@@ -19,6 +19,7 @@ import { Types } from 'mongoose';
 import PDFDocument from 'pdfkit';
 import { v4 as uuidv4 } from 'uuid';
 import cloudinary from '../../../config/cloudinary';
+import logger from '../../../config/logger';
 
 export class InvestigationController {
   
@@ -821,6 +822,12 @@ export class InvestigationController {
           step.proof_evidence_ids = evidenceIds;
           await step.save();
         }
+
+        // Auto-trigger a new AI analysis now that new evidence/context has arrived.
+        // Fire-and-forget — we don't block the HTTP response on this.
+        InvestigationOrchestrator.runAnalysis(thread.case_id, 'department_response').catch((err: Error) => {
+          logger.error(`[AutoTrigger] AI analysis after department response failed for case ${thread.case_id}: ${err.message}`);
+        });
       }
 
       // Log in diary

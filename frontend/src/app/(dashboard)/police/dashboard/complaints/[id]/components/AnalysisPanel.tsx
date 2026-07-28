@@ -509,8 +509,9 @@ export function AnalysisPanel({
         </div>
       </Card>
 
-      {/* Suspects + Next Steps */}
+      {/* Suspects + Next Steps — 2-col grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Suspect Candidates */}
         <Card className="flex flex-col">
           <CardHeader title="Suspect Candidates" />
           <div className="mt-3 space-y-3 overflow-y-auto max-h-[300px] pr-2">
@@ -539,63 +540,60 @@ export function AnalysisPanel({
           </div>
         </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 mt-4">
-          {/* Next Steps */}
-          <Card className="flex flex-col lg:col-span-2">
-            <CardHeader title="Ranked Next Steps" />
-            <div className="mt-3 space-y-3 overflow-y-auto max-h-[300px] pr-2">
-              {snapshot.ranked_next_steps.length === 0 ? (
-                <p className="text-sm text-neutral-400 italic">No further steps suggested.</p>
-              ) : (
-                snapshot.ranked_next_steps.map((step, idx) => (
-                  <div key={idx} className="p-3 border border-primary-100 rounded-lg bg-primary-50/30 flex gap-3 items-start">
-                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold">
-                      {idx + 1}
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-neutral-800">{safeText(step.step_id).replace(/_/g, ' ')}</p>
-                      <p className="text-xs text-neutral-600 mt-1">{safeText(step.reason)}</p>
-                      {step.evidence_needed.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {step.evidence_needed.map((ev: any) => (
-                            <span key={safeText(ev)} className="text-[9px] uppercase tracking-wider bg-white border border-neutral-200 text-neutral-500 px-1.5 py-0.5 rounded">
-                              Requires: {safeText(ev)}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+        {/* Ranked Next Steps */}
+        <Card className="flex flex-col">
+          <CardHeader title="Ranked Next Steps" />
+          <div className="mt-3 space-y-3 overflow-y-auto max-h-[300px] pr-2">
+            {snapshot.ranked_next_steps.length === 0 ? (
+              <p className="text-sm text-neutral-400 italic">No further steps suggested.</p>
+            ) : (
+              snapshot.ranked_next_steps.map((step, idx) => (
+                <div key={idx} className="p-3 border border-primary-100 rounded-lg bg-primary-50/30 flex gap-3 items-start">
+                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold">
+                    {idx + 1}
                   </div>
-                ))
-              )}
-            </div>
-          </Card>
-        </div>
-
-
-
-        {/* Correction Chat Box */}
-        <Card className="mt-auto">
-          <div className="flex items-center gap-2 mb-2">
-            <ShieldAlert className="text-orange-500 h-4 w-4" />
-            <h4 className="text-xs font-bold text-neutral-700 uppercase">Officer Override & Correction</h4>
-          </div>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={correctionMsg}
-              onChange={(e) => setCorrectionMsg(e.target.value)}
-              placeholder="Tell the AI to correct an assumption, ignore a suspect, or prioritise a step…"
-              className="flex-1 px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-              onKeyDown={(e) => e.key === 'Enter' && handleCorrect()}
-              disabled={actionLoading}
-            />
-            <Button onClick={handleCorrect} isLoading={actionLoading} disabled={!correctionMsg.trim()}>
-              <Send size={16} />
-            </Button>
+                  <div>
+                    <p className="text-sm font-bold text-neutral-800">{safeText(step.step_id).replace(/_/g, ' ')}</p>
+                    <p className="text-xs text-neutral-600 mt-1">{safeText(step.reason)}</p>
+                    {step.evidence_needed.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {step.evidence_needed.map((ev: any) => (
+                          <span key={safeText(ev)} className="text-[9px] uppercase tracking-wider bg-white border border-neutral-200 text-neutral-500 px-1.5 py-0.5 rounded">
+                            Requires: {safeText(ev)}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </Card>
       </div>
-    </div>  
-      );
+
+      {/* Officer Correction Box */}
+      <Card>
+        <div className="flex items-center gap-2 mb-2">
+          <ShieldAlert className="text-orange-500 h-4 w-4" />
+          <h4 className="text-xs font-bold text-neutral-700 uppercase">Officer Override &amp; Correction</h4>
+        </div>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={correctionMsg}
+            onChange={(e) => setCorrectionMsg(e.target.value)}
+            placeholder="Tell the AI to correct an assumption, ignore a suspect, or prioritise a step…"
+            className="flex-1 px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            onKeyDown={(e) => e.key === 'Enter' && handleCorrect()}
+            disabled={actionLoading}
+          />
+          <Button onClick={handleCorrect} isLoading={actionLoading} disabled={!correctionMsg.trim()}>
+            <Send size={16} />
+          </Button>
+        </div>
+      </Card>
+    </div>
+  );
 }
+

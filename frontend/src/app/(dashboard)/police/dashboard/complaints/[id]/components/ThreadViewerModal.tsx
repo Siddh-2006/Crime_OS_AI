@@ -43,9 +43,10 @@ export default function ThreadViewerModal({ isOpen, onClose, caseId, threadId }:
     try {
       await apiClient.post(`/cases/threads/${thread._id}/reply`, {
         content: replyText,
+        sender: 'io',
       });
       setReplyText('');
-      // refresh thread
+      // Refresh thread after reply
       const res = await apiClient.get(`/cases/${caseId}/threads`);
       const t = res.data.data.find((x: any) => x.request_id === threadId || x._id === threadId);
       setThread(t);
@@ -79,8 +80,8 @@ export default function ThreadViewerModal({ isOpen, onClose, caseId, threadId }:
             <p className="text-sm text-neutral-500">Request ID: {threadId}</p>
           </div>
           <div className="flex items-center gap-2">
-            <button 
-              onClick={handleExportPdf} 
+            <button
+              onClick={handleExportPdf}
               disabled={exporting || !thread}
               className="px-3 py-1.5 flex items-center gap-1.5 text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg transition-colors disabled:opacity-50"
             >
@@ -106,9 +107,8 @@ export default function ThreadViewerModal({ isOpen, onClose, caseId, threadId }:
                     <div className="text-xs text-neutral-400 mb-1 px-1">
                       {isIO ? 'You (IO)' : thread.department_entity_id} · {new Date(msg.timestamp).toLocaleString('en-IN')}
                     </div>
-                    <div className={`p-4 rounded-xl max-w-[85%] text-sm leading-relaxed border shadow-sm ${
-                      isIO ? 'bg-blue-600 text-white border-blue-700 rounded-br-sm' : 'bg-white text-neutral-800 border-neutral-200 rounded-bl-sm'
-                    }`}>
+                    <div className={`p-4 rounded-xl max-w-[85%] text-sm leading-relaxed border shadow-sm ${isIO ? 'bg-blue-600 text-white border-blue-700 rounded-br-sm' : 'bg-white text-neutral-800 border-neutral-200 rounded-bl-sm'
+                      }`}>
                       {msg.content}
                     </div>
                   </div>
@@ -128,7 +128,7 @@ export default function ThreadViewerModal({ isOpen, onClose, caseId, threadId }:
                 className="flex-1 resize-none bg-neutral-50 border border-neutral-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 rows={2}
               />
-              <button 
+              <button
                 onClick={handleReply}
                 disabled={!replyText.trim() || replying}
                 className="bg-blue-600 text-white px-5 rounded-lg font-semibold text-sm hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 transition-colors"
