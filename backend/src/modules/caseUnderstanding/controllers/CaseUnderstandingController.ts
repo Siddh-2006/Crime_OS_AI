@@ -30,13 +30,41 @@ export class CaseUnderstandingController {
         return;
       }
 
-      // case_id in 'cases' equals the complaint's MongoDB _id (stored as string or _id)
+      // 1. Try finding by case_id or _id directly
       let doc = await db.collection('cases').findOne({ case_id: id });
       if (!doc) {
         doc = await db.collection('cases').findOne({ _id: id as any });
       }
       if (!doc && mongoose.Types.ObjectId.isValid(id)) {
         doc = await db.collection('cases').findOne({ _id: new mongoose.Types.ObjectId(id) as any });
+      }
+      // 2. Try finding by complaint_number / overview.complaint_number
+      if (!doc) {
+        doc = await db.collection('cases').findOne({ 'overview.complaint_number': id });
+      }
+      if (!doc) {
+        doc = await db.collection('cases').findOne({ complaint_number: id });
+      }
+      // 3. Fallback: resolve complaint by complaintNumber or _id in 'complaints' collection first
+      if (!doc) {
+        const queryOr: any[] = [
+          { complaintNumber: id },
+          { _id: id as any },
+        ];
+        if (mongoose.Types.ObjectId.isValid(id)) {
+          queryOr.push({ _id: new mongoose.Types.ObjectId(id) as any });
+        }
+        const complaintDoc = await db.collection('complaints').findOne({ $or: queryOr });
+        if (complaintDoc) {
+          const complaintIdStr = complaintDoc._id.toString();
+          doc = await db.collection('cases').findOne({
+            $or: [
+              { case_id: complaintIdStr } as any,
+              { _id: complaintIdStr as any },
+              { _id: complaintDoc._id as any },
+            ],
+          });
+        }
       }
 
       if (!doc) {

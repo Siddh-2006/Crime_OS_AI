@@ -64,6 +64,11 @@ class IncrementalPipelineOrchestrator:
         if existing_profile:
             logger.info("[incremental_orchestrator] ComplaintProfile already exists", extra={"case_id": case_id})
             existing_case = await self.case_repo.get_by_id(case_id)
+            if not existing_case and not skip_llm:
+                existing_evidences = await self.evidence_profile_repo.get_all_for_case(case_id)
+                context = CaseContext.from_profiles(existing_profile, existing_evidences)
+                existing_case = await self.engine.analyze(context)
+                await self.case_repo.save(existing_case)
             token_info = await self._get_or_create_upload_token(case_id, complaint_number)
             return existing_profile, existing_case, token_info
 

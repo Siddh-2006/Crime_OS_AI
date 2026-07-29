@@ -6,6 +6,7 @@ Gemini fallback, and MockLLMClient.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from typing import Any
 import httpx
 
 from app.core.config import settings
@@ -52,7 +53,7 @@ class OllamaLLMClient(ILLMClient):
             )
 
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.GEMINI_MODEL}:generateContent?key={api_key}"
-        payload = {
+        payload: dict[str, Any] = {
             "contents": [
                 {
                     "role": "user",
@@ -107,7 +108,7 @@ class OllamaLLMClient(ILLMClient):
 
     async def generate(self, prompt: str, system_prompt: str | None = None) -> str:
         url = f"{self.base_url}/api/generate"
-        payload = {
+        payload: dict[str, Any] = {
             "model": self.model,
             "prompt": prompt,
             "stream": False,
@@ -123,7 +124,8 @@ class OllamaLLMClient(ILLMClient):
             payload["system"] = system_prompt
 
         try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
+            timeout_cfg = httpx.Timeout(float(self.timeout), connect=60.0)
+            async with httpx.AsyncClient(timeout=timeout_cfg) as client:
                 response = await client.post(url, json=payload)
                 response.raise_for_status()
                 data = response.json()
@@ -135,34 +137,37 @@ class OllamaLLMClient(ILLMClient):
                     raise LLMError("Ollama returned an empty response")
                 return result
         except httpx.HTTPStatusError as exc:
+            err_detail = str(exc) or repr(exc)
             logger.warning(
                 "Ollama HTTP error",
-                extra={"status_code": exc.response.status_code, "error": str(exc)},
+                extra={"status_code": exc.response.status_code, "error": err_detail},
             )
             if settings.GEMINI_API_KEY.strip():
                 logger.warning("Falling back to Gemini")
                 return await self._generate_with_gemini(prompt, system_prompt)
-            raise LLMError(f"Ollama server returned error status: {exc.response.status_code}")
+            raise LLMError(f"Ollama server returned error status: {exc.response.status_code} - {err_detail}")
         except httpx.RequestError as exc:
+            err_detail = str(exc) or repr(exc)
             logger.warning(
                 "Ollama communication error",
-                extra={"error": str(exc)},
+                extra={"error": err_detail},
             )
             if settings.GEMINI_API_KEY.strip():
                 logger.warning("Falling back to Gemini")
                 return await self._generate_with_gemini(prompt, system_prompt)
-            raise LLMError(f"Failed to communicate with Ollama: {exc}")
+            raise LLMError(f"Failed to communicate with Ollama: {err_detail}")
         except Exception as exc:
             if isinstance(exc, LLMError):
                 raise
+            err_detail = str(exc) or repr(exc)
             logger.warning(
                 "Ollama unexpected error",
-                extra={"error": str(exc)},
+                extra={"error": err_detail},
             )
             if settings.GEMINI_API_KEY.strip():
                 logger.warning("Falling back to Gemini")
                 return await self._generate_with_gemini(prompt, system_prompt)
-            raise LLMError(f"Unexpected error calling Ollama: {exc}")
+            raise LLMError(f"Unexpected error calling Ollama: {err_detail}")
 
 
 class MockLLMClient(ILLMClient):

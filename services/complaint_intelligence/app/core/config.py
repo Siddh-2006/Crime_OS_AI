@@ -6,13 +6,18 @@ if a required variable is missing or has the wrong type.
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_SERVICE_DIR = Path(__file__).resolve().parent.parent.parent
+_ENV_FILE = _SERVICE_DIR / ".env"
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(str(_ENV_FILE), ".env"),
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
@@ -35,8 +40,8 @@ class Settings(BaseSettings):
     REDIS_DB: int = Field(default=0, ge=0, le=15)
 
     # ── MongoDB ───────────────────────────────────────────────────────────────
-    MONGODB_URI: str = "mongodb://localhost:27017/crime_os"
-    MONGODB_DB: str = "crime_os"
+    MONGODB_URI: str = "mongodb://localhost:27017/test"
+    MONGODB_DB: str = "test"
 
     # ── Logging ───────────────────────────────────────────────────────────────
     LOG_LEVEL: str = Field(default="INFO", pattern="^(DEBUG|INFO|WARNING|ERROR|CRITICAL)$")

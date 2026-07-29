@@ -4,6 +4,7 @@ Provides connection verification and database access.
 """
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from app.core.config import settings
@@ -16,15 +17,38 @@ async def get_mongo_db() -> Any:
     """Return Motor async database instance or None if unreachable."""
     global _mongo_client
     if _mongo_client is None:
-        try:
-            from motor.motor_asyncio import AsyncIOMotorClient
-            _mongo_client = AsyncIOMotorClient(settings.MONGODB_URI, serverSelectionTimeoutMS=30000)
-            await _mongo_client.admin.command('ping')
-            logger.info("Connected to MongoDB successfully", extra={"url": settings.MONGODB_URI})
-        except Exception as exc:
-            logger.warning("MongoDB unreachable or Motor not available", extra={"error": str(exc)})
-            _mongo_client = None
-            return None
+        from motor.motor_asyncio import AsyncIOMotorClient
+        client_kwargs: dict[str, Any] = {
+            "serverSelectionTimeoutMS": 30000,
+            "connectTimeoutMS": 10000,
+        }
+        if "mongodb+srv" in settings.MONGODB_URI or "ssl=true" in settings.MONGODB_URI.lower():
+            client_kwargs["tls"] = True
+            client_kwargs["tlsAllowInvalidCertificates"] = True
+            try:
+                import certifi
+                client_kwargs["tlsCAFile"] = certifi.where()
+            except ImportError:
+                pass
+
+        for attempt in range(1, 4):
+            try:
+                client = AsyncIOMotorClient(settings.MONGODB_URI, **client_kwargs)
+                await client.admin.command('ping')
+                _mongo_client = client
+                logger.info("Connected to MongoDB successfully", extra={"url": settings.MONGODB_URI, "attempt": attempt})
+                break
+            except Exception as exc:
+                logger.warning(
+                    f"MongoDB connection attempt {attempt}/3 failed",
+                    extra={"error": str(exc), "attempt": attempt},
+                )
+                if attempt < 3:
+                    await asyncio.sleep(1.0)
+                else:
+                    _mongo_client = None
+                    return None
+
     return _mongo_client[settings.MONGODB_DB] if _mongo_client else None
 
 

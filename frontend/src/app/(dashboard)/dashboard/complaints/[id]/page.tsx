@@ -79,9 +79,12 @@ export default function CitizenComplaintDetailPage(): React.ReactElement {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    const id = params.id as string;
+
     async function fetchComplaintAndIntelligence() {
+      let foundCU = false;
       try {
-        const id = params.id as string;
         const res = await apiClient.get(API_ROUTES.COMPLAINTS.DETAIL(id));
         setComplaint(res.data.data);
 
@@ -90,6 +93,7 @@ export default function CitizenComplaintDetailPage(): React.ReactElement {
           const cuRes = await apiClient.get(API_ROUTES.CASE_UNDERSTANDING.DETAIL(id));
           if (cuRes.data?.data) {
             setCaseUnderstanding(cuRes.data.data);
+            foundCU = true;
           }
         } catch {
           // Non-blocking if case understanding not yet processed
@@ -99,8 +103,27 @@ export default function CitizenComplaintDetailPage(): React.ReactElement {
       } finally {
         setLoading(false);
       }
+
+      if (!foundCU && id) {
+        timer = setInterval(async () => {
+          try {
+            const cuRes = await apiClient.get(API_ROUTES.CASE_UNDERSTANDING.DETAIL(id));
+            if (cuRes.data?.data) {
+              setCaseUnderstanding(cuRes.data.data);
+              if (timer) clearInterval(timer);
+            }
+          } catch {
+            /* keep polling while processing */
+          }
+        }, 5000);
+      }
     }
+
     fetchComplaintAndIntelligence();
+
+    return () => {
+      if (timer) clearInterval(timer);
+    };
   }, [params.id]);
 
   if (loading) return <Loader fullPage />;
@@ -172,8 +195,28 @@ export default function CitizenComplaintDetailPage(): React.ReactElement {
       </div>
 
       {/* Single Case Understanding Engine Dashboard */}
-      {caseUnderstanding && (
+      {caseUnderstanding ? (
         <CaseUnderstandingView data={caseUnderstanding} />
+      ) : (
+        <div className="bg-gradient-to-r from-indigo-900 via-slate-900 to-purple-900 rounded-2xl p-6 text-white shadow-xl border border-indigo-500/20 relative overflow-hidden">
+          <div className="flex flex-col sm:flex-row items-center gap-5">
+            <div className="relative flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 shrink-0">
+              <div className="w-7 h-7 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin" />
+            </div>
+            <div className="flex-1 text-center sm:text-left space-y-1">
+              <div className="flex items-center justify-center sm:justify-start gap-2">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/30 text-indigo-200 border border-indigo-400/30">
+                  <span className="w-2 h-2 rounded-full bg-indigo-400 animate-ping" />
+                  AI Pipeline Active
+                </span>
+              </div>
+              <h3 className="text-lg font-bold text-white">AI Case Intelligence Analysis in Progress</h3>
+              <p className="text-xs text-indigo-200/80">
+                Our multi-modal AI engine is extracting OCR text, analyzing evidence media, detecting entities, and synthesizing 9-section Case Intelligence. This section will automatically update once complete.
+              </p>
+            </div>
+          </div>
+        </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

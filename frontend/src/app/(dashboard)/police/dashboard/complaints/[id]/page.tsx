@@ -282,11 +282,47 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
   };
 
   useEffect(() => {
-    fetchComplaint();
-    fetchSnapshot();
+    let timer: NodeJS.Timeout | null = null;
+
+    const initData = async () => {
+      await fetchComplaint();
+      await fetchSnapshot();
+    };
+
+    initData().then(() => {
+      const id = params.id as string;
+      if (id) {
+        timer = setInterval(async () => {
+          try {
+            const res = await apiClient.get(API_ROUTES.COMPLAINTS.DETAIL(id));
+            const updated = res.data.data;
+            if (updated) {
+              setComplaint(updated);
+              const ci = updated.complaintIntelligence;
+              if (ci && Object.keys(ci).length > 0 && (ci.summary || ci.crimeType || ci.m12Understanding || ci.m12CrimeClassification || ci.m3Entities)) {
+                if (timer) clearInterval(timer);
+                return;
+              }
+            }
+            const cuRes = await apiClient.get(API_ROUTES.CASE_UNDERSTANDING.DETAIL(id));
+            if (cuRes.data?.data) {
+              setCaseUnderstanding(cuRes.data.data);
+              if (timer) clearInterval(timer);
+            }
+          } catch {
+            /* polling while running */
+          }
+        }, 4000);
+      }
+    });
+
     if (user?.role === 'SHO') {
       fetchIOs();
     }
+
+    return () => {
+      if (timer) clearInterval(timer);
+    };
   }, [params.id, user]);
 
   const handleReject = async (e: React.FormEvent) => {
@@ -358,6 +394,13 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
   const isSHO = user?.role === 'SHO';
   const isLocked = complaint.status === 'FIR_REGISTERED' || complaint.status === 'CLOSED';
   const isClosed = complaint.status === 'CLOSED';
+
+  const ciData = complaint?.complaintIntelligence as any;
+  const snapData = snapshot as any;
+  const hasNonEmptyCI = ciData && Object.keys(ciData).length > 0 && (
+    !!ciData.summary || !!ciData.crimeType || !!ciData.m12Understanding || !!ciData.m12CrimeClassification || !!ciData.m3Entities
+  );
+  const isAIReady = !!(caseUnderstanding || (snapData && Object.keys(snapData).length > 0) || hasNonEmptyCI);
 
   return (
     <div className="space-y-6 overflow-x-hidden">
@@ -479,16 +522,34 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                 {label}
                 {key === 'ai' && (
                   <span className={`ml-2 text-[10px] font-extrabold px-1.5 py-0.5 rounded-md ${
-                    caseUnderstanding || complaint.complaintIntelligence || snapshot
+                    isAIReady
                       ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                       : 'bg-amber-50 text-amber-600 border border-amber-200'
                   }`}>
-                    {caseUnderstanding || complaint.complaintIntelligence || snapshot ? 'READY' : 'PENDING'}
+                    {isAIReady ? 'READY' : 'PROCESSING'}
                   </span>
                 )}
               </button>
             ))}
           </div>
+
+          {!isAIReady && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-3.5 mb-6 flex flex-wrap items-center justify-between gap-3 text-xs font-semibold shadow-sm">
+              <div className="flex items-center gap-2.5">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+                </span>
+                <span>AI Pipeline Active: Multi-modal OCR & Case Intelligence Engine is currently processing evidence for this complaint.</span>
+              </div>
+              <button
+                onClick={() => setActiveTab('ai')}
+                className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[11px] font-bold transition-colors"
+              >
+                View Live Progress →
+              </button>
+            </div>
+          )}
 
           {/* ── TAB: ORIGINAL COMPLAINT ── */}
           {activeTab === 'original' && (
@@ -718,7 +779,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
 
             const ci = complaint.complaintIntelligence as any;
             const snap = snapshot as any;
-            const hasAI = !!(ci || snap);
+            const hasAI = isAIReady;
 
             if (snapshotLoading) {
               return (
@@ -730,15 +791,25 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
 
             if (!hasAI) {
               return (
-                <Card>
-                  <div className="text-center py-12 space-y-3">
-                    <div className="text-4xl">🕓</div>
-                    <p className="text-base font-bold text-neutral-700">Not yet analyzed</p>
-                    <p className="text-sm text-neutral-500 max-w-md mx-auto leading-relaxed">
-                      This complaint hasn&apos;t been processed by the Complaint Intelligence Engine yet — it is still awaiting SHO assignment. Once assigned, AI-generated crime classification, entities, and a source-linked timeline will appear here automatically.
-                    </p>
+                <div className="bg-gradient-to-r from-indigo-900 via-slate-900 to-purple-900 rounded-2xl p-6 text-white shadow-xl border border-indigo-500/20 relative overflow-hidden my-4">
+                  <div className="flex flex-col sm:flex-row items-center gap-5">
+                    <div className="relative flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 shrink-0">
+                      <div className="w-7 h-7 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin" />
+                    </div>
+                    <div className="flex-1 text-center sm:text-left space-y-1">
+                      <div className="flex items-center justify-center sm:justify-start gap-2">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/30 text-indigo-200 border border-indigo-400/30">
+                          <span className="w-2 h-2 rounded-full bg-indigo-400 animate-ping" />
+                          AI Pipeline Active
+                        </span>
+                      </div>
+                      <h3 className="text-lg font-bold text-white">AI Case Intelligence Analysis in Progress</h3>
+                      <p className="text-xs text-indigo-200/80">
+                        The Complaint Intelligence Engine is currently extracting OCR text, analyzing evidence media, detecting entities, and synthesizing 9-section Case Intelligence. This tab will automatically update once complete.
+                      </p>
+                    </div>
                   </div>
-                </Card>
+                </div>
               );
             }
 

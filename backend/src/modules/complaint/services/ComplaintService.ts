@@ -280,15 +280,40 @@ export class ComplaintService {
       const venvPython = path.resolve(__dirname, '../../../../../services/complaint_intelligence/.venv/Scripts/python.exe');
       const pythonExec = process.platform === 'win32' && fs.existsSync(venvPython) ? venvPython : 'python';
 
+      const scriptDir = path.dirname(scriptPath);
       logger.info(`[ComplaintIntelligence] Triggering full pipeline for ${complaintNumber}`);
 
       const pyProcess = spawn(pythonExec, [scriptPath, complaintNumber], {
-        detached: true,
-        stdio: 'ignore',
-        env: { ...process.env, PYTHONUTF8: '1' }
+        cwd: scriptDir,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        env: { ...process.env, PYTHONUTF8: '1', MONGODB_DB: 'test' }
       });
 
-      pyProcess.unref();
+      pyProcess.stdout?.on('data', (data: Buffer) => {
+        const lines = data.toString('utf-8').split(/\r?\n/);
+        for (const line of lines) {
+          if (line.trim()) {
+            logger.info(`[ComplaintIntelligence] ${line}`);
+          }
+        }
+      });
+
+      pyProcess.stderr?.on('data', (data: Buffer) => {
+        const lines = data.toString('utf-8').split(/\r?\n/);
+        for (const line of lines) {
+          if (line.trim()) {
+            logger.error(`[ComplaintIntelligence Error] ${line}`);
+          }
+        }
+      });
+
+      pyProcess.on('close', (code: number) => {
+        if (code === 0) {
+          logger.info(`[ComplaintIntelligence] Pipeline completed successfully for ${complaintNumber}`);
+        } else {
+          logger.error(`[ComplaintIntelligence] Pipeline exited with code ${code} for ${complaintNumber}`);
+        }
+      });
     } catch (err: any) {
       logger.error(`[ComplaintIntelligence] Failed to trigger pipeline for ${complaintNumber}`, { error: err?.message });
     }

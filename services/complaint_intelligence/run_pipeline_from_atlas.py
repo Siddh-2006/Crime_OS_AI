@@ -45,35 +45,43 @@ async def main():
     print(f"  URI : {settings.MONGODB_URI[:45]}...")
     print(f"  DB  : {settings.MONGODB_DB}\n")
 
-    client = AsyncIOMotorClient(settings.MONGODB_URI, serverSelectionTimeoutMS=30000)
-    try:
-        await client.admin.command('ping')
-        print(f"  ✓ Connected to MongoDB Atlas cluster successfully!\n")
-    except Exception as exc:
-        print(f"  [Error] MongoDB Atlas connection failed: {exc}")
-        return
+    from app.core.mongo import get_mongo_db
+    db = await get_mongo_db()
+    if db is None:
+        print("  [Error] MongoDB Atlas connection failed.")
+        sys.exit(1)
+    print("  ✓ Connected to MongoDB Atlas cluster successfully!\n")
 
     # Auto-start Florence-2 captioning service if not already running
     await ensure_florence_running(florence_base_url=settings.FLORENCE_BASE_URL)
 
-    db = client[settings.MONGODB_DB]
+    import re
+    from bson import ObjectId
 
-    # Fetch specific complaint from Atlas 'complaints' collection
-    TARGET_ID = sys.argv[1] if len(sys.argv) > 1 else "COMP-7d3ea8bc-841a-4fe8-b543-78282832385c"
-    target_complaint = await db.complaints.find_one({"$or": [{"complaintNumber": TARGET_ID}, {"_id": TARGET_ID}]})
-    
-    if not target_complaint:
-        complaints = await db.complaints.find({}).to_list(length=10)
-        for c in complaints:
-            if c.get("complaintNumber") == TARGET_ID or str(c.get("_id")) == TARGET_ID:
-                target_complaint = c
-                break
-        if not target_complaint and complaints:
-            target_complaint = complaints[-1]  # fallback
+    raw_target = sys.argv[1] if len(sys.argv) > 1 else "COMP-7d3ea8bc-841a-4fe8-b543-78282832385c"
+    TARGET_ID = str(raw_target).strip().strip('"').strip("'")
+
+    from typing import Any
+
+    or_conditions: list[dict[str, Any]] = [
+        {"complaintNumber": TARGET_ID},
+        {"complaintNumber": {"$regex": f"^{re.escape(TARGET_ID)}$", "$options": "i"}},
+        {"_id": TARGET_ID},
+    ]
+    if ObjectId.is_valid(TARGET_ID):
+        or_conditions.append({"_id": ObjectId(TARGET_ID)})
+
+    target_complaint = None
+    for attempt in range(20):
+        target_complaint = await db.complaints.find_one({"$or": or_conditions})
+        if target_complaint:
+            break
+        if attempt < 19:
+            await asyncio.sleep(1.0)
 
     if not target_complaint:
-        print(f"  [Error] Complaint [{TARGET_ID}] not found in Atlas database.")
-        return
+        print(f"  [Error] Complaint [{TARGET_ID}] not found in Atlas database after retries.")
+        sys.exit(1)
 
     case_id = str(target_complaint.get("_id"))
     complaint_num = target_complaint.get("complaintNumber") or case_id
@@ -182,20 +190,22 @@ async def main():
     container = get_container()
     orchestrator = container.incremental_pipeline_orchestrator
 
-    # 1. Register Complaint Profile (Instant <10ms creation, defers LLM call until evidence processing)
-    print("  [1/2] Registering ComplaintProfile (Fast <10ms)...")
-    complaint_profile, _, upload_token = await orchestrator.register_complaint(
+    valid_evidences = [ev for ev in raw_evidence if isinstance(ev, dict)]
+    has_evidence = len(valid_evidences) > 0
+
+    # 1. Register Complaint Profile (Instant <10ms creation, defers LLM call if evidence items exist)
+    print("  [1/2] Registering ComplaintProfile...")
+    complaint_profile, initial_case_understanding, upload_token = await orchestrator.register_complaint(
         case_id=case_id,
         complaint_text=detailed_desc,
         complaint_number=complaint_num,
         metadata={"category": category, "short_summary": short_desc},
-        skip_llm=True,
+        skip_llm=has_evidence,
     )
     print(f"  ✓ Saved ComplaintProfile for Case ID: {case_id}")
 
     # 2. Process Evidence Items Incrementally
     print("\n  [2/2] Processing Evidence Profiles Incrementally...")
-    valid_evidences = [ev for ev in raw_evidence if isinstance(ev, dict)]
     async with httpx.AsyncClient(timeout=30, follow_redirects=True) as http_client:
         for i, ev in enumerate(valid_evidences):
             ev_id = str(ev.get("publicId") or ev.get("_id") or f"ev-{i+1}")
@@ -235,6 +245,12 @@ async def main():
         ctx = CaseContext.from_profiles(complaint_profile, all_evs)
         case_understanding = await container.case_understanding_engine.analyze(ctx)
         await container.case_repository.save(case_understanding)
+
+    # Update complaint document status in Atlas to PROCESSED
+    await db.complaints.update_one(
+        {"_id": target_complaint["_id"]},
+        {"$set": {"processingStatus": "PROCESSED", "complaintIntelligence": case_understanding.model_dump()}}
+    )
 
     # Retrieve directly from Atlas 'cases' collection to verify persistence
     atlas_saved_doc = await db.cases.find_one({"_id": case_id})
@@ -291,4 +307,8 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except Exception as exc:
+        print(f"\n  [FATAL ERROR] Pipeline execution failed: {exc}", file=sys.stderr)
+        sys.exit(1)

@@ -62,15 +62,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             "Start Redis or check REDIS_HOST/REDIS_PORT.",
         )
 
-    yield  # ── Application running ───────────────────────────────────────────
-
-    # ── Shutdown ──────────────────────────────────────────────────────────────
-    if hasattr(app.state, "worker_runner"):
-        await app.state.worker_runner.stop()
-        
-    await close_redis()
-    await close_mongo()
-    logger.info("Service stopped cleanly")
+    try:
+        yield  # ── Application running ───────────────────────────────────────────
+    finally:
+        # ── Shutdown ──────────────────────────────────────────────────────────────
+        if hasattr(app.state, "worker_runner"):
+            try:
+                await app.state.worker_runner.stop()
+            except Exception as exc:
+                logger.warning(f"Error stopping worker_runner: {exc}")
+            
+        await close_redis()
+        await close_mongo()
+        logger.info("Service stopped cleanly")
 
 
 def create_app() -> FastAPI:
