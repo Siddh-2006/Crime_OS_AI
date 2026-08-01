@@ -168,6 +168,36 @@ export class ComplaintController {
     }
   };
 
+  addPhysicalEvidence = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const uploaderId = req.user!.sub; // IO or Citizen
+      const { evidence } = req.body; // should contain isPhysical, physicalDetails
+      const ip = req.ip ?? 'unknown';
+
+      // We can use the existing addEvidence service since it accepts evidence objects.
+      const complaint = await this.complaintService.addEvidence(id, uploaderId, evidence, ip);
+      sendSuccess(res, HttpStatusCode.OK, 'Physical Evidence added successfully', complaint);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  transferEvidence = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id, evidenceId } = req.params;
+      const { targetStationEmail, manualStationName, ioChecklistStepId } = req.body;
+      const officerId = req.user!.sub;
+      const ip = req.ip ?? 'unknown';
+
+      // Transfer logic handled in service
+      await this.complaintService.transferEvidence(id, evidenceId, officerId, targetStationEmail, manualStationName, ioChecklistStepId, ip);
+      sendSuccess(res, HttpStatusCode.OK, 'Evidence transfer request dispatched', null);
+    } catch (err) {
+      next(err);
+    }
+  };
+
   closeComplaint = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params;

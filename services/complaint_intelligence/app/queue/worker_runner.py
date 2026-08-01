@@ -183,6 +183,38 @@ class AnalysisWorker:
                 trigger_llm=True,
             )
 
+            # ── [NODE.JS BRIDGE] Update the native Evidence collection ──────────
+            try:
+                from app.core.mongo import get_mongo_db
+                db = await get_mongo_db()
+                if db is not None:
+                    # Construct aiMetadata
+                    ai_meta = {
+                        "aiSummary": ev_profile.florence_description,
+                        "ocrText": ev_profile.ocr_text,
+                        "speechTranscript": ev_profile.transcript,
+                        "processingErrors": [],
+                        "fileType": ev_profile.media_type,
+                    }
+                    if ev_profile.metadata and "size_bytes" in ev_profile.metadata:
+                        ai_meta["size"] = ev_profile.metadata["size_bytes"]
+
+                    await db["evidences"].update_one(
+                        {"evidence_id": evidence_id},
+                        {
+                            "$set": {
+                                "aiMetadata": ai_meta,
+                                "processingStatus": "PROCESSED",
+                                "storage_ref": ev_profile.url,
+                            }
+                        }
+                    )
+            except Exception as sync_exc:
+                logger.warning(
+                    "[worker_runner] Failed to sync back to Node.js Evidence collection",
+                    extra={"evidence_id": evidence_id, "error": str(sync_exc)}
+                )
+            
             # Mark EvidenceRecord as completed
             try:
                 await evidence_record_repo.mark_completed(evidence_id, url=ev_profile.url)

@@ -169,17 +169,44 @@ export default function EvidenceViewerModal({ isOpen, onClose, evidence }: Evide
               <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
                 <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">AI Analysis</h3>
                 <p className="text-sm text-neutral-800 leading-relaxed">
-                  {evidence.ai_description || evidence.originalFilename || 'No description available.'}
+                  {evidence.aiMetadata?.aiSummary || evidence.originalFilename || 'No description available.'}
                 </p>
-                {evidence.ai_tags && evidence.ai_tags.length > 0 && (
+                
+                {evidence.aiMetadata?.classification && evidence.aiMetadata?.classification !== 'Unknown' && (
+                  <div className="mt-3">
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                      📊 {evidence.aiMetadata.classification} ({Math.round((evidence.aiMetadata.classificationConfidence || 0) * 100)}%)
+                    </span>
+                  </div>
+                )}
+
+                {evidence.aiMetadata?.imageTags && evidence.aiMetadata.imageTags.length > 0 && (
                   <div className="mt-3">
                     <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">Tags</h3>
                     <div className="flex flex-wrap gap-1">
-                      {evidence.ai_tags.map((tag: string) => (
+                      {evidence.aiMetadata.imageTags.map((tag: string) => (
                         <span key={tag} className="text-[10px] bg-neutral-100 text-neutral-600 px-2 py-1 rounded border border-neutral-200 font-medium">
                           #{tag}
                         </span>
                       ))}
+                    </div>
+                  </div>
+                )}
+
+                {evidence.aiMetadata?.ocrText && (
+                  <div className="mt-3">
+                    <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">OCR Text</h3>
+                    <div className="text-[10px] bg-neutral-50 p-2 rounded border border-neutral-100 max-h-32 overflow-y-auto whitespace-pre-wrap font-mono text-neutral-600">
+                      {evidence.aiMetadata.ocrText}
+                    </div>
+                  </div>
+                )}
+
+                {evidence.aiMetadata?.speechTranscript && (
+                  <div className="mt-3">
+                    <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">Audio Transcript</h3>
+                    <div className="text-[10px] bg-neutral-50 p-2 rounded border border-neutral-100 max-h-32 overflow-y-auto whitespace-pre-wrap font-mono text-neutral-600">
+                      {evidence.aiMetadata.speechTranscript}
                     </div>
                   </div>
                 )}
@@ -191,9 +218,9 @@ export default function EvidenceViewerModal({ isOpen, onClose, evidence }: Evide
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between items-center">
                     <span className="text-neutral-500">Status</span>
-                    <span className={`font-semibold ${evidence.status === 'verified' ? 'text-green-600' : evidence.status === 'rejected' ? 'text-red-600' : 'text-yellow-600'}`}>
-                      {evidence.status
-                        ? evidence.status.charAt(0).toUpperCase() + evidence.status.slice(1)
+                    <span className={`font-semibold ${evidence.processingStatus === 'PROCESSED' ? 'text-green-600' : evidence.processingStatus === 'FAILED' ? 'text-red-600' : 'text-yellow-600'}`}>
+                      {evidence.processingStatus
+                        ? evidence.processingStatus.charAt(0).toUpperCase() + evidence.processingStatus.slice(1).toLowerCase()
                         : 'Pending'}
                     </span>
                   </div>

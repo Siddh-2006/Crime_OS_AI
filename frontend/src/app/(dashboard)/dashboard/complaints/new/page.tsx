@@ -23,6 +23,13 @@ interface UploadedFile {
   originalFilename: string;
   extension: string;
   size: number;
+  isPhysical?: boolean;
+  physicalDetails?: {
+    name: string;
+    description: string;
+    locationFound: string;
+    currentLocation: string;
+  };
 }
 
 interface UploadProgress {
@@ -187,6 +194,112 @@ export default function NewComplaintPage(): React.ReactElement {
 
   // ─── Step 4: AI Review & Submission State ──────────────────────────────────
   const [declareCheck, setDeclareCheck] = useState(false);
+
+  // ─── Physical Evidence State ───────────────────────────────────────────────
+  const [isPhysicalModalOpen, setIsPhysicalModalOpen] = useState(false);
+  const [physicalData, setPhysicalData] = useState({
+    name: '',
+    description: '',
+    locationFound: '',
+    currentLocation: ''
+  });
+  const [physicalFile, setPhysicalFile] = useState<File | null>(null);
+
+  const handlePhysicalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!physicalFile) return;
+    
+    // We can use the exact same upload logic by injecting these fields later,
+    // but the easiest way is to push it to the queue and tag it after it uploads.
+    // For simplicity, we will just call a specialized processPhysicalFile:
+    await processPhysicalFile(physicalFile, physicalData);
+    
+    setIsPhysicalModalOpen(false);
+    setPhysicalData({ name: '', description: '', locationFound: '', currentLocation: '' });
+    setPhysicalFile(null);
+  };
+
+  const processPhysicalFile = async (file: File, details: any) => {
+    const fileId = `phy-${Date.now()}`;
+    const ext = file.name.split('.').pop() || '';
+    
+    setUploadProgressQueue((prev) => ({
+      ...prev,
+      [fileId]: {
+        fileName: file.name,
+        progress: 0,
+        status: 'uploading',
+        tempUrl: URL.createObjectURL(file),
+        size: file.size,
+      },
+    }));
+
+    try {
+      const res = await apiClient.get(API_ROUTES.COMPLAINTS.UPLOAD_SIGNATURE);
+      const { signature, timestamp, cloudName, apiKey } = res.data;
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('api_key', apiKey);
+      formData.append('timestamp', timestamp);
+      formData.append('signature', signature);
+      
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, true);
+      
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const percent = Math.round((e.loaded / e.total) * 100);
+          setUploadProgressQueue((prev) => ({
+            ...prev,
+            [fileId]: { ...prev[fileId], progress: percent },
+          }));
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status === 200) {
+          const response = JSON.parse(xhr.responseText);
+          const uploadedItem: UploadedFile = {
+            publicId: response.public_id,
+            secureUrl: response.secure_url,
+            resourceType: response.resource_type,
+            mimeType: file.type || 'image/jpeg',
+            originalFilename: file.name,
+            extension: ext,
+            size: response.bytes,
+            isPhysical: true,
+            physicalDetails: { ...details }
+          };
+
+          setEvidenceFiles((prev) => [...prev, uploadedItem]);
+          setUploadProgressQueue((prev) => {
+            const next = { ...prev };
+            next[fileId] = { ...next[fileId], status: 'success', progress: 100 };
+            return next;
+          });
+        } else {
+          setUploadProgressQueue((prev) => ({
+            ...prev,
+            [fileId]: { ...prev[fileId], status: 'error', error: `Upload failed: ${xhr.status}` }
+          }));
+        }
+      };
+      
+      xhr.onerror = () => {
+        setUploadProgressQueue((prev) => ({
+          ...prev,
+          [fileId]: { ...prev[fileId], status: 'error', error: 'Network error.' }
+        }));
+      };
+      
+      xhr.send(formData);
+    } catch (err: any) {
+      setUploadProgressQueue((prev) => ({
+        ...prev,
+        [fileId]: { ...prev[fileId], status: 'error', error: err.message }
+      }));
+    }
+  };
 
   // Refs for Map
   const mapRef = useRef<any>(null);
@@ -1154,6 +1267,12 @@ export default function NewComplaintPage(): React.ReactElement {
               Files upload instantly to Cloudinary storage for review
             </p>
           </div>
+          
+          <div className="flex justify-center mt-2">
+            <Button type="button" variant="secondary" onClick={() => setIsPhysicalModalOpen(true)}>
+              + Add Physical / Hardware Evidence
+            </Button>
+          </div>
 
           {/* Upload progress & completed cards */}
           {(Object.keys(uploadProgressQueue).length > 0 || evidenceFiles.length > 0) && (
@@ -1232,6 +1351,11 @@ export default function NewComplaintPage(): React.ReactElement {
                       <span className="text-[9px] font-bold text-green-600 flex items-center gap-1 mt-0.5">
                         <Check size={10} /> Cloudinary Safe
                       </span>
+                      {file.isPhysical && (
+                        <span className="inline-block bg-primary-100 text-primary-800 text-[9px] px-2 py-0.5 rounded-full mt-1 font-bold">
+                          PHYSICAL EVIDENCE
+                        </span>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -1649,6 +1773,69 @@ export default function NewComplaintPage(): React.ReactElement {
           </div>
         </Modal>
       )}
+
+      {/* Physical Evidence Modal */}
+      <Modal
+        isOpen={isPhysicalModalOpen}
+        onClose={() => setIsPhysicalModalOpen(false)}
+        title="Add Physical / Hardware Evidence"
+        size="lg"
+      >
+        <form onSubmit={handlePhysicalSubmit} className="space-y-4 p-4">
+          <Input
+            label="What is this? (Name of evidence)"
+            value={physicalData.name}
+            onChange={(e) => setPhysicalData(prev => ({ ...prev, name: e.target.value }))}
+            required
+            placeholder="e.g. Broken Hard Drive, Knife"
+          />
+          <div>
+            <label className="block text-sm font-semibold text-neutral-700 mb-1">Description</label>
+            <textarea
+              value={physicalData.description}
+              onChange={(e) => setPhysicalData(prev => ({ ...prev, description: e.target.value }))}
+              required
+              className="w-full p-2 border border-neutral-300 rounded focus:ring focus:ring-primary-300 outline-none"
+              placeholder="Detailed description of the item"
+            />
+          </div>
+          <Input
+            label="Where did you find this?"
+            value={physicalData.locationFound}
+            onChange={(e) => setPhysicalData(prev => ({ ...prev, locationFound: e.target.value }))}
+            required
+          />
+          <Input
+            label="Where is the evidence currently located?"
+            value={physicalData.currentLocation}
+            onChange={(e) => setPhysicalData(prev => ({ ...prev, currentLocation: e.target.value }))}
+            required
+          />
+          <div>
+            <label className="block text-sm font-semibold text-neutral-700 mb-1">Upload Photo of Evidence *</label>
+            <input
+              type="file"
+              accept="image/*"
+              required
+              onChange={(e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                  setPhysicalFile(e.target.files[0]);
+                }
+              }}
+              className="block w-full text-sm text-neutral-500
+                file:mr-4 file:py-2 file:px-4
+                file:rounded file:border-0
+                file:text-sm file:font-semibold
+                file:bg-primary-50 file:text-primary-700
+                hover:file:bg-primary-100"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button variant="secondary" onClick={() => setIsPhysicalModalOpen(false)}>Cancel</Button>
+            <Button type="submit">Upload Physical Evidence</Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

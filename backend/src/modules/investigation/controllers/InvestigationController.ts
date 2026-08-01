@@ -30,7 +30,7 @@ export class InvestigationController {
   static async askCopilot(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { message } = req.body;
+      const { message, language } = req.body;
       
       if (!message) {
         sendError(res, HttpStatusCode.BAD_REQUEST, {
@@ -40,7 +40,7 @@ export class InvestigationController {
         return;
       }
 
-      const response = await CopilotService.ask(id, message);
+      const response = await CopilotService.ask(id, message, language);
       sendSuccess(res, HttpStatusCode.OK, 'Copilot response generated', { response });
     } catch (error) {
       sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, {
@@ -56,6 +56,7 @@ export class InvestigationController {
   static async analyzeCase(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
+      const { language } = req.body;
 
       // Publish 'queued' to Redis immediately so state-recovery and SSE work before
       // the BullMQ worker even picks up the job.
@@ -63,7 +64,7 @@ export class InvestigationController {
 
       // Enqueue via BullMQ — the worker runs runAnalysis() in the background.
       // lockDuration on the worker is set to 25 min so the lock survives long LLM calls.
-      await AnalysisQueue.enqueueAnalyzeCase(id);
+      await AnalysisQueue.enqueueAnalyzeCase(id, language);
 
       sendSuccess(res, HttpStatusCode.OK, 'Analysis job enqueued. Connect to /analysis/progress for live updates.');
     } catch (error) {

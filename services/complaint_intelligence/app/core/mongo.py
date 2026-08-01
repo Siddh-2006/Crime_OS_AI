@@ -33,6 +33,9 @@ async def get_mongo_db() -> Any:
 
         for attempt in range(1, 4):
             try:
+                # Use short timeout for primary connection to fallback faster
+                client_kwargs["serverSelectionTimeoutMS"] = 5000 if attempt == 1 else 30000
+                
                 client = AsyncIOMotorClient(settings.MONGODB_URI, **client_kwargs)
                 await client.admin.command('ping')
                 _mongo_client = client
@@ -40,14 +43,24 @@ async def get_mongo_db() -> Any:
                 break
             except Exception as exc:
                 logger.warning(
-                    f"MongoDB connection attempt {attempt}/3 failed",
-                    extra={"error": str(exc), "attempt": attempt},
+                    f"MongoDB connection attempt {attempt}/3 failed on primary URI",
+                    extra={"error": str(exc), "attempt": attempt, "uri": settings.MONGODB_URI},
                 )
                 if attempt < 3:
                     await asyncio.sleep(1.0)
                 else:
-                    _mongo_client = None
-                    return None
+                    # Fallback to local
+                    logger.info("Falling back to local MongoDB...", extra={"uri": "mongodb://localhost:27017/crime_os"})
+                    try:
+                        client_kwargs["serverSelectionTimeoutMS"] = 30000
+                        client = AsyncIOMotorClient("mongodb://localhost:27017/crime_os", **client_kwargs)
+                        await client.admin.command('ping')
+                        _mongo_client = client
+                        logger.info("Connected to local MongoDB fallback successfully")
+                    except Exception as fallback_exc:
+                        logger.error("Failed to connect to local MongoDB fallback", extra={"error": str(fallback_exc)})
+                        _mongo_client = None
+                        return None
 
     return _mongo_client[settings.MONGODB_DB] if _mongo_client else None
 

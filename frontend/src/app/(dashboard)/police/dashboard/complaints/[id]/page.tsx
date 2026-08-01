@@ -72,6 +72,13 @@ interface Evidence {
     exif?: Record<string, any>;
     gps?: Record<string, any>;
   };
+  isPhysical?: boolean;
+  physicalDetails?: {
+    name?: string;
+    description?: string;
+    locationFound?: string;
+    currentLocation?: string;
+  };
 }
 
 interface TimelineEvent {
@@ -138,6 +145,7 @@ interface Complaint {
     m3Events?: Array<{ time?: string; description: string; sourceRef?: string }>;
     [key: string]: any;
   };
+  processingStatus?: 'PENDING' | 'PROCESSED' | 'FAILED';
 }
 
 interface IOOfficer {
@@ -164,6 +172,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
   const [ios, setIos] = useState<IOOfficer[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [assigningId, setAssigningId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Modals state
@@ -420,6 +429,19 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
           </div>
         )}
       </div>
+
+      {/* AI Processing Status */}
+      {complaint.processingStatus === 'PENDING' && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3 animate-pulse">
+          <div className="flex items-center gap-3">
+            <Loader />
+            <span className="text-sm font-bold text-blue-800">AI Analysis in Progress</span>
+          </div>
+          <p className="text-xs text-blue-600 text-center md:text-right">
+            The AI engine is currently processing the complaint, extracting metadata, and analyzing evidence...
+          </p>
+        </div>
+      )}
 
       {/* Main Info Header */}
       <div className="bg-white border border-neutral-200 rounded-xl p-5 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-3 overflow-hidden">
@@ -1376,7 +1398,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                   <Button
                     size="sm"
                     onClick={async () => {
-                      setActionLoading(true);
+                      setAssigningId(io._id);
                       try {
                         const id = params.id as string;
                         await apiClient.patch(API_ROUTES.COMPLAINTS.APPROVE(id), { assignedIO: io._id });
@@ -1385,10 +1407,11 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                       } catch (err: any) {
                         alert(err.response?.data?.message || 'Failed to approve complaint.');
                       } finally {
-                        setActionLoading(false);
+                        setAssigningId(null);
                       }
                     }}
-                    isLoading={actionLoading}
+                    isLoading={assigningId === io._id}
+                    disabled={actionLoading || (assigningId !== null && assigningId !== io._id)}
                   >
                     Assign
                   </Button>

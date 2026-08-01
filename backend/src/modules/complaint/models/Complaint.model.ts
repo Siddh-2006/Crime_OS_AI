@@ -42,6 +42,13 @@ export interface IEvidenceMetadata {
   };
   cloudinaryVersion?: string;
   checksum?: string;
+  isPhysical?: boolean;
+  physicalDetails?: {
+    name: string;
+    description: string;
+    locationFound: string;
+    currentLocation: string;
+  };
 }
 
 export interface ITimelineEvent {
@@ -157,6 +164,13 @@ const EvidenceMetadataSchema = new Schema<IEvidenceMetadata>({
   },
   cloudinaryVersion: { type: String },
   checksum: { type: String },
+  isPhysical: { type: Boolean, default: false },
+  physicalDetails: {
+    name: { type: String },
+    description: { type: String },
+    locationFound: { type: String },
+    currentLocation: { type: String }
+  }
 });
 
 const TimelineEventSchema = new Schema<ITimelineEvent>({

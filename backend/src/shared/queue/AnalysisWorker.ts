@@ -14,7 +14,7 @@ export function startAnalysisWorker(): void {
       try {
         switch (job.name) {
           case ANALYSIS_JOB_NAMES.ANALYZE_CASE:
-            await InvestigationOrchestrator.runAnalysis(job.data.caseId);
+            await InvestigationOrchestrator.runAnalysis(job.data.caseId, 'manual', job.data.language);
             break;
           default:
             logger.warn(`[AnalysisWorker] Unknown job name: ${job.name}`);

@@ -15,6 +15,15 @@ Start with:
 """
 from __future__ import annotations
 
+import sys
+if sys.version_info >= (3, 13):
+    print("\n" + "="*80)
+    print("❌ FATAL ERROR: You are running Python 3.13 (Global Environment)!")
+    print("You MUST run this using the .venv we created, which uses Python 3.12.")
+    print("Please CLOSE this terminal, and simply double-click start_all.bat")
+    print("="*80 + "\n")
+    sys.exit(1)
+
 import base64
 import io
 import logging
@@ -37,10 +46,9 @@ from importlib.machinery import ModuleSpec
 
 _fa_stub = types.ModuleType("flash_attn")
 _fa_stub.__spec__ = ModuleSpec("flash_attn", None)   # non-None spec for find_spec
-# Use setattr for dynamic attrs — avoids type checker 'no attribute' errors
-setattr(_fa_stub, "flash_attn_func", None)
-setattr(_fa_stub, "flash_attn_varlen_func", None)
-sys.modules.setdefault("flash_attn", _fa_stub)
+# Bypass the strict check_imports that crashes on missing flash_attn
+import transformers.dynamic_module_utils as _dmu
+_dmu.check_imports = lambda filename: []
 sys.modules.setdefault("flash_attn.flash_attn_interface", _fa_stub)
 
 import transformers.utils.import_utils as _tiu
@@ -158,6 +166,8 @@ def predict(req: PredictRequest) -> PredictResponse:
             images=image,
             return_tensors="pt",
         ).to(_state.device)
+        
+        inputs["pixel_values"] = inputs["pixel_values"].to(_state.model.dtype)
 
         with torch.no_grad():
             generated_ids = _state.model.generate(
@@ -169,9 +179,14 @@ def predict(req: PredictRequest) -> PredictResponse:
                 num_beams=3,
             )
 
-        generated_text = _state.processor.batch_decode(
-            generated_ids, skip_special_tokens=False
-        )[0]
+        if hasattr(_state.processor, "batch_decode"):
+            generated_text = _state.processor.batch_decode(
+                generated_ids, skip_special_tokens=False
+            )[0]
+        else:
+            generated_text = _state.processor.tokenizer.batch_decode(
+                generated_ids, skip_special_tokens=False
+            )[0]
 
         parsed = _state.processor.post_process_generation(
             generated_text,
@@ -187,6 +202,8 @@ def predict(req: PredictRequest) -> PredictResponse:
             result_text = str(raw)
 
     except Exception as exc:
+        import traceback
+        traceback.print_exc()
         logger.error("Florence inference failed", extra={"error": str(exc), "task": req.task})
         raise HTTPException(status_code=500, detail=f"Inference error: {exc}")
 

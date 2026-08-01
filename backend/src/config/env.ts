@@ -50,7 +50,7 @@ const env = cleanEnv(process.env, {
   // ── LLM — Ollama (primary, local) ────────────────────────────────────────────
   OLLAMA_BASE_URL:        str({ default: 'http://localhost:11434' }),
   OLLAMA_NUM_CTX:         num({ default: 32768 }),
-  OLLAMA_REQUIRED_MODELS: str({ default: 'gemma4:e4b' }),
+  OLLAMA_REQUIRED_MODELS: str({ default: 'gemma4:e2b' }),
 
   // ── LLM — Gemini (cloud fallback when Ollama is unavailable) ─────────────────
   GEMINI_API_KEY:   str({ default: '' }),   // set to enable Gemini fallback

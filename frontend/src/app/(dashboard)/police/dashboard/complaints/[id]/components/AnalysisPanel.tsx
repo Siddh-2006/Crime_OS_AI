@@ -387,7 +387,7 @@ export function AnalysisPanel({
             <div className="mt-4 border border-emerald-100 rounded-lg overflow-hidden shadow-sm">
               <div className="bg-emerald-50 px-4 py-2 flex items-center gap-2 border-b border-emerald-100">
                 <Scale className="text-emerald-600 h-4 w-4" />
-                <h4 className="text-xs font-bold text-emerald-900 uppercase tracking-wider">Legal Advisor</h4>
+                <h4 className="text-xs font-bold text-emerald-900 uppercase tracking-wider">Case Participant Advisor</h4>
               </div>
               <div className="p-4 bg-white space-y-4">
                 {allRecommendations.map((recommendation) => {
@@ -497,12 +497,44 @@ export function AnalysisPanel({
           {/* Confidence Breakdown */}
           {snapshot.confidence_breakdown && (
             <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100">
-              <p className="text-[10px] font-bold text-blue-800 uppercase tracking-wider mb-2">Score Breakdown</p>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                <div><p className="text-neutral-500">Evidence</p><p className="font-semibold text-neutral-800">{(snapshot.confidence_breakdown.evidence_coverage * 100).toFixed(0)}%</p></div>
-                <div><p className="text-neutral-500">Checklist</p><p className="font-semibold text-neutral-800">{(snapshot.confidence_breakdown.checklist_progress * 100).toFixed(0)}%</p></div>
-                <div><p className="text-neutral-500">Corroboration</p><p className="font-semibold text-green-600">+{(snapshot.confidence_breakdown.corroboration * 100).toFixed(0)}</p></div>
-                <div><p className="text-neutral-500">Contradiction</p><p className="font-semibold text-red-600">-{(snapshot.confidence_breakdown.contradiction_penalty * 100).toFixed(0)}</p></div>
+              <p className="text-[10px] font-bold text-blue-800 uppercase tracking-wider mb-2">Investigation Score Breakdown</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                {/* Evidence Coverage: what % of case facts are backed by evidence */}
+                <div className="space-y-1">
+                  <p className="text-neutral-500 font-medium">Evidence Coverage</p>
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex-1 bg-neutral-200 rounded-full h-1.5 overflow-hidden">
+                      <div className="h-1.5 rounded-full bg-blue-500" style={{ width: `${(snapshot.confidence_breakdown.evidence_coverage * 100).toFixed(0)}%` }} />
+                    </div>
+                    <p className="font-bold text-neutral-800 w-8 text-right">{(snapshot.confidence_breakdown.evidence_coverage * 100).toFixed(0)}%</p>
+                  </div>
+                  <p className="text-[10px] text-neutral-400 leading-tight">Facts documented by collected evidence</p>
+                </div>
+                {/* Investigation Completeness: how many standard IO steps are done */}
+                <div className="space-y-1">
+                  <p className="text-neutral-500 font-medium">Investigation Completeness</p>
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex-1 bg-neutral-200 rounded-full h-1.5 overflow-hidden">
+                      <div className="h-1.5 rounded-full bg-indigo-500" style={{ width: `${(snapshot.confidence_breakdown.checklist_progress * 100).toFixed(0)}%` }} />
+                    </div>
+                    <p className="font-bold text-neutral-800 w-8 text-right">{(snapshot.confidence_breakdown.checklist_progress * 100).toFixed(0)}%</p>
+                  </div>
+                  <p className="text-[10px] text-neutral-400 leading-tight">Required investigation steps completed</p>
+                </div>
+                {/* Corroboration: how many independent sources confirm the narrative */}
+                <div className="space-y-1">
+                  <p className="text-neutral-500 font-medium">Corroborating Sources</p>
+                  <p className="font-bold text-emerald-600 text-base">+{snapshot.confidence_breakdown.corroboration}</p>
+                  <p className="text-[10px] text-neutral-400 leading-tight">Independent witnesses / sources confirming key facts</p>
+                </div>
+                {/* Contradictions: conflicting evidence that weakens the case */}
+                <div className="space-y-1">
+                  <p className="text-neutral-500 font-medium">Contradictions Found</p>
+                  <p className={`font-bold text-base ${snapshot.confidence_breakdown.contradiction_penalty > 0 ? 'text-red-600' : 'text-neutral-400'}`}>
+                    {snapshot.confidence_breakdown.contradiction_penalty > 0 ? `⚠️ ${snapshot.confidence_breakdown.contradiction_penalty}` : '✓ None'}
+                  </p>
+                  <p className="text-[10px] text-neutral-400 leading-tight">Conflicting statements or evidence weakening the case</p>
+                </div>
               </div>
             </div>
           )}

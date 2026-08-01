@@ -4,6 +4,7 @@ import logger from '../../config/logger';
 
 export interface AnalysisJobData {
   caseId: string;
+  language?: string;
 }
 
 const analysisQueue = createQueue<AnalysisJobData>(QUEUE_NAMES.ANALYSIS);
@@ -12,9 +13,9 @@ export class AnalysisQueue {
   /**
    * Enqueues an analysis job for a given case.
    */
-  static async enqueueAnalyzeCase(caseId: string): Promise<void> {
+  static async enqueueAnalyzeCase(caseId: string, language?: string): Promise<void> {
     try {
-      await analysisQueue.add(ANALYSIS_JOB_NAMES.ANALYZE_CASE, { caseId }, {
+      await analysisQueue.add(ANALYSIS_JOB_NAMES.ANALYZE_CASE, { caseId, language }, {
         attempts: 1, // Fail fast on AI calls rather than infinitely retrying
         removeOnComplete: true,
       });

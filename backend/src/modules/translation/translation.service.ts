@@ -1,12 +1,8 @@
-import axios from 'axios';
 import env from '../../config/env';
 import logger from '../../config/logger';
+import { fastCall } from '../../shared/llm/ollamaClient';
 import { geminifast } from '../../shared/llm/geminiClient';
 import { BatchTranslateInput, TranslationItem } from './types';
-
-interface InternalTranslationResponse {
-  translations?: string[];
-}
 
 const translationCache = new Map<string, string>();
 
@@ -92,28 +88,35 @@ export class TranslationService {
     input: BatchTranslateInput,
     texts: string[],
   ): Promise<string[]> {
-    if (!env.TRANSLATION_SERVICE_URL) {
-      return this.translateWithGemini(input, texts);
-    }
-
+    // 1. Try local Ollama first
     try {
-      const response = await axios.post<InternalTranslationResponse>(
-        `${env.TRANSLATION_SERVICE_URL.replace(/\/$/, '')}/translate/batch`,
-        {
+      const sourceLanguage = LANGUAGE_NAMES[input.sourceLanguage] ?? input.sourceLanguage;
+      const targetLanguage = LANGUAGE_NAMES[input.targetLanguage] ?? input.targetLanguage;
+      
+      const result = await fastCall(
+        'You are a precise translation engine. Preserve meaning, punctuation, numbers, names, URLs, IDs, and line breaks. Return only valid JSON.',
+        JSON.stringify({
+          task: 'Translate each item and return a JSON array of strings in the same order.',
+          sourceLanguage,
+          targetLanguage,
           texts,
-          sourceLanguage: input.sourceLanguage,
-          targetLanguage: input.targetLanguage,
-        },
-        { timeout: env.TRANSLATION_TIMEOUT_MS },
+        }),
+        { jsonMode: true, temperature: 0.1, maxTokens: 4096 },
       );
 
-      if (!Array.isArray(response.data.translations)) {
-        return texts;
+      if (Array.isArray(result) && result.length === texts.length) {
+        return texts.map((text, index) => {
+          const translatedText = result[index];
+          return typeof translatedText === 'string' && translatedText.trim()
+            ? translatedText
+            : text;
+        });
       }
-
-      return texts.map((text, index) => response.data.translations?.[index] ?? text);
+      
+      logger.warn('[translation] Ollama returned invalid structure. Falling back to Gemini.');
+      return this.translateWithGemini(input, texts);
     } catch (error) {
-      logger.warn('[translation] IndicTrans service unavailable; trying Gemini fallback', {
+      logger.warn('[translation] Ollama failed. Falling back to Gemini.', {
         error: error instanceof Error ? error.message : String(error),
       });
       return this.translateWithGemini(input, texts);
@@ -125,12 +128,14 @@ export class TranslationService {
     texts: string[],
   ): Promise<string[]> {
     if (!env.GEMINI_API_KEY) {
+      logger.warn('[translation] GEMINI_API_KEY not set. Returning source text.');
       return texts;
     }
 
     try {
       const sourceLanguage = LANGUAGE_NAMES[input.sourceLanguage] ?? input.sourceLanguage;
       const targetLanguage = LANGUAGE_NAMES[input.targetLanguage] ?? input.targetLanguage;
+      
       const result = await geminifast(
         'You are a precise translation engine. Preserve meaning, punctuation, numbers, names, URLs, IDs, and line breaks. Return only valid JSON.',
         JSON.stringify({
@@ -162,6 +167,3 @@ export class TranslationService {
 }
 
 export const translationService = new TranslationService();
-
-
-

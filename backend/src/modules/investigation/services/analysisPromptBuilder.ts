@@ -21,10 +21,11 @@ const DEPT_ENTITY_ID_INSTRUCTION = (validEntityIds: string) =>
   `If it requires the complainant to provide info, set "target" to "complainant". ` +
   `Otherwise leave target blank for IO internal tasks.`;
 
-export function buildFastPrompt(facts: any, retrievedChunks: any): { system: string, user: string } {
+export function buildFastPrompt(facts: any, retrievedChunks: any, language: string = 'en'): { system: string, user: string } {
   const system = `You are a fast, efficient AI assistant helping organize investigation data.
 Your task is to take raw case facts and retrieved legal/SOP chunks and format them cleanly.
-Keep your output concise and directly address the data.`;
+Keep your output concise and directly address the data.
+IMPORTANT: You must provide your response directly in the following language code: ${language}. Do not use English unless the language code is 'en'.`;
 
   const user = `Here are the current case facts:
 ${JSON.stringify(facts, null, 2)}
@@ -43,6 +44,7 @@ export function buildDeepPrompt(
   // recommendationResult: any,
   confidenceBreakdown: ConfidenceBreakdown,
   deptEntityWhitelist: string = '(no departments available)',
+  language: string = 'en'
 ): PromptPayload {
   const system = `You are a Senior Investigative Officer AI. 
 Your job is to read case facts, SOPs (legal agent), similar historical cases (recommendations), and a computed algorithmic confidence breakdown, then generate a strict JSON response.
@@ -71,6 +73,7 @@ Only include recommended_sections when the roles include Suspect or Accused, and
 
 8. For ranked_next_steps, if a step requires an external department, set "target" to "department_entity" and "department_entity_id" to the name of the department (e.g., BANK, ISP, TELECOM). If it requires the complainant to provide info, set "target" to "complainant". Otherwise leave target blank for IO internal tasks.
 9. Do not wrap JSON in markdown \`\`\` blocks, just return raw JSON text.
+10. IMPORTANT: You must provide your textual responses (reason, title, narrative_summary, etc.) directly in the following language code: ${language}. Do not use English unless the language code is 'en'.
 
 JSON SCHEMA:
 {

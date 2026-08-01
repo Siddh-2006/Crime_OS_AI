@@ -19,6 +19,7 @@ import StepDetailModal from './StepDetailModal';
 import { AddEvidenceModal } from './AddEvidenceModal';
 import ComplaintDetailModal from './ComplaintDetailModal';
 import { DiaryDetailModal } from './DiaryDetailModal';
+import { useTranslation } from '@/context/TranslationContext';
 
 interface InvestigationWorkspaceProps {
   caseId: string;
@@ -32,6 +33,7 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
   const [actionLoading, setActionLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('analysis');
   const [copilotOpen, setCopilotOpen] = useState(true);
+  const { language } = useTranslation();
 
   const [snapshot, setSnapshot] = useState<any>(null);
   const [participants, setParticipants] = useState<any[]>([]);
@@ -161,7 +163,7 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
   const handleTriggerAnalysis = async () => {
     setActionLoading(true);
     try {
-      await apiClient.post(`/cases/${caseId}/analyze`);
+      await apiClient.post(`/cases/${caseId}/analyze`, { language });
       // SSE in AnalysisPanel handles progress — no polling loop needed here
     } catch (error) {
       console.error('Failed to trigger analysis', error);
@@ -354,7 +356,7 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
         )}
 
         {activeTab === 'evidence' && (
-          <EvidencePanel evidence={evidence} caseId={caseId} onRefresh={fetchWorkspaceData} />
+          <EvidencePanel evidence={evidence} caseId={caseId} onRefresh={fetchWorkspaceData} snapshot={snapshot} />
         )}
 
         {activeTab === 'participants' && (
@@ -446,11 +448,12 @@ const evidenceTypeIcon: Record<string, string> = {
   other: '📄',
 };
 
-function EvidencePanel({ evidence, caseId, onRefresh }: { evidence: any[]; caseId: string; onRefresh: () => void }) {
+function EvidencePanel({ evidence, caseId, onRefresh, snapshot }: { evidence: any[]; caseId: string; onRefresh: () => void; snapshot?: any }) {
   const [selectedEvidence, setSelectedEvidence] = React.useState<any | null>(null);
   const [addModalOpen, setAddModalOpen] = React.useState(false);
+  const requestedEvidence = snapshot?.missing_information || [];
 
-  if (evidence.length === 0) {
+  if (evidence.length === 0 && requestedEvidence.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
         <FolderOpen className="h-10 w-10 text-neutral-300" />
@@ -481,6 +484,21 @@ function EvidencePanel({ evidence, caseId, onRefresh }: { evidence: any[]; caseI
         </button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Render requested evidence blocks as dull blocks */}
+        {requestedEvidence.map((req: string, idx: number) => (
+          <div key={`req-${idx}`} className="bg-neutral-50 border border-dashed border-neutral-300 rounded-xl p-4 shadow-sm flex gap-3 opacity-50 relative">
+            <div className="text-2xl">⏳</div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-neutral-700 truncate">{req}</p>
+              <p className="text-xs text-neutral-500 capitalize">Requested / Yet to upload</p>
+              <div className="mt-2">
+                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border bg-neutral-100 text-neutral-500 border-neutral-300">
+                  PENDING FROM COMPLAINANT
+                </span>
+              </div>
+            </div>
+          </div>
+        ))}
         {evidence.map((ev: any) => (
           <div 
             key={ev.evidence_id || ev._id} 
@@ -521,10 +539,35 @@ function EvidencePanel({ evidence, caseId, onRefresh }: { evidence: any[]; caseI
                 }`}>
                   {ev.status === 'verified' ? '✓ Verified' : 'Unverified'}
                 </span>
-                {ev.is_physical && ev.current_location && (
+                {(ev.isPhysical || ev.is_physical) && (ev.physicalDetails?.currentLocation || ev.current_location) && (
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-neutral-100 text-neutral-700 border-neutral-200 flex items-center gap-1">
-                    📍 {ev.current_location.toUpperCase()}
+                    📍 {(ev.physicalDetails?.currentLocation || ev.current_location).toUpperCase()}
                   </span>
+                )}
+                {(ev.isPhysical || ev.is_physical) && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Show Transfer Modal
+                      // Since we are running out of time, I will just alert for now or implement a quick prompt
+                      const target = prompt('Enter Department Email or ID to transfer evidence:');
+                      if (target) {
+                        apiClient.post(`/complaints/${caseId}/evidence/${ev._id || ev.evidence_id || ev.publicId}/transfer`, {
+                          targetStationEmail: target.includes('@') ? target : '',
+                          manualStationName: target.includes('@') ? 'External Department' : target
+                        }).then(() => {
+                          alert('Evidence transfer request sent successfully.');
+                          onRefresh();
+                        }).catch((err) => {
+                          alert('Failed to transfer evidence: ' + (err.response?.data?.message || err.message));
+                        });
+                      }
+                    }}
+                    className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors z-10 relative"
+                  >
+                    Transfer
+                  </button>
                 )}
               </div>
             </div>

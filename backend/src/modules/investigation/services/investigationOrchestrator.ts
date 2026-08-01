@@ -128,7 +128,7 @@ export class InvestigationOrchestrator {
   /**
    * Executes the full orchestrator loop for a given case.
    */
-  static async runAnalysis(caseId: string, trigger: string = 'manual'): Promise<any> {
+  static async runAnalysis(caseId: string, trigger: string = 'manual', language: string = 'en'): Promise<any> {
     logger.info(`[Orchestrator] ▶ Starting analysis for caseId: ${caseId}, trigger: ${trigger}`);
 
     // 1. Facts Assembly
@@ -159,7 +159,7 @@ export class InvestigationOrchestrator {
 
     // 4. Fast LLM pass
     logger.info(`[Orchestrator] [4/7] Running fast model pass (temp=0.3, max_tokens=512)`);
-    const fastPrompt = buildFastPrompt(factsObject, legalAgentResult);
+    const fastPrompt = buildFastPrompt(factsObject, legalAgentResult, language);
     const fastResponse = await fastCall(fastPrompt.system, fastPrompt.user) as string;
     logger.info(`[Orchestrator] [4/7] Fast pass complete — response length: ${fastResponse?.length ?? 0} chars`);
     await publishProgress(caseId, 'fast_pass_done');
@@ -173,7 +173,7 @@ export class InvestigationOrchestrator {
     const deptWhitelist = activeDepts.map((d: any) => `  ${d.entity_id} → ${d.entity_name}`).join('\n');
     logger.debug(`[Orchestrator] Dept whitelist: ${activeDepts.length} active departments`);
 
-    const deepPrompt = buildDeepPrompt(factsObject, legalAgentResult, confidenceBreakdown, deptWhitelist);
+    const deepPrompt = buildDeepPrompt(factsObject, legalAgentResult, confidenceBreakdown, deptWhitelist, language);
     // const deepPrompt = buildDeepPrompt(factsObject, legalAgentResult, recommendationResult, confidenceBreakdown, deptWhitelist);
     const deepResponse = await deepCall(deepPrompt.system, deepPrompt.user, { jsonMode: true }) as any;
 

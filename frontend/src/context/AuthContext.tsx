@@ -84,7 +84,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactElemen
         // Token is invalid — clear storage (interceptor handles redirect)
         localStorage.removeItem('accessToken');
         localStorage.removeItem('user');
-        Cookies.remove('role');
+        Cookies.remove('role', { path: '/' });
         setUser(null);
       } finally {
         setIsLoading(false);
@@ -103,7 +103,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactElemen
     const { accessToken, user: citizenUser } = response.data.data!;
     localStorage.setItem('accessToken', accessToken);
     localStorage.setItem('user', JSON.stringify({ ...citizenUser, role: ROLE.USER }));
-    Cookies.set('role', ROLE.USER, { sameSite: 'strict', expires: 7 });
+    Cookies.set('role', ROLE.USER, { path: '/', sameSite: 'strict', expires: 7 });
     setUser({ ...citizenUser!, role: ROLE.USER });
   }, []);
 
@@ -116,7 +116,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactElemen
     const { accessToken, officer } = response.data.data!;
     localStorage.setItem('accessToken', accessToken);
     localStorage.setItem('user', JSON.stringify(officer));
-    Cookies.set('role', officer!.role, { sameSite: 'strict', expires: 7 });
+    Cookies.set('role', officer!.role, { path: '/', sameSite: 'strict', expires: 7 });
     setUser(officer!);
   }, []);
 
@@ -129,7 +129,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactElemen
     const { accessToken, admin } = response.data.data!;
     localStorage.setItem('accessToken', accessToken);
     localStorage.setItem('user', JSON.stringify({ ...admin, role: ROLE.ADMIN }));
-    Cookies.set('role', ROLE.ADMIN, { sameSite: 'strict', expires: 7 });
+    Cookies.set('role', ROLE.ADMIN, { path: '/', sameSite: 'strict', expires: 7 });
     setUser({ ...admin, role: ROLE.ADMIN });
   }, []);
 
@@ -151,7 +151,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactElemen
     } finally {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('user');
-      Cookies.remove('role');
+      Cookies.remove('role', { path: '/' });
       setUser(null);
     }
   }, [user]);

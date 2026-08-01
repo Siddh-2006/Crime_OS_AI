@@ -15,8 +15,6 @@
 
 import { google, gmail_v1 } from 'googleapis';
 import { v4 as uuidv4 } from 'uuid';
-import { Readable } from 'stream';
-import cloudinary from '../../../config/cloudinary';
 import env from '../../../config/env';
 import logger from '../../../config/logger';
 
@@ -47,34 +45,43 @@ function mimeToEvidenceType(mime: string): string {
   return 'document';
 }
 
-function mimeToCloudinaryResourceType(mime: string): 'image' | 'video' | 'raw' {
-  if (mime.startsWith('image/')) return 'image';
-  if (mime.startsWith('video/') || mime.startsWith('audio/')) return 'video';
-  return 'raw';
+// ─── Strip HTML tags to get plain text ─────────────────────────────────────
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .trim();
 }
 
-// ─── Extract plain-text body from a Gmail message ────────────────────────────
+// ─── Extract all text content from a Gmail message (plain + HTML fallback) ────
 
 function extractBody(payload: gmail_v1.Schema$MessagePart | undefined): string {
   if (!payload) return '';
 
-  // Direct body data on the payload itself
-  if (payload.body?.data) {
-    return Buffer.from(payload.body.data, 'base64').toString('utf-8');
-  }
+  const plainParts: string[] = [];
+  const htmlParts: string[] = [];
 
-  // Recurse through parts looking for text/plain
-  if (payload.parts) {
-    for (const part of payload.parts) {
-      if (part.mimeType === 'text/plain' && part.body?.data) {
-        return Buffer.from(part.body.data, 'base64').toString('utf-8');
-      }
-      // Nested multipart
-      const nested = extractBody(part);
-      if (nested) return nested;
+  function walk(part: gmail_v1.Schema$MessagePart) {
+    if (part.body?.data) {
+      const decoded = Buffer.from(part.body.data, 'base64').toString('utf-8');
+      if (part.mimeType === 'text/plain') plainParts.push(decoded);
+      else if (part.mimeType === 'text/html') htmlParts.push(decoded);
     }
+    for (const child of part.parts ?? []) walk(child);
   }
 
+  walk(payload);
+
+  // Prefer plain text; fall back to HTML with tags stripped.
+  // Concatenate ALL parts so that quoted original (which contains the IDs) is included.
+  if (plainParts.length > 0) return plainParts.join('\n');
+  if (htmlParts.length > 0)  return stripHtml(htmlParts.join('\n'));
   return '';
 }
 
@@ -113,34 +120,7 @@ function collectAttachmentParts(
   return results;
 }
 
-// ─── Upload a raw Buffer to Cloudinary ───────────────────────────────────────
 
-async function uploadBufferToCloudinary(
-  buffer: Buffer,
-  _filename: string,
-  mimeType: string,
-  caseId: string,
-  subfolder: 'department_responses' | 'complainant_responses',
-): Promise<{ secureUrl: string; publicId: string }> {
-  const resourceType = mimeToCloudinaryResourceType(mimeType);
-  const folder = `crime-os/${subfolder}/${caseId}`;
-
-  return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      {
-        folder,
-        public_id: `dept_${uuidv4()}`,
-        resource_type: resourceType,
-        overwrite: false,
-      },
-      (err, result) => {
-        if (err || !result) return reject(err ?? new Error('Cloudinary upload failed'));
-        resolve({ secureUrl: result.secure_url, publicId: result.public_id });
-      },
-    );
-    Readable.from(buffer).pipe(stream);
-  });
-}
 
 // ─── Core ingestion — mirrors DepartmentPortalController.respondToRequest ────
 
@@ -149,7 +129,7 @@ async function ingestResponse(opts: {
   requestId: string;
   departmentEntityId: string;
   responseContent: string;
-  attachments: Array<{ filename: string; mimeType: string; secureUrl: string; publicId: string }>;
+  attachments: Array<{ filename: string; mimeType: string; buffer?: Buffer; evidenceId?: string }>;
   sender: 'department' | 'citizen';
 }): Promise<void> {
   const { caseId, requestId, departmentEntityId, responseContent, attachments, sender } = opts;
@@ -178,14 +158,20 @@ async function ingestResponse(opts: {
   const SYSTEM_UPLOADER_ID = '000000000000000000000000';
 
   for (const att of attachments) {
-    const evidenceId = uuidv4();
+    const evidenceId = att.evidenceId || uuidv4();
     evidenceIds.push(evidenceId);
+    
+    // Store it in Node.js Evidence collection (with status: pending)
+    // The Python worker will update this document with storage_ref and aiMetadata when it finishes.
     await Evidence.create({
       case_id:            request.case_id,
       evidence_id:        evidenceId,
       type:               mimeToEvidenceType(att.mimeType),
-      storage_ref:        att.secureUrl,
-      ai_description:     `Attachment "${att.filename}" from ${sender === 'citizen' ? 'citizen' : 'department'} email response.`,
+      storage_ref:        'PENDING_UPLOAD',
+      originalFilename:   att.filename,
+      mimeType:           att.mimeType,
+      processingStatus:   'PENDING',
+      ai_description:     `Attachment "${att.filename}" from ${sender === 'citizen' ? 'citizen' : 'department'} email response. (AI Processing...)`,
       ai_tags:            [sender === 'citizen' ? 'citizen_response' : 'department_response', 'email_attachment'],
       uploader_id:        SYSTEM_UPLOADER_ID,
       status:             'verified',
@@ -304,8 +290,9 @@ export class GmailService {
     // Extract plain-text body
     const body = extractBody(msg.payload ?? undefined);
 
-    const complaintIdMatch = body.match(/complaint\s+id\s*:\s*([^\s\n\r,]+)/i);
-    const requestIdMatch = body.match(/request\s+id\s*:\s*([^\s\n\r,]+)/i);
+    const complaintIdMatch   = body.match(/complaint\s+id\s*:\s*([^\s\n\r,]+)/i);
+    const requestIdMatch     = body.match(/request\s+id\s*:\s*([^\s\n\r,]+)/i);
+    // Support both 'Reply Origin: X' (department template) and 'Responder: X' (citizen template)
     const responseOriginMatch = body.match(/(?:reply\s+origin|responder)\s*:\s*([^\s\n\r,]+)/i);
 
     if (!complaintIdMatch && !requestIdMatch) {
@@ -385,15 +372,14 @@ export class GmailService {
       return;
     }
 
-    const responseFolder = request.recipient_type === 'citizen' ? 'complainant_responses' : 'department_responses';
-  const senderType = isCitizenReply ? 'citizen' : 'department';
+    const senderType = isCitizenReply ? 'citizen' : 'department';
 
-    // Download and upload all attachments
+    // Download and process all attachments
     const uploadedAttachments: Array<{
       filename: string;
       mimeType: string;
-      secureUrl: string;
-      publicId: string;
+      buffer: Buffer;
+      evidenceId?: string;
     }> = [];
 
     const attachmentParts = collectAttachmentParts(msg.payload ?? undefined);
@@ -408,35 +394,60 @@ export class GmailService {
         if (!data) continue;
 
         const buffer = Buffer.from(data, 'base64');
-        const { secureUrl, publicId } = await uploadBufferToCloudinary(
-          buffer,
-          part.filename,
-          part.mimeType,
-          resolvedCaseId,
-          responseFolder,
-        );
-
         uploadedAttachments.push({
-          filename:  part.filename,
-          mimeType:  part.mimeType,
-          secureUrl,
-          publicId,
+          filename: part.filename,
+          mimeType: part.mimeType,
+          buffer: buffer,
         });
-
-        logger.info(`[GmailService] Uploaded attachment "${part.filename}" to Cloudinary.`);
-      } catch (attErr: any) {
-        logger.error(`[GmailService] Failed to upload attachment "${part.filename}"`, { error: attErr.message });
+      } catch (err: any) {
+        logger.error(`[GmailService] Failed to download/process attachment ${part.attachmentId}`, { error: err.message });
       }
     }
 
-    // Ingest everything into the investigation workflow
+    // --- Forward to Python AI Engine ---
+    if (uploadedAttachments.length > 0) {
+      try {
+        const FormData = require('form-data');
+        const axios = require('axios');
+        const env = require('../../config/env').default;
+        
+        // 1. Generate token
+        const tokenRes = await axios.post(`${env.COMPLAINT_INTELLIGENCE_URL}/evidence/upload-token/generate`, null, {
+          params: { case_id: resolvedCaseId }
+        });
+        const token = tokenRes.data.token;
+
+        // 2. Upload files
+        const formData = new FormData();
+        formData.append('uploader_type', senderType);
+        for (const att of uploadedAttachments) {
+          formData.append('files', att.buffer, {
+            filename: att.filename,
+            contentType: att.mimeType,
+          });
+        }
+        
+        const uploadRes = await axios.post(`${env.COMPLAINT_INTELLIGENCE_URL}/evidence/upload/${token}`, formData, {
+          headers: formData.getHeaders(),
+          timeout: 30000,
+        });
+        
+        // Attach evidenceIds back to attachments for ingestResponse
+        uploadRes.data.items.forEach((item: any, idx: number) => {
+           uploadedAttachments[idx].evidenceId = item.evidence_id;
+        });
+      } catch (err: any) {
+        logger.error(`[GmailService] Python AI upload failed: ${err.message}`, { error: err.response?.data || err.message });
+      }
+    }
+
     await ingestResponse({
-      caseId:              resolvedCaseId,
-      requestId:          request.request_id,
-      departmentEntityId: request.department_entity_id ?? (senderType === 'citizen' ? 'Complainant' : 'unknown_department'),
-      responseContent:    body,
-      attachments:        uploadedAttachments,
-      sender:             senderType,
+      caseId: resolvedCaseId,
+      requestId: request.request_id,
+      departmentEntityId: request.department_entity_id || 'unknown',
+      responseContent: body,
+      attachments: uploadedAttachments,
+      sender: senderType,
     });
 
     // Mark email as READ — prevents double-processing

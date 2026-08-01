@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Card, CardHeader } from '@/components/ui/Card';
+import { Modal } from '@/components/ui/Modal';
 import { 
   FileText, Clock, Users, ShieldAlert, GitCompare, 
   AlertTriangle, HelpCircle, FileQuestion, CheckCircle2, 
@@ -92,6 +93,7 @@ interface Props {
 
 export function CaseUnderstandingView({ data }: Props): React.ReactElement {
   const [activeTab, setActiveTab] = useState<string>('overview');
+  const [previewEvidence, setPreviewEvidence] = useState<{id: string, name: string, summary: string, extracted_information: string} | null>(null);
 
   const getPriorityBadge = (priority: string) => {
     switch (priority?.toLowerCase()) {
@@ -287,9 +289,18 @@ export function CaseUnderstandingView({ data }: Props): React.ReactElement {
                 <p className="text-sm text-neutral-500 italic">No individual evidence items analyzed.</p>
               ) : (
                 data.evidence_analysis.map((ev, idx) => (
-                  <div key={idx} className="p-4 border border-neutral-200 rounded-lg space-y-2 bg-neutral-50/50">
+                  <div 
+                    key={idx} 
+                    className="p-4 border border-neutral-200 rounded-lg space-y-2 bg-neutral-50/50 hover:bg-neutral-100 cursor-pointer transition-colors"
+                    onClick={() => setPreviewEvidence({ 
+                      id: ev.evidence_id, 
+                      name: ev.filename,
+                      summary: ev.summary,
+                      extracted_information: ev.extracted_information
+                    })}
+                  >
                     <div className="flex justify-between items-center">
-                      <span className="font-bold text-sm text-slate-900">{ev.filename} (ID: {ev.evidence_id})</span>
+                      <span className="font-bold text-sm text-slate-900">{ev.filename}</span>
                       <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-200 text-slate-800 uppercase">{ev.importance}</span>
                     </div>
                     <p className="text-xs font-semibold text-slate-700">{ev.summary}</p>
@@ -424,6 +435,57 @@ export function CaseUnderstandingView({ data }: Props): React.ReactElement {
           </Card>
         )}
       </div>
+
+      <Modal
+        isOpen={previewEvidence !== null}
+        onClose={() => setPreviewEvidence(null)}
+        title={`Evidence Preview: ${previewEvidence?.name}`}
+        size="lg"
+      >
+        {previewEvidence && (
+          <div className="flex flex-col gap-4">
+            <div className="flex justify-center items-center p-4 bg-neutral-900 rounded-lg overflow-hidden min-h-[300px]">
+              {previewEvidence.name.match(/\.(mp4|mov|webm)$/i) ? (
+                <video 
+                  src={`https://res.cloudinary.com/q9ixw3zp/video/upload/${previewEvidence.id}`} 
+                  controls 
+                  className="max-w-full max-h-[50vh] object-contain"
+                />
+              ) : previewEvidence.name.match(/\.(mp3|wav|ogg)$/i) ? (
+                <audio 
+                  src={`https://res.cloudinary.com/q9ixw3zp/video/upload/${previewEvidence.id}`} 
+                  controls 
+                  className="w-full"
+                />
+              ) : (
+                <img 
+                  src={`https://res.cloudinary.com/q9ixw3zp/image/upload/${previewEvidence.id}`} 
+                  alt={previewEvidence.name}
+                  className="max-w-full max-h-[50vh] object-contain"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                    (e.target as HTMLImageElement).parentElement!.innerHTML = '<p class="text-white text-sm">Preview not available for this file type.</p>';
+                  }}
+                />
+              )}
+            </div>
+
+            <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4">
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 mb-1">AI Summary & Visual Tags</h3>
+                <p className="text-sm text-slate-600">{previewEvidence.summary || 'No visual summary available.'}</p>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 mb-1">Extracted Content (OCR)</h3>
+                <div className="p-3 bg-white border border-slate-200 rounded text-xs text-slate-600 font-mono whitespace-pre-wrap max-h-40 overflow-y-auto">
+                  {previewEvidence.extracted_information || 'No text extracted from this media.'}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

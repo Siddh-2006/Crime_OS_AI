@@ -30,6 +30,29 @@ export interface IEvidence extends Document {
   is_physical?: boolean;
   current_location?: string;
   custody_chain?: ICustodyTransfer[];
+
+  aiMetadata?: {
+    ocrText?: string;
+    speechTranscript?: string;
+    imageTags?: string[];
+    detectedObjects?: string[];
+    faces?: string[];
+    embeddings?: number[];
+    virusScanResult?: string;
+    aiSummary?: string;
+    processingErrors?: string[];
+    classification?: string;
+    classificationConfidence?: number;
+    width?: number;
+    height?: number;
+    fileType?: string;
+    exif?: Record<string, any>;
+    gps?: Record<string, any>;
+  };
+  processingStatus?: 'PENDING' | 'PROCESSED' | 'FAILED';
+  originalFilename?: string;
+  mimeType?: string;
+  size?: number;
 }
 
 const CustodyTransferSchema = new Schema<ICustodyTransfer>({
@@ -60,7 +83,31 @@ const EvidenceSchema = new Schema<IEvidence>(
     // Physical Tracking
     is_physical:           { type: Boolean, default: false },
     current_location:      { type: String, default: 'malkhana' },
-    custody_chain:         { type: [CustodyTransferSchema], default: [] }
+    custody_chain:         { type: [CustodyTransferSchema], default: [] },
+    
+    // AI Metadata
+    processingStatus:      { type: String, enum: ['PENDING', 'PROCESSED', 'FAILED'] },
+    originalFilename:      { type: String },
+    mimeType:              { type: String },
+    size:                  { type: Number },
+    aiMetadata: {
+      ocrText: { type: String },
+      speechTranscript: { type: String },
+      imageTags: [{ type: String }],
+      detectedObjects: [{ type: String }],
+      faces: [{ type: String }],
+      embeddings: [{ type: Number }],
+      virusScanResult: { type: String },
+      aiSummary: { type: String },
+      processingErrors: [{ type: String }],
+      classification: { type: String },
+      classificationConfidence: { type: Number },
+      width: { type: Number },
+      height: { type: Number },
+      fileType: { type: String },
+      exif: { type: Schema.Types.Mixed },
+      gps: { type: Schema.Types.Mixed }
+    }
   },
   { timestamps: true, versionKey: false },
 );

@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Bot, Send, Loader2, CheckCircle2, AlertCircle, Sparkles, X } from 'lucide-react';
 import apiClient from '@/lib/axios';
 import ReactMarkdown from 'react-markdown';
+import { useTranslation } from '@/context/TranslationContext';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -103,6 +104,7 @@ export function CopilotSidebar({ caseId, onStateChangeApplied, onClose }: Copilo
   const [loading, setLoading] = useState(false);
   const [applyingIdx, setApplyingIdx] = useState<number | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const { language } = useTranslation();
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -117,7 +119,10 @@ export function CopilotSidebar({ caseId, onStateChangeApplied, onClose }: Copilo
     setLoading(true);
 
     try {
-      const res = await apiClient.post(`/cases/${caseId}/copilot/ask`, { message: trimmed });
+      const res = await apiClient.post(`/cases/${caseId}/copilot/ask`, { 
+        message: trimmed,
+        language
+      });
       const rawText: string = res.data?.data?.response ?? 'No response.';
       const { content, proposal } = parseAssistantMessage(rawText);
       setMessages(prev => [...prev, { role: 'assistant', content, proposal }]);

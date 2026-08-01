@@ -249,23 +249,20 @@ export class EmailService {
             <h2 style="color: #1a237e;">Information Required for Case ${payload.caseId}</h2>
             <p>Dear ${payload.name},</p>
             <div style="background: white; border: 1px solid #ccc; padding: 20px; white-space: pre-wrap;">${payload.content}</div>
-            <br/>
-            <p>Please reply to this email with the requested information.</p>
-            <div style="background: #fff8e1; border: 2px solid #f9a825; border-radius: 8px; padding: 16px; margin-top: 24px; font-family: monospace; font-size: 14px; color: #bf360c;">
-              Complaint ID: ${payload.caseId}<br />
-              Request ID: ${payload.requestId}
+            <div style="background: #fff8e1; border: 2px solid #f9a825; border-radius: 8px; padding: 16px; margin-top: 24px;">
+              <p style="margin: 0 0 8px; font-weight: bold; color: #e65100; font-size: 14px;">
+                ⚠️ IMPORTANT — Include these lines at the very top of your reply:
+              </p>
+              <div style="background: #fff3e0; border: 1px dashed #fb8c00; padding: 10px 14px; border-radius: 4px; font-family: monospace; font-size: 14px; color: #bf360c; font-weight: bold;">
+                Complaint ID: ${payload.caseId}<br />
+                Request ID: ${payload.requestId}<br />
+                Reply Origin: complainant
+              </div>
+              <p style="margin: 8px 0 0; color: #555; font-size: 12px;">
+                These lines let our system automatically link your response to the correct case.
+                Attach any supporting documents directly to your reply.
+              </p>
             </div>
-            <p style="color: #666; font-size: 12px; margin-top: 24px;">
-              Attach any supporting documents directly to your reply. Include both IDs and the responder type in your response so our system can match it automatically.
-            </p>
-            <div style="background: #fff8e1; border: 2px solid #f9a825; border-radius: 8px; padding: 16px; margin-top: 24px; font-family: monospace; font-size: 14px; color: #bf360c;">
-              Complaint ID: ${payload.caseId}<br />
-              Request ID: ${payload.requestId}<br />
-              Responder: complainant
-            </div>
-            <p style="color: #666; font-size: 12px; margin-top: 24px;">
-              Attach any supporting documents directly to your reply. Include both IDs and the responder type in your response so our system can match it automatically.
-            </p>
             <p style="color: #666; font-size: 12px; margin-top: 32px;">Gujarat Police — Serving with Integrity | This is a system-generated email.</p>
           </div>
         </body>

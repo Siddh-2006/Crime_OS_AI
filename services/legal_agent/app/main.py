@@ -17,20 +17,30 @@ from legal_rag.qdrant_store import LegalQdrantStore
 from legal_rag.models import EmbeddedDocumentRecord
 from ingestion.schemas import DeptRegistryRecord
 
-app = FastAPI(title="Legal Agent API")
+from contextlib import asynccontextmanager
 
-# ── Shared singletons ─────────────────────────────────────────────────────────
-# BGEEmbedder tries sentence-transformers on first use.
-# If not installed, it automatically falls back to NomicEmbedder (llama.cpp).
-# The _resolve() call here forces the check at startup so the log appears
-# immediately rather than on the first incoming request.
-print("[app/main] Initialising embedder — checking for sentence-transformers (BGE)...", file=sys.stderr)
-_embedder_config = BGEEmbeddingConfig()
-embedder = BGEEmbedder(config=_embedder_config)
-embedder._resolve()   # trigger the BGE-vs-Nomic decision at startup
+embedder = None
+retriever = None
+store = None
 
-retriever = LegalRetriever(embedder=embedder)
-store     = LegalQdrantStore()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global embedder, retriever, store
+    # ── Shared singletons ─────────────────────────────────────────────────────────
+    # BGEEmbedder tries sentence-transformers on first use.
+    # If not installed, it automatically falls back to NomicEmbedder (llama.cpp).
+    # The _resolve() call here forces the check at startup so the log appears
+    # immediately rather than on the first incoming request.
+    print("[app/main] Initialising embedder — checking for sentence-transformers (BGE)...", file=sys.stderr)
+    _embedder_config = BGEEmbeddingConfig()
+    embedder = BGEEmbedder(config=_embedder_config)
+    embedder._resolve()   # trigger the BGE-vs-Nomic decision at startup
+
+    store     = LegalQdrantStore()
+    retriever = LegalRetriever(embedder=embedder, store=store)
+    yield
+
+app = FastAPI(title="Legal Agent API", lifespan=lifespan)
 
 
 # ─── Copilot endpoint (unchanged) ────────────────────────────────────────────

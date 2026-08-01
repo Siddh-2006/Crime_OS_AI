@@ -56,6 +56,18 @@ router.post(
   validate(addEvidenceSchema),
   complaintController.addEvidence,
 );
+router.post(
+  '/:id/physical-evidence',
+  authenticate,
+  authorize(Role.USER, Role.IO),
+  complaintController.addPhysicalEvidence,
+);
+router.post(
+  '/:id/evidence/:evidenceId/transfer',
+  authenticate,
+  authorize(Role.IO),
+  complaintController.transferEvidence,
+);
 
 // ─── Police Station (SHO & IO Shared) Routes ─────────────────────────────────
 router.get(

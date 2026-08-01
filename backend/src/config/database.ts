@@ -19,11 +19,16 @@ export async function connectDatabase(): Promise<void> {
     logger.warn('MongoDB connection lost');
   });
 
-  await mongoose.connect(env.MONGODB_URI, {
-    serverSelectionTimeoutMS: 30000,
-    connectTimeoutMS: 30000,
-    socketTimeoutMS: 45000,
-  });
+  try {
+    await mongoose.connect(env.MONGODB_URI, {
+      serverSelectionTimeoutMS: 10000,
+      connectTimeoutMS: 15000,
+      socketTimeoutMS: 45000,
+    });
+  } catch (err) {
+    logger.error('Failed to connect to MongoDB. Is your IP whitelisted in Atlas?', { error: (err as Error).message });
+    throw err;
+  }
 }
 
 export async function disconnectDatabase(): Promise<void> {

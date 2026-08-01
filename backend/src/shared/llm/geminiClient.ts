@@ -1,17 +1,10 @@
-/**
+﻿/**
  * geminiClient.ts
  *
  * Cloud fallback LLM client using Google Gemini via @google/genai.
- * Only invoked when Ollama is unreachable.
  *
- * Model: gemini-2.5-flash-lite (configurable via GEMINI_MODEL env var)
- *
- * Lane mapping:
- *   fastCall → temperature 1.0, no thinking budget (fast, cheap)
- *   deepCall → temperature 1.0, thinking budget 8192 tokens (Gemini's built-in reasoning)
- *
- * Requires GEMINI_API_KEY in env. If the key is empty, all calls throw
- * immediately so the caller can surface a clear error.
+ * Supports multiple API keys provided as a comma-separated list in GEMINI_API_KEY.
+ * It will loop through the keys on failure to ensure maximum availability.
  */
 
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from '@google/genai';
@@ -19,24 +12,21 @@ import env from '../../config/env';
 import logger from '../../config/logger';
 import type { OllamaCallOptions } from './ollamaClient';
 
-// ─── Singleton client ─────────────────────────────────────────────────────────
+let _keys: string[] = [];
+let _currentKeyIndex = 0;
 
-let _client: GoogleGenAI | null = null;
-
-function getClient(): GoogleGenAI {
-  if (!_client) {
+function getKeys(): string[] {
+  if (_keys.length === 0) {
     if (!env.GEMINI_API_KEY) {
-      throw new Error(
-        '[gemini] GEMINI_API_KEY is not set. ' +
-        'Add it to .env to enable the Gemini cloud fallback.',
-      );
+      throw new Error('[gemini] GEMINI_API_KEY is not set. Add it to .env to enable the Gemini cloud fallback.');
     }
-    _client = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
+    _keys = env.GEMINI_API_KEY.split(',').map(k => k.trim()).filter(Boolean);
+    if (_keys.length === 0) {
+      throw new Error('[gemini] No valid keys found in GEMINI_API_KEY.');
+    }
   }
-  return _client;
+  return _keys;
 }
-
-// ─── Safety settings (permissive for police investigation context) ────────────
 
 const SAFETY_SETTINGS = [
   { category: HarmCategory.HARM_CATEGORY_HARASSMENT,        threshold: HarmBlockThreshold.BLOCK_NONE },
@@ -45,20 +35,14 @@ const SAFETY_SETTINGS = [
   { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
 ];
 
-// ─── Core call ────────────────────────────────────────────────────────────────
-
 async function _geminiCall(
   systemPrompt: string,
   userPrompt:   string,
   lane:         'fast' | 'deep',
   options:      OllamaCallOptions = {},
 ): Promise<string> {
-  const ai    = getClient();
+  const allKeys = getKeys();
   const model = env.GEMINI_MODEL;
-
-  // Deep lane uses Gemini's thinking capability (reasoning tokens)
-  // Only enable thinking for the deep lane.
-  // Sending thinkingBudget: 0 to flash-lite models causes 400 INVALID_ARGUMENT.
   const thinkingBudget = lane === 'deep' ? 8192 : undefined;
 
   logger.info('[gemini] Sending request', {
@@ -66,41 +50,59 @@ async function _geminiCall(
     model,
     thinking: lane === 'deep' ? 'enabled (budget: 8192)' : 'disabled',
     jsonMode: options.jsonMode ?? false,
+    keysAvailable: allKeys.length,
   });
 
-  const t0 = Date.now();
+  let lastError: any;
 
-  const response = await ai.models.generateContent({
-    model,
-    contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-    config: {
-      systemInstruction: systemPrompt,
-      temperature: options.temperature ?? 1.0,
-      ...(thinkingBudget !== undefined
-        ? { thinkingConfig: { thinkingBudget } }
-        : {}),
-      safetySettings: SAFETY_SETTINGS,
-    },
-  });
+  for (let i = 0; i < allKeys.length; i++) {
+    const attemptIndex = (_currentKeyIndex + i) % allKeys.length;
+    const apiKey = allKeys[attemptIndex];
+    const ai = new GoogleGenAI({ apiKey });
 
-  const latencyMs = Date.now() - t0;
-  const text      = response.text ?? '';
-  const usage     = (response as any).usageMetadata;
+    const t0 = Date.now();
+    try {
+      logger.debug(`[gemini] Attempting call with key index ${attemptIndex}`);
+      const response = await ai.models.generateContent({
+        model,
+        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+        config: {
+          systemInstruction: systemPrompt,
+          temperature: options.temperature ?? 1.0,
+          ...(thinkingBudget !== undefined ? { thinkingConfig: { thinkingBudget } } : {}),
+          safetySettings: SAFETY_SETTINGS,
+        },
+      });
 
-  logger.info('[gemini] Call complete', {
-    lane,
-    model,
-    latencyMs,
-    promptTokens:     usage?.promptTokenCount,
-    completionTokens: usage?.candidatesTokenCount,
-    thoughtTokens:    usage?.thoughtsTokenCount,
-    totalTokens:      usage?.totalTokenCount,
-  });
+      const latencyMs = Date.now() - t0;
+      const text = response.text ?? '';
+      const usage = (response as any).usageMetadata;
 
-  return text.trim();
+      logger.info('[gemini] Call complete', {
+        lane,
+        model,
+        keyIndexUsed: attemptIndex,
+        latencyMs,
+        responseExcerpt: text.substring(0, 150).replace(/\n/g, ' ') + '...', // Log what answer it gave
+        totalTokens: usage?.totalTokenCount,
+      });
+
+      // Stick to this key for future calls until it fails
+      _currentKeyIndex = attemptIndex;
+
+      return text.trim();
+    } catch (err: any) {
+      logger.warn(`[gemini] Call failed with key at index ${attemptIndex}`, {
+        error: err.message || err.toString(),
+      });
+      lastError = err;
+      // Loop continues to try the next key
+    }
+  }
+
+  logger.error('[gemini] All available keys failed.', { lastError: lastError?.message });
+  throw new Error(`[gemini] All ${allKeys.length} keys failed. Last error: ${lastError?.message}`);
 }
-
-// ─── JSON helper ──────────────────────────────────────────────────────────────
 
 async function _geminiCallJson(
   systemPrompt: string,
@@ -130,8 +132,6 @@ async function _geminiCallJson(
     }
   }
 }
-
-// ─── Public API (same signature as ollamaClient exports) ─────────────────────
 
 export async function geminifast(
   systemPrompt: string,

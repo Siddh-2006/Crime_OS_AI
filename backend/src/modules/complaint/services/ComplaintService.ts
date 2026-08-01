@@ -979,4 +979,84 @@ export class ComplaintService {
 
     return saved;
   }
+
+  // ─── Transfer Evidence (Physical) ─────────────────────────────────────────────
+  async transferEvidence(id: string, evidenceId: string, officerId: string, targetStationEmail: string, manualStationName: string, ioChecklistStepId: string, _ip: string): Promise<any> {
+    const complaint = await this.complaintRepository.findById(id);
+    if (!complaint) throw new NotFoundError('Complaint');
+    
+    const { DepartmentRequest } = require('../investigation/models/DepartmentRequest.model');
+    const { v4: uuidv4 } = require('uuid');
+
+    // Find the specific evidence to get its details
+    const evidence = complaint.evidence.find(e => (e as any)._id?.toString() === evidenceId || e.publicId === evidenceId);
+    if (!evidence) {
+      throw new NotFoundError('Evidence');
+    }
+
+    const physicalDetails = evidence.physicalDetails || { name: 'N/A', description: 'N/A', locationFound: 'N/A' };
+    const draftContent = `Subject: Transfer of Physical Evidence for Case ${complaint.complaintNumber}
+
+To,
+${manualStationName || 'External Department'}
+
+This is to formally request the transfer of physical evidence seized during the investigation of Case Number ${complaint.complaintNumber}.
+
+Evidence Details:
+- Name: ${physicalDetails.name}
+- Description: ${physicalDetails.description}
+- Found Location: ${physicalDetails.locationFound}
+
+Please acknowledge the receipt of this evidence and update the chain of custody accordingly.
+
+Sincerely,
+Investigating Officer
+Gujarat Police`;
+
+    const newRequest = new DepartmentRequest({
+      case_id: complaint._id,
+      request_id: uuidv4(),
+      step_id: ioChecklistStepId || 'manual_transfer',
+      request_type: 'inter_station_assignment',
+      recipient_type: 'External Department',
+      department_entity_id: manualStationName || 'External Station',
+      draft_content: draftContent,
+      attachments: [evidence.publicId],
+      status: 'draft'
+    });
+
+    await newRequest.save();
+
+    const { EmailQueue } = require('../../shared/queue/EmailQueue');
+    const { DiaryEntry } = require('../investigation/models/DiaryEntry.model');
+
+    newRequest.status = 'sent';
+    newRequest.sent_via = 'email';
+    newRequest.sent_at = new Date();
+    await newRequest.save();
+
+    await DiaryEntry.create({
+      case_id: complaint._id,
+      entry_id: uuidv4(),
+      actor: { type: 'officer', id: officerId },
+      event_type: 'request_sent',
+      payload: { 
+        request_id: newRequest.request_id, 
+        department_entity_id: newRequest.department_entity_id,
+        content: newRequest.draft_content,
+        targetEmail: targetStationEmail
+      },
+      ref_ids: { request_id: newRequest.request_id }
+    });
+
+    await EmailQueue.enqueueDepartmentRequest({
+      to:             targetStationEmail || 'itssiddh7@gmail.com', // fallback to hardcoded test dept
+      departmentName: manualStationName || 'External Department',
+      caseId:         id,
+      requestId:      newRequest.request_id,
+      content:        newRequest.draft_content,
+    });
+
+    return newRequest;
+  }
 }
