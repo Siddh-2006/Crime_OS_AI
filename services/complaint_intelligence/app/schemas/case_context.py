@@ -48,14 +48,38 @@ class CaseContext(BaseModel):
     @classmethod
     def from_profiles(
         cls,
-        complaint: ComplaintProfile,
+        complaint: ComplaintProfile | str,
         evidence_profiles: List[EvidenceProfile],
     ) -> CaseContext:
-        """Construct CaseContext directly from stored ComplaintProfile and EvidenceProfiles."""
+        """Construct CaseContext directly from ComplaintProfile/text and EvidenceProfiles."""
         items = [EvidenceItem.from_profile(ep) for ep in evidence_profiles]
+        if isinstance(complaint, str):
+            return cls(
+                case_id=str(uuid.uuid4()),
+                complaint_text=complaint,
+                evidence=items,
+            )
         return cls(
             case_id=complaint.case_id,
             complaint_text=complaint.final_text,
             complaint_metadata=complaint.metadata,
             evidence=items,
         )
+
+    @classmethod
+    def build_direct(
+        cls,
+        case_id: str,
+        complaint_text: str,
+        evidence_profiles: List[EvidenceProfile],
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> CaseContext:
+        """Directly construct CaseContext without needing a DB-persisted ComplaintProfile."""
+        items = [EvidenceItem.from_profile(ep) for ep in evidence_profiles]
+        return cls(
+            case_id=case_id,
+            complaint_text=complaint_text,
+            complaint_metadata=metadata or {},
+            evidence=items,
+        )
+

@@ -237,12 +237,33 @@ async def main():
             )
             print(f"  ✓ EvidenceProfile processed: '{fname}' (ID: {ev_id}, Type: {ev_profile.media_type})")
 
+            # Update evidence item status & aiMetadata in complaints and evidences collections
+            ai_meta = {
+                "ocrText": getattr(ev_profile, "ocr_text", None),
+                "imageTags": getattr(ev_profile, "tags", []),
+                "aiSummary": getattr(ev_profile, "caption", None) or f"Processed {rtype} evidence '{fname}'",
+                "speechTranscript": getattr(ev_profile, "audio_transcript", None),
+                "pdfText": getattr(ev_profile, "extracted_text", None),
+                "classification": getattr(ev_profile, "scene_type", None) or "DOCUMENT",
+                "classificationConfidence": 0.95
+            }
+
+            await db.complaints.update_one(
+                {"_id": target_complaint["_id"], "evidence.originalFilename": fname},
+                {"$set": {"evidence.$.processingStatus": "PROCESSED", "evidence.$.aiMetadata": ai_meta}}
+            )
+
+            await db.evidences.update_many(
+                {"$or": [{"case_id": target_complaint["_id"]}, {"case_id": case_id}], "originalFilename": fname},
+                {"$set": {"processingStatus": "PROCESSED", "aiMetadata": ai_meta}}
+            )
+
     # Fetch living CaseIntelligence from Atlas 'cases' collection
     case_understanding = await container.case_repository.get_by_id(case_id)
     if not case_understanding:
         # Fallback to direct analyze if initial run
         all_evs = await container.evidence_profile_repository.get_all_for_case(case_id)
-        ctx = CaseContext.from_profiles(complaint_profile, all_evs)
+        ctx = CaseContext.build_direct(case_id=case_id, complaint_text=detailed_desc, evidence_profiles=all_evs, metadata={"category": category, "short_summary": short_desc})
         case_understanding = await container.case_understanding_engine.analyze(ctx)
         await container.case_repository.save(case_understanding)
 

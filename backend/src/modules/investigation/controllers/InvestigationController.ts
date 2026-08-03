@@ -511,24 +511,59 @@ export class InvestigationController {
       const { id } = req.params;
       
       // 1. Structured Evidence documents (added by IO/dept)
-      const evidenceDocs = await Evidence.find({ case_id: id }).sort({ createdAt: -1 }).lean();
+      const evidenceDocs = await Evidence.find({ case_id: id }).sort({ createdAt: -1 }).lean() as any[];
+
+      const formattedEvidenceDocs = evidenceDocs.map((ev: any) => {
+        const summary = ev.aiMetadata?.aiSummary || ev.florence_description || ev.ai_description || ev.originalFilename || 'No description available.';
+        const tags = ev.aiMetadata?.imageTags || ev.ai_tags || ev.tags || [];
+        const ocr = ev.aiMetadata?.ocrText || ev.ocrText || ev.ocr_text || '';
+        return {
+          ...ev,
+          originalFilename: ev.originalFilename || ev.filename || ev.title || ev.evidence_id,
+          secureUrl: ev.secureUrl || ev.storage_ref,
+          processingStatus: ev.processingStatus || (ev.status === 'verified' ? 'PROCESSED' : 'PENDING'),
+          ai_description: summary,
+          ai_tags: tags,
+          aiMetadata: {
+            ...ev.aiMetadata,
+            aiSummary: summary,
+            imageTags: tags,
+            ocrText: ocr,
+            speechTranscript: ev.aiMetadata?.speechTranscript || ev.transcript || '',
+          },
+        };
+      });
 
       // 2. Original complainant uploads stored in Complaint.evidence[]
       const complaint = await Complaint.findById(id, { evidence: 1 }).lean() as any;
-      const complainantFiles = (complaint?.evidence || []).map((ev: any, idx: number) => ({
-        evidence_id: ev.publicId || `COMP-EV-${idx}`,
-        type: ev.resourceType || 'document',
-        storage_ref: ev.secureUrl || ev.publicId,
-        ai_description: ev.aiMetadata?.aiSummary || ev.originalFilename || 'Complainant uploaded file',
-        ai_tags: ev.aiMetadata?.imageTags || [],
-        status: ev.processingStatus === 'PROCESSED' ? 'verified' : 'pending',
-        source: 'complainant',
-        cloudinary_url: ev.secureUrl,
-        original_filename: ev.originalFilename,
-        uploaded_at: ev.uploadedAt,
-      }));
+      const complainantFiles = (complaint?.evidence || []).map((ev: any, idx: number) => {
+        const summary = ev.aiMetadata?.aiSummary || ev.florence_description || ev.ai_description || ev.originalFilename || 'Complainant uploaded file';
+        const tags = ev.aiMetadata?.imageTags || ev.ai_tags || ev.tags || [];
+        const ocr = ev.aiMetadata?.ocrText || ev.ocrText || ev.ocr_text || '';
+        return {
+          evidence_id: ev.publicId || `COMP-EV-${idx}`,
+          type: ev.resourceType || 'document',
+          storage_ref: ev.secureUrl || ev.publicId,
+          secureUrl: ev.secureUrl,
+          originalFilename: ev.originalFilename,
+          ai_description: summary,
+          ai_tags: tags,
+          aiMetadata: {
+            ...ev.aiMetadata,
+            aiSummary: summary,
+            imageTags: tags,
+            ocrText: ocr,
+          },
+          processingStatus: ev.processingStatus || 'PROCESSED',
+          status: (ev.processingStatus === 'PROCESSED' || ev.processingStatus === 'processed') ? 'verified' : 'pending',
+          source: 'complainant',
+          cloudinary_url: ev.secureUrl,
+          original_filename: ev.originalFilename,
+          uploaded_at: ev.uploadedAt,
+        };
+      });
 
-      const combined = [...complainantFiles, ...evidenceDocs];
+      const combined = [...complainantFiles, ...formattedEvidenceDocs];
       sendSuccess(res, HttpStatusCode.OK, 'Fetched evidence', combined);
     } catch (error) {
       sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, {

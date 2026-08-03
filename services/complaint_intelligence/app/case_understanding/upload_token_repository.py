@@ -218,15 +218,15 @@ class IEvidenceRecordRepository(ABC):
 
 
 class MongoEvidenceRecordRepository(IEvidenceRecordRepository):
-    """Motor-backed implementation of IEvidenceRecordRepository."""
+    """Motor-backed implementation of IEvidenceRecordRepository targeting 'evidences' collection."""
 
-    def __init__(self, collection_name: str = "evidence_records") -> None:
+    def __init__(self, collection_name: str = "evidences") -> None:
         self.collection_name = collection_name
 
     async def _col(self):
         db = await get_mongo_db()
         if db is None:
-            raise RuntimeError("MongoDB unavailable — cannot operate on evidence_records")
+            raise RuntimeError("MongoDB unavailable — cannot operate on evidences collection")
         return db[self.collection_name]
 
     async def save(self, record: EvidenceRecord) -> None:

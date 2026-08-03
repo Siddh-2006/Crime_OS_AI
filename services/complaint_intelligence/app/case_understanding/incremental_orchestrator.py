@@ -178,6 +178,30 @@ class IncrementalPipelineOrchestrator:
             # Run worker ONLY on this single new evidence file
             ev_profile = await self._run_single_worker(case_id, ev_id, filename, content_type, file_bytes)
             await self.evidence_profile_repo.save(ev_profile)
+            try:
+                from app.core.mongo import get_mongo_db
+                db = await get_mongo_db()
+                if db is not None:
+                    ai_meta = {
+                        "ocrText": getattr(ev_profile, "ocr_text", None),
+                        "imageTags": getattr(ev_profile, "tags", []),
+                        "aiSummary": getattr(ev_profile, "caption", None) or f"Processed evidence '{filename}'",
+                        "speechTranscript": getattr(ev_profile, "audio_transcript", None),
+                        "pdfText": getattr(ev_profile, "extracted_text", None),
+                        "classification": getattr(ev_profile, "scene_type", None) or "DOCUMENT",
+                        "classificationConfidence": 0.95
+                    }
+                    await db["complaints"].update_one(
+                        {"$or": [{"_id": case_id}, {"complaintNumber": case_id}], "evidence.originalFilename": filename},
+                        {"$set": {"evidence.$.processingStatus": "PROCESSED", "evidence.$.aiMetadata": ai_meta}}
+                    )
+                    await db["evidences"].update_many(
+                        {"$or": [{"case_id": case_id}, {"evidence_id": ev_id}], "originalFilename": filename},
+                        {"$set": {"processingStatus": "PROCESSED", "aiMetadata": ai_meta}}
+                    )
+            except Exception as mongo_exc:
+                logger.warning("[incremental_orchestrator] Could not sync evidence status to mongo collections", extra={"error": str(mongo_exc)})
+
             logger.info(
                 "[incremental_orchestrator] Created new EvidenceProfile",
                 extra={"evidence_id": ev_id, "media_type": ev_profile.media_type},
@@ -190,15 +214,34 @@ class IncrementalPipelineOrchestrator:
         case_understanding = await self.fuse_case_intelligence(case_id)
         return ev_profile, case_understanding
 
-    async def fuse_case_intelligence(self, case_id: str) -> CaseUnderstanding:
-        """Fetch ComplaintProfile + ALL accumulated EvidenceProfiles and perform a SINGLE LLM fusion call."""
-        complaint_profile = await self.complaint_profile_repo.get_by_case_id(case_id)
-        if not complaint_profile:
-            complaint_profile = ComplaintProfile(
-                case_id=case_id,
-                original_text="Complaint text pending registration.",
-            )
-            await self.complaint_profile_repo.save(complaint_profile)
+    async def fuse_case_intelligence(self, case_id: str, complaint_text: Optional[str] = None) -> CaseUnderstanding:
+        """Fetch ALL accumulated EvidenceProfiles from 'evidences' and perform a SINGLE LLM fusion call."""
+        final_complaint_text = complaint_text
+        if not final_complaint_text:
+            complaint_profile = await self.complaint_profile_repo.get_by_case_id(case_id)
+            if complaint_profile and complaint_profile.final_text:
+                final_complaint_text = complaint_profile.final_text
+            else:
+                try:
+                    from app.core.mongo import get_mongo_db
+                    db = await get_mongo_db()
+                    if db is not None:
+                        from bson import ObjectId
+                        or_conditions: List[Dict[str, Any]] = [
+                            {"_id": case_id},
+                            {"complaintNumber": case_id},
+                        ]
+                        if ObjectId.is_valid(case_id):
+                            or_conditions.append({"_id": ObjectId(case_id)})
+                        query: Dict[str, Any] = {"$or": or_conditions}
+                        c_doc = await db["complaints"].find_one(query)
+                        if c_doc:
+                            final_complaint_text = c_doc.get("detailedDescription") or c_doc.get("shortDescription") or "Complaint filed."
+                except Exception as exc:
+                    logger.warning("[incremental_orchestrator] Could not fetch complaint text from db", extra={"error": str(exc)})
+
+        if not final_complaint_text:
+            final_complaint_text = "Complaint text submitted."
 
         all_evidence_profiles = await self.evidence_profile_repo.get_all_for_case(case_id)
 
@@ -213,7 +256,7 @@ class IncrementalPipelineOrchestrator:
             extra={"case_id": case_id, "total_accumulated_evidence": len(all_evidence_profiles)},
         )
 
-        context = CaseContext.from_profiles(complaint_profile, all_evidence_profiles)
+        context = CaseContext.build_direct(case_id=case_id, complaint_text=final_complaint_text, evidence_profiles=all_evidence_profiles)
         case_understanding = await self.engine.analyze(context)
         await self.case_repo.save(case_understanding)
 

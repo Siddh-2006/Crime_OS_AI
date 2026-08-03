@@ -81,7 +81,7 @@ class MongoComplaintProfileRepository(IComplaintProfileRepository):
 
 
 class MongoEvidenceProfileRepository(IEvidenceProfileRepository):
-    def __init__(self, collection_name: str = "evidence_profiles", use_in_memory: bool = False) -> None:
+    def __init__(self, collection_name: str = "evidences", use_in_memory: bool = False) -> None:
         self.collection_name = collection_name
         self.use_in_memory = use_in_memory
         self._in_memory: dict[str, dict] = {}
@@ -89,11 +89,34 @@ class MongoEvidenceProfileRepository(IEvidenceProfileRepository):
     async def save(self, profile: EvidenceProfile) -> None:
         doc = profile.model_dump(mode="json")
         doc["_id"] = profile.evidence_id
-        
+        doc["evidence_id"] = profile.evidence_id
+        doc["case_id"] = profile.case_id
+        doc["originalFilename"] = profile.filename
+        doc["type"] = profile.media_type
+        doc["storage_ref"] = profile.url or ""
+        doc["processingStatus"] = profile.processing_status
+
+        # Build aiMetadata sub-document for Node.js compatibility
+        ai_meta = doc.get("aiMetadata") or doc.get("ai_metadata") or {}
+        if profile.ocr_text:
+            ai_meta["ocrText"] = profile.ocr_text
+        if profile.florence_description:
+            ai_meta["aiSummary"] = profile.florence_description
+        if profile.transcript:
+            ai_meta["speechTranscript"] = profile.transcript
+        if profile.pdf_text:
+            ai_meta["pdfText"] = profile.pdf_text
+        doc["aiMetadata"] = ai_meta
+        doc["ai_metadata"] = ai_meta
+
         db = None if self.use_in_memory else await get_mongo_db()
         if db is not None:
-            await db[self.collection_name].replace_one({"_id": profile.evidence_id}, doc, upsert=True)
-            logger.info("[repository] Saved EvidenceProfile to MongoDB", extra={"evidence_id": profile.evidence_id, "case_id": profile.case_id})
+            await db[self.collection_name].replace_one(
+                {"$or": [{"_id": profile.evidence_id}, {"evidence_id": profile.evidence_id}]},
+                doc,
+                upsert=True
+            )
+            logger.info("[repository] Saved EvidenceProfile to 'evidences' collection", extra={"evidence_id": profile.evidence_id, "case_id": profile.case_id})
         else:
             self._in_memory[profile.evidence_id] = doc
             logger.info("[repository] Saved EvidenceProfile in-memory", extra={"evidence_id": profile.evidence_id})
@@ -117,7 +140,11 @@ class MongoEvidenceProfileRepository(IEvidenceProfileRepository):
     async def get_all_for_case(self, case_id: str) -> List[EvidenceProfile]:
         db = None if self.use_in_memory else await get_mongo_db()
         if db is not None:
-            cursor = db[self.collection_name].find({"case_id": case_id})
+            from bson import ObjectId
+            or_conditions = [{"case_id": case_id}]
+            if ObjectId.is_valid(case_id):
+                or_conditions.append({"case_id": ObjectId(case_id)})
+            cursor = db[self.collection_name].find({"$or": or_conditions})
             docs = await cursor.to_list(length=500)
             results = []
             for d in docs:
@@ -127,8 +154,9 @@ class MongoEvidenceProfileRepository(IEvidenceProfileRepository):
         else:
             results = []
             for doc in self._in_memory.values():
-                if doc.get("case_id") == case_id:
+                if str(doc.get("case_id")) == str(case_id):
                     d = dict(doc)
                     d.pop("_id", None)
                     results.append(EvidenceProfile.model_validate(d))
             return results
+

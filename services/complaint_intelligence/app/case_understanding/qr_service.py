@@ -64,7 +64,7 @@ class QRCodeService:
 
             img = qr.make_image(fill_color="black", back_color="white")
             buf = io.BytesIO()
-            img.save(buf, format="PNG")
+            img.save(buf)
             buf.seek(0)
 
             b64 = base64.b64encode(buf.read()).decode("utf-8")

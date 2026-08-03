@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import io
 import mimetypes
+from typing import Any
 
 from app.audio_worker.interfaces import IAudioMetadataExtractor
 from app.core.logging import logger
@@ -138,7 +139,7 @@ class AudioMetadataExtractor(IAudioMetadataExtractor):
         from pydub import AudioSegment  # type: ignore[import-untyped]
 
         ext = file_name.rsplit(".", 1)[-1].lower() if "." in file_name else "wav"
-        audio = AudioSegment.from_file(io.BytesIO(audio_bytes), format=ext)
+        audio: Any = AudioSegment.from_file(io.BytesIO(audio_bytes), format=ext)
         duration_seconds = len(audio) / 1000.0
         sample_rate = audio.frame_rate or None
         channels = audio.channels or None

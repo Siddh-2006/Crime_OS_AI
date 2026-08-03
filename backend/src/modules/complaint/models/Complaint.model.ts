@@ -71,9 +71,31 @@ export interface IComplaintIntelligence {
   category?: string;
   summary?: string;
   entities?: Array<{ name: string; type: string }>;
-  missingInformation?: string[];
-  recommendedEvidence?: string[];
+  missingInformation?: any[];
+  recommendedEvidence?: any[];
+  overview?: Record<string, any>;
+  timeline?: any[];
+  people_and_entities?: Record<string, any>;
+  evidence_analysis?: any[];
+  evidence_correlation?: any[];
+  crime_analysis?: Record<string, any>;
+  contradictions?: any[];
+  missing_information?: any[];
+  missing_evidence?: any[];
+  sections?: Record<string, any>;
+  [key: string]: any;
 }
+
+const ComplaintIntelligenceSchema = new Schema<IComplaintIntelligence>({
+  category: { type: String },
+  summary: { type: String },
+  entities: [{
+    name: { type: String },
+    type: { type: String }
+  }],
+  missingInformation: [{ type: Schema.Types.Mixed }],
+  recommendedEvidence: [{ type: Schema.Types.Mixed }]
+}, { _id: false, strict: false });
 
 export interface IComplaint extends Document {
   complaintNumber: string; // UUID
@@ -189,16 +211,7 @@ const AuditLogSchema = new Schema<IAuditLog>({
   action: { type: String, required: true },
 });
 
-const ComplaintIntelligenceSchema = new Schema<IComplaintIntelligence>({
-  category: { type: String },
-  summary: { type: String },
-  entities: [{
-    name: { type: String },
-    type: { type: String }
-  }],
-  missingInformation: [{ type: String }],
-  recommendedEvidence: [{ type: String }]
-}, { _id: false });
+
 
 const ComplaintSchema = new Schema<IComplaint>(
   {

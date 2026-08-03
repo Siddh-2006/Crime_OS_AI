@@ -307,21 +307,25 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
             const updated = res.data.data;
             if (updated) {
               setComplaint(updated);
-              const ci = updated.complaintIntelligence;
-              if (ci && Object.keys(ci).length > 0 && (ci.summary || ci.crimeType || ci.m12Understanding || ci.m12CrimeClassification || ci.m3Entities)) {
-                if (timer) clearInterval(timer);
-                return;
-              }
             }
-            const cuRes = await apiClient.get(API_ROUTES.CASE_UNDERSTANDING.DETAIL(id));
-            if (cuRes.data?.data) {
-              setCaseUnderstanding(cuRes.data.data);
+
+            try {
+              const cuRes = await apiClient.get(API_ROUTES.CASE_UNDERSTANDING.DETAIL(id));
+              if (cuRes.data?.data) {
+                setCaseUnderstanding(cuRes.data.data);
+              }
+            } catch {
+              /* Case understanding details may not be ready yet */
+            }
+
+            // Stop polling once AI processing has finished (PROCESSED or FAILED)
+            if (updated && updated.processingStatus !== 'PENDING') {
               if (timer) clearInterval(timer);
             }
           } catch {
-            /* polling while running */
+            /* continue polling while processing */
           }
-        }, 4000);
+        }, 3000);
       }
     });
 
@@ -407,9 +411,9 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
   const ciData = complaint?.complaintIntelligence as any;
   const snapData = snapshot as any;
   const hasNonEmptyCI = ciData && Object.keys(ciData).length > 0 && (
-    !!ciData.summary || !!ciData.crimeType || !!ciData.m12Understanding || !!ciData.m12CrimeClassification || !!ciData.m3Entities
+    !!ciData.overview || !!ciData.summary || !!ciData.crimeType || !!ciData.crime_analysis || !!ciData.m12Understanding || !!ciData.m12CrimeClassification || !!ciData.m3Entities
   );
-  const isAIReady = !!(caseUnderstanding || (snapData && Object.keys(snapData).length > 0) || hasNonEmptyCI);
+  const isAIReady = complaint?.processingStatus?.toUpperCase() === 'PROCESSED' || !!(caseUnderstanding || (snapData && Object.keys(snapData).length > 0) || hasNonEmptyCI);
 
   return (
     <div className="space-y-6 overflow-x-hidden">
@@ -431,7 +435,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
       </div>
 
       {/* AI Processing Status */}
-      {complaint.processingStatus === 'PENDING' && (
+      {!isAIReady && (complaint.processingStatus?.toUpperCase() === 'PENDING' || complaint.processingStatus?.toUpperCase() === 'PROCESSING') && (
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3 animate-pulse">
           <div className="flex items-center gap-3">
             <Loader />
@@ -795,11 +799,13 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
 
           {/* ── TAB: AI COMPLAINT INTELLIGENCE ── */}
           {activeTab === 'ai' && (() => {
-            if (caseUnderstanding) {
-              return <CaseUnderstandingView data={caseUnderstanding} />;
+            const ci = complaint.complaintIntelligence as any;
+            const cuData = caseUnderstanding || (ci && ci.overview ? ci : null);
+
+            if (cuData) {
+              return <CaseUnderstandingView data={cuData} />;
             }
 
-            const ci = complaint.complaintIntelligence as any;
             const snap = snapshot as any;
             const hasAI = isAIReady;
 

@@ -164,53 +164,91 @@ export default function EvidenceViewerModal({ isOpen, onClose, evidence }: Evide
             </div>
 
             {/* Metadata Sidebar */}
-            <div className="space-y-4">
-              {/* AI Analysis */}
-              <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
-                <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">AI Analysis</h3>
-                <p className="text-sm text-neutral-800 leading-relaxed">
-                  {evidence.aiMetadata?.aiSummary || evidence.originalFilename || 'No description available.'}
-                </p>
-                
-                {evidence.aiMetadata?.classification && evidence.aiMetadata?.classification !== 'Unknown' && (
-                  <div className="mt-3">
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
-                      📊 {evidence.aiMetadata.classification} ({Math.round((evidence.aiMetadata.classificationConfidence || 0) * 100)}%)
-                    </span>
-                  </div>
-                )}
+            {(() => {
+              const summaryText =
+                evidence.aiMetadata?.aiSummary ||
+                evidence.aiMetadata?.caption ||
+                evidence.aiMetadata?.florence_description ||
+                evidence.ai_description ||
+                evidence.originalFilename ||
+                'No description available.';
 
-                {evidence.aiMetadata?.imageTags && evidence.aiMetadata.imageTags.length > 0 && (
-                  <div className="mt-3">
-                    <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">Tags</h3>
-                    <div className="flex flex-wrap gap-1">
-                      {evidence.aiMetadata.imageTags.map((tag: string) => (
-                        <span key={tag} className="text-[10px] bg-neutral-100 text-neutral-600 px-2 py-1 rounded border border-neutral-200 font-medium">
-                          #{tag}
+              const tagsList: string[] = Array.from(new Set([
+                ...(evidence.aiMetadata?.imageTags || []),
+                ...(evidence.ai_tags || []),
+                ...(evidence.aiMetadata?.tags || []),
+              ]));
+
+              const ocrText =
+                evidence.aiMetadata?.ocrText ||
+                evidence.ocrText ||
+                evidence.ocr_text ||
+                '';
+
+              const speechTranscript =
+                evidence.aiMetadata?.speechTranscript ||
+                evidence.speechTranscript ||
+                evidence.transcript ||
+                '';
+
+              const classification =
+                evidence.aiMetadata?.classification ||
+                evidence.classification ||
+                (evidence.type === 'image' || evidence.type === 'screenshot' ? 'IMAGE' : null);
+
+              const confidence =
+                evidence.aiMetadata?.classificationConfidence ??
+                evidence.classificationConfidence ??
+                0.95;
+
+              return (
+                <div className="space-y-4">
+                  {/* AI Analysis */}
+                  <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
+                    <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">AI Analysis</h3>
+                    <p className="text-sm text-neutral-800 leading-relaxed">
+                      {summaryText}
+                    </p>
+                    
+                    {classification && classification !== 'Unknown' && (
+                      <div className="mt-3">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                          📊 {classification} ({Math.round(confidence * 100)}%)
                         </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                      </div>
+                    )}
 
-                {evidence.aiMetadata?.ocrText && (
-                  <div className="mt-3">
-                    <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">OCR Text</h3>
-                    <div className="text-[10px] bg-neutral-50 p-2 rounded border border-neutral-100 max-h-32 overflow-y-auto whitespace-pre-wrap font-mono text-neutral-600">
-                      {evidence.aiMetadata.ocrText}
-                    </div>
-                  </div>
-                )}
+                    {tagsList.length > 0 && (
+                      <div className="mt-3">
+                        <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">Tags</h3>
+                        <div className="flex flex-wrap gap-1">
+                          {tagsList.map((tag: string) => (
+                            <span key={tag} className="text-[10px] bg-neutral-100 text-neutral-600 px-2 py-1 rounded border border-neutral-200 font-medium">
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
-                {evidence.aiMetadata?.speechTranscript && (
-                  <div className="mt-3">
-                    <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">Audio Transcript</h3>
-                    <div className="text-[10px] bg-neutral-50 p-2 rounded border border-neutral-100 max-h-32 overflow-y-auto whitespace-pre-wrap font-mono text-neutral-600">
-                      {evidence.aiMetadata.speechTranscript}
-                    </div>
+                    {ocrText && (
+                      <div className="mt-3">
+                        <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">OCR Text</h3>
+                        <div className="text-[10px] bg-neutral-50 p-2 rounded border border-neutral-100 max-h-32 overflow-y-auto whitespace-pre-wrap font-mono text-neutral-600">
+                          {ocrText}
+                        </div>
+                      </div>
+                    )}
+
+                    {speechTranscript && (
+                      <div className="mt-3">
+                        <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">Audio Transcript</h3>
+                        <div className="text-[10px] bg-neutral-50 p-2 rounded border border-neutral-100 max-h-32 overflow-y-auto whitespace-pre-wrap font-mono text-neutral-600">
+                          {speechTranscript}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
 
               {/* System Metadata */}
               <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
@@ -218,7 +256,7 @@ export default function EvidenceViewerModal({ isOpen, onClose, evidence }: Evide
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between items-center">
                     <span className="text-neutral-500">Status</span>
-                    <span className={`font-semibold ${evidence.processingStatus === 'PROCESSED' ? 'text-green-600' : evidence.processingStatus === 'FAILED' ? 'text-red-600' : 'text-yellow-600'}`}>
+                    <span className={`font-semibold ${evidence.processingStatus?.toUpperCase() === 'PROCESSED' ? 'text-green-600' : evidence.processingStatus?.toUpperCase() === 'FAILED' ? 'text-red-600' : 'text-yellow-600'}`}>
                       {evidence.processingStatus
                         ? evidence.processingStatus.charAt(0).toUpperCase() + evidence.processingStatus.slice(1).toLowerCase()
                         : 'Pending'}
@@ -296,6 +334,8 @@ export default function EvidenceViewerModal({ isOpen, onClose, evidence }: Evide
                 </div>
               )}
             </div>
+          );
+        })()}
           </div>
         </div>
       </div>

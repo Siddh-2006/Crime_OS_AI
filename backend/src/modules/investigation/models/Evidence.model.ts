@@ -34,6 +34,7 @@ export interface IEvidence extends Document {
   aiMetadata?: {
     ocrText?: string;
     speechTranscript?: string;
+    pdfText?: string;
     imageTags?: string[];
     detectedObjects?: string[];
     faces?: string[];
@@ -93,6 +94,7 @@ const EvidenceSchema = new Schema<IEvidence>(
     aiMetadata: {
       ocrText: { type: String },
       speechTranscript: { type: String },
+      pdfText: { type: String },
       imageTags: [{ type: String }],
       detectedObjects: [{ type: String }],
       faces: [{ type: String }],
