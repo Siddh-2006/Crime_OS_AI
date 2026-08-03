@@ -52,8 +52,8 @@ interface Snapshot {
     contradiction_penalty: number;
     final_score: number;
   };
-  /** Array of strings (each may contain "Section X IPC: explanation") */
-  suggested_legal_sections?: string[];
+  /** Case-level legal sections returned by the AI as objects or strings */
+  suggested_legal_sections?: Array<{ code: string; title: string; reason?: string } | string>;
   trigger: string;
   officer_authored: boolean;
 }
@@ -101,6 +101,18 @@ const safeArray = (value: unknown): string[] => {
 const safeMarkdown = (value: unknown): string => {
   const text = safeText(value);
   return text.trim().length > 0 ? text : '*No summary generated yet.*';
+};
+
+const formatLegalSectionLabel = (section: unknown): string => {
+  if (typeof section === 'string') return section;
+  if (section && typeof section === 'object') {
+    const candidate = section as Record<string, unknown>;
+    const code = safeText(candidate.code);
+    const title = safeText(candidate.title);
+    if (code && title && code !== title) return `${code}: ${title}`;
+    return code || title || safeText(section);
+  }
+  return safeText(section);
 };
 
 // ─── SSE helper ───────────────────────────────────────────────────────────────
@@ -363,7 +375,7 @@ export function AnalysisPanel({
             </div>
           </div>
 
-          {/* Legal Sections — suggested_legal_sections is string[] */}
+          {/* Legal Sections — case-level AI suggestions */}
           {snapshot.suggested_legal_sections && snapshot.suggested_legal_sections.length > 0 && (
             <div className="border border-indigo-100 rounded-lg overflow-hidden shadow-sm">
               <div className="bg-indigo-50 px-4 py-2 flex items-center gap-2 border-b border-indigo-100">
@@ -376,7 +388,12 @@ export function AnalysisPanel({
                 {snapshot.suggested_legal_sections.map((section: any, idx) => (
                   <li key={idx} className="flex items-start gap-2 text-sm text-neutral-700 bg-indigo-50/30 p-2 rounded border border-indigo-50">
                     <span className="text-indigo-400 mt-0.5">•</span>
-                    <span>{typeof section === 'string' ? section : safeText(section.title ?? section.code ?? section.reason ?? section)}</span>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-neutral-900">{formatLegalSectionLabel(section)}</p>
+                      {section && typeof section === 'object' && section.reason ? (
+                        <p className="text-xs text-neutral-600 mt-1">{safeText(section.reason)}</p>
+                      ) : null}
+                    </div>
                   </li>
                 ))}
               </ul>

@@ -18,22 +18,41 @@ import logger from '../../../config/logger';
 function normalizeSuggestedLegalSections(sections: unknown): ILegalSectionSuggestion[] {
   if (!Array.isArray(sections)) return [];
 
-  return sections.flatMap((section): ILegalSectionSuggestion[] => {
+  const normalized: ILegalSectionSuggestion[] = [];
+  const seen = new Set<string>();
+
+  sections.forEach((section) => {
+    const addSection = (code: string, title: string, reason?: string) => {
+      const key = `${code || title}`.trim().toLowerCase();
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      normalized.push({ code: code.trim(), title: title.trim(), ...(reason?.trim() ? { reason } : {}) });
+    };
+
     if (typeof section === 'string') {
-      return [{ code: section, title: section }];
+      const raw = section.trim();
+      if (!raw) return;
+      const match = raw.match(/^([A-Za-z0-9.\-]+)\s*[:\-]\s*(.+)$/);
+      addSection(match ? match[1].trim() : raw, match ? match[2].trim() : raw, undefined);
+      return;
     }
 
-    if (!section || typeof section !== 'object') return [];
+    if (!section || typeof section !== 'object') return;
 
     const candidate = section as Record<string, unknown>;
-    if (typeof candidate.code !== 'string' || typeof candidate.title !== 'string') return [];
+    const code = typeof candidate.code === 'string' ? candidate.code.trim() : '';
+    const title = typeof candidate.title === 'string' ? candidate.title.trim() : '';
+    const altCode = typeof candidate.sectionCode === 'string' ? candidate.sectionCode.trim() : '';
+    const altTitle = typeof candidate.sectionTitle === 'string' ? candidate.sectionTitle.trim() : '';
+    const name = typeof candidate.name === 'string' ? candidate.name.trim() : '';
+    const reason = typeof candidate.reason === 'string' ? candidate.reason.trim() : undefined;
 
-    return [{
-      code: candidate.code,
-      title: candidate.title,
-      ...(typeof candidate.reason === 'string' ? { reason: candidate.reason } : {}),
-    }];
+    if (code || title || altCode || altTitle || name) {
+      addSection(code || altCode || name || title, title || altTitle || name || code || altCode || '', reason);
+    }
   });
+
+  return normalized;
 }
 
 function normalizeParticipantRoles(roles: unknown): ParticipantRecommendationRole[] {
@@ -215,7 +234,7 @@ export class InvestigationOrchestrator {
       suspect_candidates: normalizedSuspectCandidates,
       participant_recommendations: normalizedParticipantRecommendations,
       narrative_summary: deepResponse.narrative_summary || fastResponse,
-      suggested_legal_sections: deepResponse.suggested_legal_sections || [],
+      suggested_legal_sections,
       confidence_breakdown: confidenceBreakdown,
       officer_authored: false,
       parent_snapshot_id: previousSnapshot?._id || undefined,

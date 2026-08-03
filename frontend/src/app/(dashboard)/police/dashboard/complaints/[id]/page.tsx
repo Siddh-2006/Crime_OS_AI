@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -205,6 +205,31 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
   // AI analysis snapshot fetched from backend
   const [snapshot, setSnapshot] = useState<any | null>(null);
   const [snapshotLoading, setSnapshotLoading] = useState(false);
+
+  const snapshotLegalSections = useMemo(() => {
+    const sections = Array.isArray((snapshot as any)?.suggested_legal_sections)
+      ? (snapshot as any).suggested_legal_sections
+      : [];
+
+    return sections.flatMap((section: any) => {
+      if (typeof section === 'string') {
+        const trimmed = section.trim();
+        if (!trimmed) return [];
+        const match = trimmed.match(/^([A-Za-z0-9.\-]+)\s*[:\-]\s*(.+)$/);
+        return [{ code: match ? match[1].trim() : trimmed, title: match ? match[2].trim() : trimmed }];
+      }
+
+      if (section && typeof section === 'object') {
+        const code = typeof section.code === 'string' ? section.code.trim() : '';
+        const title = typeof section.title === 'string' ? section.title.trim() : '';
+        const reason = typeof section.reason === 'string' ? section.reason.trim() : '';
+        if (!code && !title && !reason) return [];
+        return [{ code: code || title || 'Section', title: title || code || 'Applicable section', reason }];
+      }
+
+      return [];
+    });
+  }, [snapshot]);
 
   const fetchComplaint = async () => {
     try {
@@ -646,9 +671,20 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                             </div>
                             <div>
                               <p className="text-xs text-neutral-400 font-semibold uppercase tracking-wider">Legal Sections (Applicable IPC/BNS)</p>
-                              <p className="text-sm font-semibold text-neutral-800 mt-1 bg-neutral-50 p-3 rounded-lg border border-neutral-200">
-                                {legalSections || <span className="text-neutral-400 italic">No legal sections assigned yet.</span>}
-                              </p>
+                              {snapshotLegalSections.length > 0 ? (
+                                <div className="mt-1 space-y-2 bg-neutral-50 p-3 rounded-lg border border-neutral-200">
+                                  {snapshotLegalSections.map((section: { code: string; title: string; reason?: string }, idx: number) => (
+                                    <div key={`${section.code}-${idx}`} className="rounded-md border border-neutral-200 bg-white p-2.5">
+                                      <p className="text-sm font-semibold text-neutral-800">{section.code}: {section.title}</p>
+                                      {section.reason && <p className="text-xs text-neutral-600 mt-1">{section.reason}</p>}
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-sm font-semibold text-neutral-800 mt-1 bg-neutral-50 p-3 rounded-lg border border-neutral-200">
+                                  {legalSections || <span className="text-neutral-400 italic">No legal sections assigned yet.</span>}
+                                </p>
+                              )}
                             </div>
                             <div>
                               <p className="text-xs text-neutral-400 font-semibold uppercase tracking-wider">Investigation Case Notes</p>
@@ -1347,7 +1383,18 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
 
           <div className="border-t border-neutral-200 pt-4 space-y-3 text-xs">
             <h4 className="font-bold border-b border-neutral-100 pb-1 text-blue-900">3. Applicable Legal Sections</h4>
-            <p className="font-mono bg-neutral-50 p-2 border border-neutral-200 rounded">{legalSections || 'No legal sections added yet.'}</p>
+            {snapshotLegalSections.length > 0 ? (
+              <div className="space-y-2 font-mono bg-neutral-50 p-2 border border-neutral-200 rounded">
+                {snapshotLegalSections.map((section: { code: string; title: string; reason?: string }, idx: number) => (
+                  <div key={`${section.code}-${idx}`} className="rounded border border-neutral-200 bg-white p-2">
+                    <p className="font-semibold text-neutral-800">{section.code}: {section.title}</p>
+                    {section.reason && <p className="text-neutral-600 mt-1">{section.reason}</p>}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="font-mono bg-neutral-50 p-2 border border-neutral-200 rounded">{legalSections || 'No legal sections added yet.'}</p>
+            )}
           </div>
 
           <div className="border-t border-neutral-200 pt-4 space-y-3 text-xs">

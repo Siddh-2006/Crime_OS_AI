@@ -55,7 +55,11 @@ REQUIREMENTS:
 1. Output strictly valid JSON matching the exact schema provided below.
 2. ranked_next_steps MUST be highly detailed, case-specific, and actionable. You MUST invent custom, precise steps tailored to the Case Facts. For example, instead of a generic "Review Evidence", write "Cross-check WhatsApp screenshots and freeze HDFC bank account ending in 1234". If a phone number is present in the facts, add a step to "Request CDR for phone number X". DO NOT output generic, vague steps.
 3. narrative_summary MUST act as an intelligent investigative assistant. It must explain the current state of the investigation, explicitly mention the factors from the confidence breakdown (evidence coverage, checklist progress, corroboration, contradictions), and clearly outline potential risks or gaps in the investigation.
-4. suggested_legal_sections MUST provide a brief list of the applicable legal sections (e.g., IPC, IT Act) with a short explanation of why they apply. It MUST be an array of strings.
+4. suggested_legal_sections MUST provide the full case-level list of applicable legal sections supported by the provided legal context. Return an array of objects, not strings. Each object must contain:
+- code
+- title
+- reason
+If multiple sections apply, include all of them. Do not collapse the output to a single section just because a suspect or accused participant is present.
 ${DEPT_ENTITY_ID_INSTRUCTION(deptEntityWhitelist)}
 5. Do not wrap JSON in markdown \`\`\` blocks, just return raw JSON text.
 6. participant_recommendations MUST identify all relevant investigation participants, not only suspects. Use the provided facts, including complaint details, case participants grouped by role, evidence links, diary entries, checklist progress, entities, and retrieval context. Each recommendation must include:
@@ -70,6 +74,7 @@ Only include recommended_sections when the roles include Suspect or Accused, and
 - code
 - title
 - reason
+Return all applicable sections as separate objects in the array. Do not trim the list down to one entry.
 
 8. For ranked_next_steps, if a step requires an external department, set "target" to "department_entity" and "department_entity_id" to the name of the department (e.g., BANK, ISP, TELECOM). If it requires the complainant to provide info, set "target" to "complainant". Otherwise leave target blank for IO internal tasks.
 9. Do not wrap JSON in markdown \`\`\` blocks, just return raw JSON text.
@@ -149,7 +154,8 @@ ${DEPT_ENTITY_ID_INSTRUCTION(deptEntityWhitelist)}
 5. Do not wrap JSON in markdown \`\`\` blocks, just return raw JSON text.
 6. participant_recommendations MUST be updated only as a recommendation set. Do not create or modify CaseParticipants in the output narrative or reasoning.
 7. For participant_recommendations, only include recommended_sections for Suspect or Accused roles, and only use BNS codes.
-8. For ranked_next_steps, if a step requires an external department, set "target" to "department_entity" and "department_entity_id" to the name of the department (e.g., BANK, ISP, TELECOM). If it requires the complainant to provide info, set "target" to "complainant". Otherwise leave target blank for IO internal tasks.
+8. For suggested_legal_sections, return an array of objects with code/title/reason and include every relevant case-level section the legal context supports. Do not reduce this to just one item.
+9. For ranked_next_steps, if a step requires an external department, set "target" to "department_entity" and "department_entity_id" to the name of the department (e.g., BANK, ISP, TELECOM). If it requires the complainant to provide info, set "target" to "complainant". Otherwise leave target blank for IO internal tasks.
 9. Do not wrap JSON in markdown \`\`\` blocks, just return raw JSON text.
 
 JSON SCHEMA:
