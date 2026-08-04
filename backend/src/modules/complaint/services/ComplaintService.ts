@@ -7,6 +7,7 @@ import { PoliceStation } from '../../police/models/PoliceStation.model';
 import { Officer } from '../../police/models/Officer.model';
 import { User } from '../../user/models/User.model';
 import { DiaryEntry } from '../../investigation/models/DiaryEntry.model';
+import { Evidence } from '../../investigation/models/Evidence.model';
 import { getRedisClient } from '../../../config/redis';
 import { REDIS_KEYS, REDIS_TTL } from '../../../shared/constants/redis.constants';
 import { NotFoundError } from '../../../common/errors/NotFoundError';
@@ -157,7 +158,7 @@ export class ComplaintService {
   }
 
   // ─── Create Complaint ───────────────────────────────────────────────────────
-  async createComplaint(citizenId: string, data: any, ip: string): Promise<IComplaint> {
+  async createComplaint(actorId: string, data: any, ip: string): Promise<IComplaint> {
     const {
       incidentDate,
       incidentTime,
@@ -165,6 +166,7 @@ export class ComplaintService {
       category,
       shortDescription,
       detailedDescription,
+      complainantUserId,
       policeStation,
       evidence = [],
       coordinates,
@@ -172,8 +174,16 @@ export class ComplaintService {
       approximateDateText,
     } = data;
 
+    const resolvedComplainantId = complainantUserId || actorId;
+    const officer = await Officer.findById(actorId).lean().exec();
+    const resolvedPoliceStation = policeStation || (officer?.policeStation?.toString() ?? null);
+
+    if (!resolvedPoliceStation) {
+      throw new NotFoundError('Police Station');
+    }
+
     // Verify station exists
-    const stationExists = await PoliceStation.findById(policeStation);
+    const stationExists = await PoliceStation.findById(resolvedPoliceStation);
     if (!stationExists) {
       throw new NotFoundError('Police Station');
     }
@@ -194,7 +204,7 @@ export class ComplaintService {
       originalFilename: file.originalFilename || 'unnamed_file',
       extension: file.extension || 'bin',
       size: file.size || 0,
-      uploadedBy: new Types.ObjectId(citizenId),
+      uploadedBy: new Types.ObjectId(actorId),
       uploadedAt: new Date(),
       processingStatus: 'PENDING',
     }));
@@ -202,8 +212,8 @@ export class ComplaintService {
     const newComplaintData: Partial<IComplaint> = {
       complaintNumber,
       status: ComplaintStatus.SUBMITTED,
-      citizen: new Types.ObjectId(citizenId),
-      policeStation: new Types.ObjectId(policeStation),
+      citizen: new Types.ObjectId(resolvedComplainantId),
+      policeStation: new Types.ObjectId(resolvedPoliceStation),
       incidentDate: new Date(incidentDate),
       incidentTime,
       incidentPlace,
@@ -220,8 +230,8 @@ export class ComplaintService {
       descriptionHistory: [
         {
           version: 1,
-          editedBy: 'Citizen',
-          editorId: new Types.ObjectId(citizenId),
+          editedBy: officer ? 'IO' : 'Citizen',
+          editorId: new Types.ObjectId(actorId),
           content: detailedDescription,
           timestamp: new Date(),
         },
@@ -230,12 +240,12 @@ export class ComplaintService {
         {
           user: 'Citizen',
           timestamp: new Date(),
-          description: 'Complaint submitted successfully by Citizen.',
+          description: officer ? 'Complaint submitted successfully by police officer.' : 'Complaint submitted successfully by Citizen.',
         },
       ],
       auditLogs: [
         {
-          actor: citizenId,
+          actor: actorId,
           ip,
           timestamp: new Date(),
           newValue: JSON.stringify({ complaintNumber, category, status: ComplaintStatus.SUBMITTED }),
@@ -246,15 +256,49 @@ export class ComplaintService {
 
     const created = await this.complaintRepository.create(newComplaintData);
 
+    // ── Seed standalone evidences collection ─────────────────────────────────
+    // The Python complaint-intelligence service updates the evidences collection
+    // (keyed by evidence_id = Cloudinary publicId) with AI metadata after processing.
+    // We pre-create PENDING records here so Python's $set finds them immediately.
+    if (validatedEvidence.length > 0) {
+      const evidenceDocs = validatedEvidence.map((file) => ({
+        case_id:          created._id,
+        evidence_id:      file.publicId,           // matches Python's profile.evidence_id
+        type:             file.resourceType || 'image',
+        storage_ref:      file.secureUrl,
+        ai_tags:          [],
+        uploader_id:      new Types.ObjectId(actorId),
+        status:           'pending' as const,
+        source:           'complainant' as const,
+        processingStatus: 'PENDING' as const,
+        originalFilename: file.originalFilename,
+        mimeType:         file.mimeType,
+        size:             file.size,
+      }));
+      try {
+        await Evidence.insertMany(evidenceDocs, { ordered: false });
+        logger.debug('Seeded evidences collection for complaint', {
+          complaintId: created._id,
+          count: evidenceDocs.length,
+        });
+      } catch (seedErr: any) {
+        // Duplicate key = already exists, safe to ignore
+        if (seedErr?.code !== 11000) {
+          logger.warn('Failed to seed evidences collection', { error: seedErr?.message });
+        }
+      }
+    }
+
+
     // Write to Case Diary
     await DiaryEntry.create({
       case_id: created._id,
       entry_id: uuidv4(),
       timestamp: new Date(),
-      actor: { type: 'officer', id: citizenId },
+      actor: { type: 'officer', id: actorId },
       event_type: 'complaint_filed',
       payload: {
-        complainant_id: citizenId,
+        complainant_id: resolvedComplainantId,
         incident_date: incidentDate,
         incident_place: incidentPlace,
         category: category,
@@ -265,7 +309,7 @@ export class ComplaintService {
       }
     });
 
-    logger.info('Complaint filed by citizen', { citizenId, complaintNumber: created.complaintNumber, complaintId: created._id });
+    logger.info('Complaint filed', { actorId, complainantId: resolvedComplainantId, complaintNumber: created.complaintNumber, complaintId: created._id });
 
     // Automatically trigger full M1-M12 processing pipeline in background
     this.triggerComplaintIntelligencePipeline(created.complaintNumber);
@@ -277,7 +321,7 @@ export class ComplaintService {
   private triggerComplaintIntelligencePipeline(complaintNumber: string): void {
     try {
       const scriptPath = path.resolve(__dirname, '../../../../../services/complaint_intelligence/run_pipeline_from_atlas.py');
-      const venvPython = path.resolve(__dirname, '../../../../../services/complaint_intelligence/.venv/Scripts/python.exe');
+      const venvPython = path.resolve(__dirname, '../../../../../services/.venv/Scripts/python.exe');
       const pythonExec = process.platform === 'win32' && fs.existsSync(venvPython) ? venvPython : 'python';
 
       const scriptDir = path.dirname(scriptPath);
@@ -345,6 +389,13 @@ export class ComplaintService {
       if (String(complaint.policeStation._id) !== String(officer.policeStation)) {
         throw new AuthorizationError('This complaint belongs to another police station.');
       }
+
+      if (officer.role === 'IO') {
+        const assignedIOId = complaint.assignedIO ? String((complaint.assignedIO as any)._id ?? complaint.assignedIO) : null;
+        if (assignedIOId !== user.sub) {
+          throw new AuthorizationError('You can only view complaints assigned to you.');
+        }
+      }
     }
 
     // Normalize PDF URL so browser can open it:
@@ -363,6 +414,7 @@ export class ComplaintService {
     }
 
     if (complaintObj.evidence && Array.isArray(complaintObj.evidence)) {
+      // Fix PDF URLs
       complaintObj.evidence = complaintObj.evidence.map((file: any) => {
         let url = file.secureUrl as string;
         if (url && url.endsWith('.pdf')) {
@@ -375,6 +427,39 @@ export class ComplaintService {
         }
         return file;
       });
+
+      // Enrich embedded evidence[] with AI metadata from the separate evidences collection.
+      // The Python complaint-intelligence service writes processingStatus + aiMetadata
+      // to the evidences collection keyed by evidence_id (= Cloudinary publicId path).
+      try {
+        const publicIds: string[] = complaintObj.evidence
+          .map((f: any) => f.publicId)
+          .filter(Boolean);
+
+        if (publicIds.length > 0) {
+          // evidence_id in the evidences collection matches the Cloudinary publicId
+          const evidenceDocs = await Evidence.find(
+            { evidence_id: { $in: publicIds } },
+            { evidence_id: 1, processingStatus: 1 }
+          ).lean();
+
+          const evidenceMap = new Map(
+            evidenceDocs.map((e: any) => [e.evidence_id, e])
+          );
+
+          complaintObj.evidence = complaintObj.evidence.map((file: any) => {
+            const enriched = evidenceMap.get(file.publicId);
+            if (!enriched) return file;
+            return {
+              ...file,
+              processingStatus: enriched.processingStatus ?? file.processingStatus,
+            };
+          });
+        }
+      } catch (enrichErr) {
+        // Non-blocking — serve complaint even if enrichment fails
+        logger.warn('[ComplaintService] Failed to enrich evidence with AI metadata', { error: (enrichErr as Error).message });
+      }
     }
 
     return complaintObj as IComplaint;
@@ -390,7 +475,16 @@ export class ComplaintService {
       throw new AuthorizationError('Police officer profile not found.');
     }
 
-    return this.complaintRepository.findStationComplaints(String(officer.policeStation), filters);
+    const query: any = {
+      policeStation: String(officer.policeStation),
+      isDeleted: false,
+    };
+
+    if (officer.role === 'IO') {
+      query.assignedIO = new Types.ObjectId(officerId);
+    }
+
+    return this.complaintRepository.findStationComplaints(query, filters);
   }
 
   // ─── Approve Complaint (SHO Only) ──────────────────────────────────────────
@@ -405,9 +499,11 @@ export class ComplaintService {
       throw new NotFoundError('Complaint');
     }
 
-    this.checkLock(complaint);
-
-    if (complaint.status !== ComplaintStatus.SUBMITTED && complaint.status !== ComplaintStatus.UNDER_REVIEW) {
+    if (
+      complaint.status !== ComplaintStatus.SUBMITTED &&
+      complaint.status !== ComplaintStatus.UNDER_REVIEW &&
+      complaint.status !== ComplaintStatus.FIR_REGISTERED
+    ) {
       throw new ValidationError(`Complaint is currently in ${complaint.status} status and cannot be approved.`);
     }
 
@@ -418,7 +514,11 @@ export class ComplaintService {
     }
 
     const oldStatus = complaint.status;
-    complaint.status = ComplaintStatus.ASSIGNED_TO_IO;
+    const newStatus = complaint.status === ComplaintStatus.FIR_REGISTERED ? ComplaintStatus.FIR_REGISTERED : ComplaintStatus.ASSIGNED_TO_IO;
+
+    if (complaint.status !== ComplaintStatus.FIR_REGISTERED) {
+      complaint.status = ComplaintStatus.ASSIGNED_TO_IO;
+    }
     complaint.assignedSHO = new Types.ObjectId(officerId);
     complaint.assignedIO = new Types.ObjectId(ioId);
     complaint.approvedAt = new Date();
@@ -427,7 +527,7 @@ export class ComplaintService {
     complaint.timeline.push({
       user: `SHO (${officer.officerName})`,
       timestamp: new Date(),
-      description: `Complaint approved and assigned to IO ${assignedIO.officerName}.`,
+      description: `Complaint assigned to IO ${assignedIO.officerName}.`,
     });
 
     complaint.auditLogs.push({
@@ -435,7 +535,7 @@ export class ComplaintService {
       ip,
       timestamp: new Date(),
       oldValue: oldStatus,
-      newValue: ComplaintStatus.ASSIGNED_TO_IO,
+      newValue: newStatus,
       action: 'COMPLAINT_APPROVAL',
     });
 
@@ -607,11 +707,11 @@ export class ComplaintService {
     return complaint;
   }
 
-  // ─── Register FIR (IO Only) ────────────────────────────────────────────────
+  // ─── Register FIR (SHO Only) ────────────────────────────────────────────────
   async registerFir(id: string, officerId: string, ip: string): Promise<IComplaint> {
     const officer = await Officer.findById(officerId);
-    if (!officer || officer.role !== 'IO') {
-      throw new AuthorizationError('Only the assigned Investigation Officer (IO) can register the FIR.');
+    if (!officer || officer.role !== 'SHO') {
+      throw new AuthorizationError('Only the Station House Officer (SHO) can register the FIR.');
     }
 
     const complaint = await this.complaintRepository.findById(id);
@@ -621,12 +721,12 @@ export class ComplaintService {
 
     this.checkLock(complaint);
 
-    if (String(complaint.assignedIO?._id) !== officerId) {
-      throw new AuthorizationError('You are not the assigned Investigation Officer for this complaint.');
+    if (complaint.status === ComplaintStatus.FIR_REGISTERED) {
+      throw new ValidationError('FIR has already been registered for this complaint.');
     }
 
-    if (complaint.status !== ComplaintStatus.ASSIGNED_TO_IO) {
-      throw new ValidationError('FIR can only be registered for complaints assigned to an IO.');
+    if (complaint.status === ComplaintStatus.CLOSED || complaint.status === ComplaintStatus.REJECTED) {
+      throw new ValidationError('FIR cannot be registered for a closed or rejected complaint.');
     }
 
     // Generate realistic FIR number: GJ-{StationCode}-{CurrentYear}-{4-digit-seq}

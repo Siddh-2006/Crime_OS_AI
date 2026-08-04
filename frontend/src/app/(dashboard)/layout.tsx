@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { ShieldCheck, LayoutDashboard, LogOut, User, FileText, Bell, Plus } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { ROLE } from '@/lib/constants';
+import { APP_ROUTES, ROLE } from '@/lib/constants';
 import { Button } from '@/components/ui/Button';
 import { Loader } from '@/components/ui/Loader';
 import { LanguageSelector } from '@/components/common/LanguageSelector';
@@ -18,12 +18,13 @@ interface NavItem {
 
 const citizenNavItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard size={18} /> },
-  { label: 'File a Complaint', href: '/dashboard/complaints/new', icon: <Plus size={18} /> },
+  { label: 'File a Complaint', href: APP_ROUTES.FILE_COMPLAINT, icon: <Plus size={18} /> },
   { label: 'My Complaints', href: '/dashboard/complaints', icon: <FileText size={18} /> },
 ];
 
 const policeNavItems: NavItem[] = [
   { label: 'Dashboard', href: '/police/dashboard', icon: <LayoutDashboard size={18} /> },
+  { label: 'File a Complaint', href: APP_ROUTES.FILE_COMPLAINT, icon: <Plus size={18} /> },
   { label: 'Station Complaints', href: '/police/dashboard/complaints', icon: <FileText size={18} /> },
 ];
 

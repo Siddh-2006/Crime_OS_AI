@@ -22,6 +22,23 @@ export interface RegisterCitizenDto {
   securityAnswer: string;
 }
 
+export interface CreateComplainantProfileDto {
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  dateOfBirth: string;
+  gender: Gender;
+  address: string;
+  city: string;
+  district: string;
+  state: string;
+  pincode: string;
+  idProofType: IdProofType;
+  idProofNumber: string;
+}
+
 export interface VerifyEmailDto {
   email: string;
   otp: string;

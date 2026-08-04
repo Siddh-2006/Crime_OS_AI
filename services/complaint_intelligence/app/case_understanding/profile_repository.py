@@ -5,7 +5,7 @@ Enforces Repository Pattern & Single Responsibility Principle.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from app.core.logging import logger
 from app.core.mongo import get_mongo_db
@@ -87,17 +87,13 @@ class MongoEvidenceProfileRepository(IEvidenceProfileRepository):
         self._in_memory: dict[str, dict] = {}
 
     async def save(self, profile: EvidenceProfile) -> None:
-        doc = profile.model_dump(mode="json")
-        doc["_id"] = profile.evidence_id
-        doc["evidence_id"] = profile.evidence_id
-        doc["case_id"] = profile.case_id
-        doc["originalFilename"] = profile.filename
-        doc["type"] = profile.media_type
-        doc["storage_ref"] = profile.url or ""
-        doc["processingStatus"] = profile.processing_status
+        # Build a $set patch with ONLY the camelCase fields the Node.js Mongoose
+        # schema expects. Never do a full replace_one — that overwrites
+        # Node-created fields (uploader_id, status, custody_chain, etc.)
+        # with Python snake_case duplicates.
 
-        # Build aiMetadata sub-document for Node.js compatibility
-        ai_meta = doc.get("aiMetadata") or doc.get("ai_metadata") or {}
+        # Build aiMetadata sub-document (Node.js canonical field name)
+        ai_meta: dict = {}
         if profile.ocr_text:
             ai_meta["ocrText"] = profile.ocr_text
         if profile.florence_description:
@@ -106,20 +102,43 @@ class MongoEvidenceProfileRepository(IEvidenceProfileRepository):
             ai_meta["speechTranscript"] = profile.transcript
         if profile.pdf_text:
             ai_meta["pdfText"] = profile.pdf_text
-        doc["aiMetadata"] = ai_meta
-        doc["ai_metadata"] = ai_meta
+
+        patch: dict = {
+            "processingStatus": profile.processing_status,
+            "originalFilename": profile.filename,
+            "type":             profile.media_type,
+            "storage_ref":      profile.url or "",
+        }
+        if ai_meta:
+            for k, v in ai_meta.items():
+                patch[f"aiMetadata.{k}"] = v
 
         db = None if self.use_in_memory else await get_mongo_db()
         if db is not None:
-            await db[self.collection_name].replace_one(
+            # upsert=True: complaint-submitted evidence is embedded in complaints,
+            # NOT pre-created in the evidences collection. We create the doc here
+            # so the Node.js enrichment query can find it.
+            result = await db[self.collection_name].update_one(
                 {"$or": [{"_id": profile.evidence_id}, {"evidence_id": profile.evidence_id}]},
-                doc,
-                upsert=True
+                {
+                    "$set": patch,
+                    "$setOnInsert": {
+                        "_id": profile.evidence_id,
+                        "evidence_id": profile.evidence_id,
+                        "case_id": profile.case_id,
+                    },
+                },
+                upsert=True,
             )
-            logger.info("[repository] Saved EvidenceProfile to 'evidences' collection", extra={"evidence_id": profile.evidence_id, "case_id": profile.case_id})
+            action = "upserted" if result.upserted_id else "updated"
+            logger.info(
+                f"[repository] {action.capitalize()} EvidenceProfile fields in 'evidences' collection",
+                extra={"evidence_id": profile.evidence_id, "case_id": profile.case_id, "fields": list(patch.keys())},
+            )
         else:
-            self._in_memory[profile.evidence_id] = doc
+            self._in_memory[profile.evidence_id] = patch
             logger.info("[repository] Saved EvidenceProfile in-memory", extra={"evidence_id": profile.evidence_id})
+
 
     async def get_by_evidence_id(self, evidence_id: str) -> Optional[EvidenceProfile]:
         db = None if self.use_in_memory else await get_mongo_db()
@@ -141,7 +160,7 @@ class MongoEvidenceProfileRepository(IEvidenceProfileRepository):
         db = None if self.use_in_memory else await get_mongo_db()
         if db is not None:
             from bson import ObjectId
-            or_conditions = [{"case_id": case_id}]
+            or_conditions: list[dict[str, Any]] = [{"case_id": case_id}]
             if ObjectId.is_valid(case_id):
                 or_conditions.append({"case_id": ObjectId(case_id)})
             cursor = db[self.collection_name].find({"$or": or_conditions})

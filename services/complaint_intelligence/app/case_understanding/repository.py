@@ -37,9 +37,12 @@ class MongoCaseRepository(ICaseRepository):
                     upsert=False
                 )
                 
-                # Also save to collection_name fallback if no complaint record matched
                 if res.matched_count == 0:
-                    await db["cases"].replace_one({"_id": case.case_id}, data, upsert=True)
+                    await db[self._collection_name].update_one(
+                        {"_id": case.case_id},
+                        {"$set": {"complaintIntelligence": data, "processingStatus": "PROCESSED"}},
+                        upsert=True
+                    )
 
                 logger.info(
                     "[repository] Saved CaseUnderstanding into 'complaints' collection",
@@ -70,12 +73,6 @@ class MongoCaseRepository(ICaseRepository):
                     if isinstance(intel, dict):
                         intel.pop("_id", None)
                         return CaseUnderstanding.model_validate(intel)
-                
-                # Fallback check on 'cases' collection
-                case_doc = await db["cases"].find_one({"_id": case_id})
-                if case_doc:
-                    case_doc.pop("_id", None)
-                    return CaseUnderstanding.model_validate(case_doc)
             except Exception as exc:
                 logger.warning(
                     "[repository] MongoDB read failed, checking fallback memory store",

@@ -38,9 +38,9 @@ export class ComplaintController {
 
   createComplaint = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const citizenId = req.user!.sub;
+      const actorId = req.user!.sub;
       const ip = req.ip ?? 'unknown';
-      const complaint = await this.complaintService.createComplaint(citizenId, req.body, ip);
+      const complaint = await this.complaintService.createComplaint(actorId, req.body, ip);
       sendSuccess(res, HttpStatusCode.CREATED, 'Complaint filed successfully', complaint);
     } catch (err) {
       next(err);

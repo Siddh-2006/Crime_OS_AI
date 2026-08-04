@@ -58,26 +58,29 @@ async def main():
     import re
     from bson import ObjectId
 
-    raw_target = sys.argv[1] if len(sys.argv) > 1 else "COMP-7d3ea8bc-841a-4fe8-b543-78282832385c"
+    raw_target = sys.argv[1] if len(sys.argv) > 1 else "latest"
     TARGET_ID = str(raw_target).strip().strip('"').strip("'")
 
     from typing import Any
 
-    or_conditions: list[dict[str, Any]] = [
-        {"complaintNumber": TARGET_ID},
-        {"complaintNumber": {"$regex": f"^{re.escape(TARGET_ID)}$", "$options": "i"}},
-        {"_id": TARGET_ID},
-    ]
-    if ObjectId.is_valid(TARGET_ID):
-        or_conditions.append({"_id": ObjectId(TARGET_ID)})
-
     target_complaint = None
-    for attempt in range(20):
-        target_complaint = await db.complaints.find_one({"$or": or_conditions})
-        if target_complaint:
-            break
-        if attempt < 19:
-            await asyncio.sleep(1.0)
+    if TARGET_ID.lower() == "latest":
+        target_complaint = await db.complaints.find_one({}, sort=[("createdAt", -1)])
+    else:
+        or_conditions: list[dict[str, Any]] = [
+            {"complaintNumber": TARGET_ID},
+            {"complaintNumber": {"$regex": f"^{re.escape(TARGET_ID)}$", "$options": "i"}},
+            {"_id": TARGET_ID},
+        ]
+        if ObjectId.is_valid(TARGET_ID):
+            or_conditions.append({"_id": ObjectId(TARGET_ID)})
+
+        for attempt in range(20):
+            target_complaint = await db.complaints.find_one({"$or": or_conditions})
+            if target_complaint:
+                break
+            if attempt < 19:
+                await asyncio.sleep(1.0)
 
     if not target_complaint:
         print(f"  [Error] Complaint [{TARGET_ID}] not found in Atlas database after retries.")
@@ -234,31 +237,61 @@ async def main():
                 file_bytes=file_bytes,
                 evidence_id=ev_id,
                 trigger_llm=is_last_item,
+                force_reprocess=True,
             )
             print(f"  ✓ EvidenceProfile processed: '{fname}' (ID: {ev_id}, Type: {ev_profile.media_type})")
 
-            # Update evidence item status & aiMetadata in complaints and evidences collections
-            ai_meta = {
-                "ocrText": getattr(ev_profile, "ocr_text", None),
-                "imageTags": getattr(ev_profile, "tags", []),
-                "aiSummary": getattr(ev_profile, "caption", None) or f"Processed {rtype} evidence '{fname}'",
-                "speechTranscript": getattr(ev_profile, "audio_transcript", None),
-                "pdfText": getattr(ev_profile, "extracted_text", None),
-                "classification": getattr(ev_profile, "scene_type", None) or "DOCUMENT",
-                "classificationConfidence": 0.95
-            }
+            # Extract metadata fields from current evidence item
+            ai_meta = ev.get("aiMetadata") or {}
+            ocr_txt = ai_meta.get("ocrText") or ev.get("ocrText")
+            florence_desc = ai_meta.get("m4Caption") or ai_meta.get("aiSummary") or ev.get("aiSummary") or ev.get("description")
+            transcript = ai_meta.get("speechTranscript") or ai_meta.get("audioTranscript") or ev.get("transcript")
+            pdf_txt = ai_meta.get("pdfText") or ev.get("pdfText")
 
-            await db.complaints.update_one(
-                {"_id": target_complaint["_id"], "evidence.originalFilename": fname},
-                {"$set": {"evidence.$.processingStatus": "PROCESSED", "evidence.$.aiMetadata": ai_meta}}
-            )
+            # Build non-destructive $set patch with dot notation for aiMetadata fields
+            raw_summary = ev_profile.florence_description
+            if not raw_summary or raw_summary.startswith("Processed "):
+                raw_summary = florence_desc
+            final_summary = raw_summary or f"Processed {rtype} evidence '{fname}'"
+            final_ocr = ev_profile.ocr_text or ocr_txt
+            final_transcript = ev_profile.transcript or transcript
+            final_pdf = ev_profile.pdf_text or pdf_txt
+
+            patch = {
+                "processingStatus": "PROCESSED",
+                "aiMetadata.aiSummary": final_summary,
+                "aiMetadata.ocrText": final_ocr,
+                "aiMetadata.speechTranscript": final_transcript,
+                "aiMetadata.pdfText": final_pdf,
+                "aiMetadata.classification": getattr(ev_profile, "scene_type", None) or ("DOCUMENT" if final_ocr else "IMAGE"),
+                "aiMetadata.classificationConfidence": 0.95,
+            }
+            # Strip out None and blank string values
+            patch = {k: v for k, v in patch.items() if v is not None and (not isinstance(v, str) or v.strip() != "")}
+
+            # Build item-specific search conditions to update ONLY this evidence file
+            ev_conditions: list[dict[str, Any]] = [
+                {"_id": ev_id},
+                {"evidence_id": ev_id},
+                {"evidence_id": f"crime-os/evidence/{case_id}/{ev_id}"},
+                {"storage_ref": cloudinary_url},
+                {"originalFilename": fname},
+            ]
+            if ObjectId.is_valid(ev_id):
+                ev_conditions.append({"_id": ObjectId(ev_id)})
 
             await db.evidences.update_many(
-                {"$or": [{"case_id": target_complaint["_id"]}, {"case_id": case_id}], "originalFilename": fname},
-                {"$set": {"processingStatus": "PROCESSED", "aiMetadata": ai_meta}}
+                {"$or": ev_conditions},
+                {"$set": patch}
             )
 
-    # Fetch living CaseIntelligence from Atlas 'cases' collection
+            # Update ONLY processingStatus on embedded complaint evidence item
+            await db.complaints.update_one(
+                {"_id": target_complaint["_id"], "evidence.originalFilename": fname},
+                {"$set": {"evidence.$.processingStatus": "PROCESSED"}}
+            )
+
+    # Fetch living CaseIntelligence from Atlas 'complaints' collection
     case_understanding = await container.case_repository.get_by_id(case_id)
     if not case_understanding:
         # Fallback to direct analyze if initial run
@@ -273,11 +306,11 @@ async def main():
         {"$set": {"processingStatus": "PROCESSED", "complaintIntelligence": case_understanding.model_dump()}}
     )
 
-    # Retrieve directly from Atlas 'cases' collection to verify persistence
-    atlas_saved_doc = await db.cases.find_one({"_id": case_id})
-    if atlas_saved_doc:
-        print(f"  ✓ Verified CaseUnderstanding saved successfully to MongoDB Atlas collection 'cases'!")
-        print(f"  ✓ Saved Case ID: {atlas_saved_doc.get('case_id')}\n")
+    # Retrieve directly from Atlas 'complaints' collection to verify persistence
+    atlas_saved_doc = await db.complaints.find_one({"_id": target_complaint["_id"]})
+    if atlas_saved_doc and atlas_saved_doc.get("complaintIntelligence"):
+        print(f"  ✓ Verified CaseUnderstanding saved successfully to MongoDB Atlas collection 'complaints'!")
+        print(f"  ✓ Saved Case ID: {target_complaint.get('_id')}\n")
 
     # Display Output
     print(f"  [1] OVERVIEW")
