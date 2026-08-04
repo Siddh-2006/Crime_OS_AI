@@ -9,7 +9,7 @@ interface ThreadMessage {
   sender: 'io' | 'department' | 'citizen';
   content: string;
   timestamp: string;
-  attachments?: string[];
+  attachments?: any[];
 }
 
 interface RequestThread {
@@ -177,12 +177,23 @@ export function DepartmentInboxPanel({ threads, onRefresh, caseId, filter, onFil
                     </div>
                     {msg.attachments && msg.attachments.length > 0 && (
                       <div className={`flex gap-2 mt-2 flex-wrap ${msg.sender === 'io' ? 'justify-end' : ''}`}>
-                        {msg.attachments.map(att => (
-                          <div key={att} className="flex items-center gap-1 text-[10px] font-medium px-2 py-1 bg-white border border-neutral-200 rounded-full text-neutral-600 shadow-sm">
-                            <Paperclip size={10} />
-                            {att}
-                          </div>
-                        ))}
+                        {msg.attachments.map((att: any) => {
+                          const isObj = typeof att === 'object' && att !== null;
+                          const filename = isObj ? (att.originalFilename || att.evidence_id) : att;
+                          const url = isObj ? (att.storage_ref || att.secureUrl) : null;
+                          const isValidUrl = url && url.startsWith('http');
+                          return (
+                            <div 
+                              key={isObj ? att.evidence_id : att} 
+                              className={`flex items-center gap-1 text-[10px] font-medium px-2 py-1 bg-white border border-neutral-200 rounded-full text-neutral-600 shadow-sm ${isValidUrl ? 'cursor-pointer hover:bg-neutral-50 hover:text-blue-600 transition-colors' : ''}`}
+                              onClick={() => isValidUrl && window.open(url, '_blank')}
+                              title={isValidUrl ? 'Click to view attachment' : 'Attachment processing...'}
+                            >
+                              <Paperclip size={10} />
+                              <span className="truncate max-w-[200px]">{filename}</span>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>

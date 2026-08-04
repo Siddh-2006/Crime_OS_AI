@@ -9,7 +9,8 @@ export interface IEmailProvider {
 
 export interface EmailAttachment {
   filename: string;
-  content: Buffer | string;
+  content?: Buffer | string;
+  path?: string;
   cid?: string;
   contentType?: string;
 }

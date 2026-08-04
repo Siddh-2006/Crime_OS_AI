@@ -754,7 +754,25 @@ export class InvestigationController {
     try {
       const { id } = req.params;
       const { RequestThread } = require('../models/RequestThread.model');
+      const { Evidence } = require('../models/Evidence.model');
       const threads = await RequestThread.find({ case_id: id }).sort({ updatedAt: -1 }).lean();
+      
+      const allEvidenceIds = new Set<string>();
+      threads.forEach((t: any) => t.messages?.forEach((m: any) => m.attachments?.forEach((a: any) => {
+        if (typeof a === 'string') allEvidenceIds.add(a);
+      })));
+      
+      const evidences = await Evidence.find({ evidence_id: { $in: Array.from(allEvidenceIds) } }).lean();
+      const evidenceMap = evidences.reduce((acc: any, e: any) => { acc[e.evidence_id] = e; return acc; }, {});
+
+      threads.forEach((t: any) => {
+        t.messages?.forEach((m: any) => {
+          if (m.attachments) {
+            m.attachments = m.attachments.map((aId: any) => evidenceMap[aId] || aId);
+          }
+        });
+      });
+
       sendSuccess(res, HttpStatusCode.OK, 'Threads fetched successfully', threads);
     } catch (error: any) {
       sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, {

@@ -166,6 +166,21 @@ async function ingestResponse(opts: {
     const evidenceId = att.evidenceId || uuidv4();
     evidenceIds.push(evidenceId);
     
+    const evidenceDoc = {
+      publicId: evidenceId,
+      secureUrl: 'pending', // Mongoose requires this field. Python will update it later.
+      resourceType: att.mimeType.startsWith('image') ? 'image' : att.mimeType.startsWith('video') ? 'video' : 'raw',
+      mimeType: att.mimeType,
+      originalFilename: att.filename,
+      extension: att.filename.split('.').pop() || '',
+      size: att.buffer?.length || 0,
+      uploadedBy: SYSTEM_UPLOADER_ID as unknown as import('mongoose').Types.ObjectId,
+      uploadedAt: new Date(),
+      processingStatus: 'PENDING' as const,
+      ai_description: `Attachment "${att.filename}" from ${sender === 'citizen' ? 'citizen' : 'department'} email response. (AI Processing...)`,
+      ai_tags: [sender === 'citizen' ? 'citizen_response' : 'department_response', 'email_attachment'],
+    };
+
     // Store it in Node.js Evidence collection (with status: pending)
     // The Python worker will update this document with storage_ref and aiMetadata when it finishes.
     await Evidence.create({
@@ -176,12 +191,19 @@ async function ingestResponse(opts: {
       originalFilename:   att.filename,
       mimeType:           att.mimeType,
       processingStatus:   'PENDING',
-      ai_description:     `Attachment "${att.filename}" from ${sender === 'citizen' ? 'citizen' : 'department'} email response. (AI Processing...)`,
-      ai_tags:            [sender === 'citizen' ? 'citizen_response' : 'department_response', 'email_attachment'],
+      ai_description:     evidenceDoc.ai_description,
+      ai_tags:            evidenceDoc.ai_tags,
       uploader_id:        SYSTEM_UPLOADER_ID,
       status:             'verified',
       source:             sender === 'citizen' ? 'complainant' : 'department',
       linked_request_id:  requestId,
+    });
+    
+    // Also push to Complaint.evidence so the UI and Python scripts can see it
+    await import('../../../modules/complaint/models/Complaint.model').then(({ Complaint }) => {
+      return Complaint.findByIdAndUpdate(request.case_id, {
+        $push: { evidence: evidenceDoc }
+      });
     });
   }
 
@@ -243,18 +265,14 @@ async function ingestResponse(opts: {
       logger.info(`[GmailService] Complaint ${caseId} is in ${complaintStatus} — re-triggering complaint_intelligence pipeline only`);
       _spawnComplaintIntelligence(complaintNumber);
     } else if (complaintNumber) {
-      // ASSIGNED_TO_IO or later → trigger BOTH:
+      // ASSIGNED_TO_IO or later → trigger ONLY:
       //   1. IO investigation orchestrator (updates IO dashboard AI analysis)
-      //   2. complaint_intelligence pipeline (updates the broader complaint understanding)
-      logger.info(`[GmailService] Complaint ${caseId} is in ${complaintStatus ?? 'unknown'} — triggering BOTH InvestigationOrchestrator AND complaint_intelligence`);
+      logger.info(`[GmailService] Complaint ${caseId} is in ${complaintStatus ?? 'unknown'} — triggering ONLY InvestigationOrchestrator (skipping complaint_intelligence pipeline)`);
 
       // 1. IO dashboard AI analysis (fire and forget)
       InvestigationOrchestrator.runAnalysis(caseId.toString(), 'citizen_evidence_received').catch(
         (err: Error) => logger.error(`[GmailService] Orchestrator re-analysis failed`, { caseId, error: err.message }),
       );
-
-      // 2. complaint_intelligence pipeline (fire and forget — runs in background)
-      _spawnComplaintIntelligence(complaintNumber);
     }
   } catch (err: any) {
     logger.error(`[GmailService] Failed to determine re-analysis route for case ${caseId}`, { error: err.message });
@@ -480,11 +498,11 @@ export class GmailService {
       try {
         const FormData = require('form-data');
         const axios = require('axios');
-        const env = require('../../config/env').default;
+        const env = require('../../../config/env').default;
         
         // 1. Generate token
-        const tokenRes = await axios.post(`${env.COMPLAINT_INTELLIGENCE_URL}/evidence/upload-token/generate`, null, {
-          params: { case_id: resolvedCaseId }
+        const tokenRes = await axios.post(`${env.COMPLAINT_INTELLIGENCE_URL}/evidence/upload-token/generate`, {
+          case_id: resolvedCaseId 
         });
         const token = tokenRes.data.token;
 
@@ -512,11 +530,18 @@ export class GmailService {
       }
     }
 
+    // Strip original quoted email (e.g. "On Tue, Aug 4, 2026 at 7:29 PM Crime OS Gujarat Police <...> wrote:")
+    let cleanBody = body.split(/On\s+(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun),\s+.*?wrote:/i)[0];
+    cleanBody = cleanBody.split(/On\s+\d{1,2}\s+[A-Z][a-z]{2}\s+\d{4}.*?wrote:/i)[0]; // Fallback date format
+    cleanBody = cleanBody.split(/From:.*?To:.*?Subject:/is)[0]; // Outlook format
+    cleanBody = cleanBody.trim();
+    if (!cleanBody) cleanBody = body.trim(); // Fallback if everything was stripped
+
     await ingestResponse({
       caseId: resolvedCaseId,
       requestId: request.request_id,
       departmentEntityId: request.department_entity_id || 'unknown',
-      responseContent: body,
+      responseContent: cleanBody,
       attachments: uploadedAttachments,
       sender: senderType,
     });

@@ -34,6 +34,7 @@ export interface DepartmentRequestEmailPayload {
   caseId: string;
   requestId: string;
   content: string;
+  attachments?: { filename: string; url: string }[];
 }
 
 export interface CitizenRequestEmailPayload {
@@ -42,6 +43,7 @@ export interface CitizenRequestEmailPayload {
   caseId: string;
   requestId: string;
   content: string;
+  attachments?: { filename: string; url: string }[];
 }
 
 export interface EscalationEmailPayload {
@@ -230,6 +232,10 @@ export class EmailService {
         </body>
         </html>
       `,
+      attachments: payload.attachments?.map(att => ({
+        filename: att.filename,
+        path: att.url,
+      })),
     });
   }
 
@@ -268,6 +274,10 @@ export class EmailService {
         </body>
         </html>
       `,
+      attachments: payload.attachments?.map(att => ({
+        filename: att.filename,
+        path: att.url,
+      })),
     });
   }
 
