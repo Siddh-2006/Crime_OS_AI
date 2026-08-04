@@ -12,7 +12,7 @@ import apiClient from '@/lib/axios';
 import { API_ROUTES, APP_ROUTES } from '@/lib/constants';
 import {
   ShieldAlert, ArrowLeft, ArrowRight, ClipboardCheck, Check, Search, X, FileText, Upload,
-  Loader2, Mic, Calendar, Clock, MapPin, Film, Music, Eye, Trash2, HelpCircle, Paperclip
+  Loader2, Mic, Calendar, Clock, MapPin, Film, Music, Eye, Trash2, HelpCircle, Paperclip, MailCheck, BadgeCheck
 } from 'lucide-react';
 
 interface UploadedFile {
@@ -47,8 +47,28 @@ export default function NewComplaintPage(): React.ReactElement {
   const [submitting, setSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpSubmitting, setOtpSubmitting] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [complainantVerified, setComplainantVerified] = useState(false);
 
-  // ─── Step 1: Incident State ─────────────────────────────────────────────────
+  // ─── Step 1: Complainant profile details ───────────────────────────────────
+  const [complainantFirstName, setComplainantFirstName] = useState('');
+  const [complainantLastName, setComplainantLastName] = useState('');
+  const [complainantEmail, setComplainantEmail] = useState('');
+  const [complainantPhone, setComplainantPhone] = useState('');
+  const [complainantDob, setComplainantDob] = useState('');
+  const [complainantGender, setComplainantGender] = useState('MALE');
+  const [complainantAddress, setComplainantAddress] = useState('');
+  const [complainantCity, setComplainantCity] = useState('');
+  const [complainantDistrict, setComplainantDistrict] = useState('');
+  const [complainantState, setComplainantState] = useState('Gujarat');
+  const [complainantPincode, setComplainantPincode] = useState('');
+  const [complainantIdProofType, setComplainantIdProofType] = useState('AADHAAR');
+  const [complainantIdProofNumber, setComplainantIdProofNumber] = useState('');
+  const [complainantId, setComplainantId] = useState('');
+
+  // ─── Step 2: Incident State ────────────────────────────────────────────────
   const [shortDescription, setShortDescription] = useState(''); // Complaint Title
   const [isApproximateDate, setIsApproximateDate] = useState(false);
   const [incidentDate, setIncidentDate] = useState('');
@@ -69,7 +89,6 @@ export default function NewComplaintPage(): React.ReactElement {
   const [stations, setStations] = useState<any[]>([]);
   const [loadingStations, setLoadingStations] = useState(false);
   const [selectedStation, setSelectedStation] = useState<any | null>(null);
-  const [stationDropdownOpen, setStationDropdownOpen] = useState(false);
 
   // Optional category
   const [category, setCategory] = useState('');
@@ -304,6 +323,7 @@ export default function NewComplaintPage(): React.ReactElement {
   // Refs for Map
   const mapRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Load initial police stations
   useEffect(() => {
@@ -372,7 +392,7 @@ export default function NewComplaintPage(): React.ReactElement {
 
   // ─── Dynamic Leaflet Map Injection ──────────────────────────────────────────
   useEffect(() => {
-    if (step !== 1) return;
+    if (step !== 2) return;
 
     // Check if Leaflet is already loaded globally
     if ((window as any).L) {
@@ -419,7 +439,10 @@ export default function NewComplaintPage(): React.ReactElement {
 
   // Initialize Map
   useEffect(() => {
-    if (step !== 1 || !mapLoaded || !(window as any).L) return;
+    if (step !== 2 || !mapLoaded || !(window as any).L) return;
+
+    const container = mapContainerRef.current;
+    if (!container) return;
 
     let initialLat = 23.0225;
     let initialLng = 72.5714;
@@ -439,12 +462,11 @@ export default function NewComplaintPage(): React.ReactElement {
 
     // Check if map already created on DOM element
     if (!mapRef.current) {
-      mapRef.current = L.map('leaflet-map-element').setView([initialLat, initialLng], 12);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
-      }).addTo(mapRef.current);
-
+      mapRef.current = L.map(container).setView([initialLat, initialLng], 12);
       markerRef.current = L.marker([initialLat, initialLng], { draggable: true }).addTo(mapRef.current);
+      setTimeout(() => {
+        mapRef.current?.invalidateSize();
+      }, 0);
 
       const updateCoordsFromMarker = async () => {
         const position = markerRef.current.getLatLng();
@@ -711,6 +733,23 @@ export default function NewComplaintPage(): React.ReactElement {
 
   // ─── Step Validation & Progress ───────────────────────────────────────────
   const validateStep1 = () => {
+    if (!complainantFirstName.trim()) return 'Complainant first name is required';
+    if (!complainantLastName.trim()) return 'Complainant last name is required';
+    if (!complainantEmail.trim()) return 'Complainant email is required';
+    if (!complainantPhone.trim()) return 'Complainant phone number is required';
+    if (!complainantDob) return 'Complainant date of birth is required';
+    if (!complainantAddress.trim()) return 'Complainant address is required';
+    if (!complainantCity.trim()) return 'Complainant city is required';
+    if (!complainantDistrict.trim()) return 'Complainant district is required';
+    if (!complainantState.trim()) return 'Complainant state is required';
+    if (!complainantPincode.trim()) return 'Complainant pincode is required';
+    if (!complainantIdProofNumber.trim()) return 'Identity proof number is required';
+    if (!complainantId) return 'Please create a complainant profile before continuing';
+    if (!complainantVerified) return 'Please verify the complainant email with the OTP sent to them';
+    return null;
+  };
+
+  const validateStep2 = () => {
     if (!shortDescription.trim()) return 'Complaint Title is required';
     if (shortDescription.trim().length < 5 || shortDescription.trim().length > 255) {
       return 'Complaint Title must be between 5 and 255 characters';
@@ -729,12 +768,6 @@ export default function NewComplaintPage(): React.ReactElement {
     }
 
     if (!incidentPlace.trim()) return 'Incident location is required. Drop pin on map or search address';
-    if (!selectedStation) return 'Jurisdiction police station could not be auto-detected. Please drop a pin on the map or search an address.';
-
-    return null;
-  };
-
-  const validateStep2 = () => {
     if (detailedDescription.trim().length < 10) {
       return 'Detailed Description must be at least 10 characters';
     }
@@ -793,9 +826,10 @@ export default function NewComplaintPage(): React.ReactElement {
         coordinates: coordinates || undefined,
         address: incidentPlace,
         category: category || undefined,
-        shortDescription, // Complaint Title
+        shortDescription,
         detailedDescription,
-        policeStation: selectedStation._id,
+        complainantUserId: complainantId || undefined,
+        policeStation: selectedStation?._id || undefined,
         evidence: evidenceFiles,
       };
 
@@ -829,6 +863,56 @@ export default function NewComplaintPage(): React.ReactElement {
       return <FileText className="h-6 w-6 text-red-500" />;
     }
     return <FileText className="h-6 w-6 text-neutral-500" />;
+  };
+
+  const handleCreateComplainantProfile = async () => {
+    setError(null);
+    setOtpSubmitting(true);
+    try {
+      const res = await apiClient.post(API_ROUTES.AUTH.COMPLAINANT_PROFILE, {
+        firstName: complainantFirstName,
+        middleName: '',
+        lastName: complainantLastName,
+        email: complainantEmail,
+        phone: complainantPhone,
+        dateOfBirth: complainantDob,
+        gender: complainantGender,
+        address: complainantAddress,
+        city: complainantCity,
+        district: complainantDistrict,
+        state: complainantState,
+        pincode: complainantPincode,
+        idProofType: complainantIdProofType,
+        idProofNumber: complainantIdProofNumber,
+      });
+      setComplainantId(res.data.data?.id || res.data.data?._id || '');
+      setOtpSent(true);
+      setError(null);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Could not create complainant profile.');
+    } finally {
+      setOtpSubmitting(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otpCode.trim()) {
+      setError('Please enter the OTP sent to the complainant email.');
+      return;
+    }
+
+    setOtpSubmitting(true);
+    setError(null);
+    try {
+      await apiClient.post(API_ROUTES.AUTH.VERIFY_EMAIL, { email: complainantEmail, otp: otpCode });
+      setComplainantVerified(true);
+      setOtpSent(true);
+      setError(null);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Invalid OTP. Please try again.');
+    } finally {
+      setOtpSubmitting(false);
+    }
   };
 
   const categories = [
@@ -872,10 +956,10 @@ export default function NewComplaintPage(): React.ReactElement {
       {/* Modern Stepper Indicator */}
       <div className="grid grid-cols-4 gap-2 bg-neutral-50 border border-neutral-200 rounded-xl p-3 shadow-inner">
         {[
-          { num: 1, name: 'Incident Details' },
-          { num: 2, name: 'Narrative Story' },
-          { num: 3, name: 'Evidence Files' },
-          { num: 4, name: 'AI Review & Save' }
+          { num: 1, name: 'Complainant' },
+          { num: 2, name: 'Complaint' },
+          { num: 3, name: 'Evidence' },
+          { num: 4, name: 'Review' }
         ].map((s) => (
           <div key={s.num} className="flex flex-col md:flex-row items-center gap-2 px-1 text-center md:text-left">
             <span
@@ -916,11 +1000,78 @@ export default function NewComplaintPage(): React.ReactElement {
         </div>
       )}
 
-      {/* ─── Step 1: Incident specifics ─── */}
+      {/* ─── Step 1: Complainant profile & OTP ─── */}
       {step === 1 && (
         <Card className="space-y-6 p-6">
           <div className="border-b border-neutral-100 pb-3">
-            <h2 className="text-xl font-bold text-neutral-900">Step 1: Incident Specification</h2>
+            <h2 className="text-xl font-bold text-neutral-900">Step 1: Complainant details</h2>
+            <p className="text-sm text-neutral-500">Capture the complainant profile and verify their email before filing the case.</p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <Input label="First Name *" value={complainantFirstName} onChange={(e) => setComplainantFirstName(e.target.value)} placeholder="e.g. Priya" required />
+            <Input label="Last Name *" value={complainantLastName} onChange={(e) => setComplainantLastName(e.target.value)} placeholder="e.g. Sharma" required />
+            <Input label="Email *" type="email" value={complainantEmail} onChange={(e) => setComplainantEmail(e.target.value)} placeholder="complainant@example.com" required />
+            <Input label="Phone *" value={complainantPhone} onChange={(e) => setComplainantPhone(e.target.value)} placeholder="10-digit mobile number" required />
+            <Input label="Date of Birth *" type="date" value={complainantDob} onChange={(e) => setComplainantDob(e.target.value)} required />
+            <Select label="Gender *" value={complainantGender} onChange={(e) => setComplainantGender(e.target.value)} options={[{value:'MALE',label:'Male'},{value:'FEMALE',label:'Female'},{value:'OTHER',label:'Other'}]} />
+            <Input label="Address *" value={complainantAddress} onChange={(e) => setComplainantAddress(e.target.value)} placeholder="Flat / House / Street" required />
+            <Input label="City *" value={complainantCity} onChange={(e) => setComplainantCity(e.target.value)} placeholder="Ahmedabad" required />
+            <Input label="District *" value={complainantDistrict} onChange={(e) => setComplainantDistrict(e.target.value)} placeholder="Ahmedabad" required />
+            <Input label="State *" value={complainantState} onChange={(e) => setComplainantState(e.target.value)} placeholder="Gujarat" required />
+            <Input label="Pincode *" value={complainantPincode} onChange={(e) => setComplainantPincode(e.target.value)} placeholder="380001" required />
+            <Select
+              label="ID Proof Type *"
+              value={complainantIdProofType}
+              onChange={(e) => setComplainantIdProofType(e.target.value)}
+              options={[
+                { value: 'AADHAAR', label: 'Aadhaar' },
+                { value: 'PAN', label: 'PAN' },
+                { value: 'DRIVING_LICENSE', label: 'Driving License' },
+                { value: 'VOTER_ID', label: 'Voter ID' },
+              ]}
+            />
+            <Input label="ID Proof Number *" value={complainantIdProofNumber} onChange={(e) => setComplainantIdProofNumber(e.target.value)} placeholder="1234 5678 9012" required />
+          </div>
+
+          <div className="rounded-xl border border-primary-100 bg-primary-50/60 p-4 space-y-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <MailCheck className="h-5 w-5 text-primary-700" />
+              <div>
+                <p className="text-sm font-semibold text-primary-900">Email verification for the complainant</p>
+                <p className="text-xs text-primary-700">An OTP will be sent to the complainant’s email before the complaint can be submitted.</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="secondary" onClick={handleCreateComplainantProfile} isLoading={otpSubmitting}>
+                {otpSent ? 'Resend OTP' : 'Send OTP'}
+              </Button>
+              <Input label="OTP" value={otpCode} onChange={(e) => setOtpCode(e.target.value)} placeholder="6-digit OTP" className="min-w-[180px]" />
+              <Button type="button" onClick={handleVerifyOtp} isLoading={otpSubmitting}>
+                Verify OTP
+              </Button>
+            </div>
+            {complainantVerified && (
+              <div className="flex items-center gap-2 text-sm font-semibold text-green-700">
+                <BadgeCheck className="h-4 w-4" />
+                Complainant email verified successfully.
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end pt-4 border-t border-neutral-100">
+            <Button onClick={handleNext} rightIcon={<ArrowRight size={16} />}>
+              Continue to Complaint Details
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {/* ─── Step 2: Incident specifics ─── */}
+      {step === 2 && (
+        <Card className="space-y-6 p-6">
+          <div className="border-b border-neutral-100 pb-3">
+            <h2 className="text-xl font-bold text-neutral-900">Step 2: Complaint details</h2>
             <p className="text-sm text-neutral-500">Provide dates, general timing, exact coordinates, and jurisdictional area.</p>
           </div>
 
@@ -1062,7 +1213,7 @@ export default function NewComplaintPage(): React.ReactElement {
 
               {/* Map element */}
               <div className="relative border border-neutral-300 rounded-xl overflow-hidden shadow-sm bg-neutral-100">
-                <div id="leaflet-map-element" className="h-[280px] w-full z-0" />
+                <div ref={mapContainerRef} id="leaflet-map-element" className="h-[280px] w-full z-0" />
                 {!mapLoaded && !mapError && (
                   <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10">
                     <Loader2 className="animate-spin text-primary-800 mr-2" />
@@ -1085,48 +1236,59 @@ export default function NewComplaintPage(): React.ReactElement {
                 required
               />
 
-              {!selectedStation && (
-                <div className="border border-amber-200 bg-amber-50 rounded-lg p-4 space-y-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <label className="block text-sm font-semibold text-neutral-800">Manual Jurisdiction Selection</label>
-                      <p className="text-xs text-neutral-600">Auto-detection did not resolve a police station. Please choose one from the list below.</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={handleStationSearchChange}
-                      placeholder="Search police station by name, city, or district"
-                      className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg outline-none focus:ring-2 focus:ring-primary-500 bg-white text-neutral-900"
-                    />
-
-                    <select
-                      value={selectedStation?._id ?? ''}
-                      onChange={(e) => {
-                        const chosen = stations.find((station) => station._id === e.target.value);
-                        setSelectedStation(chosen ?? null);
-                      }}
-                      className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg outline-none focus:ring-2 focus:ring-primary-500 bg-white text-neutral-900"
-                    >
-                      <option value="">Select a police station</option>
-                      {stations.map((station) => (
-                        <option key={station._id} value={station._id}>
-                          {station.name} — {station.city}, {station.district} ({station.code})
-                        </option>
-                      ))}
-                    </select>
-
-                    {loadingStations && (
-                      <p className="text-xs text-neutral-500">Loading police stations…</p>
-                    )}
-                  </div>
-                </div>
-              )}
+              <div className="rounded-lg border border-primary-200 bg-primary-50/80 p-4 text-sm text-neutral-700">
+                <p className="font-semibold text-neutral-900">Police Station Assignment</p>
+                <p>
+                  Your assigned police station will be selected automatically from your officer profile when the complaint is submitted.
+                </p>
+              </div>
             </div>
 
+            {/* Description Narrative */}
+            <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-4 space-y-4">
+              <label className="block text-sm font-semibold text-neutral-800">Detailed Narrative Description *</label>
+              <textarea
+                value={detailedDescription}
+                onChange={(e) => setDetailedDescription(e.target.value)}
+                placeholder="Start typing your story here... Detail the events, suspect characteristics, lost objects, time frames, and potential witnesses."
+                className="w-full p-4 rounded-xl border border-neutral-300 min-h-[260px] text-sm focus:ring-2 focus:ring-primary-500 outline-none transition-all resize-none shadow-sm text-neutral-900 bg-white"
+              />
+
+              <div className="flex flex-col md:flex-row items-center gap-3">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setIsRecordingUIActive(true)}
+                  leftIcon={<Mic size={16} />}
+                >
+                  Record Voice
+                </Button>
+                <span className="text-xs text-neutral-400 font-medium">Prepares speech recorder UI placeholder</span>
+              </div>
+
+              <div
+                className={[
+                  'rounded-xl border border-primary-100 bg-primary-50/40 text-primary-900 space-y-3 p-4 transition-all duration-500',
+                  detailedDescription.length > 0 ? 'opacity-60 pointer-events-none' : 'opacity-100'
+                ].join(' ')}
+              >
+                <div className="flex items-center gap-2 border-b border-primary-200 pb-2">
+                  <HelpCircle size={16} className="text-primary-800" />
+                  <h4 className="text-xs font-bold uppercase tracking-wider">Helpful Writing Tips</h4>
+                </div>
+                <p className="text-xs leading-relaxed text-neutral-600">
+                  Consider detailing:
+                </p>
+                <ul className="text-xs space-y-1.5 list-disc pl-4 text-neutral-700">
+                  <li>What exactly took place?</li>
+                  <li>Where was the location of crime?</li>
+                  <li>When did it occur?</li>
+                  <li>Who was involved or suspected?</li>
+                  <li>What property or money was lost?</li>
+                  <li>Are there witnesses or CCTV?</li>
+                </ul>
+              </div>
+            </div>
 
             {/* Optional category */}
             <div className="border border-neutral-200 bg-neutral-50 rounded-lg p-4 space-y-2">
@@ -1142,77 +1304,12 @@ export default function NewComplaintPage(): React.ReactElement {
             </div>
           </div>
 
-          <div className="flex justify-end pt-4 border-t border-neutral-100">
-            <Button onClick={handleNext} rightIcon={<ArrowRight size={16} />}>
-              Continue to Step 2
-            </Button>
-          </div>
-        </Card>
-      )}
-
-      {/* ─── Step 2: Story Description Narrative ─── */}
-      {step === 2 && (
-        <Card className="space-y-6 p-6">
-          <div className="border-b border-neutral-100 pb-3">
-            <h2 className="text-xl font-bold text-neutral-900">Step 2: Tell us what happened</h2>
-            <p className="text-sm text-neutral-500">Write everything you remember. Don&apos;t worry about legal terms. Our AI will organize everything later.</p>
-          </div>
-
-          <div className="flex flex-col md:flex-row gap-6">
-            {/* Description Narrative input */}
-            <div className="flex-1 space-y-4">
-              <label className="block text-sm font-semibold text-neutral-700">Detailed Narrative Description *</label>
-              <textarea
-                value={detailedDescription}
-                onChange={(e) => setDetailedDescription(e.target.value)}
-                placeholder="Start typing your story here... Detail the events, suspect characteristics, lost objects, time frames, and potential witnesses."
-                className="w-full p-4 rounded-xl border border-neutral-300 min-h-[260px] text-sm focus:ring-2 focus:ring-primary-500 outline-none transition-all resize-none shadow-sm text-neutral-900 bg-white"
-              />
-
-              <div className="flex items-center gap-3">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => setIsRecordingUIActive(true)}
-                  leftIcon={<Mic size={16} />}
-                >
-                  Record Voice
-                </Button>
-                <span className="text-xs text-neutral-400 font-medium">Prepares speech recorder UI placeholder</span>
-              </div>
-            </div>
-
-            {/* Fading Floating Writing Tips Panel */}
-            <div
-              className={[
-                'w-full md:w-64 p-4 rounded-xl border border-primary-100 bg-primary-50/40 text-primary-900 space-y-3 self-start transition-all duration-500 transform',
-                detailedDescription.length > 0 ? 'opacity-0 scale-95 pointer-events-none md:w-0 md:p-0 md:border-0 md:h-0 overflow-hidden' : 'opacity-100 scale-100'
-              ].join(' ')}
-            >
-              <div className="flex items-center gap-2 border-b border-primary-200 pb-2">
-                <HelpCircle size={16} className="text-primary-800" />
-                <h4 className="text-xs font-bold uppercase tracking-wider">Helpful Writing Tips</h4>
-              </div>
-              <p className="text-xs leading-relaxed text-neutral-600">
-                Consider detailing:
-              </p>
-              <ul className="text-xs space-y-1.5 list-disc pl-4 text-neutral-700">
-                <li>What exactly took place?</li>
-                <li>Where was the location of crime?</li>
-                <li>When did it occur?</li>
-                <li>Who was involved or suspected?</li>
-                <li>What property or money was lost?</li>
-                <li>Are there witnesses or CCTV?</li>
-              </ul>
-            </div>
-          </div>
-
           <div className="flex justify-between items-center pt-4 border-t border-neutral-100">
             <Button variant="ghost" onClick={handlePrev} leftIcon={<ArrowLeft size={16} />}>
-              Back to Specifics
+              Back to Complainant
             </Button>
             <Button onClick={handleNext} rightIcon={<ArrowRight size={16} />}>
-              Continue to Step 3
+              Continue to Evidence
             </Button>
           </div>
         </Card>
@@ -1384,7 +1481,7 @@ export default function NewComplaintPage(): React.ReactElement {
 
           <div className="flex justify-between items-center pt-4 border-t border-neutral-100">
             <Button variant="ghost" onClick={handlePrev} leftIcon={<ArrowLeft size={16} />}>
-              Back to Story
+              Back to Complaint
             </Button>
             <Button onClick={handleNext} rightIcon={<ArrowRight size={16} />}>
               Continue to Review
@@ -1395,7 +1492,7 @@ export default function NewComplaintPage(): React.ReactElement {
 
       {/* ─── Step 4: Review & Submission ─── */}
       {step === 4 && (
-        <form onSubmit={handleSubmit} className="max-w-3xl mx-auto space-y-8 animate-fade-in text-neutral-900">
+        <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-8 animate-fade-in text-neutral-900">
           {/* Header Banner */}
           <div className="bg-gradient-to-r from-primary-900 to-primary-850 text-white rounded-2xl p-6 shadow flex items-center justify-between gap-4 border border-primary-955">
             <div className="space-y-1.5">
@@ -1474,17 +1571,23 @@ export default function NewComplaintPage(): React.ReactElement {
                   <span className="block text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Assigned Police Station</span>
                   <div className="mt-1.5">
                     <div className="flex items-center gap-2">
-                      <p className="font-extrabold text-neutral-855 text-sm">{selectedStation?.name || 'Detection Pending...'}</p>
+                      <p className="font-extrabold text-neutral-855 text-sm">
+                        {selectedStation?.name || 'Automatically assigned on submission'}
+                      </p>
                       {selectedStation && (
                         <span className="text-[9px] font-extrabold bg-green-100 border border-green-200 text-green-700 px-2 py-0.5 rounded-full select-none uppercase tracking-wide flex items-center gap-0.5">
                           <Check size={8} /> Auto-Mapped
                         </span>
                       )}
                     </div>
-                    {selectedStation && (
+                    {selectedStation ? (
                       <p className="text-xs text-neutral-400 mt-1 font-medium leading-relaxed">
                         Station Code: {selectedStation.code} <br />
                         Jurisdiction: {selectedStation.city}, {selectedStation.district}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-neutral-500 mt-1 font-medium leading-relaxed">
+                        Your officer profile will provide the assigned station when the complaint is created.
                       </p>
                     )}
                   </div>

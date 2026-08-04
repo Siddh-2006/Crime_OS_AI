@@ -6,7 +6,7 @@ export interface IComplaintRepository {
   findByComplaintNumber(complaintNumber: string): Promise<IComplaint | null>;
   findCitizenComplaints(citizenId: string): Promise<IComplaint[]>;
   findStationComplaints(
-    stationId: string,
+    query: any,
     filters?: {
       status?: string;
       search?: string;

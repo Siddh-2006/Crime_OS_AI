@@ -5,6 +5,7 @@ import { HttpStatusCode } from '../../../common/enums/httpStatus.enum';
 import env from '../../../config/env';
 import type {
   RegisterCitizenDto,
+  CreateComplainantProfileDto,
   VerifyEmailDto,
   ResendOtpDto,
   LoginDto,
@@ -40,10 +41,19 @@ export class AuthController {
     }
   };
 
+  createComplainantProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const complainant = await this.authService.createComplainantProfile(req.body as CreateComplainantProfileDto);
+      sendSuccess(res, HttpStatusCode.CREATED, 'Complainant profile created. Please verify the email address.', { id: complainant._id, email: complainant.email });
+    } catch (err) {
+      next(err);
+    }
+  };
+
   verifyEmail = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       await this.authService.verifyEmail(req.body as VerifyEmailDto);
-      sendSuccess(res, HttpStatusCode.OK, 'Email verified successfully. You can now login.');
+      sendSuccess(res, HttpStatusCode.OK, 'Email verified successfully. You can continue with the complaint flow.');
     } catch (err) {
       next(err);
     }

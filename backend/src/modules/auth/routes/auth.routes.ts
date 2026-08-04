@@ -6,8 +6,11 @@ import { OtpService } from '../services/OtpService';
 import { UserRepository } from '../../user/repositories/UserRepository';
 import { validate } from '../../../common/middlewares/validate.middleware';
 import { authenticate } from '../../../common/middlewares/authenticate.middleware';
+import { authorize } from '../../../common/middlewares/authorize.middleware';
+import { Role } from '../../../shared/enums/roles.enum';
 import {
   registerCitizenSchema,
+  createComplainantProfileSchema,
   verifyEmailSchema,
   resendOtpSchema,
   loginSchema,
@@ -38,8 +41,14 @@ const router = Router();
 router.post('/register', registerLimiter, validate(registerCitizenSchema), authController.register);
 
 /**
+ * POST /auth/complainant-profile
+ * Create a complainant profile on behalf of a police officer and send OTP
+ */
+router.post('/complainant-profile', authenticate, authorize(Role.SHO, Role.IO), validate(createComplainantProfileSchema), authController.createComplainantProfile);
+
+/**
  * POST /auth/verify-email
- * Verify email using OTP sent during registration
+ * Verify email using OTP sent during registration or complainant profile creation
  */
 router.post('/verify-email', otpVerifyLimiter, validate(verifyEmailSchema), authController.verifyEmail);
 

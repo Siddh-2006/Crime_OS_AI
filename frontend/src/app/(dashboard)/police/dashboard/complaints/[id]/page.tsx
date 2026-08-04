@@ -407,6 +407,8 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
   const isSHO = user?.role === 'SHO';
   const isLocked = complaint.status === 'FIR_REGISTERED' || complaint.status === 'CLOSED';
   const isClosed = complaint.status === 'CLOSED';
+  const canRegisterFir = isSHO && complaint.status !== 'FIR_REGISTERED' && complaint.status !== 'CLOSED' && complaint.status !== 'REJECTED';
+  const canAssignIo = isSHO && complaint.status === 'FIR_REGISTERED';
 
   const ciData = complaint?.complaintIntelligence as any;
   const snapData = snapshot as any;
@@ -455,6 +457,11 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
             <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-200 whitespace-nowrap">
               {complaint.status.replace(/_/g, ' ')}
             </span>
+            {complaint.assignedIO && (
+              <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
+                Assigned IO: {complaint.assignedIO.officerName} (Badge {complaint.assignedIO.badgeNumber})
+              </span>
+            )}
           </div>
           <p className="text-xs text-neutral-500 mt-1 truncate">
             Complainant: {complaint.citizen.firstName} {complaint.citizen.lastName} | Phone: {complaint.citizen.phone}
@@ -462,38 +469,48 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
         </div>
 
         {/* Action Controls for SHO */}
-        {isSHO && complaint.status === 'SUBMITTED' && (
-          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-            <Button
-              size="sm"
-              onClick={() => {
-                setAssignModalOpen(true);
-                fetchRecommendations();
-              }}
-              disabled={actionLoading}
-            >
-              Approve & Assign IO
-            </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={() => setRejectModalOpen(true)}
-              disabled={actionLoading}
-            >
-              Reject Case
-            </Button>
-          </div>
-        )}
-
-        {/* Action Controls for assigned IO */}
-        {isAssignedIO && !isLocked && (
-          <div className="flex flex-wrap gap-2 w-full md:w-auto justify-end">
-            <Button variant="secondary" size="sm" leftIcon={<FileText size={15} />} onClick={() => setPreviewModalOpen(true)}>
-              Preview FIR
-            </Button>
-            <Button size="sm" leftIcon={<FileSignature size={15} />} onClick={() => setFirConfirmModalOpen(true)}>
-              Register FIR
-            </Button>
+        {isSHO && (canRegisterFir || canAssignIo) && (
+          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
+            {canRegisterFir && (
+              <>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  leftIcon={<FileText size={15} />}
+                  onClick={() => setPreviewModalOpen(true)}
+                >
+                  Preview FIR
+                </Button>
+                <Button
+                  size="sm"
+                  leftIcon={<FileSignature size={15} />}
+                  onClick={() => setFirConfirmModalOpen(true)}
+                  disabled={actionLoading}
+                >
+                  Register FIR
+                </Button>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => setRejectModalOpen(true)}
+                  disabled={actionLoading}
+                >
+                  Reject Case
+                </Button>
+              </>
+            )}
+            {canAssignIo && (
+              <Button
+                size="sm"
+                onClick={() => {
+                  setAssignModalOpen(true);
+                  fetchRecommendations();
+                }}
+                disabled={actionLoading}
+              >
+                Assign IO
+              </Button>
+            )}
           </div>
         )}
 

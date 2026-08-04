@@ -5,6 +5,7 @@
 export const API_ROUTES = {
   AUTH: {
     REGISTER: '/auth/register',
+    COMPLAINANT_PROFILE: '/auth/complainant-profile',
     VERIFY_EMAIL: '/auth/verify-email',
     RESEND_OTP: '/auth/resend-otp',
     LOGIN: '/auth/login',
@@ -75,7 +76,7 @@ export const APP_ROUTES = {
   ADMIN_LOGIN: '/admin/login',
   ADMIN_DASHBOARD: '/admin/dashboard',
   ADMIN_DEPARTMENTS: '/admin/departments',
-  FILE_COMPLAINT: '/dashboard/complaints/new',
+  FILE_COMPLAINT: '/police/dashboard/complaints/new',
   MY_COMPLAINTS: '/dashboard/complaints',
   COMPLAINT_DETAIL: (id: string) => `/dashboard/complaints/${id}`,
   POLICE_COMPLAINTS: '/police/dashboard/complaints',

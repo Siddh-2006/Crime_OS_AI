@@ -12,6 +12,7 @@ import { IUser } from '../../user/models/User.model';
 import logger from '../../../config/logger';
 import type {
   RegisterCitizenDto,
+  CreateComplainantProfileDto,
   VerifyEmailDto,
   LoginDto,
   ForgotPasswordDto,
@@ -71,6 +72,34 @@ export class AuthService {
     logger.info('Citizen registered — verification OTP sent', { email: dto.email });
   }
 
+  async createComplainantProfile(dto: CreateComplainantProfileDto): Promise<IUser> {
+    const complainant = await this.userRepository.create({
+      ...dto,
+      dateOfBirth: new Date(dto.dateOfBirth),
+      isEmailVerified: false,
+      username: undefined,
+      password: undefined,
+      securityQuestion: undefined,
+      securityAnswer: undefined,
+    });
+
+    const otp = await this.otpService.generateAndStoreEmailVerificationOtp(dto.email);
+
+    try {
+      await EmailQueue.enqueueVerificationOtp({
+        to: dto.email,
+        name: dto.firstName,
+        otp,
+        expiryMinutes: REDIS_TTL.OTP / 60,
+      });
+    } catch (err) {
+      logger.warn('Failed to enqueue complainant verification OTP email (Redis might be down)', { error: err });
+    }
+
+    logger.info('Complainant profile created — verification OTP sent', { email: dto.email });
+    return complainant;
+  }
+
   async verifyEmail(dto: VerifyEmailDto): Promise<void> {
     const user = await this.userRepository.findByEmail(dto.email);
     if (!user) throw new NotFoundError('User');
@@ -105,6 +134,10 @@ export class AuthService {
   async login(dto: LoginDto): Promise<AuthResult & { refreshToken: string }> {
     const user = await this.userRepository.findByEmail(dto.email, true);
     if (!user) throw new AuthenticationError('Invalid email or password');
+
+    if (!user.password) {
+      throw new AuthenticationError('Invalid email or password');
+    }
 
     const isPasswordValid = await comparePassword(dto.password, user.password);
     if (!isPasswordValid) throw new AuthenticationError('Invalid email or password');

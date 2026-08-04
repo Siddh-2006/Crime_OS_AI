@@ -33,7 +33,7 @@ export class ComplaintRepository implements IComplaintRepository {
   }
 
   async findStationComplaints(
-    stationId: string,
+    query: any,
     filters: {
       status?: string;
       search?: string;
@@ -42,14 +42,14 @@ export class ComplaintRepository implements IComplaintRepository {
     } = {}
   ): Promise<{ complaints: IComplaint[]; total: number }> {
     const { status, search, page = 1, limit = 10 } = filters;
-    const query: any = { policeStation: stationId, isDeleted: false };
+    const queryObj: any = { ...query, isDeleted: false };
 
     if (status) {
-      query.status = status;
+      queryObj.status = status;
     }
 
     if (search) {
-      query.$or = [
+      queryObj.$or = [
         { complaintNumber: { $regex: search, $options: 'i' } },
         { shortDescription: { $regex: search, $options: 'i' } },
         { detailedDescription: { $regex: search, $options: 'i' } },
@@ -60,14 +60,14 @@ export class ComplaintRepository implements IComplaintRepository {
     const skip = (page - 1) * limit;
 
     const [complaints, total] = await Promise.all([
-      Complaint.find(query)
+      Complaint.find(queryObj)
         .populate('citizen', 'firstName lastName email phone')
         .populate('assignedIO', 'officerName badgeNumber')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .exec(),
-      Complaint.countDocuments(query),
+      Complaint.countDocuments(queryObj),
     ]);
 
     return { complaints, total };

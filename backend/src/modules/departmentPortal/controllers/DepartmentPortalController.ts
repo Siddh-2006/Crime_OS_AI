@@ -65,6 +65,14 @@ export class DepartmentPortalController {
         return;
       }
 
+      if (!user.password) {
+        sendError(res, HttpStatusCode.UNAUTHORIZED, {
+          code: 'AUTH_FAILED',
+          message: 'Invalid credentials'
+        });
+        return;
+      }
+
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
         sendError(res, HttpStatusCode.UNAUTHORIZED, {
