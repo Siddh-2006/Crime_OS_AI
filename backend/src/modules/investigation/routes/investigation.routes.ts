@@ -56,8 +56,10 @@ router.post('/:id/requests/draft',           InvestigationController.generateDra
 router.patch('/:id/requests/:reqId',         InvestigationController.updateRequestDraft);
 router.post('/:id/requests/:reqId/send',     InvestigationController.sendRequest);
 
-// Citizen request
-router.post('/:id/citizen-request',          CitizenRequestController.createCitizenRequest);
+// Citizen requests
+router.post('/:id/citizen-request/missing-info',  CitizenRequestController.requestFromMissingInfo);
+router.post('/:id/citizen-request',               CitizenRequestController.createCitizenRequest);
+
 
 // Escalation
 router.post('/:id/escalate',                 InvestigationController.escalateCase);
