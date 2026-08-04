@@ -27,20 +27,20 @@ router.get('/police-stations/search', authenticate, complaintController.searchPo
 router.post(
   '/upload-signature',
   authenticate,
-  authorize(Role.USER),
+  authorize(Role.USER, Role.SHO, Role.IO),
   complaintController.getUploadSignature,
 );
 router.post(
   '/',
   authenticate,
-  authorize(Role.USER),
+  authorize(Role.USER, Role.SHO, Role.IO),
   validate(createComplaintSchema),
   complaintController.createComplaint,
 );
 router.get(
   '/',
   authenticate,
-  authorize(Role.USER),
+  authorize(Role.USER, Role.SHO, Role.IO),
   complaintController.getCitizenComplaints,
 );
 router.get(
@@ -52,7 +52,7 @@ router.get(
 router.post(
   '/:id/evidence',
   authenticate,
-  authorize(Role.USER),
+  authorize(Role.USER, Role.SHO, Role.IO),
   validate(addEvidenceSchema),
   complaintController.addEvidence,
 );
@@ -110,7 +110,7 @@ router.patch(
 router.patch(
   '/:id/register-fir',
   authenticate,
-  authorize(Role.IO),
+  authorize(Role.SHO),
   complaintController.registerFir,
 );
 router.patch(

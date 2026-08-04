@@ -11,22 +11,20 @@ import { ToastContainer } from '@/components/ui/Toast';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
-import { APP_ROUTES, ROLE } from '@/lib/constants';
+import { APP_ROUTES } from '@/lib/constants';
 import type { AxiosError } from 'axios';
 import type { ApiResponse } from '@/lib/types';
 
 interface LoginFormValues {
   email: string;
   password: string;
-  isPolice: boolean;
 }
 
 /**
- * Unified login page for both citizens and police officers.
- * Toggle between the two login modes.
+ * Police officer login page.
  */
 export default function LoginPage(): React.ReactElement {
-  const { loginCitizen, loginPolice } = useAuth();
+  const { loginPolice } = useAuth();
   const { toasts, showToast, removeToast } = useToast();
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
@@ -34,25 +32,15 @@ export default function LoginPage(): React.ReactElement {
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
-    defaultValues: { email: '', password: '', isPolice: false },
+    defaultValues: { email: '', password: '' },
   });
-
-  const isPoliceValue = watch('isPolice');
-  const isPolice = String(isPoliceValue) === 'true';
 
   const onSubmit = async (values: LoginFormValues): Promise<void> => {
     try {
-      const isPoliceSubmit = String(values.isPolice) === 'true';
-      if (isPoliceSubmit) {
-        await loginPolice(values.email, values.password);
-        router.replace(APP_ROUTES.POLICE_DASHBOARD);
-      } else {
-        await loginCitizen(values.email, values.password);
-        router.replace(APP_ROUTES.DASHBOARD);
-      }
+      await loginPolice(values.email, values.password);
+      router.replace(APP_ROUTES.POLICE_DASHBOARD);
     } catch (err) {
       const axiosErr = err as AxiosError<ApiResponse>;
       const message =
@@ -68,34 +56,8 @@ export default function LoginPage(): React.ReactElement {
   return (
     <>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-neutral-900">Welcome back</h1>
-        <p className="mt-1 text-sm text-neutral-500">Sign in to access the Crime OS portal</p>
-      </div>
-
-      {/* Toggle: Citizen / Police */}
-      <div className="mb-6 flex rounded-lg border border-neutral-200 bg-neutral-100 p-1">
-        <label
-          className={[
-            'flex-1 cursor-pointer rounded-md py-2 text-center text-sm font-medium transition-colors select-none',
-            !isPolice
-              ? 'bg-white text-primary-900 shadow-card'
-              : 'text-neutral-500 hover:text-neutral-700',
-          ].join(' ')}
-        >
-          <input type="radio" {...register('isPolice')} value="false" className="sr-only" defaultChecked />
-          Citizen
-        </label>
-        <label
-          className={[
-            'flex-1 cursor-pointer rounded-md py-2 text-center text-sm font-medium transition-colors select-none',
-            isPolice
-              ? 'bg-white text-primary-900 shadow-card'
-              : 'text-neutral-500 hover:text-neutral-700',
-          ].join(' ')}
-        >
-          <input type="radio" {...register('isPolice')} value="true" className="sr-only" />
-          Police Officer
-        </label>
+        <h1 className="text-2xl font-bold text-neutral-900">Police Officer Login</h1>
+        <p className="mt-1 text-sm text-neutral-500">Sign in to access the Crime OS police portal</p>
       </div>
 
       <Card>
@@ -133,16 +95,14 @@ export default function LoginPage(): React.ReactElement {
             {...register('password', { required: 'Password is required' })}
           />
 
-          {!isPolice && (
-            <div className="text-right">
-              <Link
-                href={APP_ROUTES.FORGOT_PASSWORD}
-                className="text-sm font-medium text-primary-700 hover:underline"
-              >
-                Forgot password?
-              </Link>
-            </div>
-          )}
+          <div className="text-right">
+            <Link
+              href={APP_ROUTES.FORGOT_PASSWORD}
+              className="text-sm font-medium text-primary-700 hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </div>
 
           <Button
             type="submit"
@@ -155,14 +115,6 @@ export default function LoginPage(): React.ReactElement {
         </form>
       </Card>
 
-      {!isPolice && (
-        <p className="mt-6 text-center text-sm text-neutral-600">
-          Don&apos;t have an account?{' '}
-          <Link href={APP_ROUTES.REGISTER} className="font-medium text-primary-700 hover:underline">
-            Register as a Citizen
-          </Link>
-        </p>
-      )}
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </>
