@@ -327,4 +327,126 @@ export class CitizenRequestController {
       sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, 'Error creating citizen request');
     }
   }
+
+  /**
+   * POST /cases/:id/citizen-request/missing-info
+   * Creates a citizen evidence request directly from an AI-identified missing_information
+   * or missing_evidence item — does NOT require a checklist step.
+   * Authenticated (IO Officer).
+   */
+  static async requestFromMissingInfo(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params; // caseId (MongoDB ObjectId)
+      const { item, reason, importance, type } = req.body;
+      // type: 'missing_information' | 'missing_evidence'
+
+      if (!item) {
+        return sendError(res, HttpStatusCode.BAD_REQUEST, 'item is required');
+      }
+
+      // Fetch complaint + citizen details
+      const caseDoc = await Complaint.findById(id)
+        .populate('citizen', 'firstName lastName email')
+        .lean();
+      if (!caseDoc) {
+        return sendError(res, HttpStatusCode.NOT_FOUND, 'Case not found');
+      }
+
+      const citizen = (caseDoc as any).citizen as any;
+      const citizenEmail: string = citizen?.email ?? '';
+      const citizenName: string = [citizen?.firstName, citizen?.lastName].filter(Boolean).join(' ') || 'Complainant';
+
+      if (!citizenEmail) {
+        return sendError(res, HttpStatusCode.BAD_REQUEST, 'Complainant email not found — cannot send request');
+      }
+
+      // Use a pseudo step_id so the DB required constraint is satisfied
+      const pseudoStepId = `missing_info_${uuidv4()}`;
+      const requestId = uuidv4();
+
+      // Draft a specific email message using the LLM
+      const systemPrompt = `You are a police investigation assistant. Draft a short (2-3 sentence), professional, and empathetic message to the complainant requesting specific information or evidence. 
+Do NOT use any placeholders. Do NOT mention legal section numbers. 
+Be direct about what is needed and why it helps their case.`;
+      const userPrompt = `Missing Item: ${item}
+Reason it is needed: ${reason || 'This information is required to progress the investigation.'}
+Importance: ${importance || 'high'}
+Draft a polite request to the complainant for this specific item.`;
+
+      let draftContent = `Dear ${citizenName},\n\nWe are following up regarding your complaint. The investigation requires the following: ${item}. ${reason ? reason + '.' : ''} Kindly reply to this email with the requested information or documents at the earliest.\n\nRegards,\nGujarat Police Investigation Team`;
+      try {
+        draftContent = await fastCall(systemPrompt, userPrompt) as string;
+      } catch (err) {
+        logger.warn('[CitizenRequest] LLM draft failed for missing-info request, using fallback', err);
+      }
+
+      // Create the DepartmentRequest record
+      const request = new DepartmentRequest({
+        case_id: id,
+        request_id: requestId,
+        step_id: pseudoStepId,
+        request_type: 'citizen_request',
+        recipient_type: 'citizen',
+        draft_content: draftContent,
+        status: 'sent',
+        sent_via: 'email',
+        sent_at: new Date(),
+      });
+      await request.save();
+
+      // Create RequestThread so it appears in the IO thread view
+      await RequestThread.create({
+        case_id: request.case_id,
+        request_id: requestId,
+        department_entity_id: citizenName,
+        step_title: `Missing Information Request: ${item}`,
+        request_type: 'citizen_request',
+        recipient_type: 'citizen',
+        unread_by_io: false,
+        messages: [
+          {
+            sender: 'io',
+            content: draftContent,
+            timestamp: new Date(),
+            attachments: [],
+          },
+        ],
+      });
+
+      // Diary entry
+      await DiaryEntry.create({
+        case_id: id,
+        entry_id: uuidv4(),
+        actor: { type: 'system', id: 'orchestrator' },
+        event_type: 'request_sent',
+        payload: {
+          recipient: 'Complainant',
+          missing_item: item,
+          type: type || 'missing_information',
+          message: `Requested missing evidence/information from complainant: ${item}`,
+          content: draftContent,
+        },
+        ref_ids: { request_id: requestId },
+      });
+
+      // Enqueue email via existing EmailWorker — no changes to worker needed
+      await EmailQueue.enqueueCitizenRequest({
+        to: citizenEmail,
+        name: citizenName,
+        caseId: id,
+        requestId,
+        content: draftContent,
+      });
+
+      logger.info(`[CitizenRequest] Missing-info request ${requestId} sent to ${citizenEmail} for case ${id} (item: "${item}")`);
+
+      sendSuccess(res, HttpStatusCode.OK, 'Request sent to complainant successfully', {
+        request_id: requestId,
+        sent_to: citizenEmail,
+      });
+    } catch (error: any) {
+      logger.error('[CitizenRequest] Error creating missing-info citizen request', error);
+      sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, 'Error sending request to complainant');
+    }
+  }
 }

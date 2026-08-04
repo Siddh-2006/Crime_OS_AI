@@ -6,8 +6,9 @@ import { Modal } from '@/components/ui/Modal';
 import { 
   FileText, Clock, Users, ShieldAlert, GitCompare, 
   AlertTriangle, HelpCircle, FileQuestion, CheckCircle2, 
-  Building2, MapPin, Phone, Mail, CreditCard, DollarSign, Smartphone
+  Building2, MapPin, Phone, Mail, CreditCard, DollarSign, Smartphone, Send, Loader2, CheckCheck
 } from 'lucide-react';
+import apiClient from '@/lib/apiClient';
 
 export interface CaseUnderstandingData {
   case_id: string;
@@ -89,11 +90,36 @@ export interface CaseUnderstandingData {
 
 interface Props {
   data: CaseUnderstandingData;
+  caseId?: string;
 }
 
-export function CaseUnderstandingView({ data }: Props): React.ReactElement {
+export function CaseUnderstandingView({ data, caseId }: Props): React.ReactElement {
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [previewEvidence, setPreviewEvidence] = useState<{id: string, name: string, summary: string, extracted_information: string} | null>(null);
+  // Track which missing items have been requested (key = item string)
+  const [requestedItems, setRequestedItems] = useState<Record<string, 'loading' | 'sent'>>({});
+
+  const handleRequestFromComplainant = async (
+    item: string,
+    reason: string,
+    importance: string,
+    type: 'missing_information' | 'missing_evidence',
+  ) => {
+    if (!caseId || requestedItems[item]) return;
+    setRequestedItems(prev => ({ ...prev, [item]: 'loading' }));
+    try {
+      await apiClient.post(`/cases/${caseId}/citizen-request/missing-info`, {
+        item,
+        reason,
+        importance,
+        type,
+      });
+      setRequestedItems(prev => ({ ...prev, [item]: 'sent' }));
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Failed to send request to complainant');
+      setRequestedItems(prev => { const n = { ...prev }; delete n[item]; return n; });
+    }
+  };
 
   const getPriorityBadge = (priority: string) => {
     switch (priority?.toLowerCase()) {
@@ -389,12 +415,33 @@ export function CaseUnderstandingView({ data }: Props): React.ReactElement {
                 <p className="text-sm text-neutral-500 italic">No missing information flags recorded.</p>
               ) : (
                 data.missing_information.map((mi, i) => (
-                  <div key={i} className="p-3 border border-amber-200 bg-amber-50 rounded-lg text-xs space-y-1">
-                    <div className="flex justify-between font-bold text-amber-900">
-                      <span>{mi.item}</span>
-                      <span className="uppercase text-[10px] bg-amber-200 px-1.5 py-0.5 rounded">{mi.importance}</span>
+                  <div key={i} className="p-3 border border-amber-200 bg-amber-50 rounded-lg text-xs space-y-2">
+                    <div className="flex justify-between items-start gap-2">
+                      <span className="font-bold text-amber-900">{mi.item}</span>
+                      <span className="uppercase text-[10px] bg-amber-200 px-1.5 py-0.5 rounded shrink-0">{mi.importance}</span>
                     </div>
                     <p className="text-amber-800">{mi.reason}</p>
+                    {caseId && (
+                      <button
+                        onClick={() => handleRequestFromComplainant(mi.item, mi.reason, mi.importance, 'missing_information')}
+                        disabled={!!requestedItems[mi.item]}
+                        className={`flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-md transition-all ${
+                          requestedItems[mi.item] === 'sent'
+                            ? 'bg-green-100 text-green-700 border border-green-200 cursor-default'
+                            : requestedItems[mi.item] === 'loading'
+                            ? 'bg-amber-100 text-amber-500 border border-amber-200 cursor-not-allowed'
+                            : 'bg-white text-amber-700 border border-amber-300 hover:bg-amber-100 cursor-pointer'
+                        }`}
+                      >
+                        {requestedItems[mi.item] === 'sent' ? (
+                          <><CheckCheck size={12} /> Requested</>                          
+                        ) : requestedItems[mi.item] === 'loading' ? (
+                          <><Loader2 size={12} className="animate-spin" /> Sending...</>
+                        ) : (
+                          <><Send size={12} /> Request from Complainant</>
+                        )}
+                      </button>
+                    )}
                   </div>
                 ))
               )}
@@ -411,13 +458,34 @@ export function CaseUnderstandingView({ data }: Props): React.ReactElement {
                 <p className="text-sm text-neutral-500 italic">No missing evidence recommendations recorded.</p>
               ) : (
                 data.missing_evidence.map((me, i) => (
-                  <div key={i} className="p-3 border border-slate-200 bg-slate-50 rounded-lg text-xs space-y-1">
-                    <div className="flex justify-between font-bold text-slate-900">
-                      <span>{me.evidence_name}</span>
-                      <span className="uppercase text-[10px] bg-slate-200 px-1.5 py-0.5 rounded">{me.importance}</span>
+                  <div key={i} className="p-3 border border-slate-200 bg-slate-50 rounded-lg text-xs space-y-2">
+                    <div className="flex justify-between items-start gap-2">
+                      <span className="font-bold text-slate-900">{me.evidence_name}</span>
+                      <span className="uppercase text-[10px] bg-slate-200 px-1.5 py-0.5 rounded shrink-0">{me.importance}</span>
                     </div>
                     <p className="text-slate-700">{me.reason_relevant}</p>
                     <p className="text-slate-500 italic">Allegation: {me.related_allegation}</p>
+                    {caseId && (
+                      <button
+                        onClick={() => handleRequestFromComplainant(me.evidence_name, me.reason_relevant, me.importance, 'missing_evidence')}
+                        disabled={!!requestedItems[me.evidence_name]}
+                        className={`flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-md transition-all ${
+                          requestedItems[me.evidence_name] === 'sent'
+                            ? 'bg-green-100 text-green-700 border border-green-200 cursor-default'
+                            : requestedItems[me.evidence_name] === 'loading'
+                            ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+                            : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100 cursor-pointer'
+                        }`}
+                      >
+                        {requestedItems[me.evidence_name] === 'sent' ? (
+                          <><CheckCheck size={12} /> Requested</>
+                        ) : requestedItems[me.evidence_name] === 'loading' ? (
+                          <><Loader2 size={12} className="animate-spin" /> Sending...</>
+                        ) : (
+                          <><Send size={12} /> Request from Complainant</>
+                        )}
+                      </button>
+                    )}
                   </div>
                 ))
               )}

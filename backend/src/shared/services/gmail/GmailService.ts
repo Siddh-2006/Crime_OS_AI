@@ -18,11 +18,16 @@ import { v4 as uuidv4 } from 'uuid';
 import env from '../../../config/env';
 import logger from '../../../config/logger';
 
+import { spawn } from 'child_process';
+import * as fs from 'fs';
+import * as path from 'path';
 import { DepartmentRequest } from '../../../modules/investigation/models/DepartmentRequest.model';
 import { RequestThread } from '../../../modules/investigation/models/RequestThread.model';
 import { CaseChecklist } from '../../../modules/investigation/models/CaseChecklist.model';
 import { Evidence } from '../../../modules/investigation/models/Evidence.model';
 import { DiaryEntry } from '../../../modules/investigation/models/DiaryEntry.model';
+import { Complaint } from '../../../modules/complaint/models/Complaint.model';
+import { ComplaintStatus } from '../../../modules/complaint/enums/complaintStatus.enum';
 import { InvestigationOrchestrator } from '../../../modules/investigation/services/investigationOrchestrator';
 
 // ─── OAuth2 client (singleton) ────────────────────────────────────────────────
@@ -224,10 +229,57 @@ async function ingestResponse(opts: {
 
   logger.info(`[GmailService] Response ingested for request ${requestId}, case ${caseId}, evidence count: ${evidenceIds.length}`);
 
-  // 7. Trigger AI re-analysis (fire and forget)
-  InvestigationOrchestrator.runAnalysis(caseId.toString()).catch((err) => {
-    logger.error(`[GmailService] AI re-analysis failed after email ingestion`, { caseId, error: err.message });
-  });
+  // 7. Dual AI re-analysis based on complaint status (fire and forget)
+  try {
+    const complaintDoc = await Complaint.findById(caseId).lean();
+    const complaintStatus = (complaintDoc as any)?.status as ComplaintStatus | undefined;
+    const complaintNumber = (complaintDoc as any)?.complaintNumber as string | undefined;
+
+    const preAssignmentStatuses: ComplaintStatus[] = [ComplaintStatus.SUBMITTED, ComplaintStatus.UNDER_REVIEW];
+    const isPreAssignment = complaintStatus && preAssignmentStatuses.includes(complaintStatus);
+
+    if (isPreAssignment && complaintNumber) {
+      // SUBMITTED / UNDER_REVIEW → re-run the complaint_intelligence pipeline
+      logger.info(`[GmailService] Complaint ${caseId} is in ${complaintStatus} — re-triggering complaint_intelligence pipeline`);
+      const scriptPath = path.resolve(
+        __dirname,
+        '../../../../../services/complaint_intelligence/run_pipeline_from_atlas.py',
+      );
+      const venvPython = path.resolve(
+        __dirname,
+        '../../../../../services/complaint_intelligence/.venv/Scripts/python.exe',
+      );
+      const pythonExec =
+        process.platform === 'win32' && fs.existsSync(venvPython) ? venvPython : 'python';
+      const scriptDir = path.dirname(scriptPath);
+      const pyProcess = spawn(pythonExec, [scriptPath, complaintNumber], {
+        cwd: scriptDir,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        env: { ...process.env, PYTHONUTF8: '1', MONGODB_DB: 'test' },
+      });
+      pyProcess.stdout?.on('data', (d: Buffer) =>
+        d.toString('utf-8').split(/\r?\n/).filter(Boolean).forEach((l: string) =>
+          logger.info(`[ComplaintIntelligence] ${l}`)
+        )
+      );
+      pyProcess.stderr?.on('data', (d: Buffer) =>
+        d.toString('utf-8').split(/\r?\n/).filter(Boolean).forEach((l: string) =>
+          logger.warn(`[ComplaintIntelligence] ${l}`)
+        )
+      );
+      pyProcess.on('close', (code: number) =>
+        logger.info(`[ComplaintIntelligence] Pipeline exited with code ${code} for ${complaintNumber}`)
+      );
+    } else {
+      // ASSIGNED_TO_IO or later → re-run IO investigation orchestrator
+      logger.info(`[GmailService] Complaint ${caseId} is in ${complaintStatus ?? 'unknown'} — triggering InvestigationOrchestrator`);
+      InvestigationOrchestrator.runAnalysis(caseId.toString(), 'citizen_evidence_received').catch(
+        (err: Error) => logger.error(`[GmailService] Orchestrator re-analysis failed`, { caseId, error: err.message }),
+      );
+    }
+  } catch (err: any) {
+    logger.error(`[GmailService] Failed to determine re-analysis route for case ${caseId}`, { error: err.message });
+  }
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
