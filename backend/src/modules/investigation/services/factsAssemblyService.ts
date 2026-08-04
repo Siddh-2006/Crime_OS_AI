@@ -74,6 +74,7 @@ export interface EvidenceRow {
   status:                 string;
   ai_description?:        string;
   ai_tags:                string[];
+  applicable_sections?:   ILegalSectionSuggestion[];
   linked_diary_entry_id?: string;   // which diary entry added this evidence
   linked_request_id?:     string;   // which dept request this evidence came from
   related_participant_ids?: string[];
@@ -273,6 +274,11 @@ export async function buildFactsObject(caseId: string): Promise<FactsObject> {
       status:                 ev.status,
       ai_description:         ev.ai_description,
       ai_tags:                ev.ai_tags ?? [],
+      applicable_sections:    Array.isArray(ev.applicableSections) ? ev.applicableSections.map((section: any) => ({
+        code: section.code,
+        title: section.title,
+        ...(section.reason ? { reason: section.reason } : {}),
+      })) : [],
       linked_diary_entry_id:  ev.linked_diary_entry_id,
       linked_request_id:      ev.linked_request_id,
       related_participant_ids: (ev.relatedParticipantIds ?? []).map((participantId) => participantId.toString()),
@@ -291,6 +297,11 @@ export async function buildFactsObject(caseId: string): Promise<FactsObject> {
         status: evidence.status,
         ai_description: evidence.ai_description,
         ai_tags: evidence.ai_tags ?? [],
+        applicable_sections: Array.isArray(evidence.applicableSections) ? evidence.applicableSections.map((section: any) => ({
+          code: section.code,
+          title: section.title,
+          ...(section.reason ? { reason: section.reason } : {}),
+        })) : [],
         linked_diary_entry_id: evidence.linked_diary_entry_id,
         linked_request_id: evidence.linked_request_id,
         related_participant_ids: linkedIds,

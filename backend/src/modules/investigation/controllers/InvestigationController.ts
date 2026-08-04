@@ -503,6 +503,121 @@ export class InvestigationController {
   }
 
   /**
+   * POST /cases/:id/evidence/:evidenceId/sections/attach
+   * Attach AI-suggested legal sections to an evidence item.
+   */
+  static async attachEvidenceSections(req: Request, res: Response): Promise<void> {
+    try {
+      const { id, evidenceId } = req.params;
+      const { sections } = req.body;
+      const officerId = (req as any).user?.sub ?? 'anonymous';
+      const normalizedEvidenceId = decodeURIComponent(String(evidenceId || '')).trim();
+
+      const normalizedSections = Array.isArray(sections)
+        ? sections.filter((section: any) => section && typeof section.code === 'string' && typeof section.title === 'string')
+          .map((section: any) => ({
+            code: section.code.trim(),
+            title: section.title.trim(),
+            ...(typeof section.reason === 'string' && section.reason.trim() ? { reason: section.reason.trim() } : {}),
+          }))
+        : [];
+
+      if (normalizedSections.length === 0) {
+        sendError(res, HttpStatusCode.BAD_REQUEST, {
+          code: 'NO_VALID_SECTIONS',
+          message: 'At least one valid section is required',
+        });
+        return;
+      }
+
+      const evidenceDoc = await Evidence.findOne({
+        case_id: id,
+        $or: [
+          { evidence_id: normalizedEvidenceId },
+          { evidence_id: evidenceId },
+          { _id: normalizedEvidenceId },
+        ],
+      }).exec();
+      let targetEvidence: any = evidenceDoc;
+      let targetEvidenceId = normalizedEvidenceId;
+
+      if (!evidenceDoc) {
+        const complaintDoc = await Complaint.findById(id);
+        if (complaintDoc) {
+          const matchedIndex = complaintDoc.evidence.findIndex((item: any, index: number) => {
+            const publicId = item?.publicId?.toString();
+            const objectId = item?._id?.toString();
+            const legacyId = `COMP-EV-${index}`;
+            return Boolean(
+              publicId && [publicId, objectId, legacyId].includes(normalizedEvidenceId)
+            );
+          });
+
+          if (matchedIndex >= 0) {
+            targetEvidence = complaintDoc.evidence[matchedIndex];
+            targetEvidenceId = targetEvidence.publicId || targetEvidence._id?.toString() || normalizedEvidenceId;
+
+            const existingSections = Array.isArray(targetEvidence.applicableSections) ? targetEvidence.applicableSections : [];
+            const mergedSections = new Map<string, any>();
+            existingSections.forEach((section: any) => {
+              if (section?.code) mergedSections.set(section.code.toLowerCase(), section);
+            });
+            normalizedSections.forEach((section: any) => {
+              mergedSections.set(section.code.toLowerCase(), section);
+            });
+
+            complaintDoc.evidence[matchedIndex].applicableSections = Array.from(mergedSections.values());
+            await complaintDoc.save();
+          } else {
+            sendError(res, HttpStatusCode.NOT_FOUND, {
+              code: 'EVIDENCE_NOT_FOUND',
+              message: 'Evidence not found',
+            });
+            return;
+          }
+        } else {
+          sendError(res, HttpStatusCode.NOT_FOUND, {
+            code: 'EVIDENCE_NOT_FOUND',
+            message: 'Evidence not found',
+          });
+          return;
+        }
+      } else {
+        const existingSections = Array.isArray(evidenceDoc.applicableSections) ? evidenceDoc.applicableSections : [];
+        const mergedSections = new Map<string, any>();
+        existingSections.forEach((section: any) => {
+          if (section?.code) mergedSections.set(section.code.toLowerCase(), section);
+        });
+        normalizedSections.forEach((section: any) => {
+          mergedSections.set(section.code.toLowerCase(), section);
+        });
+
+        evidenceDoc.applicableSections = Array.from(mergedSections.values());
+        await evidenceDoc.save();
+      }
+
+      await DiaryEntry.create({
+        case_id: id,
+        entry_id: uuidv4(),
+        actor: { type: 'officer', id: officerId },
+        event_type: 'evidence_sections_attached',
+        payload: {
+          evidence_id: targetEvidenceId,
+          section_codes: normalizedSections.map((section: any) => section.code),
+        },
+        ref_ids: { evidence_id: targetEvidenceId },
+      });
+
+      sendSuccess(res, HttpStatusCode.OK, 'Evidence sections attached', targetEvidence);
+    } catch (error: any) {
+      sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, {
+        code: 'EVIDENCE_SECTION_ATTACH_FAILED',
+        message: error.message || 'Failed to attach sections to evidence',
+      });
+    }
+  }
+
+  /**
    * GET /cases/:id/evidence
    * Fetch case evidence — merges IO/department Evidence records + complainant's original uploads.
    */

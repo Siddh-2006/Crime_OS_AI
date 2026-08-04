@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Download, FileText, RefreshCw, X } from 'lucide-react';
 import apiClient from '@/lib/axios';
 import { Button } from '@/components/ui/Button';
@@ -16,6 +16,35 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
   const [loading, setLoading] = useState(false);
   const [regenLoading, setRegenLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const sectionNumbers = useMemo(() => {
+    const numbers: Record<string, number | null> = {};
+    let counter = 0;
+
+    const addSection = (visible: boolean, key: string) => {
+      if (!visible) return;
+      counter += 1;
+      numbers[key] = counter;
+    };
+
+    addSection(true, 'filingInformation');
+    addSection(true, 'caseParticulars');
+    addSection(Boolean(data?.section3_complainantDetails), 'complainantDetails');
+    addSection(Boolean(data?.section4_victimDetails?.length), 'victimDetails');
+    addSection(Boolean(data?.section5_accusedDetails?.length), 'accusedDetails');
+    addSection(Boolean(data?.section6_applicableLegalSections?.length), 'applicableLegalSections');
+    addSection(Boolean(data?.section7_evidenceLinkedSections?.length), 'evidenceLinkedSections');
+    addSection(true, 'investigationSummary');
+    addSection(Boolean(data?.section9_witnesses?.length), 'witnesses');
+    addSection(Boolean(data?.section10_evidenceCollected?.length), 'evidenceCollected');
+    addSection(Boolean(data?.section11_departmentReports?.length), 'departmentReports');
+    addSection(true, 'investigationFindings');
+    addSection(Boolean(data?.section13_accusedAppliedSections?.length), 'accusedAppliedSections');
+    addSection(true, 'finalReport');
+    addSection(Boolean(data?.section15_annexures?.length), 'annexures');
+
+    return numbers;
+  }, [data]);
 
   const fetchChargeSheet = async () => {
     setLoading(true);
@@ -116,7 +145,7 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
 
               {/* 1. Filing Information */}
               <section>
-                <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3">1. Filing Information</h3>
+                <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3">{sectionNumbers.filingInformation ?? 1}. Filing Information</h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div><span className="font-semibold text-neutral-500">Charge Sheet No:</span> {data.section1_filingInformation.chargeSheetNumber}</div>
                   <div><span className="font-semibold text-neutral-500">FIR No:</span> {data.section1_filingInformation.firNumber}</div>
@@ -127,7 +156,7 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
 
               {/* 2. Case Particulars */}
               <section>
-                <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">2. Case Particulars</h3>
+                <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">{sectionNumbers.caseParticulars ?? 2}. Case Particulars</h3>
                 <div className="text-sm space-y-2">
                   <p><span className="font-semibold text-neutral-500">Nature of Offence:</span> {data.section2_caseParticulars.natureOfOffence}</p>
                   <p><span className="font-semibold text-neutral-500">Date/Time:</span> {data.section2_caseParticulars.dateOfOccurrence ? new Date(data.section2_caseParticulars.dateOfOccurrence).toLocaleDateString() : ''} {data.section2_caseParticulars.timeOfOccurrence}</p>
@@ -141,7 +170,7 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
               {/* 3. Complainant Details */}
               {data.section3_complainantDetails && (
                 <section>
-                  <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">3. Complainant / Informant Details</h3>
+                  <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">{sectionNumbers.complainantDetails ?? 3}. Complainant / Informant Details</h3>
                   <div className="text-sm space-y-1">
                     <p><span className="font-semibold text-neutral-500">Name:</span> {data.section3_complainantDetails.firstName} {data.section3_complainantDetails.lastName}</p>
                     <p><span className="font-semibold text-neutral-500">Contact:</span> {data.section3_complainantDetails.phone} | {data.section3_complainantDetails.email}</p>
@@ -153,7 +182,7 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
               {/* 4. Victim Details */}
               {data.section4_victimDetails?.length > 0 && (
                 <section>
-                  <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">4. Victim Details</h3>
+                  <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">{sectionNumbers.victimDetails ?? 4}. Victim Details</h3>
                   <div className="space-y-3">
                     {data.section4_victimDetails.map((victim: any, idx: number) => (
                       <div key={idx} className="text-sm p-3 bg-neutral-50 rounded border">
@@ -171,7 +200,7 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
               {/* 5. Accused Details */}
               {data.section5_accusedDetails?.length > 0 && (
                 <section>
-                  <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">5. Accused Details</h3>
+                  <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">{sectionNumbers.accusedDetails ?? 5}. Accused Details</h3>
                   <div className="space-y-3">
                     {data.section5_accusedDetails.map((accused: any, idx: number) => (
                       <div key={idx} className="text-sm p-3 bg-neutral-50 rounded border">
@@ -186,7 +215,7 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
               {/* 6. Applicable Legal Sections */}
               {data.section6_applicableLegalSections?.length > 0 && (
                 <section>
-                  <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">6. Applicable Legal Sections</h3>
+                  <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">{sectionNumbers.applicableLegalSections ?? 6}. Applicable Legal Sections</h3>
                   <div className="text-sm">
                     <ul className="list-disc pl-5 space-y-1">
                       {data.section6_applicableLegalSections.map((sec: any, idx: number) => (
@@ -197,18 +226,41 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
                 </section>
               )}
 
-              {/* 7. Investigation Summary */}
+              {/* 7. Evidence-linked sections */}
+              {data.section7_evidenceLinkedSections?.length > 0 && (
+                <section>
+                  <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">{sectionNumbers.evidenceLinkedSections ?? 7}. Evidence-linked BSA Sections</h3>
+                  <div className="space-y-3">
+                    {data.section7_evidenceLinkedSections.map((entry: any, idx: number) => (
+                      <div key={idx} className="text-sm p-3 bg-neutral-50 rounded border">
+                        <p className="font-semibold text-neutral-800">{entry.title || entry.evidence_id || 'Evidence'}</p>
+                        {entry.applicable_sections?.length > 0 ? (
+                          <ul className="list-disc pl-5 mt-2 space-y-1">
+                            {entry.applicable_sections.map((sec: any, sIdx: number) => (
+                              <li key={sIdx}><span className="font-semibold">{sec.code}</span> - {sec.title}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-neutral-500 mt-2 text-xs">No linked statutory sections yet.</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* 8. Investigation Summary */}
               <section>
-                <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">7. Investigation Summary</h3>
-                <div className="text-sm text-justify text-neutral-700 whitespace-pre-wrap">{data.section7_investigationSummary || 'No summary available.'}</div>
+                <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">{sectionNumbers.investigationSummary ?? 8}. Investigation Summary</h3>
+                <div className="text-sm text-justify text-neutral-700 whitespace-pre-wrap">{data.section8_investigationSummary || 'No summary available.'}</div>
               </section>
 
-              {/* 8. Witnesses */}
-              {data.section8_witnesses?.length > 0 && (
+              {/* 9. Witnesses */}
+              {data.section9_witnesses?.length > 0 && (
                 <section>
-                  <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">8. Witnesses</h3>
+                  <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">{sectionNumbers.witnesses ?? 9}. Witnesses</h3>
                   <div className="space-y-3">
-                    {data.section8_witnesses.map((witness: any, idx: number) => (
+                    {data.section9_witnesses.map((witness: any, idx: number) => (
                       <div key={idx} className="text-sm p-3 bg-neutral-50 rounded border">
                         <p><span className="font-semibold text-neutral-500">Name:</span> {witness.name}</p>
                         <p><span className="font-semibold text-neutral-500">Contact:</span> {witness.contact?.phone} | {witness.contact?.address}</p>
@@ -219,42 +271,42 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
                 </section>
               )}
 
-              {/* 9. Evidence Collected */}
-              {data.section9_evidenceCollected?.length > 0 && (
+              {/* 10. Evidence Collected */}
+              {data.section10_evidenceCollected?.length > 0 && (
                 <section>
-                  <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">9. Evidence Collected</h3>
+                  <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">{sectionNumbers.evidenceCollected ?? 10}. Evidence Collected</h3>
                   <ul className="list-disc pl-5 text-sm space-y-1">
-                    {data.section9_evidenceCollected.map((ev: any, idx: number) => (
+                    {data.section10_evidenceCollected.map((ev: any, idx: number) => (
                       <li key={idx}><span className="font-semibold">{ev.title || ev.evidence_id || ev.type}:</span> {ev.description || ev.ai_description || ev.storage_ref}</li>
                     ))}
                   </ul>
                 </section>
               )}
 
-              {/* 10. Department & Forensic Reports */}
-              {data.section10_departmentReports?.length > 0 && (
+              {/* 11. Department & Forensic Reports */}
+              {data.section11_departmentReports?.length > 0 && (
                 <section>
-                  <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">10. Department Reports</h3>
+                  <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">{sectionNumbers.departmentReports ?? 11}. Department Reports</h3>
                   <ul className="list-disc pl-5 text-sm space-y-1">
-                    {data.section10_departmentReports.map((req: any, idx: number) => (
+                    {data.section11_departmentReports.map((req: any, idx: number) => (
                       <li key={idx}><span className="font-semibold">{req.department}:</span> {req.request_type} - <span className="uppercase text-xs">{req.status}</span></li>
                     ))}
                   </ul>
                 </section>
               )}
 
-              {/* 11. Investigation Findings */}
+              {/* 12. Investigation Findings */}
               <section>
-                <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">11. Investigation Findings</h3>
-                <div className="text-sm text-justify text-neutral-700 whitespace-pre-wrap">{data.section11_investigationFindings || 'No findings available.'}</div>
+                <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">{sectionNumbers.investigationFindings ?? 12}. Investigation Findings</h3>
+                <div className="text-sm text-justify text-neutral-700 whitespace-pre-wrap">{data.section12_investigationFindings || 'No findings available.'}</div>
               </section>
 
-              {/* 12. Accused Applied Sections */}
-              {data.section12_accusedAppliedSections?.length > 0 && (
+              {/* 13. Accused Applied Sections */}
+              {data.section13_accusedAppliedSections?.length > 0 && (
                 <section>
-                  <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">12. Sections Applied to Accused</h3>
+                  <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">{sectionNumbers.accusedAppliedSections ?? 13}. Sections Applied to Accused</h3>
                   <div className="space-y-3">
-                    {data.section12_accusedAppliedSections.map((entry: any, idx: number) => {
+                    {data.section13_accusedAppliedSections.map((entry: any, idx: number) => {
                       const accused = data.section5_accusedDetails?.find((a: any) => a._id === entry.accusedId || a.id === entry.accusedId);
                       return (
                         <div key={idx} className="text-sm p-3 bg-neutral-50 rounded border">
@@ -272,21 +324,32 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
                 </section>
               )}
 
-              {/* 13. Final Report / Prayer */}
+              {/* 14. Final Report / Prayer */}
               <section>
-                <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">13. Final Report / Prayer</h3>
-                <div className="text-sm text-justify text-neutral-700 whitespace-pre-wrap">{data.section13_finalReport || 'No final report available.'}</div>
+                <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">{sectionNumbers.finalReport ?? 14}. Final Report / Prayer</h3>
+                <div className="text-sm text-justify text-neutral-700 whitespace-pre-wrap">{data.section14_finalReport || 'No final report available.'}</div>
               </section>
 
-              {/* 14. Annexures */}
-              {/* <section>
-                <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">14. Annexures</h3>
-                <ul className="list-disc pl-5 text-sm space-y-1">
-                  {data.section14_annexures?.map((annex: any, idx: number) => (
-                    <li key={idx}><span className="font-semibold">{annex.type}:</span> {annex.title}</li>
-                  ))}
-                </ul>
-              </section> */}
+              {data.section15_annexures?.length > 0 && (
+                <section>
+                  <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">{sectionNumbers.annexures ?? 15}. Annexures</h3>
+                  <div className="space-y-3 text-sm">
+                    {data.section15_annexures.map((annex: any, idx: number) => (
+                      <div key={idx} className="p-3 bg-neutral-50 rounded border">
+                        <p className="font-semibold text-neutral-800">{annex.title}</p>
+                        <p className="text-xs text-neutral-500 mt-1 uppercase tracking-wider">{annex.type}</p>
+                        {annex.url ? (
+                          <a href={annex.url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 break-all mt-2 inline-block">
+                            {annex.url}
+                          </a>
+                        ) : (
+                          <p className="text-xs text-neutral-400 mt-2">No CDN link available.</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
 
             </div>
           ) : null}

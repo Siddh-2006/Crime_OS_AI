@@ -195,7 +195,21 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
       await fetchWorkspaceData();
     } catch (error: any) {
       showToast(error.response?.data?.message || 'Failed to attach sections to participant.', 'error');
-      throw error;
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleAttachEvidenceSections = async (evidenceId: string, sections: any[]) => {
+    setActionLoading(true);
+    try {
+      await apiClient.post(`/cases/${caseId}/evidence/${evidenceId}/sections/attach`, {
+        sections,
+      });
+      showToast('Evidence sections attached successfully.', 'success');
+      await fetchWorkspaceData();
+    } catch (error: any) {
+      showToast(error.response?.data?.message || 'Failed to attach sections to evidence.', 'error');
     } finally {
       setActionLoading(false);
     }
@@ -321,10 +335,12 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
             snapshot={snapshot}
             loading={actionLoading && !snapshot}
             participants={participants}
+            evidence={evidence}
             onCorrectSnapshot={handleCorrectSnapshot}
             onTriggerAnalysis={handleTriggerAnalysis}
             onAnalysisComplete={fetchWorkspaceData}
             onAttachSectionsToParticipant={handleAttachSectionsToParticipant}
+            onAttachEvidenceSections={handleAttachEvidenceSections}
             onAcceptRecommendedSection={handleAcceptRecommendedSection}
             onApproveParticipant={handleApproveParticipant}
             actionLoading={actionLoading}
@@ -532,6 +548,19 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot }: { evidence: an
                      </span>
                    ))}
                  </div>
+              )}
+
+              {Array.isArray(ev.applicableSections) && ev.applicableSections.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  <span className="text-[9px] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded border border-emerald-200 font-bold">
+                    📚 {ev.applicableSections.length} section{ev.applicableSections.length > 1 ? 's' : ''}
+                  </span>
+                  {ev.applicableSections.slice(0, 2).map((section: any, index: number) => (
+                    <span key={`${section.code}-${index}`} className="text-[9px] bg-white text-neutral-700 px-1.5 py-0.5 rounded border border-neutral-200">
+                      {section.code}
+                    </span>
+                  ))}
+                </div>
               )}
               <div className="flex items-center gap-2 mt-2">
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
