@@ -267,7 +267,7 @@ export class ComplaintService {
         type:             file.resourceType || 'image',
         storage_ref:      file.secureUrl,
         ai_tags:          [],
-        uploader_id:      new Types.ObjectId(citizenId),
+        uploader_id:      new Types.ObjectId(actorId),
         status:           'pending' as const,
         source:           'complainant' as const,
         processingStatus: 'PENDING' as const,
