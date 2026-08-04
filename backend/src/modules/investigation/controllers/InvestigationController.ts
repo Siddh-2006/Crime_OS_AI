@@ -563,7 +563,45 @@ export class InvestigationController {
         };
       });
 
-      const combined = [...complainantFiles, ...formattedEvidenceDocs];
+      // Helper to extract a normalized key for matching evidence files
+      const getNormKey = (ev: any): string => {
+        const idStr = String(ev.publicId || ev.evidence_id || '').trim();
+        if (idStr && idStr.includes('/evidence/')) {
+          return idStr;
+        }
+        const filename = String(ev.originalFilename || ev.original_filename || ev.filename || '').trim();
+        if (filename && filename !== 'unnamed_file') {
+          return filename.toLowerCase();
+        }
+        const url = String(ev.secureUrl || ev.storage_ref || ev.cloudinary_url || '').replace(/^https?:\/\//, '').trim();
+        if (url) {
+          return url;
+        }
+        return idStr || String(ev._id || Math.random());
+      };
+
+      // Deduplicate evidence items so identical files are not rendered twice
+      const seen = new Set<string>();
+      const combined: any[] = [];
+
+      // Prioritize formattedEvidenceDocs (from evidences collection) as they contain verification & custody data
+      for (const ev of formattedEvidenceDocs) {
+        const key = getNormKey(ev);
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          combined.push(ev);
+        }
+      }
+
+      // Add complainantFiles only if not already present in formattedEvidenceDocs
+      for (const ev of complainantFiles) {
+        const key = getNormKey(ev);
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          combined.push(ev);
+        }
+      }
+
       sendSuccess(res, HttpStatusCode.OK, 'Fetched evidence', combined);
     } catch (error) {
       sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, {
