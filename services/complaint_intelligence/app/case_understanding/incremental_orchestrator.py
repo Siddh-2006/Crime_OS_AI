@@ -194,23 +194,26 @@ class IncrementalPipelineOrchestrator:
                     # Strip out None and blank string values so we don't clear existing valid fields
                     patch = {k: v for k, v in patch.items() if v is not None and (not isinstance(v, str) or v.strip() != "")}
 
+                    # Build item-specific search conditions to update ONLY this evidence file
+                    ev_conditions: list[dict[str, Any]] = [
+                        {"_id": ev_id},
+                        {"evidence_id": ev_id},
+                        {"evidence_id": f"crime-os/evidence/{case_id}/{ev_id}"},
+                        {"originalFilename": filename},
+                    ]
+                    from bson import ObjectId
+                    if ObjectId.is_valid(ev_id):
+                        ev_conditions.append({"_id": ObjectId(ev_id)})
+
                     await db["evidences"].update_many(
-                        {
-                            "$or": [
-                                {"_id": ev_id},
-                                {"evidence_id": ev_id},
-                                {"evidence_id": f"crime-os/evidence/{case_id}/{ev_id}"},
-                                {"case_id": case_id},
-                            ],
-                        },
+                        {"$or": ev_conditions},
                         {"$set": patch}
                     )
 
-                    # Also update embedded evidence item inside complaint doc if matched
-                    embedded_patch = {f"evidence.$.{k}": v for k, v in patch.items()}
+                    # Update ONLY processingStatus on embedded complaint evidence item
                     await db["complaints"].update_one(
                         {"evidence.originalFilename": filename},
-                        {"$set": embedded_patch}
+                        {"$set": {"evidence.$.processingStatus": "PROCESSED"}}
                     )
             except Exception as mongo_exc:
                 logger.warning("[incremental_orchestrator] Could not sync evidence status to mongo collections", extra={"error": str(mongo_exc)})

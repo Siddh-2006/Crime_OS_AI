@@ -58,26 +58,29 @@ async def main():
     import re
     from bson import ObjectId
 
-    raw_target = sys.argv[1] if len(sys.argv) > 1 else "COMP-7d3ea8bc-841a-4fe8-b543-78282832385c"
+    raw_target = sys.argv[1] if len(sys.argv) > 1 else "latest"
     TARGET_ID = str(raw_target).strip().strip('"').strip("'")
 
     from typing import Any
 
-    or_conditions: list[dict[str, Any]] = [
-        {"complaintNumber": TARGET_ID},
-        {"complaintNumber": {"$regex": f"^{re.escape(TARGET_ID)}$", "$options": "i"}},
-        {"_id": TARGET_ID},
-    ]
-    if ObjectId.is_valid(TARGET_ID):
-        or_conditions.append({"_id": ObjectId(TARGET_ID)})
-
     target_complaint = None
-    for attempt in range(20):
-        target_complaint = await db.complaints.find_one({"$or": or_conditions})
-        if target_complaint:
-            break
-        if attempt < 19:
-            await asyncio.sleep(1.0)
+    if TARGET_ID.lower() == "latest":
+        target_complaint = await db.complaints.find_one({}, sort=[("createdAt", -1)])
+    else:
+        or_conditions: list[dict[str, Any]] = [
+            {"complaintNumber": TARGET_ID},
+            {"complaintNumber": {"$regex": f"^{re.escape(TARGET_ID)}$", "$options": "i"}},
+            {"_id": TARGET_ID},
+        ]
+        if ObjectId.is_valid(TARGET_ID):
+            or_conditions.append({"_id": ObjectId(TARGET_ID)})
+
+        for attempt in range(20):
+            target_complaint = await db.complaints.find_one({"$or": or_conditions})
+            if target_complaint:
+                break
+            if attempt < 19:
+                await asyncio.sleep(1.0)
 
     if not target_complaint:
         print(f"  [Error] Complaint [{TARGET_ID}] not found in Atlas database after retries.")
@@ -266,24 +269,26 @@ async def main():
             # Strip out None and blank string values
             patch = {k: v for k, v in patch.items() if v is not None and (not isinstance(v, str) or v.strip() != "")}
 
+            # Build item-specific search conditions to update ONLY this evidence file
+            ev_conditions: list[dict[str, Any]] = [
+                {"_id": ev_id},
+                {"evidence_id": ev_id},
+                {"evidence_id": f"crime-os/evidence/{case_id}/{ev_id}"},
+                {"storage_ref": cloudinary_url},
+                {"originalFilename": fname},
+            ]
+            if ObjectId.is_valid(ev_id):
+                ev_conditions.append({"_id": ObjectId(ev_id)})
+
             await db.evidences.update_many(
-                {
-                    "$or": [
-                        {"_id": ev_id},
-                        {"evidence_id": ev_id},
-                        {"evidence_id": f"crime-os/evidence/{case_id}/{ev_id}"},
-                        {"case_id": target_complaint["_id"]},
-                        {"case_id": case_id},
-                    ],
-                },
+                {"$or": ev_conditions},
                 {"$set": patch}
             )
 
-            # Also update embedded evidence item inside complaint doc if matched
-            embedded_patch = {f"evidence.$.{k}": v for k, v in patch.items()}
+            # Update ONLY processingStatus on embedded complaint evidence item
             await db.complaints.update_one(
                 {"_id": target_complaint["_id"], "evidence.originalFilename": fname},
-                {"$set": embedded_patch}
+                {"$set": {"evidence.$.processingStatus": "PROCESSED"}}
             )
 
     # Fetch living CaseIntelligence from Atlas 'complaints' collection

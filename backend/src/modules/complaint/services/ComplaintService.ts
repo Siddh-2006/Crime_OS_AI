@@ -424,7 +424,7 @@ export class ComplaintService {
           // evidence_id in the evidences collection matches the Cloudinary publicId
           const evidenceDocs = await Evidence.find(
             { evidence_id: { $in: publicIds } },
-            { evidence_id: 1, processingStatus: 1, aiMetadata: 1 }
+            { evidence_id: 1, processingStatus: 1 }
           ).lean();
 
           const evidenceMap = new Map(
@@ -437,10 +437,6 @@ export class ComplaintService {
             return {
               ...file,
               processingStatus: enriched.processingStatus ?? file.processingStatus,
-              aiMetadata: {
-                ...(file.aiMetadata ?? {}),
-                ...(enriched.aiMetadata ?? {}),
-              },
             };
           });
         }
