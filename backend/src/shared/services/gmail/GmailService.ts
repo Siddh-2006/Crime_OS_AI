@@ -239,48 +239,67 @@ async function ingestResponse(opts: {
     const isPreAssignment = complaintStatus && preAssignmentStatuses.includes(complaintStatus);
 
     if (isPreAssignment && complaintNumber) {
-      // SUBMITTED / UNDER_REVIEW → re-run the complaint_intelligence pipeline
-      logger.info(`[GmailService] Complaint ${caseId} is in ${complaintStatus} — re-triggering complaint_intelligence pipeline`);
-      const scriptPath = path.resolve(
-        __dirname,
-        '../../../../../services/complaint_intelligence/run_pipeline_from_atlas.py',
-      );
-      const venvPython = path.resolve(
-        __dirname,
-        '../../../../../services/complaint_intelligence/.venv/Scripts/python.exe',
-      );
-      const pythonExec =
-        process.platform === 'win32' && fs.existsSync(venvPython) ? venvPython : 'python';
-      const scriptDir = path.dirname(scriptPath);
-      const pyProcess = spawn(pythonExec, [scriptPath, complaintNumber], {
-        cwd: scriptDir,
-        stdio: ['ignore', 'pipe', 'pipe'],
-        env: { ...process.env, PYTHONUTF8: '1', MONGODB_DB: 'test' },
-      });
-      pyProcess.stdout?.on('data', (d: Buffer) =>
-        d.toString('utf-8').split(/\r?\n/).filter(Boolean).forEach((l: string) =>
-          logger.info(`[ComplaintIntelligence] ${l}`)
-        )
-      );
-      pyProcess.stderr?.on('data', (d: Buffer) =>
-        d.toString('utf-8').split(/\r?\n/).filter(Boolean).forEach((l: string) =>
-          logger.warn(`[ComplaintIntelligence] ${l}`)
-        )
-      );
-      pyProcess.on('close', (code: number) =>
-        logger.info(`[ComplaintIntelligence] Pipeline exited with code ${code} for ${complaintNumber}`)
-      );
-    } else {
-      // ASSIGNED_TO_IO or later → re-run IO investigation orchestrator
-      logger.info(`[GmailService] Complaint ${caseId} is in ${complaintStatus ?? 'unknown'} — triggering InvestigationOrchestrator`);
+      // SUBMITTED / UNDER_REVIEW → complaint_intelligence pipeline only
+      logger.info(`[GmailService] Complaint ${caseId} is in ${complaintStatus} — re-triggering complaint_intelligence pipeline only`);
+      _spawnComplaintIntelligence(complaintNumber);
+    } else if (complaintNumber) {
+      // ASSIGNED_TO_IO or later → trigger BOTH:
+      //   1. IO investigation orchestrator (updates IO dashboard AI analysis)
+      //   2. complaint_intelligence pipeline (updates the broader complaint understanding)
+      logger.info(`[GmailService] Complaint ${caseId} is in ${complaintStatus ?? 'unknown'} — triggering BOTH InvestigationOrchestrator AND complaint_intelligence`);
+
+      // 1. IO dashboard AI analysis (fire and forget)
       InvestigationOrchestrator.runAnalysis(caseId.toString(), 'citizen_evidence_received').catch(
         (err: Error) => logger.error(`[GmailService] Orchestrator re-analysis failed`, { caseId, error: err.message }),
       );
+
+      // 2. complaint_intelligence pipeline (fire and forget — runs in background)
+      _spawnComplaintIntelligence(complaintNumber);
     }
   } catch (err: any) {
     logger.error(`[GmailService] Failed to determine re-analysis route for case ${caseId}`, { error: err.message });
   }
 }
+
+// ─── Helper: spawn the complaint_intelligence Python pipeline ─────────────────
+
+function _spawnComplaintIntelligence(complaintNumber: string): void {
+  try {
+    const scriptPath = path.resolve(
+      __dirname,
+      '../../../../../services/complaint_intelligence/run_pipeline_from_atlas.py',
+    );
+    const venvPython = path.resolve(
+      __dirname,
+      '../../../../../services/complaint_intelligence/.venv/Scripts/python.exe',
+    );
+    const pythonExec =
+      process.platform === 'win32' && fs.existsSync(venvPython) ? venvPython : 'python';
+    const scriptDir = path.dirname(scriptPath);
+
+    const pyProcess = spawn(pythonExec, [scriptPath, complaintNumber], {
+      cwd: scriptDir,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: { ...process.env, PYTHONUTF8: '1', MONGODB_DB: 'test' },
+    });
+    pyProcess.stdout?.on('data', (d: Buffer) =>
+      d.toString('utf-8').split(/\r?\n/).filter(Boolean).forEach((l: string) =>
+        logger.info(`[ComplaintIntelligence] ${l}`)
+      )
+    );
+    pyProcess.stderr?.on('data', (d: Buffer) =>
+      d.toString('utf-8').split(/\r?\n/).filter(Boolean).forEach((l: string) =>
+        logger.warn(`[ComplaintIntelligence] ${l}`)
+      )
+    );
+    pyProcess.on('close', (code: number) =>
+      logger.info(`[ComplaintIntelligence] Pipeline exited with code ${code} for ${complaintNumber}`)
+    );
+  } catch (err: any) {
+    logger.warn(`[GmailService] Failed to spawn complaint_intelligence for ${complaintNumber}: ${err.message}`);
+  }
+}
+
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
