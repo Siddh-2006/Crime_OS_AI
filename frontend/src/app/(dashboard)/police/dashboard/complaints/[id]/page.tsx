@@ -820,7 +820,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
             const cuData = caseUnderstanding || (ci && ci.overview ? ci : null);
 
             if (cuData) {
-              return <CaseUnderstandingView data={cuData} />;
+              return <CaseUnderstandingView data={cuData} caseId={params.id as string} />;
             }
 
             const snap = snapshot as any;

@@ -182,22 +182,35 @@ class IncrementalPipelineOrchestrator:
                 from app.core.mongo import get_mongo_db
                 db = await get_mongo_db()
                 if db is not None:
-                    ai_meta = {
-                        "ocrText": getattr(ev_profile, "ocr_text", None),
-                        "imageTags": getattr(ev_profile, "tags", []),
-                        "aiSummary": getattr(ev_profile, "caption", None) or f"Processed evidence '{filename}'",
-                        "speechTranscript": getattr(ev_profile, "audio_transcript", None),
-                        "pdfText": getattr(ev_profile, "extracted_text", None),
-                        "classification": getattr(ev_profile, "scene_type", None) or "DOCUMENT",
-                        "classificationConfidence": 0.95
+                    patch = {
+                        "processingStatus": "PROCESSED",
+                        "aiMetadata.aiSummary": ev_profile.florence_description or f"Processed evidence '{filename}'",
+                        "aiMetadata.ocrText": ev_profile.ocr_text,
+                        "aiMetadata.speechTranscript": ev_profile.transcript,
+                        "aiMetadata.pdfText": ev_profile.pdf_text,
+                        "aiMetadata.classification": getattr(ev_profile, "scene_type", None) or ("DOCUMENT" if ev_profile.ocr_text else "IMAGE"),
+                        "aiMetadata.classificationConfidence": 0.95,
                     }
-                    await db["complaints"].update_one(
-                        {"$or": [{"_id": case_id}, {"complaintNumber": case_id}], "evidence.originalFilename": filename},
-                        {"$set": {"evidence.$.processingStatus": "PROCESSED", "evidence.$.aiMetadata": ai_meta}}
-                    )
+                    # Strip out None and blank string values so we don't clear existing valid fields
+                    patch = {k: v for k, v in patch.items() if v is not None and (not isinstance(v, str) or v.strip() != "")}
+
                     await db["evidences"].update_many(
-                        {"$or": [{"case_id": case_id}, {"evidence_id": ev_id}], "originalFilename": filename},
-                        {"$set": {"processingStatus": "PROCESSED", "aiMetadata": ai_meta}}
+                        {
+                            "$or": [
+                                {"_id": ev_id},
+                                {"evidence_id": ev_id},
+                                {"evidence_id": f"crime-os/evidence/{case_id}/{ev_id}"},
+                                {"case_id": case_id},
+                            ],
+                        },
+                        {"$set": patch}
+                    )
+
+                    # Also update embedded evidence item inside complaint doc if matched
+                    embedded_patch = {f"evidence.$.{k}": v for k, v in patch.items()}
+                    await db["complaints"].update_one(
+                        {"evidence.originalFilename": filename},
+                        {"$set": embedded_patch}
                     )
             except Exception as mongo_exc:
                 logger.warning("[incremental_orchestrator] Could not sync evidence status to mongo collections", extra={"error": str(mongo_exc)})
@@ -260,7 +273,7 @@ class IncrementalPipelineOrchestrator:
         case_understanding = await self.engine.analyze(context)
         await self.case_repo.save(case_understanding)
 
-        print(f"  [DONE] [PIPELINE COMPLETE] CaseIntelligence updated & saved to MongoDB Atlas collection 'cases' for Case ID: '{case_id}'!")
+        print(f"  [DONE] [PIPELINE COMPLETE] CaseIntelligence updated & saved to MongoDB Atlas collection 'complaints' for Case ID: '{case_id}'!")
         print(f"     Summary : {case_understanding.overview.complaint_summary[:100]}...")
         print(f"     Priority: {case_understanding.overview.priority.upper()} (Confidence: {case_understanding.overview.confidence:.0%})\n")
 
@@ -316,8 +329,12 @@ class IncrementalPipelineOrchestrator:
                 )
                 if img_res.succeeded and img_res.output:
                     analysis = img_res.output.get("analysis")
-                    if analysis:
+                    if isinstance(analysis, dict):
                         florence_desc = analysis.get("description")
+                    elif isinstance(analysis, str):
+                        florence_desc = analysis
+                    if not florence_desc:
+                        florence_desc = img_res.output.get("florence_description") or img_res.output.get("ai_description")
             except Exception as exc:
                 logger.warning("[incremental_orchestrator] ImageWorker failed", extra={"file_name": filename, "error": str(exc)})
 
@@ -328,9 +345,15 @@ class IncrementalPipelineOrchestrator:
                 )
                 if ocr_res.succeeded and ocr_res.output:
                     res_data = ocr_res.output.get("ocr_result", {})
-                    ocr_text = res_data.get("translated_text") or res_data.get("raw_text")
+                    if isinstance(res_data, dict):
+                        ocr_text = res_data.get("translated_text") or res_data.get("raw_text")
+                    if not ocr_text:
+                        ocr_text = ocr_res.output.get("raw_text") or ocr_res.output.get("ocr_text")
             except Exception as exc:
                 logger.warning("[incremental_orchestrator] OCRWorker failed", extra={"file_name": filename, "error": str(exc)})
+
+            if not florence_desc and ocr_text:
+                florence_desc = f"Evidence screenshot '{filename}'. Extracted OCR Text: {ocr_text[:300]}"
 
             return EvidenceProfile(
                 evidence_id=evidence_id,
@@ -338,7 +361,7 @@ class IncrementalPipelineOrchestrator:
                 filename=filename,
                 media_type="image",
                 url=cloudinary_url,
-                florence_description=florence_desc,
+                florence_description=florence_desc or f"Processed image evidence '{filename}'",
                 ocr_text=ocr_text,
                 metadata={"size_bytes": len(file_bytes)},
             )
