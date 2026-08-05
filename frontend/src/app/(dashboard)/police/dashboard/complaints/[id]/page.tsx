@@ -35,7 +35,9 @@ import {
   Users,
   Zap,
   Search,
-  CheckCircle2
+  CheckCircle2,
+  RefreshCw,
+  Bot,
 } from 'lucide-react';
 
 interface HistoryEntry {
@@ -205,6 +207,23 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
   // AI analysis snapshot fetched from backend
   const [snapshot, setSnapshot] = useState<any | null>(null);
   const [snapshotLoading, setSnapshotLoading] = useState(false);
+
+  // Complaint Intelligence pipeline re-run state
+  const [rerunningPipeline, setRerunningPipeline] = useState(false);
+
+  const handleRerunPipeline = async () => {
+    const id = params.id as string;
+    if (!id) return;
+    setRerunningPipeline(true);
+    try {
+      await apiClient.post(API_ROUTES.COMPLAINTS.RERUN_PIPELINE(id));
+      await fetchComplaint();
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Failed to trigger pipeline rerun.');
+    } finally {
+      setRerunningPipeline(false);
+    }
+  };
 
   const snapshotLegalSections = useMemo(() => {
     const sections = Array.isArray((snapshot as any)?.suggested_legal_sections)
@@ -461,16 +480,29 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
         )}
       </div>
 
-      {/* AI Processing Status */}
-      {!isAIReady && (complaint.processingStatus?.toUpperCase() === 'PENDING' || complaint.processingStatus?.toUpperCase() === 'PROCESSING') && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3 animate-pulse">
+      {/* AI Processing Status - Minimal Banner */}
+      {!isAIReady && (
+        <div className="bg-indigo-50/80 border border-indigo-200/80 rounded-xl p-3.5 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <Loader />
-            <span className="text-sm font-bold text-blue-800">AI Analysis in Progress</span>
+            <div className="p-2 rounded-lg bg-indigo-100 text-indigo-600 shrink-0">
+              <Bot className="h-5 w-5 animate-pulse" />
+            </div>
+            <div className="text-xs text-neutral-700">
+              <span className="font-bold text-indigo-950">AI Analysis in Progress:</span>{' '}
+              <span className="text-neutral-600">The Complaint Intelligence Engine is extracting OCR text & analyzing evidence...</span>
+            </div>
           </div>
-          <p className="text-xs text-blue-600 text-center md:text-right">
-            The AI engine is currently processing the complaint, extracting metadata, and analyzing evidence...
-          </p>
+
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={handleRerunPipeline}
+            isLoading={rerunningPipeline}
+            leftIcon={<RefreshCw size={12} />}
+            className="text-xs text-indigo-700 bg-white border-indigo-200 hover:bg-indigo-50 shrink-0 !py-1 !px-2.5 shadow-none"
+          >
+            {rerunningPipeline ? 'Re-triggering...' : 'Re-run AI Pipeline'}
+          </Button>
         </div>
       )}
 
@@ -854,11 +886,6 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
           {activeTab === 'ai' && (() => {
             const ci = complaint.complaintIntelligence as any;
             const cuData = caseUnderstanding || (ci && ci.overview ? ci : null);
-
-            if (cuData) {
-              return <CaseUnderstandingView data={cuData} caseId={params.id as string} />;
-            }
-
             const snap = snapshot as any;
             const hasAI = isAIReady;
 
@@ -872,29 +899,45 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
 
             if (!hasAI) {
               return (
-                <div className="bg-gradient-to-r from-indigo-900 via-slate-900 to-purple-900 rounded-2xl p-6 text-white shadow-xl border border-indigo-500/20 relative overflow-hidden my-4">
-                  <div className="flex flex-col sm:flex-row items-center gap-5">
-                    <div className="relative flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 shrink-0">
-                      <div className="w-7 h-7 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin" />
+                <Card className="min-h-[380px] flex flex-col items-center justify-center p-8 text-center space-y-5 my-4 border border-neutral-200 shadow-sm bg-white rounded-2xl">
+                  <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600">
+                    <Bot className="h-10 w-10 animate-pulse" />
+                  </div>
+
+                  <div className="space-y-1.5 max-w-md">
+                    <h3 className="text-lg font-bold text-neutral-800">Analysis in Progress</h3>
+                    <p className="text-xs text-neutral-500 leading-relaxed">
+                      The AI is working through this case. Typically takes 1–4 minutes. You can switch to other tabs — this view will update automatically when done.
+                    </p>
+                  </div>
+
+                  <div className="w-full max-w-md space-y-2 pt-2">
+                    <div className="flex justify-between text-xs font-semibold text-neutral-600">
+                      <span className="truncate">Multi-modal OCR & Extracting Case Facts...</span>
+                      <span className="text-indigo-600 font-bold">65%</span>
                     </div>
-                    <div className="flex-1 text-center sm:text-left space-y-1">
-                      <div className="flex items-center justify-center sm:justify-start gap-2">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/30 text-indigo-200 border border-indigo-400/30">
-                          <span className="w-2 h-2 rounded-full bg-indigo-400 animate-ping" />
-                          AI Pipeline Active
-                        </span>
-                      </div>
-                      <h3 className="text-lg font-bold text-white">AI Case Intelligence Analysis in Progress</h3>
-                      <p className="text-xs text-indigo-200/80">
-                        The Complaint Intelligence Engine is currently extracting OCR text, analyzing evidence media, detecting entities, and synthesizing 9-section Case Intelligence. This tab will automatically update once complete.
-                      </p>
+                    <div className="w-full bg-neutral-100 rounded-full h-2 overflow-hidden">
+                      <div className="h-2 rounded-full bg-indigo-600 transition-all duration-500 animate-pulse" style={{ width: '65%' }} />
                     </div>
                   </div>
-                </div>
+
+                  <div className="pt-3">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleRerunPipeline}
+                      isLoading={rerunningPipeline}
+                      leftIcon={<RefreshCw size={13} />}
+                      className="text-xs text-neutral-600 border-neutral-200 hover:bg-neutral-50 shadow-none"
+                    >
+                      {rerunningPipeline ? 'Re-triggering...' : 'Re-run AI Pipeline'}
+                    </Button>
+                  </div>
+                </Card>
               );
             }
 
-            // Merge data: prefer snapshot deep analysis, fall back to M12 complaintIntelligence fields
+            // Calculations for fallback view
             const crimeType = snap?.summary?.crimeType ?? (ci?.m12CrimeClassification ? `${ci.m12CrimeClassification.primary_category.toUpperCase()} (${ci.m12CrimeClassification.sub_category})` : (ci?.crimeType ?? '—'));
             const statute   = snap?.summary?.statute ?? (ci?.m12CrimeClassification?.applicable_statutes?.join(', ') ?? '—');
             const priority  = snap?.summary?.priority ?? ci?.m12RiskAssessment?.level ?? ci?.priority ?? '—';
@@ -955,7 +998,32 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
             ];
 
             return (
-              <div>
+              <div className="space-y-4">
+                {/* Header Toolbar on Ready Page */}
+                <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-neutral-200 shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <Brain className="h-5 w-5 text-indigo-600" />
+                    <span className="text-sm font-bold text-neutral-800">AI Case Intelligence Analysis</span>
+                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      READY
+                    </span>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleRerunPipeline}
+                    isLoading={rerunningPipeline}
+                    leftIcon={<RefreshCw size={12} />}
+                    className="text-xs text-neutral-700 bg-white border-neutral-200 hover:bg-neutral-50 shadow-none !py-1 !px-2.5"
+                  >
+                    {rerunningPipeline ? 'Re-triggering...' : 'Re-run AI Pipeline'}
+                  </Button>
+                </div>
+
+                {cuData ? (
+                  <CaseUnderstandingView data={cuData} caseId={params.id as string} />
+                ) : (
+                  <div>
                 {/* AI Sub-Tabs */}
                 <div className="flex gap-1 border-b border-neutral-200 mb-5 overflow-x-auto">
                   {aiSubTabs.map(({ key, label, count }) => (
@@ -1126,10 +1194,10 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                           </div>
 
                           {/* Evidence AI Description / Summary */}
-                          {(file.aiMetadata?.aiSummary || (file.aiMetadata as any)?.m4Caption) && (
+                          {(file.aiMetadata?.aiSummary || (file.aiMetadata as any)?.caption || (file.aiMetadata as any)?.m4Caption) && (
                             <div className="bg-indigo-50/50 border border-indigo-100 rounded-lg p-2.5 text-xs text-indigo-950">
                               <span className="font-bold text-indigo-700 mr-1.5">📷 Scene Analysis:</span>
-                              {file.aiMetadata?.aiSummary || (file.aiMetadata as any)?.m4Caption}
+                              {file.aiMetadata?.aiSummary || (file.aiMetadata as any)?.caption || (file.aiMetadata as any)?.m4Caption}
                             </div>
                           )}
 
@@ -1241,6 +1309,8 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                       </div>
                     )}
                   </Card>
+                )}
+                  </div>
                 )}
               </div>
             );

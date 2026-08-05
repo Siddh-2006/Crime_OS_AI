@@ -119,5 +119,11 @@ router.patch(
   authorize(Role.IO, Role.SHO),
   complaintController.closeComplaint,
 );
+router.post(
+  '/:id/rerun-pipeline',
+  authenticate,
+  authorize(Role.SHO, Role.IO),
+  complaintController.rerunPipeline,
+);
 
 export default router;

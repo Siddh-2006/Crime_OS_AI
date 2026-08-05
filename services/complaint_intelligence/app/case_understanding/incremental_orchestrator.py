@@ -24,6 +24,29 @@ from app.schemas.case_understanding import CaseUnderstanding
 from app.schemas.upload_token import TokenGenerateResponse
 
 
+def is_fallback_description(desc: Optional[str]) -> bool:
+    if not desc or not desc.strip():
+        return True
+    d = desc.strip().lower()
+    fallback_prefixes = (
+        "processed image evidence",
+        "processed evidence",
+        "processed document",
+        "evidence document",
+        "processed video",
+        "processed audio",
+        "processed image",
+        "evidence screenshot",
+    )
+    for prefix in fallback_prefixes:
+        if d.startswith(prefix):
+            if "extracted ocr text:" in d:
+                return False
+            if len(d) < len(prefix) + 60:
+                return True
+    return False
+
+
 class IncrementalPipelineOrchestrator:
     """
     Orchestrates decoupled, incremental case intelligence:
@@ -168,11 +191,28 @@ class IncrementalPipelineOrchestrator:
 
         # Check if EvidenceProfile already exists (Idempotency)
         existing_ev_profile = await self.evidence_profile_repo.get_by_evidence_id(ev_id)
-        if existing_ev_profile and not force_reprocess:
+        if not existing_ev_profile:
+            all_profiles = await self.evidence_profile_repo.get_all_for_case(case_id)
+            for p in all_profiles:
+                if p.filename == filename or p.evidence_id == ev_id:
+                    existing_ev_profile = p
+                    break
+
+        is_profile_complete = False
+        if existing_ev_profile:
+            has_real_caption = bool(existing_ev_profile.florence_description and not is_fallback_description(existing_ev_profile.florence_description))
+            has_real_ocr = bool(existing_ev_profile.ocr_text and existing_ev_profile.ocr_text.strip())
+            has_real_transcript = bool(existing_ev_profile.transcript and existing_ev_profile.transcript.strip())
+            has_real_pdf = bool(existing_ev_profile.pdf_text and existing_ev_profile.pdf_text.strip())
+
+            is_profile_complete = (has_real_ocr or has_real_caption or has_real_transcript or has_real_pdf)
+
+        if existing_ev_profile and is_profile_complete and not force_reprocess:
             logger.info(
                 "[incremental_orchestrator] Idempotency check: EvidenceProfile already processed. Skipping worker.",
-                extra={"evidence_id": ev_id},
+                extra={"evidence_id": ev_id, "file_name": filename},
             )
+            print(f"  ⚡ [SKIPPED] Evidence '{filename}' already processed (ID: {existing_ev_profile.evidence_id}). Reusing extracted OCR & visual captions!")
             ev_profile = existing_ev_profile
         else:
             # Run worker ONLY on this single new evidence file

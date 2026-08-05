@@ -13,6 +13,7 @@ import io
 import json
 import sys
 from pathlib import Path
+from typing import Optional, Dict, Any, List
 
 # Force UTF-8 output on Windows terminal
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
@@ -34,6 +35,29 @@ from app.schemas.case_understanding import CaseUnderstanding
 
 
 
+
+
+def is_fallback_description(desc: Optional[str]) -> bool:
+    if not desc or not desc.strip():
+        return True
+    d = desc.strip().lower()
+    fallback_prefixes = (
+        "processed image evidence",
+        "processed evidence",
+        "processed document",
+        "evidence document",
+        "processed video",
+        "processed audio",
+        "processed image",
+        "evidence screenshot",
+    )
+    for prefix in fallback_prefixes:
+        if d.startswith(prefix):
+            if "extracted ocr text:" in d:
+                return False
+            if len(d) < len(prefix) + 60:
+                return True
+    return False
 
 
 async def main():
@@ -118,28 +142,53 @@ async def main():
             rtype = str(ev.get("resourceType") or ev.get("type") or "image").lower()
             cloudinary_url = str(ev.get("secureUrl") or ev.get("url") or ev.get("cloudinaryUrl") or "")
             ai_meta = ev.get("aiMetadata") or {}
-
             ocr_txt = ai_meta.get("ocrText") or ev.get("ocrText")
-            florence_desc = ai_meta.get("m4Caption") or ai_meta.get("aiSummary") or ev.get("aiSummary") or ev.get("description")
+            florence_desc = ai_meta.get("aiSummary") or ai_meta.get("caption") or ai_meta.get("m4Caption") or ev.get("aiSummary") or ev.get("description")
             transcript = ai_meta.get("speechTranscript") or ai_meta.get("audioTranscript") or ev.get("transcript")
             pdf_txt = ai_meta.get("pdfText") or ev.get("pdfText")
+            p_status = str(ev.get("processingStatus") or ai_meta.get("processingStatus") or "").upper()
 
-            # 1. Florence-2 Visual Captioning (if missing) — send image_base64
-            if not florence_desc and cloudinary_url and rtype in ("image", "png", "jpeg", "jpg"):
+            has_real_caption = bool(florence_desc and not is_fallback_description(florence_desc))
+            has_real_ocr = bool(ocr_txt and ocr_txt.strip())
+            has_real_transcript = bool(transcript and transcript.strip())
+            has_real_pdf = bool(pdf_txt and pdf_txt.strip())
+
+            is_already_processed = ("--force" not in sys.argv) and (has_real_ocr or has_real_caption or has_real_transcript or has_real_pdf)
+
+            # 1. Florence-2 Visual Captioning (if missing) — fetch both <CAPTION> and <MORE_DETAILED_CAPTION>
+            if not is_already_processed and not florence_desc and cloudinary_url and rtype in ("image", "png", "jpeg", "jpg"):
                 try:
                     img_res = await http_client.get(cloudinary_url)
                     if img_res.status_code == 200:
                         import base64 as _b64
                         img_b64 = _b64.b64encode(img_res.content).decode("utf-8")
-                        res_florence = await http_client.post(
+                        
+                        # Fetch short caption (<CAPTION>)
+                        res_short = await http_client.post(
                             f"{settings.FLORENCE_BASE_URL}/predict",
                             json={"image_base64": img_b64, "task": "<CAPTION>"},
                             timeout=30.0
                         )
-                        if res_florence.status_code == 200:
-                            florence_desc = res_florence.json().get("result", "")
-                            if florence_desc:
-                                print(f"  ✓ Florence-2 visual caption generated for: {fname}")
+                        short_cap = res_short.json().get("result", "") if res_short.status_code == 200 else ""
+
+                        # Fetch detailed caption (<MORE_DETAILED_CAPTION>)
+                        res_detailed = await http_client.post(
+                            f"{settings.FLORENCE_BASE_URL}/predict",
+                            json={"image_base64": img_b64, "task": "<MORE_DETAILED_CAPTION>"},
+                            timeout=30.0
+                        )
+                        detailed_cap = res_detailed.json().get("result", "") if res_detailed.status_code == 200 else ""
+
+                        if detailed_cap or short_cap:
+                            florence_desc = detailed_cap or short_cap
+                            print(f"  ✓ Florence-2 visual captions generated for {fname}:")
+                            if short_cap:
+                                print(f"     • Caption (Short)   : {short_cap}")
+                            if detailed_cap:
+                                print(f"     • aiSummary (Detail): {detailed_cap[:120]}...")
+
+                            ai_meta["caption"] = short_cap or detailed_cap
+                            ai_meta["aiSummary"] = detailed_cap or short_cap
                     else:
                         logger.warning("[Florence] Could not download image for captioning: %s (status %s)", fname, img_res.status_code)
                 except Exception as exc:
@@ -151,7 +200,7 @@ async def main():
                     print(f"  ⚠️ [SERVICE UNREACHABLE] Florence-2 vision service ({settings.FLORENCE_BASE_URL}) is NOT running!")
 
             # 2. PaddleOCR Text Extraction (if missing)
-            if not ocr_txt and cloudinary_url and rtype in ("image", "png", "jpeg", "jpg"):
+            if not is_already_processed and not ocr_txt and cloudinary_url and rtype in ("image", "png", "jpeg", "jpg"):
                 print(f"  [OCR] Downloading & running PaddleOCR for {fname}...")
                 try:
                     res = await http_client.get(cloudinary_url)
@@ -170,6 +219,22 @@ async def main():
                 except Exception as exc:
                     logger.error("[OCR SERVICE ERROR] PaddleOCR extraction failed for '%s': %s", fname, exc)
                     print(f"  ❌ [OCR SERVICE ERROR] Could not process {fname}: {exc}")
+
+            # Store extracted OCR and Florence captions back into ev['aiMetadata'] for persistence
+            if "aiMetadata" not in ev or not isinstance(ev["aiMetadata"], dict):
+                ev["aiMetadata"] = {}
+            if florence_desc:
+                ev["aiMetadata"]["caption"] = short_cap if 'short_cap' in locals() and short_cap else florence_desc
+                ev["aiMetadata"]["aiSummary"] = florence_desc
+            if ocr_txt:
+                ev["aiMetadata"]["ocrText"] = ocr_txt
+            if transcript:
+                ev["aiMetadata"]["speechTranscript"] = transcript
+            if pdf_txt:
+                ev["aiMetadata"]["pdfText"] = pdf_txt
+
+            if is_already_processed:
+                print(f"  ⚡ [SKIPPED] Evidence '{fname}' is already fully processed (Status: PROCESSED / OCR/Caption present).")
 
             metadata = {
                 "url": cloudinary_url,
@@ -209,15 +274,69 @@ async def main():
 
     # 2. Process Evidence Items Incrementally
     print("\n  [2/2] Processing Evidence Profiles Incrementally...")
+    from app.schemas.case_profile import EvidenceProfile
     async with httpx.AsyncClient(timeout=30, follow_redirects=True) as http_client:
         for i, ev in enumerate(valid_evidences):
             ev_id = str(ev.get("publicId") or ev.get("_id") or f"ev-{i+1}")
             fname = str(ev.get("originalFilename") or ev.get("filename") or f"evidence_{i+1}")
             rtype = str(ev.get("resourceType") or ev.get("type") or "image").lower()
             cloudinary_url = str(ev.get("secureUrl") or ev.get("url") or ev.get("cloudinaryUrl") or "")
+            ai_meta = ev.get("aiMetadata") or {}
+
+            ocr_txt = ai_meta.get("ocrText") or ev.get("ocrText")
+            florence_desc = ai_meta.get("m4Caption") or ai_meta.get("aiSummary") or ev.get("aiSummary") or ev.get("description")
+            transcript = ai_meta.get("speechTranscript") or ai_meta.get("audioTranscript") or ev.get("transcript")
+            pdf_txt = ai_meta.get("pdfText") or ev.get("pdfText")
+            p_status = str(ev.get("processingStatus") or ai_meta.get("processingStatus") or "").upper()
+
+            is_already_processed = ("--force" not in sys.argv) and (p_status == "PROCESSED" or bool(ocr_txt or florence_desc or transcript or pdf_txt))
+
+            # Lookup existing EvidenceProfile in repository
+            existing_ev_profile = await orchestrator.evidence_profile_repo.get_by_evidence_id(ev_id)
+            if not existing_ev_profile:
+                all_profiles = await orchestrator.evidence_profile_repo.get_all_for_case(case_id)
+                for p in all_profiles:
+                    if p.filename == fname or p.evidence_id == ev_id:
+                        existing_ev_profile = p
+                        break
+
+            if existing_ev_profile:
+                # Update existing profile if missing OCR/Florence data
+                updated = False
+                if ocr_txt and not existing_ev_profile.ocr_text:
+                    existing_ev_profile.ocr_text = ocr_txt
+                    updated = True
+                if florence_desc and (not existing_ev_profile.florence_description or existing_ev_profile.florence_description.startswith("Processed ")):
+                    existing_ev_profile.florence_description = florence_desc
+                    updated = True
+                if transcript and not existing_ev_profile.transcript:
+                    existing_ev_profile.transcript = transcript
+                    updated = True
+                if pdf_txt and not existing_ev_profile.pdf_text:
+                    existing_ev_profile.pdf_text = pdf_txt
+                    updated = True
+                if updated:
+                    existing_ev_profile.processing_status = "PROCESSED"
+                    await orchestrator.evidence_profile_repo.save(existing_ev_profile)
+            else:
+                existing_ev_profile = EvidenceProfile(
+                    evidence_id=ev_id,
+                    case_id=case_id,
+                    filename=fname,
+                    media_type=rtype if rtype in ("image", "audio", "video", "pdf", "document") else "image",
+                    url=cloudinary_url,
+                    processing_status="PROCESSED" if is_already_processed else "PENDING",
+                    florence_description=florence_desc or f"Processed evidence '{fname}'",
+                    ocr_text=ocr_txt,
+                    transcript=transcript,
+                    pdf_text=pdf_txt,
+                    ai_metadata=ai_meta,
+                )
+                await orchestrator.evidence_profile_repo.save(existing_ev_profile)
 
             file_bytes = b""
-            if cloudinary_url:
+            # Only download from Cloudinary if media workers actually need to run
+            if not is_already_processed and not existing_ev_profile and cloudinary_url:
                 try:
                     res = await http_client.get(cloudinary_url)
                     if res.status_code == 200:
@@ -230,6 +349,7 @@ async def main():
 
             # Trigger LLM ONLY ONCE on the final evidence item of the batch
             is_last_item = (i == len(valid_evidences) - 1)
+            force_run = ("--force" in sys.argv)
             ev_profile, case_understanding = await orchestrator.process_incremental_evidence(
                 case_id=case_id,
                 filename=fname,
@@ -237,7 +357,7 @@ async def main():
                 file_bytes=file_bytes,
                 evidence_id=ev_id,
                 trigger_llm=is_last_item,
-                force_reprocess=True,
+                force_reprocess=force_run,
             )
             print(f"  ✓ EvidenceProfile processed: '{fname}' (ID: {ev_id}, Type: {ev_profile.media_type})")
 

@@ -321,8 +321,11 @@ export class ComplaintService {
   private triggerComplaintIntelligencePipeline(complaintNumber: string): void {
     try {
       const scriptPath = path.resolve(__dirname, '../../../../../services/complaint_intelligence/run_pipeline_from_atlas.py');
-      const venvPython = path.resolve(__dirname, '../../../../../services/.venv/Scripts/python.exe');
-      const pythonExec = process.platform === 'win32' && fs.existsSync(venvPython) ? venvPython : 'python';
+      const venvPythonIntell = path.resolve(__dirname, '../../../../../services/complaint_intelligence/.venv/Scripts/python.exe');
+      const venvPythonRoot = path.resolve(__dirname, '../../../../../services/.venv/Scripts/python.exe');
+      const pythonExec = process.platform === 'win32'
+        ? (fs.existsSync(venvPythonIntell) ? venvPythonIntell : (fs.existsSync(venvPythonRoot) ? venvPythonRoot : 'python'))
+        : 'python';
 
       const scriptDir = path.dirname(scriptPath);
       logger.info(`[ComplaintIntelligence] Triggering full pipeline for ${complaintNumber}`);
@@ -361,6 +364,26 @@ export class ComplaintService {
     } catch (err: any) {
       logger.error(`[ComplaintIntelligence] Failed to trigger pipeline for ${complaintNumber}`, { error: err?.message });
     }
+  }
+
+  // ─── Re-run Complaint Intelligence Pipeline ─────────────────────────────────
+  async rerunComplaintIntelligencePipeline(id: string): Promise<IComplaint> {
+    const complaint = await this.complaintRepository.findById(id);
+    if (!complaint) {
+      throw new NotFoundError('Complaint');
+    }
+
+    complaint.processingStatus = 'PENDING' as any;
+    await this.complaintRepository.save(complaint);
+
+    logger.info('[ComplaintService] Re-triggering Complaint Intelligence pipeline', {
+      complaintId: id,
+      complaintNumber: complaint.complaintNumber,
+    });
+
+    this.triggerComplaintIntelligencePipeline(complaint.complaintNumber);
+
+    return complaint;
   }
 
   // ─── Get Citizen's Complaints ──────────────────────────────────────────────

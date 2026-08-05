@@ -314,25 +314,48 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
               {(!data.evidence_analysis || data.evidence_analysis.length === 0) ? (
                 <p className="text-sm text-neutral-500 italic">No individual evidence items analyzed.</p>
               ) : (
-                data.evidence_analysis.map((ev, idx) => (
-                  <div 
-                    key={idx} 
-                    className="p-4 border border-neutral-200 rounded-lg space-y-2 bg-neutral-50/50 hover:bg-neutral-100 cursor-pointer transition-colors"
-                    onClick={() => setPreviewEvidence({ 
-                      id: ev.evidence_id, 
-                      name: ev.filename,
-                      summary: ev.summary,
-                      extracted_information: ev.extracted_information
-                    })}
-                  >
-                    <div className="flex justify-between items-center">
-                      <span className="font-bold text-sm text-slate-900">{ev.filename}</span>
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-200 text-slate-800 uppercase">{ev.importance}</span>
-                    </div>
-                    <p className="text-xs font-semibold text-slate-700">{ev.summary}</p>
-                    <p className="text-xs text-neutral-600">{ev.extracted_information}</p>
-                  </div>
-                ))
+                (() => {
+                  // Deduplicate evidence analysis items by filename or evidence_id
+                  const seenKeys = new Set<string>();
+                  const uniqueItems = data.evidence_analysis.filter((ev) => {
+                    const key = ev.filename || ev.evidence_id;
+                    if (key && seenKeys.has(key)) return false;
+                    if (key) seenKeys.add(key);
+                    return true;
+                  });
+
+                  return uniqueItems.map((ev, idx) => {
+                    const summaryClean = (ev.summary || '').trim();
+                    const infoClean = (ev.extracted_information || '').trim();
+                    const isDuplicateText = infoClean && (
+                      infoClean === summaryClean ||
+                      summaryClean.includes(infoClean) ||
+                      infoClean.includes(summaryClean)
+                    );
+
+                    return (
+                      <div 
+                        key={ev.evidence_id || idx} 
+                        className="p-4 border border-neutral-200 rounded-lg space-y-2 bg-neutral-50/50 hover:bg-neutral-100 cursor-pointer transition-colors"
+                        onClick={() => setPreviewEvidence({ 
+                          id: ev.evidence_id, 
+                          name: ev.filename,
+                          summary: ev.summary,
+                          extracted_information: ev.extracted_information
+                        })}
+                      >
+                        <div className="flex justify-between items-center">
+                          <span className="font-bold text-sm text-slate-900">{ev.filename}</span>
+                          <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-200 text-slate-800 uppercase">{ev.importance}</span>
+                        </div>
+                        {summaryClean && <p className="text-xs font-semibold text-slate-700">{summaryClean}</p>}
+                        {!isDuplicateText && infoClean && (
+                          <p className="text-xs text-neutral-600">{infoClean}</p>
+                        )}
+                      </div>
+                    );
+                  });
+                })()
               )}
             </div>
           </Card>

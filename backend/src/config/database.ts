@@ -7,8 +7,20 @@ import logger from './logger';
  * Uses Mongoose's built-in reconnection logic.
  */
 export async function connectDatabase(): Promise<void> {
-  mongoose.connection.on('connected', () => {
+  mongoose.connection.on('connected', async () => {
     logger.info('MongoDB connection established', { uri: env.MONGODB_URI.replace(/\/\/.*@/, '//***@') });
+    try {
+      const usersColl = mongoose.connection.collection('users');
+      const indexes = await usersColl.indexes();
+      const usernameIdx = indexes.find((i: any) => i.name === 'username_1');
+      if (usernameIdx && !usernameIdx.sparse) {
+        logger.info('Dropping non-sparse username_1 index from users collection...');
+        await usersColl.dropIndex('username_1');
+        logger.info('Legacy non-sparse username_1 index dropped successfully.');
+      }
+    } catch (err: any) {
+      logger.warn('User index maintenance notice', { message: err?.message });
+    }
   });
 
   mongoose.connection.on('error', (err: Error) => {

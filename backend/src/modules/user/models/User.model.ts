@@ -32,7 +32,7 @@ const UserSchema = new Schema<IUser>(
     firstName:       { type: String, required: true, trim: true, maxlength: 50 },
     middleName:      { type: String, trim: true, maxlength: 50 },
     lastName:        { type: String, required: true, trim: true, maxlength: 50 },
-    username:        { type: String, trim: true, lowercase: true, maxlength: 30 },
+    username:        { type: String, trim: true, lowercase: true, maxlength: 30, unique: true, sparse: true, default: undefined },
     email:           { type: String, required: true, trim: true, lowercase: true },
     phone:           { type: String, required: true, trim: true },
     password:        { type: String, select: false },

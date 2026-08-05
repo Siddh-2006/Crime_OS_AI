@@ -80,6 +80,35 @@ class MongoComplaintProfileRepository(IComplaintProfileRepository):
             return None
 
 
+def _doc_to_evidence_profile(doc: dict) -> EvidenceProfile:
+    doc_id = str(doc.get("evidence_id") or doc.get("_id") or "")
+    case_id = str(doc.get("case_id") or "")
+    fname = str(doc.get("originalFilename") or doc.get("filename") or "")
+    mtype = str(doc.get("type") or doc.get("media_type") or "image")
+    url = str(doc.get("storage_ref") or doc.get("url") or "")
+    p_status = str(doc.get("processingStatus") or doc.get("processing_status") or "PENDING")
+
+    ai_meta = doc.get("aiMetadata") if isinstance(doc.get("aiMetadata"), dict) else {}
+    ocr_txt = ai_meta.get("ocrText") or doc.get("ocr_text") or doc.get("ocrText")
+    florence_desc = ai_meta.get("aiSummary") or ai_meta.get("caption") or ai_meta.get("m4Caption") or doc.get("florence_description") or doc.get("ai_description") or doc.get("aiSummary")
+    transcript = ai_meta.get("speechTranscript") or doc.get("transcript") or doc.get("speechTranscript")
+    pdf_txt = ai_meta.get("pdfText") or doc.get("pdf_text") or doc.get("pdfText")
+
+    return EvidenceProfile(
+        evidence_id=doc_id,
+        case_id=case_id,
+        filename=fname,
+        media_type=mtype,
+        url=url,
+        processing_status=p_status,
+        florence_description=florence_desc,
+        ocr_text=ocr_txt,
+        transcript=transcript,
+        pdf_text=pdf_txt,
+        ai_metadata=ai_meta,
+    )
+
+
 class MongoEvidenceProfileRepository(IEvidenceProfileRepository):
     def __init__(self, collection_name: str = "evidences", use_in_memory: bool = False) -> None:
         self.collection_name = collection_name
@@ -98,6 +127,7 @@ class MongoEvidenceProfileRepository(IEvidenceProfileRepository):
             ai_meta["ocrText"] = profile.ocr_text
         if profile.florence_description:
             ai_meta["aiSummary"] = profile.florence_description
+            ai_meta["caption"] = profile.florence_description
         if profile.transcript:
             ai_meta["speechTranscript"] = profile.transcript
         if profile.pdf_text:
@@ -119,7 +149,14 @@ class MongoEvidenceProfileRepository(IEvidenceProfileRepository):
             # NOT pre-created in the evidences collection. We create the doc here
             # so the Node.js enrichment query can find it.
             result = await db[self.collection_name].update_one(
-                {"$or": [{"_id": profile.evidence_id}, {"evidence_id": profile.evidence_id}]},
+                {
+                    "$or": [
+                        {"_id": profile.evidence_id},
+                        {"evidence_id": profile.evidence_id},
+                        {"case_id": profile.case_id, "originalFilename": profile.filename},
+                        {"case_id": profile.case_id, "filename": profile.filename},
+                    ]
+                },
                 {
                     "$set": patch,
                     "$setOnInsert": {
@@ -139,21 +176,17 @@ class MongoEvidenceProfileRepository(IEvidenceProfileRepository):
             self._in_memory[profile.evidence_id] = patch
             logger.info("[repository] Saved EvidenceProfile in-memory", extra={"evidence_id": profile.evidence_id})
 
-
     async def get_by_evidence_id(self, evidence_id: str) -> Optional[EvidenceProfile]:
         db = None if self.use_in_memory else await get_mongo_db()
         if db is not None:
             doc = await db[self.collection_name].find_one({"$or": [{"_id": evidence_id}, {"evidence_id": evidence_id}]})
             if doc:
-                doc.pop("_id", None)
-                return EvidenceProfile.model_validate(doc)
+                return _doc_to_evidence_profile(doc)
             return None
         else:
             doc = self._in_memory.get(evidence_id)
             if doc:
-                d = dict(doc)
-                d.pop("_id", None)
-                return EvidenceProfile.model_validate(d)
+                return _doc_to_evidence_profile(doc)
             return None
 
     async def get_all_for_case(self, case_id: str) -> List[EvidenceProfile]:
@@ -165,17 +198,33 @@ class MongoEvidenceProfileRepository(IEvidenceProfileRepository):
                 or_conditions.append({"case_id": ObjectId(case_id)})
             cursor = db[self.collection_name].find({"$or": or_conditions})
             docs = await cursor.to_list(length=500)
-            results = []
-            for d in docs:
-                d.pop("_id", None)
-                results.append(EvidenceProfile.model_validate(d))
-            return results
+            results = [_doc_to_evidence_profile(d) for d in docs]
+
+            # Fallback: check embedded evidence inside 'complaints' collection if none found in 'evidences'
+            if not results:
+                complaint_or: list[dict[str, Any]] = [{"_id": case_id}, {"complaintNumber": case_id}]
+                if ObjectId.is_valid(case_id):
+                    complaint_or.append({"_id": ObjectId(case_id)})
+                complaint_doc = await db["complaints"].find_one({"$or": complaint_or})
+                if complaint_doc and isinstance(complaint_doc.get("evidence"), list):
+                    for i, ev in enumerate(complaint_doc["evidence"]):
+                        if isinstance(ev, dict):
+                            results.append(_doc_to_evidence_profile(ev))
+
+            # Deduplicate by filename / evidence_id (keeping the most complete profile)
+            seen_files: set[str] = set()
+            deduped_results: list[EvidenceProfile] = []
+            for p in results:
+                key = p.filename or p.evidence_id
+                if key in seen_files:
+                    continue
+                seen_files.add(key)
+                deduped_results.append(p)
+            return deduped_results
         else:
             results = []
             for doc in self._in_memory.values():
                 if str(doc.get("case_id")) == str(case_id):
-                    d = dict(doc)
-                    d.pop("_id", None)
-                    results.append(EvidenceProfile.model_validate(d))
+                    results.append(_doc_to_evidence_profile(doc))
             return results
 

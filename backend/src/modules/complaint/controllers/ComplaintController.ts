@@ -210,4 +210,14 @@ export class ComplaintController {
       next(err);
     }
   };
+
+  rerunPipeline = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const complaint = await this.complaintService.rerunComplaintIntelligencePipeline(id);
+      sendSuccess(res, HttpStatusCode.OK, 'Complaint Intelligence pipeline re-triggered successfully', complaint);
+    } catch (err) {
+      next(err);
+    }
+  };
 }

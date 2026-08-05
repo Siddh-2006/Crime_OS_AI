@@ -39,6 +39,7 @@ export const API_ROUTES = {
     REJECT: (id: string) => `/complaints/${id}/reject`,
     UPDATE: (id: string) => `/complaints/${id}/update`,
     REGISTER_FIR: (id: string) => `/complaints/${id}/register-fir`,
+    RERUN_PIPELINE: (id: string) => `/complaints/${id}/rerun-pipeline`,
   },
   CASES: {
     PARTICIPANTS: (id: string) => `/cases/${id}/participants`,

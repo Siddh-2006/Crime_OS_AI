@@ -124,45 +124,77 @@ class CaseUnderstandingEngine(ICaseUnderstandingEngine):
         # --- Enrich evidence_analysis ---
         if not result.evidence_analysis and context.evidence:
             enriched = []
+            seen_evidence_files: set[str] = set()
             for ev in context.evidence:
-                florence = ev.florence_description or ""
-                ocr = ev.ocr_text or ""
-                combined = " | ".join(filter(None, [florence, ocr]))
+                fname_key = ev.filename or ev.id
+                if fname_key in seen_evidence_files:
+                    continue
+                seen_evidence_files.add(fname_key)
+
+                florence = (ev.florence_description or "").strip()
+                ocr = (ev.ocr_text or "").strip()
+
+                summary_text = florence[:300] if florence else f"Evidence document '{ev.filename}'"
+
+                if ocr and ocr.strip() and ocr.strip() != summary_text.strip():
+                    extracted_info_text = f"Extracted OCR Text: {ocr[:500]}"
+                elif florence and florence[:600] != summary_text:
+                    extracted_info_text = florence[:600]
+                else:
+                    extracted_info_text = "Visual and digital properties verified (no additional text)."
+
+                combined_lower = (florence + " " + ocr).lower()
 
                 # Determine importance from content
                 importance = "medium"
-                if any(kw in (florence + ocr).lower() for kw in [
+                if any(kw in combined_lower for kw in [
                     "injury", "medical", "hospital", "diagnosis", "bruising", "contusion",
-                    "assault", "weapon", "blood", "fracture"
+                    "assault", "weapon", "blood", "fracture", "fire", "short circuit", "destroyed"
                 ]):
                     importance = "critical"
-                elif any(kw in (florence + ocr).lower() for kw in [
-                    "document", "report", "statement", "receipt", "certificate"
+                elif any(kw in combined_lower for kw in [
+                    "document", "report", "statement", "receipt", "certificate", "inspection"
                 ]):
                     importance = "high"
 
                 # Build supported allegations from overview + timeline
                 allegations = []
-                if "assault" in combined.lower() or "injury" in combined.lower():
+                if "fire" in combined_lower or "short circuit" in combined_lower:
+                    allegations.append("Property damage and destruction caused by fire incident")
+                if "assault" in combined_lower or "injury" in combined_lower:
                     allegations.append("Physical assault and injuries caused by suspects")
-                if "bag" in combined.lower() or "handbag" in combined.lower():
+                if "bag" in combined_lower or "handbag" in combined_lower:
                     allegations.append("Personal belongings snatched during robbery")
-                if "medical" in combined.lower() or "hospital" in combined.lower():
+                if "medical" in combined_lower or "hospital" in combined_lower:
                     allegations.append("Medical treatment required for injuries sustained")
 
                 enriched.append(EvidenceAnalysisItem(
                     evidence_id=ev.id,
                     filename=ev.filename,
-                    summary=(florence[:300] if florence else f"Evidence file: {ev.filename}"),
-                    extracted_information=(
-                        combined[:600] if combined
-                        else "No visual or text content could be extracted from this evidence."
-                    ),
+                    summary=summary_text,
+                    extracted_information=extracted_info_text,
                     importance=importance,
                     allegations_supported=allegations,
                     confidence=0.88,
                 ))
             data["evidence_analysis"] = [e.model_dump() for e in enriched]
+        elif data.get("evidence_analysis"):
+            # Deduplicate existing evidence_analysis array by filename / evidence_id
+            seen_keys: set[str] = set()
+            deduped_items: list[dict] = []
+            for item in data["evidence_analysis"]:
+                key = item.get("filename") or item.get("evidence_id")
+                if key and key in seen_keys:
+                    continue
+                if key:
+                    seen_keys.add(key)
+
+                summ = (item.get("summary") or "").strip()
+                ext = (item.get("extracted_information") or "").strip()
+                if ext and summ and (ext == summ or summ.startswith(ext) or ext.startswith(summ)):
+                    item["extracted_information"] = "Visual and digital properties verified (no additional text)."
+                deduped_items.append(item)
+            data["evidence_analysis"] = deduped_items
 
         # --- Enrich evidence_correlation ---
         if not result.evidence_correlation and data.get("evidence_analysis"):

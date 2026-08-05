@@ -1,4 +1,4 @@
-﻿@echo off
+@echo off
 echo =======================================================
 echo Crime OS AI - Full System Startup Script
 echo =======================================================
