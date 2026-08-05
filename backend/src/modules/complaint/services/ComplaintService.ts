@@ -191,11 +191,6 @@ export class ComplaintService {
     // Generate unique complaint number
     const complaintNumber = `COMP-${uuidv4()}`;
 
-    // Verify evidence uploads
-    if (evidence.length > 10) {
-      throw new ValidationError('Maximum 10 evidence files allowed.');
-    }
-
     const validatedEvidence: IEvidenceMetadata[] = evidence.map((file: any) => ({
       publicId: file.publicId,
       secureUrl: file.secureUrl,
@@ -958,10 +953,6 @@ export class ComplaintService {
     }
 
     this.checkLock(complaint);
-
-    if (complaint.evidence.length + evidenceData.length > 10) {
-      throw new ValidationError('Maximum 10 evidence files allowed.');
-    }
 
     const validatedEvidence: IEvidenceMetadata[] = evidenceData.map((file: any) => ({
       publicId: file.publicId,

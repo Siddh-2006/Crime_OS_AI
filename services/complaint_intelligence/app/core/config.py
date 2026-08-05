@@ -12,12 +12,14 @@ from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _SERVICE_DIR = Path(__file__).resolve().parent.parent.parent
+_REPO_ROOT = _SERVICE_DIR.parent.parent
 _ENV_FILE = _SERVICE_DIR / ".env"
+_BACKEND_ENV_FILE = _REPO_ROOT / "backend" / ".env"
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=(str(_ENV_FILE), ".env"),
+        env_file=(str(_BACKEND_ENV_FILE), str(_ENV_FILE), ".env"),
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",

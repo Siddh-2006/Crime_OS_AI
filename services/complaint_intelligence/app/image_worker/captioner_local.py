@@ -22,7 +22,8 @@ _tiu.is_flash_attn_2_available = lambda: False
 _tiu.is_flash_attn_greater_or_equal_2_10 = lambda: False
 
 from app.core.logging import logger
-from app.image_worker.captioner import _parse_caption
+from app.image_worker.captioner import _parse_caption, caption_with_gemini
+from app.image_worker.text_detector import detect_text_with_gemini
 from app.image_worker.interfaces import IImageCaptioner
 from app.schemas.evidence import ImageAnalysisResult
 
@@ -91,23 +92,30 @@ class FlorenceLocalCaptioner(IImageCaptioner):
     async def caption(self, image_bytes: bytes) -> ImageAnalysisResult:
         from PIL import Image
 
-        image_pil = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        try:
+            image_pil = Image.open(io.BytesIO(image_bytes)).convert("RGB")
 
-        logger.info("Florence-2 local inference started")
+            logger.info("Florence-2 local inference started")
 
-        # Task 1: detailed caption
-        caption = _run_task(image_pil, "<MORE_DETAILED_CAPTION>")
+            # Task 1: detailed caption
+            caption = _run_task(image_pil, "<MORE_DETAILED_CAPTION>")
 
-        # Task 2: brief caption for scene type inference
-        brief = _run_task(image_pil, "<CAPTION>")
-        combined = f"{brief} {caption}".strip()
+            # Task 2: brief caption for scene type inference
+            brief = _run_task(image_pil, "<CAPTION>")
+            combined = f"{brief} {caption}".strip()
 
-        result = _parse_caption(combined)
-        logger.info(
-            "Florence-2 local inference completed",
-            extra={"scene_type": result.scene_type, "tags": result.tags, "caption": caption[:100]},
-        )
-        return result
+            result = _parse_caption(combined)
+            logger.info(
+                "Florence-2 local inference completed",
+                extra={"scene_type": result.scene_type, "tags": result.tags, "caption": caption[:100]},
+            )
+            return result
+        except Exception as exc:
+            logger.warning(
+                "Florence-2 local inference failed; falling back to Gemini vision",
+                extra={"error": str(exc)},
+            )
+            return await caption_with_gemini(image_bytes)
 
 
 class FlorenceLocalTextDetector:
@@ -122,11 +130,18 @@ class FlorenceLocalTextDetector:
     async def detect(self, image_bytes: bytes) -> bool:
         from PIL import Image
 
-        image_pil = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-        ocr_text = _run_task(image_pil, "<OCR>")
-        has_text = len(ocr_text.strip()) > self._TEXT_THRESHOLD
-        logger.info(
-            "Florence-2 text detection completed",
-            extra={"has_text": has_text, "ocr_length": len(ocr_text)},
-        )
-        return has_text
+        try:
+            image_pil = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+            ocr_text = _run_task(image_pil, "<OCR>")
+            has_text = len(ocr_text.strip()) > self._TEXT_THRESHOLD
+            logger.info(
+                "Florence-2 text detection completed",
+                extra={"has_text": has_text, "ocr_length": len(ocr_text)},
+            )
+            return has_text
+        except Exception as exc:
+            logger.warning(
+                "Florence-2 local text detection failed; falling back to Gemini vision",
+                extra={"error": str(exc)},
+            )
+            return await detect_text_with_gemini(image_bytes)

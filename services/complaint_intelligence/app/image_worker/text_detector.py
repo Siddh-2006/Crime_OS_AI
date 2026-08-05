@@ -15,12 +15,69 @@ import base64
 import httpx
 
 from app.core.config import settings
+from app.core.exceptions import LLMError
 from app.core.logging import logger
+from app.image_worker.captioner import _guess_image_mime_type
 from app.image_worker.interfaces import ITextDetector
 
 # Text is considered present if Florence returns more than this many characters
 _TEXT_PRESENCE_THRESHOLD = 5
-_MAX_RETRIES = 1
+_MAX_RETRIES = 3
+
+
+async def detect_text_with_gemini(image_bytes: bytes, timeout: int | None = None) -> bool:
+    """Use Gemini vision to decide whether readable text is visible in an image."""
+    api_key = settings.GEMINI_API_KEY.strip()
+    if not api_key:
+        raise LLMError("GEMINI_API_KEY is not set. Add it to the complaint-intelligence .env file to enable Gemini fallback.")
+
+    image_b64 = base64.b64encode(image_bytes).decode("utf-8")
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.GEMINI_MODEL}:generateContent?key={api_key}"
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {
+                        "text": (
+                            "Does this image contain readable text, printed words, handwriting, "
+                            "a form, document, receipt, screenshot text, or signage? Return only true or false."
+                        )
+                    },
+                    {
+                        "inline_data": {
+                            "mime_type": _guess_image_mime_type(image_bytes),
+                            "data": image_b64,
+                        }
+                    },
+                ],
+            }
+        ],
+        "generationConfig": {"temperature": 0.0},
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=timeout or settings.FLORENCE_TIMEOUT_SECONDS) as client:
+            resp = await client.post(url, json=payload)
+            resp.raise_for_status()
+            text = (
+                resp.json()
+                .get("candidates", [{}])[0]
+                .get("content", {})
+                .get("parts", [{}])[0]
+                .get("text", "")
+                .strip()
+                .lower()
+            )
+            if text.startswith("true"):
+                return True
+            if text.startswith("false"):
+                return False
+            raise LLMError(f"Gemini returned an invalid text-detection response: {text[:80]}")
+    except httpx.HTTPStatusError as exc:
+        raise LLMError(f"Gemini vision API returned error status: {exc.response.status_code}") from exc
+    except httpx.RequestError as exc:
+        raise LLMError(f"Failed to communicate with Gemini vision: {exc}") from exc
 
 
 class FlorenceTextDetector(ITextDetector):
@@ -66,17 +123,22 @@ class FlorenceTextDetector(ITextDetector):
                     extra={"attempt": attempt, "error": str(exc)},
                 )
             except httpx.HTTPStatusError as exc:
-                # Non-retryable: Florence returned an error response
+                last_exc = exc
                 logger.error(
                     "Florence text detection HTTP error",
-                    extra={"status": exc.response.status_code, "error": str(exc)},
+                    extra={"attempt": attempt, "status": exc.response.status_code, "error": str(exc)},
                 )
-                raise
+                if exc.response.status_code not in {404, 408, 425, 429, 500, 502, 503, 504}:
+                    raise
 
         logger.error(
             "Florence text detection failed after max retries",
             extra={"retries": _MAX_RETRIES, "error": str(last_exc)},
         )
+        if settings.GEMINI_API_KEY.strip():
+            logger.warning("Falling back to Gemini vision for text detection")
+            return await detect_text_with_gemini(image_bytes, timeout=self._timeout)
+        logger.warning("Gemini vision fallback skipped because GEMINI_API_KEY is not configured")
         raise last_exc  # type: ignore[misc]
 
 

@@ -1,7 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
+import { Blob } from 'buffer';
 import { ComplaintService } from '../services/ComplaintService';
 import { sendSuccess } from '../../../shared/utils/response.util';
 import { HttpStatusCode } from '../../../common/enums/httpStatus.enum';
+import env from '../../../config/env';
 import logger from '../../../config/logger';
 
 export class ComplaintController {
@@ -13,6 +15,40 @@ export class ComplaintController {
       const caseId = req.query.caseId as string | undefined;
       const signatureData = await this.complaintService.getUploadSignature(citizenId, caseId);
       sendSuccess(res, HttpStatusCode.OK, 'Upload signature generated successfully', signatureData);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  analyzeComplaintIntake = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const text = String(req.body?.text ?? '');
+      const context = typeof req.body?.context === 'string' ? req.body.context : '';
+      const files = (req.files as Express.Multer.File[] | undefined) ?? [];
+
+      const formData = new FormData();
+      formData.append('text', text);
+      if (context) {
+        formData.append('context', context);
+      }
+
+      for (const file of files) {
+        const blob = new Blob([file.buffer], { type: file.mimetype || 'application/octet-stream' });
+        formData.append('files', blob, file.originalname || 'upload.bin');
+      }
+
+      const response = await fetch(`${env.COMPLAINT_INTELLIGENCE_URL}/profile-complaint-multimodal`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const detail = await response.text();
+        throw new Error(detail || `Complaint intake analysis failed with HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      sendSuccess(res, HttpStatusCode.OK, 'Complaint intake analysed successfully', data);
     } catch (err) {
       next(err);
     }

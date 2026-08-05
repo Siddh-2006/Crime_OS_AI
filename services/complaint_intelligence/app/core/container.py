@@ -101,6 +101,7 @@ class Container:
                 model=self._cfg.OLLAMA_MODEL,
                 timeout=self._cfg.OLLAMA_TIMEOUT_SECONDS,
                 num_ctx=self._cfg.OLLAMA_NUM_CTX,
+                max_retries=self._cfg.LLM_MAX_RETRIES,
             )
         return self._ollama_client
 

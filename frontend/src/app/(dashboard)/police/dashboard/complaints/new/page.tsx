@@ -23,6 +23,7 @@ interface UploadedFile {
   originalFilename: string;
   extension: string;
   size: number;
+  source?: 'evidence' | 'complaint-intake';
   isPhysical?: boolean;
   physicalDetails?: {
     name: string;
@@ -39,6 +40,26 @@ interface UploadProgress {
   error?: string;
   tempUrl?: string;
   size: number;
+  source?: 'evidence' | 'complaint-intake';
+}
+
+interface ComplaintDraftResponse {
+  prefill?: {
+    shortDescription?: string | null;
+    detailedDescription?: string | null;
+    incidentDate?: string | null;
+    incidentTime?: string | null;
+    incidentPlace?: string | null;
+    approximateDateText?: string | null;
+    coordinates?: string | null;
+    address?: string | null;
+    category?: string | null;
+  };
+  missing_fields?: string[];
+  missingFields?: string[];
+  confidence?: number;
+  summary?: string;
+  files?: UploadedFile[];
 }
 
 export default function NewComplaintPage(): React.ReactElement {
@@ -96,6 +117,8 @@ export default function NewComplaintPage(): React.ReactElement {
   // ─── Step 2: Describe State ────────────────────────────────────────────────
   const [detailedDescription, setDetailedDescription] = useState('');
   const [isRecordingUIActive, setIsRecordingUIActive] = useState(false);
+  const [isComplaintIntakeProcessing, setIsComplaintIntakeProcessing] = useState(false);
+  const [intakeStatusMessage, setIntakeStatusMessage] = useState('');
 
   // Speech-to-Text State
   const [isRecording, setIsRecording] = useState(false);
@@ -572,34 +595,29 @@ export default function NewComplaintPage(): React.ReactElement {
 
   // ─── Step 3: Direct Cloudinary File Uploads ──────────────────────────────
   const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'mp4', 'mpeg', 'mov', 'avi', 'mp3', 'wav', 'ogg', 'pdf', 'doc', 'docx', 'zip'];
+  const COMPLAINT_INTAKE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'pdf', 'mp3', 'wav', 'm4a', 'ogg', 'flac'];
 
-  const processFiles = (files: File[]) => {
+  const processFiles = async (files: File[], source: 'evidence' | 'complaint-intake' = 'evidence') => {
     setError(null);
-    const totalCount = evidenceFiles.length + Object.keys(uploadProgressQueue).filter(k => uploadProgressQueue[k].status === 'uploading').length;
-    if (totalCount + files.length > 10) {
-      setError('You can select a maximum of 10 evidence files.');
-      return;
-    }
 
-    files.forEach((file) => {
+    const uploads = files.map((file) => {
       const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
-      if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      const allowedExtensions = source === 'complaint-intake' ? COMPLAINT_INTAKE_EXTENSIONS : ALLOWED_EXTENSIONS;
+      if (!allowedExtensions.includes(ext)) {
         setError(`Unsupported file type: ${file.name}`);
-        return;
+        return Promise.resolve(null);
       }
-      if (file.size > 100 * 1024 * 1024) {
-        setError(`File exceeds 100MB limit: ${file.name}`);
-        return;
-      }
-      uploadFile(file);
+      return uploadFile(file, source);
     });
+
+    await Promise.all(uploads);
   };
 
-  const uploadFile = async (file: File) => {
+  const uploadFile = async (file: File, source: 'evidence' | 'complaint-intake' = 'evidence') => {
     const fileId = `${file.name}-${file.size}-${Date.now()}`;
     const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
     const isImage = file.type.startsWith('image/');
-    
+
     // Push initial status
     setUploadProgressQueue((prev) => ({
       ...prev,
@@ -609,82 +627,12 @@ export default function NewComplaintPage(): React.ReactElement {
         status: 'uploading',
         tempUrl: isImage ? URL.createObjectURL(file) : undefined,
         size: file.size,
+        source,
       },
     }));
 
-    try {
-      // 1. Signature retrieval
-      const sigRes = await apiClient.post(API_ROUTES.COMPLAINTS.UPLOAD_SIGNATURE);
-      const { signature, timestamp, apiKey, cloudName, folder, publicId } = sigRes.data.data;
-
-      // 2. Form Data preparation
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('api_key', apiKey);
-      formData.append('timestamp', String(timestamp));
-      formData.append('signature', signature);
-      formData.append('folder', folder);
-      formData.append('public_id', publicId);
-
-      let resourceType = 'image';
-      if (file.type.startsWith('video/') || file.type.startsWith('audio/')) {
-        resourceType = 'video';
-      } else if (file.type.includes('pdf') || file.name.endsWith('.pdf') || !file.type.startsWith('image/')) {
-        resourceType = 'raw';
-      }
-
-      // 3. XHR to track progress percent
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`, true);
-
-      xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable) {
-          const percent = Math.round((e.loaded / e.total) * 100);
-          setUploadProgressQueue((prev) => {
-            if (!prev[fileId]) return prev;
-            return {
-              ...prev,
-              [fileId]: { ...prev[fileId], progress: percent },
-            };
-          });
-        }
-      };
-
-      xhr.onload = () => {
-        if (xhr.status === 200) {
-          const response = JSON.parse(xhr.responseText);
-          const uploadedItem: UploadedFile = {
-            publicId: response.public_id,
-            secureUrl: response.secure_url,
-            resourceType: response.resource_type,
-            mimeType: file.type || 'application/octet-stream',
-            originalFilename: file.name,
-            extension: ext,
-            size: response.bytes,
-          };
-
-          setEvidenceFiles((prev) => [...prev, uploadedItem]);
-          setUploadProgressQueue((prev) => {
-            const next = { ...prev };
-            next[fileId] = { ...next[fileId], status: 'success', progress: 100 };
-            return next;
-          });
-        } else {
-          setUploadProgressQueue((prev) => {
-            if (!prev[fileId]) return prev;
-            return {
-              ...prev,
-              [fileId]: {
-                ...prev[fileId],
-                status: 'error',
-                error: `Upload failed: HTTP ${xhr.status}`,
-              },
-            };
-          });
-        }
-      };
-
-      xhr.onerror = () => {
+    return new Promise<UploadedFile | null>((resolve) => {
+      const finishWithError = (message: string) => {
         setUploadProgressQueue((prev) => {
           if (!prev[fileId]) return prev;
           return {
@@ -692,26 +640,169 @@ export default function NewComplaintPage(): React.ReactElement {
             [fileId]: {
               ...prev[fileId],
               status: 'error',
-              error: 'Network connection error.',
+              error: message,
             },
           };
         });
+        resolve(null);
       };
 
-      xhr.send(formData);
+      apiClient.post(API_ROUTES.COMPLAINTS.UPLOAD_SIGNATURE)
+        .then((sigRes) => {
+          const { signature, timestamp, apiKey, cloudName, folder, publicId } = sigRes.data.data;
+
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('api_key', apiKey);
+          formData.append('timestamp', String(timestamp));
+          formData.append('signature', signature);
+          formData.append('folder', folder);
+          formData.append('public_id', publicId);
+
+          let resourceType = 'image';
+          if (file.type.startsWith('video/') || file.type.startsWith('audio/')) {
+            resourceType = 'video';
+          } else if (file.type.includes('pdf') || file.name.endsWith('.pdf') || !file.type.startsWith('image/')) {
+            resourceType = 'raw';
+          }
+
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`, true);
+
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+              const percent = Math.round((e.loaded / e.total) * 100);
+              setUploadProgressQueue((prev) => {
+                if (!prev[fileId]) return prev;
+                return {
+                  ...prev,
+                  [fileId]: { ...prev[fileId], progress: percent },
+                };
+              });
+            }
+          };
+
+          xhr.onload = () => {
+            if (xhr.status === 200) {
+              const response = JSON.parse(xhr.responseText);
+              const uploadedItem: UploadedFile = {
+                publicId: response.public_id,
+                secureUrl: response.secure_url,
+                resourceType: response.resource_type,
+                mimeType: file.type || 'application/octet-stream',
+                originalFilename: file.name,
+                extension: ext,
+                size: response.bytes,
+                source,
+              };
+
+              setEvidenceFiles((prev) => [...prev, uploadedItem]);
+              setUploadProgressQueue((prev) => {
+                const next = { ...prev };
+                next[fileId] = { ...next[fileId], status: 'success', progress: 100 };
+                return next;
+              });
+              resolve(uploadedItem);
+            } else {
+              finishWithError(`Upload failed: HTTP ${xhr.status}`);
+            }
+          };
+
+          xhr.onerror = () => {
+            finishWithError('Network connection error.');
+          };
+
+          xhr.send(formData);
+        })
+        .catch((err) => {
+          console.error(err);
+          finishWithError(err.response?.data?.message || err.message || 'Signature error.');
+        });
+    });
+  };
+
+  const applyComplaintDraft = (draft: ComplaintDraftResponse | null | undefined) => {
+    if (!draft?.prefill) return;
+
+    const prefill = draft.prefill;
+
+    if (prefill.shortDescription?.trim()) {
+      setShortDescription(prefill.shortDescription.trim());
+    }
+    if (prefill.detailedDescription?.trim()) {
+      setDetailedDescription(prefill.detailedDescription.trim());
+    }
+    if (prefill.incidentDate?.trim()) {
+      setIncidentDate(prefill.incidentDate.trim());
+    }
+    if (prefill.incidentTime?.trim()) {
+      const normalizedTime = prefill.incidentTime.trim().toLowerCase();
+      if (['morning', 'afternoon', 'evening', 'night', 'unknown'].includes(normalizedTime)) {
+        setTimePeriod(normalizedTime);
+        setIncidentTime('');
+      } else {
+        setTimePeriod('exact');
+        setIncidentTime(prefill.incidentTime.trim());
+      }
+    }
+    if (prefill.incidentPlace?.trim()) {
+      setIncidentPlace(prefill.incidentPlace.trim());
+    }
+    if (prefill.approximateDateText?.trim()) {
+      setIsApproximateDate(true);
+      setApproximateDateText(prefill.approximateDateText.trim());
+    }
+    if (prefill.coordinates?.trim()) {
+      setCoordinates(prefill.coordinates.trim());
+    }
+    if (prefill.address?.trim()) {
+      setIncidentPlace(prefill.address.trim());
+    }
+    if (prefill.category?.trim()) {
+      setCategory(prefill.category.trim());
+    }
+  };
+
+  const processComplaintIntake = async (files: File[]) => {
+    if (files.length === 0) return;
+
+    setIsComplaintIntakeProcessing(true);
+    setIntakeStatusMessage('Processing complaint media for auto-fill...');
+
+    try {
+      const intakeUploadPromise = processFiles(files, 'complaint-intake');
+      const intakeAnalysisPromise = (async () => {
+        const formData = new FormData();
+        formData.append('text', `${shortDescription}\n${detailedDescription}`.trim());
+        formData.append('context', JSON.stringify({
+          shortDescription,
+          detailedDescription,
+          incidentDate,
+          incidentTime,
+          incidentPlace,
+          approximateDateText,
+          coordinates,
+          address: incidentPlace,
+          category,
+        }));
+
+        files.forEach((file) => formData.append('files', file));
+
+        return apiClient.post(API_ROUTES.COMPLAINTS.INTAKE_ANALYZE, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      })();
+
+      const analysisResponse = await intakeAnalysisPromise;
+      await intakeUploadPromise;
+
+      const payload = (analysisResponse.data?.data ?? analysisResponse.data) as ComplaintDraftResponse;
+      applyComplaintDraft(payload);
     } catch (err: any) {
-      console.error(err);
-      setUploadProgressQueue((prev) => {
-        if (!prev[fileId]) return prev;
-        return {
-          ...prev,
-          [fileId]: {
-            ...prev[fileId],
-            status: 'error',
-            error: err.response?.data?.message || err.message || 'Signature error.',
-          },
-        };
-      });
+      setError(err.response?.data?.message || err.message || 'Complaint media processing failed. You can continue and fill the form manually.');
+    } finally {
+      setIsComplaintIntakeProcessing(false);
+      setIntakeStatusMessage('');
     }
   };
 
@@ -781,6 +872,10 @@ export default function NewComplaintPage(): React.ReactElement {
       if (err) { setError(err); return; }
       setStep(2);
     } else if (step === 2) {
+      if (isComplaintIntakeProcessing) {
+        setError('Please wait for complaint media processing to finish');
+        return;
+      }
       const err = validateStep2();
       if (err) { setError(err); return; }
       setStep(3);
@@ -1076,6 +1171,62 @@ export default function NewComplaintPage(): React.ReactElement {
           </div>
 
           <div className="space-y-4">
+            <div className="rounded-2xl border border-primary-200 bg-primary-50/60 p-4 space-y-3">
+              <div>
+                <p className="text-sm font-semibold text-primary-900">Optional complaint media intake</p>
+                <p className="text-xs text-primary-800/80">
+                  Upload images, PDFs, or audio recordings to auto-fill the complaint fields. The uploaded files will also remain part of the complaint evidence.
+                </p>
+              </div>
+
+              <div
+                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDragging(false);
+                  if (e.dataTransfer.files) {
+                    void processComplaintIntake(Array.from(e.dataTransfer.files));
+                  }
+                }}
+                onClick={() => document.getElementById('complaint-intake-input')?.click()}
+                className={[
+                  'border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all duration-200 bg-white',
+                  isDragging
+                    ? 'border-primary-500 bg-primary-50/60 scale-[0.99] shadow-inner'
+                    : 'border-primary-200 hover:border-primary-500 hover:bg-primary-50/40',
+                ].join(' ')}
+              >
+                <input
+                  type="file"
+                  id="complaint-intake-input"
+                  className="hidden"
+                  multiple
+                  accept="image/*,audio/*,.pdf"
+                  onChange={(e) => {
+                    if (e.target.files) {
+                      void processComplaintIntake(Array.from(e.target.files));
+                      e.target.value = '';
+                    }
+                  }}
+                />
+                <Upload size={30} className="mx-auto text-primary-700 mb-2" />
+                <p className="text-sm font-semibold text-neutral-700">
+                  Drag &amp; drop complaint media here, or <span className="text-primary-700 font-bold">browse files</span>
+                </p>
+                <p className="text-xs text-neutral-500 mt-1.5">
+                  These files are processed for OCR, Florence captions, and Whisper transcription before you continue.
+                </p>
+              </div>
+
+              {isComplaintIntakeProcessing && (
+                <div className="flex items-center gap-2 text-xs font-semibold text-primary-800">
+                  <Loader2 size={14} className="animate-spin" />
+                  {intakeStatusMessage || 'Processing complaint media...'}
+                </div>
+              )}
+            </div>
+
             {/* Title / Summary */}
             <Input
               label="Complaint Title *"
@@ -1308,7 +1459,7 @@ export default function NewComplaintPage(): React.ReactElement {
             <Button variant="ghost" onClick={handlePrev} leftIcon={<ArrowLeft size={16} />}>
               Back to Complainant
             </Button>
-            <Button onClick={handleNext} rightIcon={<ArrowRight size={16} />}>
+            <Button onClick={handleNext} rightIcon={<ArrowRight size={16} />} disabled={isComplaintIntakeProcessing}>
               Continue to Evidence
             </Button>
           </div>
@@ -1320,7 +1471,7 @@ export default function NewComplaintPage(): React.ReactElement {
         <Card className="space-y-6 p-6">
           <div className="border-b border-neutral-100 pb-3">
             <h2 className="text-xl font-bold text-neutral-900">Step 3: Upload Evidence</h2>
-            <p className="text-sm text-neutral-500">Provide supporting files (max 10, up to 100MB each). Supported formats: Images, Videos, Audio, PDF, Documents, ZIP.</p>
+            <p className="text-sm text-neutral-500">Provide supporting files for the complaint record. Supported formats: Images, Videos, Audio, PDF, Documents, ZIP.</p>
           </div>
 
           {/* Drag & drop zone */}
@@ -1331,7 +1482,7 @@ export default function NewComplaintPage(): React.ReactElement {
               e.preventDefault();
               setIsDragging(false);
               if (e.dataTransfer.files) {
-                processFiles(Array.from(e.dataTransfer.files));
+                void processFiles(Array.from(e.dataTransfer.files), 'evidence');
               }
             }}
             onClick={() => document.getElementById('evidence-select-input')?.click()}
@@ -1350,7 +1501,7 @@ export default function NewComplaintPage(): React.ReactElement {
               accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.zip,.txt"
               onChange={(e) => {
                 if (e.target.files) {
-                  processFiles(Array.from(e.target.files));
+                  void processFiles(Array.from(e.target.files), 'evidence');
                   e.target.value = '';
                 }
               }}
@@ -1400,6 +1551,11 @@ export default function NewComplaintPage(): React.ReactElement {
                         <p className="text-[10px] text-neutral-400">
                           {(item.size / (1024 * 1024)).toFixed(2)} MB · {ext}
                         </p>
+                        {item.source === 'complaint-intake' && (
+                          <span className="inline-block mt-1 text-[9px] font-bold uppercase tracking-wider bg-primary-100 text-primary-800 px-2 py-0.5 rounded-full">
+                            Complaint Intake Evidence
+                          </span>
+                        )}
 
                         {item.status === 'uploading' && (
                           <div className="w-full bg-neutral-200 h-1 rounded-full mt-2 overflow-hidden">
@@ -1668,6 +1824,11 @@ export default function NewComplaintPage(): React.ReactElement {
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-neutral-855 truncate">{file.originalFilename}</p>
                         <p className="text-[10px] text-neutral-400 mt-0.5">{(file.size / (1024 * 1024)).toFixed(2)} MB · {file.extension.toUpperCase()}</p>
+                        {file.source === 'complaint-intake' && (
+                          <span className="inline-block mt-1 text-[9px] font-bold uppercase tracking-wider bg-primary-100 text-primary-800 px-2 py-0.5 rounded-full">
+                            Complaint Intake Evidence
+                          </span>
+                        )}
                       </div>
                     </div>
                   ))}

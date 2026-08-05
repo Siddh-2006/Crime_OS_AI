@@ -33,6 +33,7 @@ export const API_ROUTES = {
     DETAIL: (id: string) => `/complaints/${id}`,
     IO_LIST: '/complaints/police/ios',
     UPLOAD_SIGNATURE: '/complaints/upload-signature',
+    INTAKE_ANALYZE: '/complaints/multimodal-intake',
     STATIONS_SEARCH: '/complaints/police-stations/search',
     STATION_LIST: '/complaints/station/list',
     APPROVE: (id: string) => `/complaints/${id}/approve`,

@@ -39,11 +39,13 @@ class OllamaLLMClient(ILLMClient):
         model: str,
         timeout: int = 300,
         num_ctx: int = 4096,
+        max_retries: int | None = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.timeout = timeout
         self.num_ctx = num_ctx
+        self.max_retries = max(1, max_retries or settings.LLM_MAX_RETRIES)
 
     async def _generate_with_gemini(self, prompt: str, system_prompt: str | None = None) -> str:
         api_key = settings.GEMINI_API_KEY.strip()
@@ -106,7 +108,7 @@ class OllamaLLMClient(ILLMClient):
             )
             raise LLMError(f"Unexpected error calling Gemini: {exc}")
 
-    async def generate(self, prompt: str, system_prompt: str | None = None) -> str:
+    async def _generate_with_ollama(self, prompt: str, system_prompt: str | None = None) -> str:
         url = f"{self.base_url}/api/generate"
         payload: dict[str, Any] = {
             "model": self.model,
@@ -123,51 +125,75 @@ class OllamaLLMClient(ILLMClient):
         if system_prompt:
             payload["system"] = system_prompt
 
-        try:
-            timeout_cfg = httpx.Timeout(float(self.timeout), connect=60.0)
-            async with httpx.AsyncClient(timeout=timeout_cfg) as client:
-                response = await client.post(url, json=payload)
-                response.raise_for_status()
-                data = response.json()
-                result = data.get("response", "").strip()
-                if "<think>" in result and "</think>" in result:
-                    import re
-                    result = re.sub(r"<think>.*?</think>", "", result, flags=re.DOTALL).strip()
-                if not result:
-                    raise LLMError("Ollama returned an empty response")
-                return result
-        except httpx.HTTPStatusError as exc:
-            err_detail = str(exc) or repr(exc)
+        timeout_cfg = httpx.Timeout(float(self.timeout), connect=60.0)
+        async with httpx.AsyncClient(timeout=timeout_cfg) as client:
+            response = await client.post(url, json=payload)
+            response.raise_for_status()
+            data = response.json()
+            result = data.get("response", "").strip()
+            if "<think>" in result and "</think>" in result:
+                import re
+                result = re.sub(r"<think>.*?</think>", "", result, flags=re.DOTALL).strip()
+            if not result:
+                raise LLMError("Ollama returned an empty response")
+            return result
+
+    async def generate(self, prompt: str, system_prompt: str | None = None) -> str:
+        last_error: Exception | None = None
+        last_message = "Ollama call failed"
+
+        for attempt in range(1, self.max_retries + 1):
+            try:
+                return await self._generate_with_ollama(prompt, system_prompt)
+            except httpx.HTTPStatusError as exc:
+                err_detail = str(exc) or repr(exc)
+                last_error = exc
+                last_message = f"Ollama server returned error status: {exc.response.status_code} - {err_detail}"
+                logger.warning(
+                    "Ollama HTTP error",
+                    extra={
+                        "status_code": exc.response.status_code,
+                        "attempt": attempt,
+                        "max_retries": self.max_retries,
+                        "error": err_detail,
+                    },
+                )
+            except httpx.RequestError as exc:
+                err_detail = str(exc) or repr(exc)
+                last_error = exc
+                last_message = f"Failed to communicate with Ollama: {err_detail}"
+                logger.warning(
+                    "Ollama communication error",
+                    extra={"attempt": attempt, "max_retries": self.max_retries, "error": err_detail},
+                )
+            except LLMError as exc:
+                last_error = exc
+                last_message = str(exc)
+                logger.warning(
+                    "Ollama generation error",
+                    extra={"attempt": attempt, "max_retries": self.max_retries, "error": str(exc)},
+                )
+            except Exception as exc:
+                err_detail = str(exc) or repr(exc)
+                last_error = exc
+                last_message = f"Unexpected error calling Ollama: {err_detail}"
+                logger.warning(
+                    "Ollama unexpected error",
+                    extra={"attempt": attempt, "max_retries": self.max_retries, "error": err_detail},
+                )
+
+        if settings.GEMINI_API_KEY.strip():
             logger.warning(
-                "Ollama HTTP error",
-                extra={"status_code": exc.response.status_code, "error": err_detail},
+                "Ollama failed after retries; falling back to Gemini",
+                extra={"max_retries": self.max_retries, "error": last_message},
             )
-            if settings.GEMINI_API_KEY.strip():
-                logger.warning("Falling back to Gemini")
-                return await self._generate_with_gemini(prompt, system_prompt)
-            raise LLMError(f"Ollama server returned error status: {exc.response.status_code} - {err_detail}")
-        except httpx.RequestError as exc:
-            err_detail = str(exc) or repr(exc)
-            logger.warning(
-                "Ollama communication error",
-                extra={"error": err_detail},
-            )
-            if settings.GEMINI_API_KEY.strip():
-                logger.warning("Falling back to Gemini")
-                return await self._generate_with_gemini(prompt, system_prompt)
-            raise LLMError(f"Failed to communicate with Ollama: {err_detail}")
-        except Exception as exc:
-            if isinstance(exc, LLMError):
-                raise
-            err_detail = str(exc) or repr(exc)
-            logger.warning(
-                "Ollama unexpected error",
-                extra={"error": err_detail},
-            )
-            if settings.GEMINI_API_KEY.strip():
-                logger.warning("Falling back to Gemini")
-                return await self._generate_with_gemini(prompt, system_prompt)
-            raise LLMError(f"Unexpected error calling Ollama: {err_detail}")
+            return await self._generate_with_gemini(prompt, system_prompt)
+
+        logger.warning(
+            "Ollama failed after retries; Gemini fallback skipped because GEMINI_API_KEY is not configured",
+            extra={"max_retries": self.max_retries, "error": last_message},
+        )
+        raise LLMError(f"{last_message} after {self.max_retries} attempt(s)") from last_error
 
 
 class MockLLMClient(ILLMClient):

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import multer from 'multer';
 import { ComplaintController } from '../controllers/ComplaintController';
 import { ComplaintService } from '../services/ComplaintService';
 import { ComplaintRepository } from '../repositories/ComplaintRepository';
@@ -17,6 +18,7 @@ import {
 const complaintRepository = new ComplaintRepository();
 const complaintService = new ComplaintService(complaintRepository);
 const complaintController = new ComplaintController(complaintService);
+const intakeUpload = multer({ storage: multer.memoryStorage() });
 
 const router = Router();
 
@@ -24,6 +26,13 @@ const router = Router();
 router.get('/police-stations/search', authenticate, complaintController.searchPoliceStations);
 
 // ─── Citizen Routes ──────────────────────────────────────────────────────────
+router.post(
+  '/multimodal-intake',
+  authenticate,
+  authorize(Role.USER, Role.SHO, Role.IO),
+  intakeUpload.array('files'),
+  complaintController.analyzeComplaintIntake,
+);
 router.post(
   '/upload-signature',
   authenticate,

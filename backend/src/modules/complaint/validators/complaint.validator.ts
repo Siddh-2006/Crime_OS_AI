@@ -22,7 +22,7 @@ export const createComplaintSchema = Joi.object({
   detailedDescription: Joi.string().trim().min(10).required(),
   complainantUserId: Joi.string().pattern(objectIdPattern).required(),
   policeStation: Joi.string().pattern(objectIdPattern).optional().allow('', null),
-  evidence: Joi.array().items(evidenceMetadataSchema).max(10).optional(),
+  evidence: Joi.array().items(evidenceMetadataSchema).optional(),
   coordinates: Joi.string().trim().max(100).optional().allow('', null),
   address: Joi.string().trim().max(255).optional().allow('', null),
   approximateDateText: Joi.string().trim().max(100).optional().allow('', null),
@@ -44,5 +44,5 @@ export const updateComplaintSchema = Joi.object({
 });
 
 export const addEvidenceSchema = Joi.object({
-  evidence: Joi.array().items(evidenceMetadataSchema).min(1).max(10).required(),
+  evidence: Joi.array().items(evidenceMetadataSchema).min(1).required(),
 });
