@@ -55,7 +55,11 @@ REQUIREMENTS:
 1. Output strictly valid JSON matching the exact schema provided below.
 2. ranked_next_steps MUST be highly detailed, case-specific, and actionable. You MUST invent custom, precise steps tailored to the Case Facts. For example, instead of a generic "Review Evidence", write "Cross-check WhatsApp screenshots and freeze HDFC bank account ending in 1234". If a phone number is present in the facts, add a step to "Request CDR for phone number X". DO NOT output generic, vague steps.
 3. narrative_summary MUST act as an intelligent investigative assistant. It must explain the current state of the investigation, explicitly mention the factors from the confidence breakdown (evidence coverage, checklist progress, corroboration, contradictions), and clearly outline potential risks or gaps in the investigation.
-4. suggested_legal_sections MUST provide a brief list of the applicable legal sections (e.g., IPC, IT Act) with a short explanation of why they apply. It MUST be an array of strings.
+4. suggested_legal_sections MUST provide the full case-level list of applicable legal sections supported by the provided legal context. Return an array of objects, not strings. Each object must contain:
+- code
+- title
+- reason
+If multiple sections apply, include all of them. Do not collapse the output to a single section just because a suspect or accused participant is present.
 ${DEPT_ENTITY_ID_INSTRUCTION(deptEntityWhitelist)}
 5. Do not wrap JSON in markdown \`\`\` blocks, just return raw JSON text.
 6. participant_recommendations MUST identify all relevant investigation participants, not only suspects. Use the provided facts, including complaint details, case participants grouped by role, evidence links, diary entries, checklist progress, entities, and retrieval context. Each recommendation must include:
@@ -65,11 +69,17 @@ ${DEPT_ENTITY_ID_INSTRUCTION(deptEntityWhitelist)}
 - reason
 - supporting_evidence_ids
 - contradicting_evidence_ids
-Only include recommended_sections when the roles include Suspect or Accused, and every code in recommended_sections must be a BNS code from the retrieved legal context. These are AI suggestions only and must NOT update CaseParticipants automatically.
-7. suggested_legal_sections MUST ONLY contain statutory provisions present in the provided Legal Context. Select only the provisions applicable to the current case facts. Do NOT invent statutory sections. Each section must contain:
+Only include recommended_sections when the roles include Suspect or Accused, and every code in recommended_sections must be a BNS code from the retrieved legal context. These are AI suggestions only and must NOT update CaseParticipants automatically. For Suspect or Accused recommendations, include at least two relevant BNS sections when the legal context supports them; for Witness, Victim, or Complainant roles, leave recommended_sections empty.
+7. evidence_section_recommendations MUST identify applicable BSA sections for each evidence item. Use the evidence metadata and the legal context to map each evidence to its most relevant statutory provisions. Each entry must include:
+- evidence_id
+- evidence_title
+- applicable_sections (array of objects with code, title, reason)
+Only include sections that are supported by the legal context. Do not invent BSA sections. Use the evidence list from the facts and keep the output grounded in the current case evidence. Never mix BSA and BNS sections in the same recommendation set; suspects/accused must receive BNS only, while evidence must receive BSA only.
+8. suggested_legal_sections MUST ONLY contain statutory provisions present in the provided Legal Context. Select only the provisions applicable to the current case facts. Do NOT invent statutory sections. Each section must contain:
 - code
 - title
 - reason
+Return all applicable sections as separate objects in the array. Do not trim the list down to one entry.
 
 8. For ranked_next_steps, if a step requires an external department, set "target" to "department_entity" and "department_entity_id" to the name of the department (e.g., BANK, ISP, TELECOM). If it requires the complainant to provide info, set "target" to "complainant". Otherwise leave target blank for IO internal tasks.
 9. Do not wrap JSON in markdown \`\`\` blocks, just return raw JSON text.
@@ -104,6 +114,19 @@ JSON SCHEMA:
       ]
     }
   ],
+  "evidence_section_recommendations": [
+    {
+      "evidence_id": "EV-001",
+      "evidence_title": "Suspicious payment screenshot",
+      "applicable_sections": [
+        {
+          "code": "BSA-117",
+          "title": "Single line telling about the BSA section",
+          "reason": "Detailed reason why this section holds for this evidence."
+        }
+      ]
+    }
+  ],
   "suggested_legal_sections": [
   {
     "code": "BNS-117",
@@ -118,6 +141,12 @@ JSON SCHEMA:
 
 === FACTS ===
 ${JSON.stringify(facts, null, 2)}
+
+=== EVIDENCE ITEMS ===
+${JSON.stringify((facts?.evidence?.items || []).map((item: any) => ({
+  ...item,
+  applicable_sections: item.applicable_sections || item.applicableSections || []
+})), null, 2)}
 
 === ALGORITHMIC CONFIDENCE BREAKDOWN ===
 ${JSON.stringify(confidenceBreakdown, null, 2)}
@@ -148,9 +177,11 @@ REQUIREMENTS:
 ${DEPT_ENTITY_ID_INSTRUCTION(deptEntityWhitelist)}
 5. Do not wrap JSON in markdown \`\`\` blocks, just return raw JSON text.
 6. participant_recommendations MUST be updated only as a recommendation set. Do not create or modify CaseParticipants in the output narrative or reasoning.
-7. For participant_recommendations, only include recommended_sections for Suspect or Accused roles, and only use BNS codes.
-8. For ranked_next_steps, if a step requires an external department, set "target" to "department_entity" and "department_entity_id" to the name of the department (e.g., BANK, ISP, TELECOM). If it requires the complainant to provide info, set "target" to "complainant". Otherwise leave target blank for IO internal tasks.
-9. Do not wrap JSON in markdown \`\`\` blocks, just return raw JSON text.
+7. For participant_recommendations, only include recommended_sections for Suspect or Accused roles, and only use BNS codes. For those sensitive roles, include at least two BNS sections when supported by the legal context; for Witness, Victim, or Complainant roles, leave recommended_sections empty.
+8. For evidence_section_recommendations, return a section list for each evidence item using the current case evidence and the provided legal context. Preserve any sections already present in the previous analysis output when they still apply, and add or refine sections if needed. Evidence sections must be BSA only, never BNS.
+9. For suggested_legal_sections, return an array of objects with code/title/reason and include every relevant case-level section the legal context supports. Do not reduce this to just one item.
+10. For ranked_next_steps, if a step requires an external department, set "target" to "department_entity" and "department_entity_id" to the name of the department (e.g., BANK, ISP, TELECOM). If it requires the complainant to provide info, set "target" to "complainant". Otherwise leave target blank for IO internal tasks.
+11. Do not wrap JSON in markdown \`\`\` blocks, just return raw JSON text.
 
 JSON SCHEMA:
 {
@@ -181,6 +212,19 @@ JSON SCHEMA:
     ]
 }
   ],
+  "evidence_section_recommendations": [
+    {
+      "evidence_id": "EV-001",
+      "evidence_title": "Suspicious payment screenshot",
+      "applicable_sections": [
+        {
+          "code": "BSA-117",
+          "title": "Single line telling about the BSA section",
+          "reason": "Detailed reason why this section holds for this evidence."
+        }
+      ]
+    }
+  ],
   "narrative_summary": "Explanation of case status..."
 }`;
 
@@ -194,6 +238,7 @@ ${JSON.stringify({
     ranked_next_steps: originalSnapshot.ranked_next_steps,
     suggested_legal_sections: originalSnapshot.suggested_legal_sections,
     participant_recommendations: originalSnapshot.participant_recommendations,
+    evidence_section_recommendations: originalSnapshot.evidence_section_recommendations,
     narrative_summary: originalSnapshot.narrative_summary
   }, null, 2)}
 

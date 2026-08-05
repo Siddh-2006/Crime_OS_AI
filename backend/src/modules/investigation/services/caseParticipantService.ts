@@ -43,6 +43,72 @@ function pickAppliedSectionsTarget(roles: ParticipantRole[]): 'suspectProfile' |
   return roles.includes('Accused') ? 'accusedProfile' : 'suspectProfile';
 }
 
+export function resolveAllowedSectionsForParticipant(
+  snapshot: any,
+  participant: Partial<ICaseParticipant>,
+): ILegalSectionSuggestion[] {
+  const participantName = participant?.name?.trim().toLowerCase();
+  const participantRoles = Array.isArray(participant?.roles) ? participant.roles : [];
+  const byCode = new Map<string, ILegalSectionSuggestion>();
+
+  const pushSection = (section: unknown) => {
+    if (!section || typeof section !== 'object') return;
+    const candidate = section as Partial<ILegalSectionSuggestion>;
+    const code = typeof candidate.code === 'string' ? candidate.code.trim() : '';
+    const title = typeof candidate.title === 'string' ? candidate.title.trim() : '';
+    if (!code || !title) return;
+
+    const key = code.toLowerCase();
+    if (!byCode.has(key)) {
+      byCode.set(key, {
+        code,
+        title,
+        ...(typeof candidate.reason === 'string' && candidate.reason.trim().length > 0 ? { reason: candidate.reason.trim() } : {}),
+      });
+    }
+  };
+
+  const addSections = (sections: unknown) => {
+    if (!Array.isArray(sections)) return;
+    sections.forEach(pushSection);
+  };
+
+  addSections((snapshot as any)?.suggested_legal_sections);
+
+  const recommendations = Array.isArray((snapshot as any)?.participant_recommendations)
+    ? (snapshot as any).participant_recommendations
+    : [];
+
+  recommendations.forEach((recommendation: any) => {
+    if (!recommendation || typeof recommendation !== 'object') return;
+
+    const recommendationName = typeof recommendation.name === 'string' ? recommendation.name.trim().toLowerCase() : '';
+    const recommendationRoles = Array.isArray(recommendation.roles) ? recommendation.roles : [];
+    const matchesParticipant =
+      (!participantName || recommendationName === participantName) ||
+      participantRoles.some((role) => recommendationRoles.includes(role));
+
+    if (matchesParticipant) {
+      addSections(recommendation.recommended_sections);
+    }
+  });
+
+  const suspectCandidates = Array.isArray((snapshot as any)?.suspect_candidates)
+    ? (snapshot as any).suspect_candidates
+    : [];
+
+  suspectCandidates.forEach((candidate: any) => {
+    if (!candidate || typeof candidate !== 'object') return;
+    const candidateName = typeof candidate.entity === 'string' ? candidate.entity.trim().toLowerCase() : '';
+    const matchesParticipant = !participantName || candidateName === participantName;
+    if (matchesParticipant) {
+      addSections(candidate.recommended_sections);
+    }
+  });
+
+  return Array.from(byCode.values());
+}
+
 export class CaseParticipantService {
   static async listByCaseId(caseId: string): Promise<ICaseParticipant[]> {
     return CaseParticipant.find({ case_id: new Types.ObjectId(caseId) }).sort({ createdAt: 1 }).exec();
@@ -166,13 +232,13 @@ export class CaseParticipantService {
     }
 
     const latestSnapshot = await AnalysisSnapshot.findOne({ case_id: caseObjectId }).sort({ timestamp: -1 }).lean().exec();
-    const allowedSections = latestSnapshot?.suggested_legal_sections ?? [];
-    const allowedByCode = new Map(allowedSections.map((section) => [section.code, section]));
+    const allowedSections = resolveAllowedSectionsForParticipant(latestSnapshot as any, participant);
+    const allowedByCode = new Map(allowedSections.map((section) => [section.code.toLowerCase(), section]));
 
     const normalizedSections = input.sections.flatMap((section): IAppliedLegalSection[] => {
       if (!section || typeof section.code !== 'string' || typeof section.title !== 'string') return [];
 
-      const approvedSection = allowedByCode.get(section.code);
+      const approvedSection = allowedByCode.get(section.code.trim().toLowerCase());
       if (!approvedSection) return [];
 
       return [{

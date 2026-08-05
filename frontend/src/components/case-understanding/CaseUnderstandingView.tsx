@@ -421,27 +421,7 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
                       <span className="uppercase text-[10px] bg-amber-200 px-1.5 py-0.5 rounded shrink-0">{mi.importance}</span>
                     </div>
                     <p className="text-amber-800">{mi.reason}</p>
-                    {caseId && (
-                      <button
-                        onClick={() => handleRequestFromComplainant(mi.item, mi.reason, mi.importance, 'missing_information')}
-                        disabled={!!requestedItems[mi.item]}
-                        className={`flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-md transition-all ${
-                          requestedItems[mi.item] === 'sent'
-                            ? 'bg-green-100 text-green-700 border border-green-200 cursor-default'
-                            : requestedItems[mi.item] === 'loading'
-                            ? 'bg-amber-100 text-amber-500 border border-amber-200 cursor-not-allowed'
-                            : 'bg-white text-amber-700 border border-amber-300 hover:bg-amber-100 cursor-pointer'
-                        }`}
-                      >
-                        {requestedItems[mi.item] === 'sent' ? (
-                          <><CheckCheck size={12} /> Requested</>                          
-                        ) : requestedItems[mi.item] === 'loading' ? (
-                          <><Loader2 size={12} className="animate-spin" /> Sending...</>
-                        ) : (
-                          <><Send size={12} /> Request from Complainant</>
-                        )}
-                      </button>
-                    )}
+
                   </div>
                 ))
               )}

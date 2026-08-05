@@ -1,4 +1,5 @@
 import { Schema, model, Document, Types } from 'mongoose';
+import { ILegalSectionSuggestion, LegalSectionSuggestionSchema } from './LegalSection.schema';
 
 export type EvidenceStatus = 'pending' | 'verified' | 'rejected';
 
@@ -25,6 +26,7 @@ export interface IEvidence extends Document {
   linked_diary_entry_id?: string;
   linked_request_id?: string;
   relatedParticipantIds?: Types.ObjectId[];
+  applicableSections?: ILegalSectionSuggestion[];
   
   // Physical Evidence Tracking
   is_physical?: boolean;
@@ -79,6 +81,7 @@ const EvidenceSchema = new Schema<IEvidence>(
     linked_diary_entry_id: { type: String },
     linked_request_id:     { type: String },
     relatedParticipantIds: [{ type: Schema.Types.ObjectId, ref: 'CaseParticipant' }],
+    applicableSections:    { type: [LegalSectionSuggestionSchema], default: [] },
     source:                { type: String, enum: ['complainant', 'io_officer', 'department', 'cyber_analyst'], default: 'complainant' },
     
     // Physical Tracking

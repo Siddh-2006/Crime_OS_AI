@@ -28,6 +28,12 @@ export interface IRankedNextStep {
   department_entity_id?: string;
 }
 
+export interface IEvidenceSectionRecommendation {
+  evidence_id: string;
+  evidence_title?: string;
+  applicable_sections: ILegalSectionSuggestion[];
+}
+
 export interface ISuspectCandidate {
   entity: string;
   confidence: number;
@@ -45,6 +51,7 @@ export interface IAnalysisSnapshot extends Document {
   ranked_next_steps: IRankedNextStep[];
   suspect_candidates: ISuspectCandidate[];
   participant_recommendations: IParticipantRecommendation[];
+  evidence_section_recommendations: IEvidenceSectionRecommendation[];
   narrative_summary: string;
   suggested_legal_sections: ILegalSectionSuggestion[];
   confidence_breakdown: Record<string, unknown>;
@@ -97,6 +104,15 @@ const ParticipantRecommendationSchema = new Schema<IParticipantRecommendation>(
   { _id: false },
 );
 
+const EvidenceSectionRecommendationSchema = new Schema<IEvidenceSectionRecommendation>(
+  {
+    evidence_id: { type: String, required: true, trim: true },
+    evidence_title: { type: String, trim: true },
+    applicable_sections: { type: [LegalSectionSuggestionSchema], default: [] },
+  },
+  { _id: false },
+);
+
 const AnalysisSnapshotSchema = new Schema<IAnalysisSnapshot>(
   {
     case_id:              { type: Schema.Types.ObjectId, ref: 'Complaint', required: true, index: true },
@@ -107,6 +123,7 @@ const AnalysisSnapshotSchema = new Schema<IAnalysisSnapshot>(
     ranked_next_steps:    [RankedNextStepSchema],
     suspect_candidates:   [SuspectCandidateSchema],
     participant_recommendations: { type: [ParticipantRecommendationSchema], default: [] },
+    evidence_section_recommendations: { type: [EvidenceSectionRecommendationSchema], default: [] },
     narrative_summary:    { type: String, required: true },
     suggested_legal_sections: { type: [LegalSectionSuggestionSchema], default: [] },
     confidence_breakdown: { type: Schema.Types.Mixed, default: {} },

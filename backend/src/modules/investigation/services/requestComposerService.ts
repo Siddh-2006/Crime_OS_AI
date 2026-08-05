@@ -6,6 +6,7 @@ import { CaseChecklist } from '../models/CaseChecklist.model';
 import { DiaryEntry } from '../models/DiaryEntry.model';
 import { Complaint } from '../../complaint/models/Complaint.model';
 import { DepartmentRegistry } from '../../admin/models/DepartmentRegistry.model';
+import { Evidence } from '../models/Evidence.model';
 import { fastCall } from '../../../shared/llm/ollamaClient';
 import { EmailQueue } from '../../../shared/queue/EmailQueue';
 import logger from '../../../config/logger';
@@ -185,12 +186,22 @@ Return JSON.`;
         (registry as any)?.contact_email ?? undefined;
 
       if (deptEmail) {
+        let emailAttachments: { filename: string; url: string }[] = [];
+        if (request.attachments && request.attachments.length > 0) {
+          const evidences = await Evidence.find({ evidence_id: { $in: request.attachments } });
+          emailAttachments = evidences.map((e: any) => ({
+            filename: e.originalFilename || `evidence_${e.evidence_id}`,
+            url: e.storage_ref || e.secureUrl
+          })).filter(a => a.url && a.url.startsWith('http'));
+        }
+
         await EmailQueue.enqueueDepartmentRequest({
           to:             deptEmail,
           departmentName: request.department_entity_id ?? 'External Department',
           caseId:         caseId.toString(),
           requestId:      request.request_id,
           content:        request.draft_content,
+          attachments:    emailAttachments,
         });
         logger.info(`Department request email queued to ${deptEmail} for request ${requestId}`);
       } else {

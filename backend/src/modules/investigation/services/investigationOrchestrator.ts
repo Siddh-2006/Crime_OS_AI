@@ -5,7 +5,7 @@ import { callLegalAgent } from '../../../shared/clients/legalAgentClient';
 import { buildFastPrompt, buildDeepPrompt, buildCorrectionPrompt } from './analysisPromptBuilder';
 import { computeConfidenceScore } from './confidenceScoringService';
 import { fastCall, deepCall } from '../../../shared/llm/ollamaClient';
-import { AnalysisSnapshot, IParticipantRecommendation, ISuspectCandidate, ParticipantRecommendationRole } from '../models/AnalysisSnapshot.model';
+import { AnalysisSnapshot, IEvidenceSectionRecommendation, IParticipantRecommendation, ISuspectCandidate, ParticipantRecommendationRole } from '../models/AnalysisSnapshot.model';
 import { DiaryEntry } from '../models/DiaryEntry.model';
 import { Escalation } from '../models/Escalation.model';
 import { CaseChecklist } from '../models/CaseChecklist.model';
@@ -18,22 +18,41 @@ import logger from '../../../config/logger';
 function normalizeSuggestedLegalSections(sections: unknown): ILegalSectionSuggestion[] {
   if (!Array.isArray(sections)) return [];
 
-  return sections.flatMap((section): ILegalSectionSuggestion[] => {
+  const normalized: ILegalSectionSuggestion[] = [];
+  const seen = new Set<string>();
+
+  sections.forEach((section) => {
+    const addSection = (code: string, title: string, reason?: string) => {
+      const key = `${code || title}`.trim().toLowerCase();
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      normalized.push({ code: code.trim(), title: title.trim(), ...(reason?.trim() ? { reason } : {}) });
+    };
+
     if (typeof section === 'string') {
-      return [{ code: section, title: section }];
+      const raw = section.trim();
+      if (!raw) return;
+      const match = raw.match(/^([A-Za-z0-9.\-]+)\s*[:\-]\s*(.+)$/);
+      addSection(match ? match[1].trim() : raw, match ? match[2].trim() : raw, undefined);
+      return;
     }
 
-    if (!section || typeof section !== 'object') return [];
+    if (!section || typeof section !== 'object') return;
 
     const candidate = section as Record<string, unknown>;
-    if (typeof candidate.code !== 'string' || typeof candidate.title !== 'string') return [];
+    const code = typeof candidate.code === 'string' ? candidate.code.trim() : '';
+    const title = typeof candidate.title === 'string' ? candidate.title.trim() : '';
+    const altCode = typeof candidate.sectionCode === 'string' ? candidate.sectionCode.trim() : '';
+    const altTitle = typeof candidate.sectionTitle === 'string' ? candidate.sectionTitle.trim() : '';
+    const name = typeof candidate.name === 'string' ? candidate.name.trim() : '';
+    const reason = typeof candidate.reason === 'string' ? candidate.reason.trim() : undefined;
 
-    return [{
-      code: candidate.code,
-      title: candidate.title,
-      ...(typeof candidate.reason === 'string' ? { reason: candidate.reason } : {}),
-    }];
+    if (code || title || altCode || altTitle || name) {
+      addSection(code || altCode || name || title, title || altTitle || name || code || altCode || '', reason);
+    }
   });
+
+  return normalized;
 }
 
 function normalizeParticipantRoles(roles: unknown): ParticipantRecommendationRole[] {
@@ -43,6 +62,31 @@ function normalizeParticipantRoles(roles: unknown): ParticipantRecommendationRol
   return Array.from(new Set(
     roles.filter((role): role is ParticipantRecommendationRole => typeof role === 'string' && allowedRoles.includes(role as ParticipantRecommendationRole))
   ));
+}
+
+function normalizeEvidenceSectionRecommendations(recommendations: unknown): IEvidenceSectionRecommendation[] {
+  if (!Array.isArray(recommendations)) return [];
+
+  return recommendations.flatMap((recommendation): IEvidenceSectionRecommendation[] => {
+    if (!recommendation || typeof recommendation !== 'object') return [];
+
+    const candidate = recommendation as Record<string, unknown>;
+    const evidenceId = typeof candidate.evidence_id === 'string' ? candidate.evidence_id.trim() : '';
+    if (!evidenceId) return [];
+
+    const evidenceTitle = typeof candidate.evidence_title === 'string' ? candidate.evidence_title.trim() : '';
+    const applicableSections = normalizeSuggestedLegalSections(candidate.applicable_sections);
+
+    return [{
+      evidence_id: evidenceId,
+      ...(evidenceTitle ? { evidence_title: evidenceTitle } : {}),
+      applicable_sections: applicableSections.map((section) => ({
+        code: section.code,
+        title: section.title,
+        ...(section.reason ? { reason: section.reason } : {}),
+      })),
+    }];
+  });
 }
 
 function normalizeParticipantRecommendations(recommendations: unknown): IParticipantRecommendation[] {
@@ -204,6 +248,7 @@ export class InvestigationOrchestrator {
       ? participant_recommendations
       : suspectCandidatesToParticipantRecommendations(legacySuspectCandidates);
     const normalizedSuspectCandidates = participantRecommendationsToSuspectCandidates(normalizedParticipantRecommendations);
+    const evidence_section_recommendations = normalizeEvidenceSectionRecommendations(deepResponse.evidence_section_recommendations);
     const suggested_legal_sections = normalizeSuggestedLegalSections(deepResponse.suggested_legal_sections);
 
     const newSnapshot = new AnalysisSnapshot({
@@ -214,8 +259,9 @@ export class InvestigationOrchestrator {
       ranked_next_steps,
       suspect_candidates: normalizedSuspectCandidates,
       participant_recommendations: normalizedParticipantRecommendations,
+      evidence_section_recommendations,
       narrative_summary: deepResponse.narrative_summary || fastResponse,
-      suggested_legal_sections: deepResponse.suggested_legal_sections || [],
+      suggested_legal_sections,
       confidence_breakdown: confidenceBreakdown,
       officer_authored: false,
       parent_snapshot_id: previousSnapshot?._id || undefined,
@@ -434,6 +480,7 @@ export class InvestigationOrchestrator {
       ? participant_recommendations
       : suspectCandidatesToParticipantRecommendations(legacySuspectCandidates);
     const suspect_candidates = participantRecommendationsToSuspectCandidates(normalizedParticipantRecommendations);
+    const evidence_section_recommendations = normalizeEvidenceSectionRecommendations(deepResponse.evidence_section_recommendations);
     const suggested_legal_sections = normalizeSuggestedLegalSections(deepResponse.suggested_legal_sections);
 
     const newSnapshot = new AnalysisSnapshot({
@@ -444,6 +491,7 @@ export class InvestigationOrchestrator {
       ranked_next_steps,
       suspect_candidates,
       participant_recommendations: normalizedParticipantRecommendations,
+      evidence_section_recommendations,
       narrative_summary: deepResponse.narrative_summary,
       suggested_legal_sections,
       confidence_breakdown: originalSnapshot.confidence_breakdown, // Keep same breakdown or recalulate? Keeping same for audit traceability.
@@ -476,6 +524,7 @@ export class InvestigationOrchestrator {
     ranked_next_steps: any[];
     suspect_candidates: any[];
     participant_recommendations?: IParticipantRecommendation[];
+    evidence_section_recommendations?: IEvidenceSectionRecommendation[];
     narrative_summary: string;
     suggested_legal_sections?: ILegalSectionSuggestion[];
   }): Promise<any> {
@@ -494,6 +543,7 @@ export class InvestigationOrchestrator {
       ranked_next_steps: payload.ranked_next_steps,
       suspect_candidates: payload.suspect_candidates,
       participant_recommendations: payload.participant_recommendations || [],
+      evidence_section_recommendations: payload.evidence_section_recommendations || [],
       narrative_summary: payload.narrative_summary,
       suggested_legal_sections: normalizeSuggestedLegalSections(payload.suggested_legal_sections),
       confidence_breakdown: computeConfidenceScore(factsObject),

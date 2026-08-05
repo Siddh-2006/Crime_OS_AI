@@ -29,6 +29,37 @@ export async function generateChargeSheetPdfStream(chargeSheetData: any, res: Re
 
     let y = MARGIN + 80;
 
+    const visibleSectionNumbers = (() => {
+      const numbers: Record<string, number | null> = {};
+      let counter = 0;
+
+      const addSection = (visible: boolean, key: string) => {
+        if (!visible) return;
+        counter += 1;
+        numbers[key] = counter;
+      };
+
+      addSection(true, 'filingInformation');
+      addSection(true, 'caseParticulars');
+      addSection(Boolean(chargeSheetData.section3_complainantDetails), 'complainantDetails');
+      addSection(Boolean(chargeSheetData.section4_victimDetails?.length), 'victimDetails');
+      addSection(Boolean(chargeSheetData.section5_accusedDetails?.length), 'accusedDetails');
+      addSection(Boolean(chargeSheetData.section6_applicableLegalSections?.length), 'applicableLegalSections');
+      addSection(Boolean(chargeSheetData.section7_evidenceLinkedSections?.length), 'evidenceLinkedSections');
+      addSection(true, 'investigationSummary');
+      addSection(Boolean(chargeSheetData.section9_witnesses?.length), 'witnesses');
+      addSection(Boolean(chargeSheetData.section10_evidenceCollected?.length), 'evidenceCollected');
+      addSection(Boolean(chargeSheetData.section11_departmentReports?.length), 'departmentReports');
+      addSection(true, 'investigationFindings');
+      addSection(Boolean(chargeSheetData.section13_accusedAppliedSections?.length), 'accusedAppliedSections');
+      addSection(true, 'finalReport');
+      addSection(Boolean(chargeSheetData.section15_annexures?.length), 'annexures');
+
+      return numbers;
+    })();
+
+    const renderSectionHeading = (key: string, title: string) => addSectionHeader(`${visibleSectionNumbers[key] ?? 1}. ${title}`);
+
     const addSectionHeader = (title: string) => {
       if (y > doc.page.height - 100) {
         doc.addPage();
@@ -63,7 +94,7 @@ export async function generateChargeSheetPdfStream(chargeSheetData: any, res: Re
     };
 
     // 1. Filing Information
-    addSectionHeader('1. Filing Information');
+    renderSectionHeading('filingInformation', 'Filing Information');
     const fInfo = chargeSheetData.section1_filingInformation;
     addTextRow('Charge Sheet No', fInfo.chargeSheetNumber);
     addTextRow('FIR No', fInfo.firNumber);
@@ -75,7 +106,7 @@ export async function generateChargeSheetPdfStream(chargeSheetData: any, res: Re
     addTextRow('Status', fInfo.chargeSheetStatus);
 
     // 2. Case Particulars
-    addSectionHeader('2. Case Particulars');
+    renderSectionHeading('caseParticulars', 'Case Particulars');
     const cPart = chargeSheetData.section2_caseParticulars;
     addTextRow('Brief Description', cPart.briefCaseDescription);
     addTextRow('Date of Occurrence', cPart.dateOfOccurrence ? new Date(cPart.dateOfOccurrence).toLocaleDateString() : 'N/A');
@@ -84,7 +115,7 @@ export async function generateChargeSheetPdfStream(chargeSheetData: any, res: Re
 
     // 3. Complainant / Informant Details
 if (chargeSheetData.section3_complainantDetails) {
-  addSectionHeader('3. Complainant / Informant Details');
+  renderSectionHeading('complainantDetails', 'Complainant / Informant Details');
 
   const complainant = chargeSheetData.section3_complainantDetails;
 
@@ -106,7 +137,7 @@ if (chargeSheetData.section3_complainantDetails) {
 
     // 4. Victim Details
 if (chargeSheetData.section4_victimDetails?.length > 0) {
-  addSectionHeader('4. Victim Details');
+  renderSectionHeading('victimDetails', 'Victim Details');
 
   chargeSheetData.section4_victimDetails.forEach((victim: any, idx: number) => {
     addTextRow(`Victim ${idx + 1}`, ' ');
@@ -126,7 +157,7 @@ if (chargeSheetData.section4_victimDetails?.length > 0) {
 
 // 5. Accused Details
 if (chargeSheetData.section5_accusedDetails?.length > 0) {
-  addSectionHeader('5. Accused Details');
+  renderSectionHeading('accusedDetails', 'Accused Details');
 
   chargeSheetData.section5_accusedDetails.forEach((accused: any, idx: number) => {
     addTextRow(`Accused ${idx + 1}`, ' ');
@@ -137,7 +168,7 @@ if (chargeSheetData.section5_accusedDetails?.length > 0) {
 
 // 6. Applicable Legal Sections
 if (chargeSheetData.section6_applicableLegalSections?.length > 0) {
-  addSectionHeader('6. Applicable Legal Sections');
+  renderSectionHeading('applicableLegalSections', 'Applicable Legal Sections');
 
   chargeSheetData.section6_applicableLegalSections.forEach((sec: any) => {
     addTextRow(
@@ -147,15 +178,31 @@ if (chargeSheetData.section6_applicableLegalSections?.length > 0) {
   });
 }
 
-    // 7. Investigation Summary
-    addSectionHeader('7. Investigation Summary');
-    addLongText(chargeSheetData.section7_investigationSummary);
+    // 7. Evidence-linked BSA sections
+if (chargeSheetData.section7_evidenceLinkedSections?.length > 0) {
+  renderSectionHeading('evidenceLinkedSections', 'Evidence-linked BSA Sections');
 
-// 8. Witnesses
-if (chargeSheetData.section8_witnesses?.length > 0) {
-  addSectionHeader('8. Witnesses');
+  chargeSheetData.section7_evidenceLinkedSections.forEach((entry: any) => {
+    addTextRow('Evidence', entry.title || entry.evidence_id || 'Evidence');
+    if (entry.applicable_sections?.length > 0) {
+      entry.applicable_sections.forEach((sec: any, sIdx: number) => {
+        addTextRow(`Section ${sIdx + 1}`, `${sec.code || 'N/A'} - ${sec.title || 'N/A'}`);
+      });
+    } else {
+      addTextRow('Sections', 'No linked statutory sections yet');
+    }
+  });
+}
 
-  chargeSheetData.section8_witnesses.forEach((witness: any, idx: number) => {
+    // 8. Investigation Summary
+    renderSectionHeading('investigationSummary', 'Investigation Summary');
+    addLongText(chargeSheetData.section8_investigationSummary);
+
+// 9. Witnesses
+if (chargeSheetData.section9_witnesses?.length > 0) {
+  renderSectionHeading('witnesses', 'Witnesses');
+
+  chargeSheetData.section9_witnesses.forEach((witness: any, idx: number) => {
     addTextRow(`Witness ${idx + 1}`, ' ');
     addTextRow('Name', witness.name || 'N/A');
     addTextRow('Contact', `${witness.contact?.phone || 'N/A'} | ${witness.contact?.address || 'N/A'}`);
@@ -166,11 +213,11 @@ if (chargeSheetData.section8_witnesses?.length > 0) {
   });
 }
 
-// 9. Evidence Collected
-if (chargeSheetData.section9_evidenceCollected?.length > 0) {
-  addSectionHeader('9. Evidence Collected');
+// 10. Evidence Collected
+if (chargeSheetData.section10_evidenceCollected?.length > 0) {
+  renderSectionHeading('evidenceCollected', 'Evidence Collected');
 
-  chargeSheetData.section9_evidenceCollected.forEach((ev: any, idx: number) => {
+  chargeSheetData.section10_evidenceCollected.forEach((ev: any, idx: number) => {
     addTextRow(
       `${idx + 1}. ${ev.title || ev.evidence_id || ev.type || 'Evidence'}`,
       ev.description || ev.ai_description || ev.storage_ref || 'N/A'
@@ -178,11 +225,11 @@ if (chargeSheetData.section9_evidenceCollected?.length > 0) {
   });
 }
 
-// 10. Department Reports
-if (chargeSheetData.section10_departmentReports?.length > 0) {
-  addSectionHeader('10. Department Reports');
+// 11. Department Reports
+if (chargeSheetData.section11_departmentReports?.length > 0) {
+  renderSectionHeading('departmentReports', 'Department Reports');
 
-  chargeSheetData.section10_departmentReports.forEach((req: any, idx: number) => {
+  chargeSheetData.section11_departmentReports.forEach((req: any, idx: number) => {
     addTextRow(
       `${idx + 1}. ${req.department || 'Department'}`,
       `${req.request_type || 'N/A'} - ${(req.status || 'N/A').toUpperCase()}`
@@ -190,15 +237,15 @@ if (chargeSheetData.section10_departmentReports?.length > 0) {
   });
 }
 
-    // 11. Investigation Findings
-    addSectionHeader('11. Investigation Findings');
-    addLongText(chargeSheetData.section11_investigationFindings);
+    // 12. Investigation Findings
+    renderSectionHeading('investigationFindings', 'Investigation Findings');
+    addLongText(chargeSheetData.section12_investigationFindings);
 
-    // 12. Sections Applied to Accused
-if (chargeSheetData.section12_accusedAppliedSections?.length > 0) {
-  addSectionHeader('12. Sections Applied to Accused');
+    // 13. Sections Applied to Accused
+if (chargeSheetData.section13_accusedAppliedSections?.length > 0) {
+  renderSectionHeading('accusedAppliedSections', 'Sections Applied to Accused');
 
-  chargeSheetData.section12_accusedAppliedSections.forEach((entry: any, idx: number) => {
+  chargeSheetData.section13_accusedAppliedSections.forEach((entry: any, idx: number) => {
     const accused = chargeSheetData.section5_accusedDetails?.find(
       (a: any) => a._id === entry.accusedId || a.id === entry.accusedId
     );
@@ -218,15 +265,21 @@ if (chargeSheetData.section12_accusedAppliedSections?.length > 0) {
   });
 }
 
-    // 13. Final Report
-    addSectionHeader('13. Final Report / Prayer');
-    addLongText(chargeSheetData.section13_finalReport);
+    // 14. Final Report
+    renderSectionHeading('finalReport', 'Final Report / Prayer');
+    addLongText(chargeSheetData.section14_finalReport);
 
-    // // 14. Annexures
-    // addSectionHeader('14. Annexures');
-    // chargeSheetData.section14_annexures.forEach((annex: any, idx: number) => {
-    //   addTextRow(`${idx + 1}. ${annex.type}`, annex.title);
-    // });
+    // 15. Annexures
+    if (chargeSheetData.section15_annexures?.length > 0) {
+      renderSectionHeading('annexures', 'Annexures');
+
+      chargeSheetData.section15_annexures.forEach((annex: any, idx: number) => {
+        addTextRow(`${idx + 1}. ${annex.title || annex.type || 'Document'}`, annex.type || 'Document');
+        if (annex.url) {
+          addTextRow('CDN Link', annex.url);
+        }
+      });
+    }
 
     doc.end();
   });

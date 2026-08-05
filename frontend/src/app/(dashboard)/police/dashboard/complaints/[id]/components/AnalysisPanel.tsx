@@ -38,12 +38,19 @@ interface ParticipantRecommendation {
   recommended_sections?: SuggestedLegalSection[];
 }
 
+interface EvidenceSectionRecommendation {
+  evidence_id: string;
+  evidence_title?: string;
+  applicable_sections?: SuggestedLegalSection[];
+}
+
 interface Snapshot {
   snapshot_id: string;
   timestamp: string;
   narrative_summary: string;
   suspect_candidates: Suspect[];
   participant_recommendations?: ParticipantRecommendation[];
+  evidence_section_recommendations?: EvidenceSectionRecommendation[];
   ranked_next_steps: NextStep[];
   confidence_breakdown?: {
     evidence_coverage: number;
@@ -52,8 +59,8 @@ interface Snapshot {
     contradiction_penalty: number;
     final_score: number;
   };
-  /** Array of strings (each may contain "Section X IPC: explanation") */
-  suggested_legal_sections?: string[];
+  /** Case-level legal sections returned by the AI as objects or strings */
+  suggested_legal_sections?: Array<{ code: string; title: string; reason?: string } | string>;
   trigger: string;
   officer_authored: boolean;
 }
@@ -71,11 +78,13 @@ interface AnalysisPanelProps {
   snapshot: Snapshot | null;
   loading: boolean;
   participants: any[];
+  evidence: any[];
   onCorrectSnapshot: (message: string) => Promise<void>;
   onTriggerAnalysis: () => Promise<void>;
   /** Called when SSE delivers 'done' so the workspace can refresh the snapshot */
   onAnalysisComplete: () => void;
   onAttachSectionsToParticipant: (participantId: string, sections: SuggestedLegalSection[]) => Promise<void>;
+  onAttachEvidenceSections: (evidenceId: string, sections: SuggestedLegalSection[]) => Promise<void>;
   onAcceptRecommendedSection: (recommendation: ParticipantRecommendation, section: SuggestedLegalSection) => Promise<void>;
   onApproveParticipant?: (recommendation: ParticipantRecommendation) => Promise<void>;
   actionLoading: boolean;
@@ -101,6 +110,18 @@ const safeArray = (value: unknown): string[] => {
 const safeMarkdown = (value: unknown): string => {
   const text = safeText(value);
   return text.trim().length > 0 ? text : '*No summary generated yet.*';
+};
+
+const formatLegalSectionLabel = (section: unknown): string => {
+  if (typeof section === 'string') return section;
+  if (section && typeof section === 'object') {
+    const candidate = section as Record<string, unknown>;
+    const code = safeText(candidate.code);
+    const title = safeText(candidate.title);
+    if (code && title && code !== title) return `${code}: ${title}`;
+    return code || title || safeText(section);
+  }
+  return safeText(section);
 };
 
 // ─── SSE helper ───────────────────────────────────────────────────────────────
@@ -137,9 +158,11 @@ export function AnalysisPanel({
   snapshot,
   loading,
   participants,
+  evidence,
   onCorrectSnapshot,
   onTriggerAnalysis,
   onAttachSectionsToParticipant,
+  onAttachEvidenceSections,
   onAcceptRecommendedSection,
   onApproveParticipant,
   onAnalysisComplete,
@@ -149,6 +172,7 @@ export function AnalysisPanel({
   const [progress, setProgress] = useState<ProgressStage | null>(null);
   const [sseError, setSseError] = useState<string | null>(null);
   const [dismissedRecommendationKeys, setDismissedRecommendationKeys] = useState<string[]>([]);
+  const [dismissedEvidenceRecommendationKeys, setDismissedEvidenceRecommendationKeys] = useState<string[]>([]);
   const [loadingItemKey, setLoadingItemKey] = useState<string | null>(null);
   const sseCleanupRef = useRef<(() => void) | null>(null);
   const onCompleteRef = useRef(onAnalysisComplete);
@@ -210,6 +234,9 @@ export function AnalysisPanel({
   const isRecommendationDismissed = (recommendationName: string, sectionCode: string) =>
     dismissedRecommendationKeys.includes(`${recommendationName}:${sectionCode}`);
 
+  const isEvidenceRecommendationDismissed = (evidenceId: string, sectionCode: string) =>
+    dismissedEvidenceRecommendationKeys.includes(`${evidenceId}:${sectionCode}`);
+
   const handleApproveParticipantWrap = async (recommendation: ParticipantRecommendation) => {
     if (!onApproveParticipant) return;
     const key = `participant:${recommendation.name}`;
@@ -222,6 +249,13 @@ export function AnalysisPanel({
     const key = `section:${recommendation.name}:${section.code}`;
     setLoadingItemKey(key);
     await onAcceptRecommendedSection(recommendation, section);
+    setLoadingItemKey(null);
+  };
+
+  const handleAttachEvidenceSectionWrap = async (recommendation: EvidenceSectionRecommendation, section: SuggestedLegalSection) => {
+    const key = `evidence-section:${recommendation.evidence_id}:${section.code}`;
+    setLoadingItemKey(key);
+    await onAttachEvidenceSections(recommendation.evidence_id, [section]);
     setLoadingItemKey(null);
   };
 
@@ -363,7 +397,7 @@ export function AnalysisPanel({
             </div>
           </div>
 
-          {/* Legal Sections — suggested_legal_sections is string[] */}
+          {/* Legal Sections — case-level AI suggestions */}
           {snapshot.suggested_legal_sections && snapshot.suggested_legal_sections.length > 0 && (
             <div className="border border-indigo-100 rounded-lg overflow-hidden shadow-sm">
               <div className="bg-indigo-50 px-4 py-2 flex items-center gap-2 border-b border-indigo-100">
@@ -376,10 +410,97 @@ export function AnalysisPanel({
                 {snapshot.suggested_legal_sections.map((section: any, idx) => (
                   <li key={idx} className="flex items-start gap-2 text-sm text-neutral-700 bg-indigo-50/30 p-2 rounded border border-indigo-50">
                     <span className="text-indigo-400 mt-0.5">•</span>
-                    <span>{typeof section === 'string' ? section : safeText(section.title ?? section.code ?? section.reason ?? section)}</span>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-neutral-900">{formatLegalSectionLabel(section)}</p>
+                      {section && typeof section === 'object' && section.reason ? (
+                        <p className="text-xs text-neutral-600 mt-1">{safeText(section.reason)}</p>
+                      ) : null}
+                    </div>
                   </li>
                 ))}
               </ul>
+            </div>
+          )}
+
+          {snapshot.evidence_section_recommendations && snapshot.evidence_section_recommendations.length > 0 && (
+            <div className="mt-4 border border-indigo-100 rounded-lg overflow-hidden shadow-sm">
+              <div className="bg-indigo-50 px-4 py-2 flex items-center gap-2 border-b border-indigo-100">
+                <Scale className="text-indigo-600 h-4 w-4" />
+                <h4 className="text-xs font-bold text-indigo-900 uppercase tracking-wider">Evidence Section Advisor</h4>
+              </div>
+              <div className="p-4 bg-white space-y-4">
+                {snapshot.evidence_section_recommendations.map((recommendation) => {
+                  const evidenceMatch = evidence.find((item: any) => safeText(item.evidence_id) === safeText(recommendation.evidence_id) || safeText(item._id) === safeText(recommendation.evidence_id));
+                  const attachedSections = Array.isArray((evidenceMatch as any)?.applicableSections) ? (evidenceMatch as any).applicableSections : [];
+
+                  return (
+                    <div key={`${safeText(recommendation.evidence_id)}-${safeText(recommendation.evidence_title)}`} className="rounded-lg border border-neutral-200 p-3 bg-neutral-50/40">
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div>
+                          <p className="text-sm font-bold text-neutral-900">{safeText(recommendation.evidence_title || recommendation.evidence_id)}</p>
+                          <p className="text-xs text-neutral-500 mt-0.5">{safeText(recommendation.evidence_id)}</p>
+                        </div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-full px-2 py-0.5">
+                          AI Suggestion
+                        </span>
+                      </div>
+
+                      {recommendation.applicable_sections && recommendation.applicable_sections.length > 0 && (
+                        <div className="space-y-2 mt-3 pt-3 border-t border-neutral-200">
+                          <p className="text-xs font-semibold text-neutral-600 mb-2">Suggested BSA Sections</p>
+                          {recommendation.applicable_sections.map((section) => {
+                            const dismissalKey = `${safeText(recommendation.evidence_id)}:${safeText(section.code)}`;
+                            const sectionKey = `evidence-section:${safeText(recommendation.evidence_id)}:${safeText(section.code)}`;
+                            if (isEvidenceRecommendationDismissed(safeText(recommendation.evidence_id), safeText(section.code))) return null;
+
+                            const isAttached = attachedSections.some((item: any) => safeText(item.code) === safeText(section.code));
+
+                            return (
+                              <div key={dismissalKey} className="flex items-start justify-between gap-3 rounded-md border border-indigo-100 bg-white p-3">
+                                <div className="min-w-0">
+                                  <p className="text-sm font-semibold text-neutral-800">
+                                    <strong>{safeText(section.code)}</strong>: {safeText(section.title)}
+                                  </p>
+                                  {safeText(section.reason) && <p className="text-xs text-neutral-500 mt-1">{safeText(section.reason)}</p>}
+                                </div>
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  {isAttached ? (
+                                    <span className="text-[10px] font-bold text-green-700 bg-green-50 px-2 py-1 rounded border border-green-200">
+                                      Attached ✓
+                                    </span>
+                                  ) : (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        onClick={() => handleAttachEvidenceSectionWrap(recommendation, section)}
+                                        isLoading={loadingItemKey === sectionKey}
+                                        disabled={actionLoading && loadingItemKey !== sectionKey}
+                                        className="!px-2.5 !py-1 text-[11px]"
+                                      >
+                                        Attach
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => setDismissedEvidenceRecommendationKeys((current) => [...current, dismissalKey])}
+                                        disabled={actionLoading}
+                                        leftIcon={<XCircle size={12} />}
+                                        className="!px-2.5 !py-1 text-[11px]"
+                                      >
+                                        Reject
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
 

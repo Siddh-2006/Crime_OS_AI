@@ -28,23 +28,113 @@ export class ChargeSheetService {
       return null;
     }
 
-    // Determine annexures dynamically
-    const annexures = [
-      { title: 'FIR Copy', type: 'FIR' },
-      { title: 'Original Complaint', type: 'Complaint' },
-    ];
+    const evidenceLookup = new Map<string, any>();
+    const registerEvidence = (candidate: any, aliases: Array<string | undefined>) => {
+      aliases.forEach((alias) => {
+        if (typeof alias === 'string' && alias.trim()) {
+          evidenceLookup.set(alias.trim(), candidate);
+        }
+      });
+    };
 
-    if (chargeSheet.witnessIds && chargeSheet.witnessIds.length > 0) {
-      annexures.push({ title: 'Witness Statements (Sec 161 CrPC)', type: 'Statements' });
+    if (Array.isArray(chargeSheet.evidenceIds)) {
+      chargeSheet.evidenceIds.forEach((evidenceDoc: any) => {
+        registerEvidence(evidenceDoc, [evidenceDoc?.evidence_id, evidenceDoc?._id?.toString()]);
+      });
     }
-    
+
+    if (Array.isArray((complaint as any).evidence)) {
+      (complaint as any).evidence.forEach((file: any, index: number) => {
+        registerEvidence(file, [file?.publicId, file?._id?.toString(), `COMP-EV-${index}`]);
+      });
+    }
+
+    const annexures: Array<{ title: string; type: string; url?: string; referenceId?: string; source?: string }> = [];
+    const pushAnnexure = (entry: { title: string; type: string; url?: string; referenceId?: string; source?: string }) => {
+      const key = `${entry.type}:${entry.referenceId || entry.title}`.toLowerCase();
+      if (!annexures.some((item) => `${item.type}:${item.referenceId || item.title}`.toLowerCase() === key)) {
+        annexures.push(entry);
+      }
+    };
+    const resolveUrl = (candidate: any): string | undefined => {
+      const raw = candidate?.secureUrl || candidate?.storage_ref || candidate?.cloudinary_url || candidate?.response_ref || candidate?.firPdfUrl || candidate?.url;
+      if (typeof raw !== 'string') return undefined;
+      return /^https?:\/\//i.test(raw) ? raw : undefined;
+    };
+
+    if (complaint.firPdfUrl) {
+      pushAnnexure({ title: 'FIR Copy', type: 'FIR', url: resolveUrl(complaint), referenceId: complaint.firPdfPublicId || complaint.firPdfUrl, source: 'complaint' });
+    }
+
+    if (Array.isArray((complaint as any).evidence)) {
+      (complaint as any).evidence.forEach((file: any, index: number) => {
+        pushAnnexure({
+          title: file.originalFilename || file.publicId || `Complaint Evidence ${index + 1}`,
+          type: file.resourceType || 'document',
+          url: resolveUrl(file),
+          referenceId: file.publicId || file._id?.toString(),
+          source: 'complaint',
+        });
+      });
+    }
+
     if (chargeSheet.evidenceIds && chargeSheet.evidenceIds.length > 0) {
-      annexures.push({ title: 'Seizure Memos & Evidence Logs', type: 'Evidence' });
+      chargeSheet.evidenceIds.forEach((evidenceDoc: any, index: number) => {
+        pushAnnexure({
+          title: evidenceDoc.title || evidenceDoc.original_filename || evidenceDoc.ai_description || evidenceDoc.evidence_id || `Evidence ${index + 1}`,
+          type: evidenceDoc.type || 'document',
+          url: resolveUrl(evidenceDoc),
+          referenceId: evidenceDoc.evidence_id || evidenceDoc._id?.toString(),
+          source: evidenceDoc.source || 'case_evidence',
+        });
+      });
     }
 
     if (chargeSheet.departmentRequestIds && chargeSheet.departmentRequestIds.length > 0) {
-      annexures.push({ title: 'Department & Forensic Reports', type: 'Reports' });
+      chargeSheet.departmentRequestIds.forEach((request: any, index: number) => {
+        const requestUrl = resolveUrl(request);
+        if (requestUrl) {
+          pushAnnexure({
+            title: request.recipient_type || request.department_entity_id || `Department Request ${index + 1}`,
+            type: 'Department Response',
+            url: requestUrl,
+            referenceId: request.request_id,
+            source: 'department_request',
+          });
+        }
+
+        if (Array.isArray(request.attachments)) {
+          request.attachments.forEach((attachmentId: string, attachmentIndex: number) => {
+            const linkedEvidence = evidenceLookup.get(attachmentId) || evidenceLookup.get(String(attachmentId).trim());
+            if (!linkedEvidence) return;
+
+            pushAnnexure({
+              title: linkedEvidence.originalFilename || linkedEvidence.title || linkedEvidence.ai_description || linkedEvidence.evidence_id || `Department Attachment ${index + 1}.${attachmentIndex + 1}`,
+              type: linkedEvidence.type || 'document',
+              url: resolveUrl(linkedEvidence),
+              referenceId: linkedEvidence.evidence_id || linkedEvidence.publicId || linkedEvidence._id?.toString(),
+              source: 'department_request_attachment',
+            });
+          });
+        }
+      });
     }
+
+    if (annexures.length === 0) {
+      pushAnnexure({ title: 'Original Complaint', type: 'Complaint', source: 'complaint' });
+    }
+
+    const evidenceLinkedSections = (chargeSheet.evidenceIds || []).map((evidence: any) => ({
+      evidence_id: evidence.evidence_id,
+      title: evidence.title || evidence.ai_description || evidence.type || 'Evidence',
+      applicable_sections: Array.isArray(evidence.applicableSections)
+        ? evidence.applicableSections.map((section: any) => ({
+            code: section.code,
+            title: section.title,
+            ...(section.reason ? { reason: section.reason } : {}),
+          }))
+        : [],
+    }));
 
     // Assemble the 14-section structure
     const assembled = {
@@ -71,14 +161,15 @@ export class ChargeSheetService {
       section5_accusedDetails: chargeSheet.accusedIds,
       section5b_suspectDetails: chargeSheet.suspectIds,
       section6_applicableLegalSections: chargeSheet.applicableLegalSections,
-      section7_investigationSummary: chargeSheet.investigationSummary,
-      section8_witnesses: chargeSheet.witnessIds,
-      section9_evidenceCollected: chargeSheet.evidenceIds,
-      section10_departmentReports: chargeSheet.departmentRequestIds,
-      section11_investigationFindings: chargeSheet.investigationFindings,
-      section12_accusedAppliedSections: chargeSheet.appliedSectionsByAccused,
-      section13_finalReport: chargeSheet.finalReport,
-      section14_annexures: annexures,
+      section7_evidenceLinkedSections: evidenceLinkedSections,
+      section8_investigationSummary: chargeSheet.investigationSummary,
+      section9_witnesses: chargeSheet.witnessIds,
+      section10_evidenceCollected: chargeSheet.evidenceIds,
+      section11_departmentReports: chargeSheet.departmentRequestIds,
+      section12_investigationFindings: chargeSheet.investigationFindings,
+      section13_accusedAppliedSections: chargeSheet.appliedSectionsByAccused,
+      section14_finalReport: chargeSheet.finalReport,
+      section15_annexures: annexures,
     };
 
     return assembled;

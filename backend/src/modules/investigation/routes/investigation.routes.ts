@@ -72,6 +72,7 @@ router.post('/:id/checklist/:stepId/complete', InvestigationController.completeS
 router.get('/:id/requests',                  InvestigationController.getDepartmentRequests);
 router.get('/:id/evidence',                  InvestigationController.getEvidence);
 router.post('/:id/evidence',                 InvestigationController.addEvidence);
+router.post('/:id/evidence/:evidenceId/sections/attach', InvestigationController.attachEvidenceSections);
 router.post('/:id/evidence/:evidenceId/transfer', InvestigationController.transferEvidence);
 
 // Per-case thread list (distinct from /threads/:threadId above)

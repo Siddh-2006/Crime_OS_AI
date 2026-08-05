@@ -22,6 +22,7 @@ export interface IEvidenceMetadata {
   uploadedAt: Date;
   processingStatus: 'PENDING' | 'PROCESSED' | 'FAILED';
   thumbnailUrl?: string;
+  applicableSections?: Array<{ code: string; title: string; reason?: string }>;
   aiMetadata?: {
     ocrText?: string;
     speechTranscript?: string;
@@ -166,6 +167,11 @@ const EvidenceMetadataSchema = new Schema<IEvidenceMetadata>({
   uploadedAt: { type: Date, default: Date.now },
   processingStatus: { type: String, enum: ['PENDING', 'PROCESSED', 'FAILED'], default: 'PENDING' },
   thumbnailUrl: { type: String },
+  applicableSections: [{
+    code: { type: String, required: true, trim: true },
+    title: { type: String, required: true, trim: true },
+    reason: { type: String, trim: true },
+  }],
   aiMetadata: {
     ocrText: { type: String },
     speechTranscript: { type: String },
