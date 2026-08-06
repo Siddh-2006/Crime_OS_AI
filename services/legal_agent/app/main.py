@@ -1,7 +1,13 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional, List
 import sys
+import os
+import time
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("legal_agent")
 import os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -41,6 +47,26 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(title="Legal Agent API", lifespan=lifespan)
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start_time = time.time()
+    try:
+        body_bytes = await request.body()
+        async def receive():
+            return {"type": "http.request", "body": body_bytes}
+        request._receive = receive
+        body_str = body_bytes.decode('utf-8')
+    except Exception:
+        body_str = "<could not read body>"
+
+    logger.info(f"Incoming Request: {request.method} {request.url.path} | Body: {body_str[:500]}")
+    
+    response = await call_next(request)
+    process_time = time.time() - start_time
+    
+    logger.info(f"Response: {request.method} {request.url.path} | Status: {response.status_code} | Time: {process_time:.4f}s")
+    return response
 
 
 # ─── Copilot endpoint (unchanged) ────────────────────────────────────────────

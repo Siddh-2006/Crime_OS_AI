@@ -137,8 +137,8 @@ async def upload_evidence(
         return {
             "status": "success",
             "message": f"Evidence '{file.filename}' processed incrementally",
-            "evidence_profile": ev_profile.model_dump(mode="json"),
-            "case_intelligence": case_understanding.model_dump(mode="json"),
+            "evidence_profile": ev_profile.model_dump(mode="json") if ev_profile else None,
+            "case_intelligence": case_understanding.model_dump(mode="json") if case_understanding else None,
         }
     except Exception as exc:
         raise HTTPException(

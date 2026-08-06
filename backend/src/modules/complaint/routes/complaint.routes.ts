@@ -53,6 +53,18 @@ router.get(
   complaintController.getCitizenComplaints,
 );
 router.get(
+  '/police/ios',
+  authenticate,
+  authorize(Role.SHO, Role.IO),
+  complaintController.getStationIOs,
+);
+router.get(
+  '/station/list',
+  authenticate,
+  authorize(Role.SHO, Role.IO),
+  complaintController.getStationComplaints,
+);
+router.get(
   '/:id',
   authenticate,
   authorize(Role.USER, Role.SHO, Role.IO),
@@ -78,19 +90,7 @@ router.post(
   complaintController.transferEvidence,
 );
 
-// ─── Police Station (SHO & IO Shared) Routes ─────────────────────────────────
-router.get(
-  '/police/ios',
-  authenticate,
-  authorize(Role.SHO, Role.IO),
-  complaintController.getStationIOs,
-);
-router.get(
-  '/station/list',
-  authenticate,
-  authorize(Role.SHO, Role.IO),
-  complaintController.getStationComplaints,
-);
+// ─── Police Station (SHO & IO Shared) Routes moved above ─────────────────────
 
 // ─── SHO Actions ─────────────────────────────────────────────────────────────
 router.patch(

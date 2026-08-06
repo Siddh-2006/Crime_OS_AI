@@ -15,10 +15,10 @@ Architecture:
   All processing (workers + LLM fusion) happens in the background via AnalysisWorker.
 """
 from __future__ import annotations
-
 import base64
 import uuid
 from typing import List, Optional
+from pydantic import BaseModel
 
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Request, UploadFile, status
 
@@ -249,9 +249,7 @@ async def upload_evidence(
 
 # ── 2. Token Generation (Internal) ───────────────────────────────────────────
 
-class TokenGenerateRequest(
-    __import__("pydantic").BaseModel,
-):
+class TokenGenerateRequest(BaseModel):
     case_id: str
     complaint_number: Optional[str] = None
 

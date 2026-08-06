@@ -565,7 +565,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                 }}
                 disabled={actionLoading}
               >
-                Assign IO
+                {complaint.assignedIO ? 'Change IO' : 'Assign IO'}
               </Button>
             )}
           </div>

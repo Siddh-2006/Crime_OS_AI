@@ -203,7 +203,7 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
   const handleAttachEvidenceSections = async (evidenceId: string, sections: any[]) => {
     setActionLoading(true);
     try {
-      await apiClient.post(`/cases/${caseId}/evidence/${evidenceId}/sections/attach`, {
+      await apiClient.post(`/cases/${caseId}/evidence/${encodeURIComponent(evidenceId)}/sections/attach`, {
         sections,
       });
       showToast('Evidence sections attached successfully.', 'success');

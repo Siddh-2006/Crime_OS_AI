@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Send, Reply, User, Building, Paperclip, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import apiClient from '@/lib/axios';
+import EvidenceViewerModal from './EvidenceViewerModal';
 
 interface ThreadMessage {
   sender: 'io' | 'department' | 'citizen';
@@ -36,6 +37,7 @@ export function DepartmentInboxPanel({ threads, onRefresh, caseId, filter, onFil
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState('');
   const [replyLoading, setReplyLoading] = useState(false);
+  const [viewingEvidence, setViewingEvidence] = useState<any | null>(null);
 
   const filteredThreads = threads.filter((thread) => {
     if (filter === 'department') return thread.request_type !== 'citizen_request';
@@ -186,7 +188,12 @@ export function DepartmentInboxPanel({ threads, onRefresh, caseId, filter, onFil
                             <div 
                               key={isObj ? att.evidence_id : att} 
                               className={`flex items-center gap-1 text-[10px] font-medium px-2 py-1 bg-white border border-neutral-200 rounded-full text-neutral-600 shadow-sm ${isValidUrl ? 'cursor-pointer hover:bg-neutral-50 hover:text-blue-600 transition-colors' : ''}`}
-                              onClick={() => isValidUrl && window.open(url, '_blank')}
+                              onClick={() => {
+                                if (isValidUrl) {
+                                  if (isObj) setViewingEvidence(att);
+                                  else window.open(url, '_blank');
+                                }
+                              }}
                               title={isValidUrl ? 'Click to view attachment' : 'Attachment processing...'}
                             >
                               <Paperclip size={10} />
@@ -232,6 +239,11 @@ export function DepartmentInboxPanel({ threads, onRefresh, caseId, filter, onFil
         )}
       </div>
 
+      <EvidenceViewerModal 
+        isOpen={!!viewingEvidence} 
+        onClose={() => setViewingEvidence(null)} 
+        evidence={viewingEvidence} 
+      />
     </div>
   );
 }

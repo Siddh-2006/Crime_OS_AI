@@ -11,9 +11,13 @@ Shutdown lifecycle:
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-from fastapi import FastAPI
+# pyrefly: ignore [missing-import]
+from fastapi import FastAPI, Request
+# pyrefly: ignore [missing-import]
 from fastapi.middleware.cors import CORSMiddleware
+# pyrefly: ignore [missing-import]
 from fastapi.responses import JSONResponse
+import time
 
 from app.core.config import settings
 from app.core.logging import logger
@@ -71,6 +75,26 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start_time = time.time()
+    try:
+        body_bytes = await request.body()
+        async def receive():
+            return {"type": "http.request", "body": body_bytes}
+        request._receive = receive
+        body_str = body_bytes.decode('utf-8')
+    except Exception:
+        body_str = "<could not read body>"
+
+    logger.info(f"Incoming Request: {request.method} {request.url.path} | Body: {body_str[:500]}")
+    
+    response = await call_next(request)
+    process_time = time.time() - start_time
+    
+    logger.info(f"Response: {request.method} {request.url.path} | Status: {response.status_code} | Time: {process_time:.4f}s")
+    return response
 
 # ── Routers ───────────────────────────────────────────────────────────────────
 app.include_router(embed.router)

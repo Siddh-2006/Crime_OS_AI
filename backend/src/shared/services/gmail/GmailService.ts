@@ -41,15 +41,6 @@ function buildOAuth2Client() {
   return client;
 }
 
-// ─── Mime-type → evidence type mapping ───────────────────────────────────────
-
-function mimeToEvidenceType(mime: string): string {
-  if (mime.startsWith('image/'))  return 'image';
-  if (mime.startsWith('video/'))  return 'video';
-  if (mime.startsWith('audio/'))  return 'audio';
-  return 'document';
-}
-
 // ─── Strip HTML tags to get plain text ─────────────────────────────────────
 
 function stripHtml(html: string): string {
@@ -83,11 +74,32 @@ function extractBody(payload: gmail_v1.Schema$MessagePart | undefined): string {
 
   walk(payload);
 
+  let rawBody = '';
   // Prefer plain text; fall back to HTML with tags stripped.
   // Concatenate ALL parts so that quoted original (which contains the IDs) is included.
-  if (plainParts.length > 0) return plainParts.join('\n');
-  if (htmlParts.length > 0)  return stripHtml(htmlParts.join('\n'));
-  return '';
+  if (plainParts.length > 0) rawBody = plainParts.join('\n');
+  else if (htmlParts.length > 0) rawBody = stripHtml(htmlParts.join('\n'));
+  
+  // Clean up quoted replies and signatures
+  const lines = rawBody.split('\n');
+  const cleanedLines: string[] = [];
+  
+  for (const line of lines) {
+    // Stop processing if we hit common reply boundaries
+    if (line.match(/^On .* wrote:$/) || 
+        line.match(/^_{10,}$/) || 
+        line.trim() === '--' ||
+        line.startsWith('From: ')) {
+      break;
+    }
+    // Skip quoted lines
+    if (line.trim().startsWith('>')) {
+      continue;
+    }
+    cleanedLines.push(line);
+  }
+  
+  return cleanedLines.join('\n').trim();
 }
 
 // ─── Collect attachment parts from a message payload ─────────────────────────
@@ -156,58 +168,52 @@ async function ingestResponse(opts: {
   request.response_at = new Date();
   await request.save();
 
-  // 3. Ingest file attachments as Evidence documents only
-  const evidenceIds: string[] = [];
-
-  // System ObjectId used as uploader for auto-ingested evidence (no real officer)
-  const SYSTEM_UPLOADER_ID = '000000000000000000000000';
-
-  for (const att of attachments) {
-    const evidenceId = att.evidenceId || uuidv4();
-    evidenceIds.push(evidenceId);
-    
-    const evidenceDoc = {
-      publicId: evidenceId,
-      secureUrl: 'pending', // Mongoose requires this field. Python will update it later.
-      resourceType: att.mimeType.startsWith('image') ? 'image' : att.mimeType.startsWith('video') ? 'video' : 'raw',
-      mimeType: att.mimeType,
-      originalFilename: att.filename,
-      extension: att.filename.split('.').pop() || '',
-      size: att.buffer?.length || 0,
-      uploadedBy: SYSTEM_UPLOADER_ID as unknown as import('mongoose').Types.ObjectId,
-      uploadedAt: new Date(),
-      processingStatus: 'PENDING' as const,
-      ai_description: `Attachment "${att.filename}" from ${sender === 'citizen' ? 'citizen' : 'department'} email response. (AI Processing...)`,
-      ai_tags: [sender === 'citizen' ? 'citizen_response' : 'department_response', 'email_attachment'],
-    };
-
-    // Store it in Node.js Evidence collection (with status: pending)
-    // The Python worker will update this document with storage_ref and aiMetadata when it finishes.
-    await Evidence.create({
-      case_id:            request.case_id,
-      evidence_id:        evidenceId,
-      type:               mimeToEvidenceType(att.mimeType),
-      storage_ref:        'PENDING_UPLOAD',
-      originalFilename:   att.filename,
-      mimeType:           att.mimeType,
-      processingStatus:   'PENDING',
-      ai_description:     evidenceDoc.ai_description,
-      ai_tags:            evidenceDoc.ai_tags,
-      uploader_id:        SYSTEM_UPLOADER_ID,
-      status:             'verified',
-      source:             sender === 'citizen' ? 'complainant' : 'department',
-      linked_request_id:  requestId,
+  // 3. Generate upload token for Python AI Pipeline
+  let uploadToken = '';
+  try {
+    const axios = require('axios');
+    const env = require('../../../config/env').default;
+    const tokenRes = await axios.post(`${env.COMPLAINT_INTELLIGENCE_URL}/evidence/upload-token/generate`, {
+      case_id: request.case_id.toString(),
     });
-    
-    // Also push to Complaint.evidence so the UI and Python scripts can see it
-    await import('../../../modules/complaint/models/Complaint.model').then(({ Complaint }) => {
-      return Complaint.findByIdAndUpdate(request.case_id, {
-        $push: { evidence: evidenceDoc }
-      });
-    });
+    uploadToken = tokenRes.data.token;
+  } catch (err: any) {
+    logger.error(`[GmailService] Failed to generate upload token for case ${caseId}`, { error: err.message });
   }
 
-  // 4. Complete the linked CaseChecklist step
+  // 4. Upload files to Python and collect the final evidence IDs
+  const evidenceIds: string[] = [];
+  if (uploadToken && attachments.length > 0) {
+    try {
+      const FormData = require('form-data');
+      const axios = require('axios');
+      const env = require('../../../config/env').default;
+      
+      const formData = new FormData();
+      for (const att of attachments) {
+        formData.append('files', att.buffer, {
+          filename: att.filename,
+          contentType: att.mimeType,
+        });
+      }
+      
+      const pyRes = await axios.post(`${env.COMPLAINT_INTELLIGENCE_URL}/evidence/upload/${uploadToken}`, formData, {
+        headers: formData.getHeaders(),
+        timeout: 15000,
+      });
+      
+      if (pyRes.data && pyRes.data.items) {
+        for (const item of pyRes.data.items) {
+          evidenceIds.push(item.evidence_id);
+        }
+      }
+      logger.info(`[GmailService] Forwarded ${attachments.length} attachments. Received ${evidenceIds.length} IDs from Python AI.`);
+    } catch (err: any) {
+      logger.warn(`[GmailService] Failed to forward attachments to Python AI`, { error: err.message });
+    }
+  }
+
+  // 5. Complete the linked CaseChecklist step
   const checklistStep = await CaseChecklist.findOne({
     case_id: request.case_id,
     step_id: request.step_id,
@@ -220,7 +226,6 @@ async function ingestResponse(opts: {
     checklistStep.locked_by_request_id = undefined;
     await checklistStep.save();
   }
-
   // 5. Append message to RequestThread
   const thread = await RequestThread.findOne({ request_id: requestId });
   if (thread) {
@@ -267,12 +272,62 @@ async function ingestResponse(opts: {
     } else if (complaintNumber) {
       // ASSIGNED_TO_IO or later → trigger ONLY:
       //   1. IO investigation orchestrator (updates IO dashboard AI analysis)
-      logger.info(`[GmailService] Complaint ${caseId} is in ${complaintStatus ?? 'unknown'} — triggering ONLY InvestigationOrchestrator (skipping complaint_intelligence pipeline)`);
+      logger.info(`[GmailService] Complaint ${caseId} is in ${complaintStatus ?? 'unknown'} — polling for evidence processing before Orchestrator run`);
 
-      // 1. IO dashboard AI analysis (fire and forget)
-      InvestigationOrchestrator.runAnalysis(caseId.toString(), 'citizen_evidence_received').catch(
-        (err: Error) => logger.error(`[GmailService] Orchestrator re-analysis failed`, { caseId, error: err.message }),
-      );
+      // Fire and forget polling loop so we don't block the Gmail worker
+      (async () => {
+        const MAX_RETRIES = 30; // 30 * 10s = 5 minutes
+        let allProcessed = false;
+        for (let i = 0; i < MAX_RETRIES; i++) {
+          const currentEvidences = await Evidence.find({ case_id: caseId, evidence_id: { $in: evidenceIds } }).lean();
+          const pendingCount = currentEvidences.filter((e: any) => e.processingStatus === 'PENDING').length;
+          
+          if (pendingCount === 0) {
+            allProcessed = true;
+            logger.info(`[GmailService] All attachments processed! Building summary prompt...`);
+            
+            const reqContext = request.draft_content;
+            const repContext = responseContent;
+            const aiExtracts = currentEvidences.map((e: any) => 
+              `[${e.originalFilename}]: ${e.ai_description || 'No AI description'}\nTags: ${(e.ai_tags || []).join(', ')}`
+            ).join('\n\n');
+
+            const prompt = `CONVERSATION CONTEXT:
+The Investigating Officer requested information:
+"""${reqContext}"""
+
+The ${sender} replied via email:
+"""${repContext}"""
+
+ATTACHED EVIDENCE AI ANALYSIS:
+${aiExtracts || 'No attachments provided.'}
+
+Update the checklist and analysis based on this new information.`.trim();
+
+            await DiaryEntry.create({
+              case_id: caseId,
+              entry_id: uuidv4(),
+              actor: { type: 'system', id: 'ai' },
+              event_type: 'evidence_analysis_complete',
+              payload: { content: prompt },
+            });
+
+            logger.info(`[GmailService] Triggering InvestigationOrchestrator for case ${caseId}`);
+            InvestigationOrchestrator.runAnalysis(caseId.toString(), 'evidence_processed').catch(
+              (err: Error) => logger.error(`[GmailService] Orchestrator re-analysis failed`, { caseId, error: err.message }),
+            );
+            break;
+          }
+          await new Promise(resolve => setTimeout(resolve, 10000));
+        }
+        
+        if (!allProcessed) {
+          logger.warn(`[GmailService] Evidence processing timed out for case ${caseId}. Triggering Orchestrator anyway.`);
+          InvestigationOrchestrator.runAnalysis(caseId.toString(), 'evidence_timeout').catch(
+            (err: Error) => logger.error(`[GmailService] Orchestrator re-analysis failed`, { caseId, error: err.message }),
+          );
+        }
+      })();
     }
   } catch (err: any) {
     logger.error(`[GmailService] Failed to determine re-analysis route for case ${caseId}`, { error: err.message });

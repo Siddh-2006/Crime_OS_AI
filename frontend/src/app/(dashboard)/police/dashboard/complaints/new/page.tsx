@@ -486,6 +486,11 @@ export default function NewComplaintPage(): React.ReactElement {
     // Check if map already created on DOM element
     if (!mapRef.current) {
       mapRef.current = L.map(container).setView([initialLat, initialLng], 12);
+      
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(mapRef.current);
+
       markerRef.current = L.marker([initialLat, initialLng], { draggable: true }).addTo(mapRef.current);
       setTimeout(() => {
         mapRef.current?.invalidateSize();
@@ -984,7 +989,10 @@ export default function NewComplaintPage(): React.ReactElement {
       setOtpSent(true);
       setError(null);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Could not create complainant profile.');
+      const errMsg = err.response?.data?.details 
+        ? `${err.response.data.message}: ${err.response.data.details.map((d: any) => d.message).join(', ')}` 
+        : err.response?.data?.message || 'Could not create complainant profile.';
+      setError(errMsg);
     } finally {
       setOtpSubmitting(false);
     }

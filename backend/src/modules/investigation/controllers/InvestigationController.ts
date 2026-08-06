@@ -252,7 +252,7 @@ export class InvestigationController {
   static async updateRequestDraft(req: Request, res: Response): Promise<void> {
     try {
       const { reqId } = req.params;
-      const { draft_content } = req.body;
+      const { draft_content, attachments, status } = req.body;
 
       if (!draft_content) {
         sendError(res, HttpStatusCode.BAD_REQUEST, {
@@ -262,9 +262,13 @@ export class InvestigationController {
         return;
       }
 
+      const updateData: any = { draft_content };
+      if (attachments !== undefined) updateData.attachments = attachments;
+      if (status !== undefined) updateData.status = status;
+
       const request = await DepartmentRequest.findOneAndUpdate(
         { request_id: reqId, status: { $in: ['draft', 'reviewed'] } },
-        { draft_content },
+        updateData,
         { new: true }
       );
 

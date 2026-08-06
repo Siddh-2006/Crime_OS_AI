@@ -73,43 +73,49 @@ export class AuthService {
   }
 
   async createComplainantProfile(dto: CreateComplainantProfileDto): Promise<IUser> {
-    const complainant = await this.userRepository.create({
-      ...dto,
-      dateOfBirth: new Date(dto.dateOfBirth),
-      isEmailVerified: false,
-      username: undefined,
-      password: undefined,
-      securityQuestion: undefined,
-      securityAnswer: undefined,
-    });
-
-    const otp = await this.otpService.generateAndStoreEmailVerificationOtp(dto.email);
-
-    try {
-      await EmailQueue.enqueueVerificationOtp({
-        to: dto.email,
-        name: dto.firstName,
-        otp,
-        expiryMinutes: REDIS_TTL.OTP / 60,
+    let complainant = await this.userRepository.findByEmail(dto.email);
+    if (!complainant) {
+      complainant = await this.userRepository.create({
+        ...dto,
+        dateOfBirth: new Date(dto.dateOfBirth),
+        isEmailVerified: false,
+        username: undefined,
+        password: undefined,
+        securityQuestion: undefined,
+        securityAnswer: undefined,
       });
-    } catch (err) {
-      logger.warn('Failed to enqueue complainant verification OTP email (Redis might be down)', { error: err });
     }
 
-    logger.info('Complainant profile created — verification OTP sent', { email: dto.email });
+    if (!complainant.isEmailVerified) {
+      const otp = await this.otpService.generateAndStoreEmailVerificationOtp(dto.email);
+
+      try {
+        await EmailQueue.enqueueVerificationOtp({
+          to: dto.email,
+          name: dto.firstName,
+          otp,
+          expiryMinutes: REDIS_TTL.OTP / 60,
+        });
+      } catch (err) {
+        logger.warn('Failed to enqueue complainant verification OTP email (Redis might be down)', { error: err });
+      }
+
+      logger.info('Complainant profile created/found — verification OTP sent', { email: dto.email });
+    } else {
+      logger.info('Complainant profile found — email already verified', { email: dto.email });
+    }
     return complainant;
   }
 
   async verifyEmail(dto: VerifyEmailDto): Promise<void> {
     const user = await this.userRepository.findByEmail(dto.email);
     if (!user) throw new NotFoundError('User');
-    if (user.isEmailVerified) throw new ConflictError('Email is already verified');
-
     await this.otpService.verifyEmailVerificationOtp(dto.email, dto.otp);
 
-    await this.userRepository.updateById(String(user._id), { isEmailVerified: true });
-
-    await EmailQueue.enqueueWelcomeEmail({ to: user.email, name: user.firstName });
+    if (!user.isEmailVerified) {
+      await this.userRepository.updateById(String(user._id), { isEmailVerified: true });
+      await EmailQueue.enqueueWelcomeEmail({ to: user.email, name: user.firstName });
+    }
 
     logger.info('Email verified successfully', { email: dto.email });
   }
