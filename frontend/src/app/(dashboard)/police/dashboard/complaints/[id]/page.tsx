@@ -457,7 +457,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
   const ciData = complaint?.complaintIntelligence as any;
   const snapData = snapshot as any;
   const hasNonEmptyCI = ciData && Object.keys(ciData).length > 0 && (
-    !!ciData.overview || !!ciData.summary || !!ciData.crimeType || !!ciData.crime_analysis || !!ciData.m12Understanding || !!ciData.m12CrimeClassification || !!ciData.m3Entities
+    !!ciData.case_understanding || !!ciData.overview || !!ciData.summary || !!ciData.crimeType || !!ciData.crime_analysis || !!ciData.m12Understanding || !!ciData.m12CrimeClassification || !!ciData.m3Entities
   );
   const isAIReady = complaint?.processingStatus?.toUpperCase() === 'PROCESSED' || !!(caseUnderstanding || (snapData && Object.keys(snapData).length > 0) || hasNonEmptyCI);
 
@@ -885,7 +885,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
           {/* ── TAB: AI COMPLAINT INTELLIGENCE ── */}
           {activeTab === 'ai' && (() => {
             const ci = complaint.complaintIntelligence as any;
-            const cuData = caseUnderstanding || (ci && ci.overview ? ci : null);
+            const cuData = caseUnderstanding || (ci && (ci.case_understanding || ci.overview || ci.timeline) ? ci : null);
             const snap = snapshot as any;
             const hasAI = isAIReady;
 

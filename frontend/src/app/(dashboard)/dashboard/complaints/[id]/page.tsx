@@ -86,9 +86,15 @@ export default function CitizenComplaintDetailPage(): React.ReactElement {
       let foundCU = false;
       try {
         const res = await apiClient.get(API_ROUTES.COMPLAINTS.DETAIL(id));
-        setComplaint(res.data.data);
+        const cData = res.data.data;
+        setComplaint(cData);
 
-        // Fetch Case Understanding JSON if available
+        if (cData?.complaintIntelligence && (cData.complaintIntelligence.case_understanding || cData.complaintIntelligence.overview || cData.complaintIntelligence.timeline)) {
+          setCaseUnderstanding(cData.complaintIntelligence);
+          foundCU = true;
+        }
+
+        // Fetch Case Understanding JSON if available via endpoint
         try {
           const cuRes = await apiClient.get(API_ROUTES.CASE_UNDERSTANDING.DETAIL(id));
           if (cuRes.data?.data) {

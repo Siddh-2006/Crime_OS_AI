@@ -56,28 +56,22 @@ class CaseUnderstandingEngine(ICaseUnderstandingEngine):
         self, result: "CaseUnderstanding", context: "CaseContext"
     ) -> "CaseUnderstanding":
         """
-        Deterministic post-processing pass:
-        - Fills evidence_analysis[] from Florence-2 / OCR data if LLM left it empty.
-        - Syncs crime_analysis from overview if it was not filled.
-        - Adds evidence_correlation from the analysis items if empty.
-        - Adds basic missing_information hints if section is empty.
+        Deterministic post-processing pass for 5-section Case Understanding:
+        - Ensures timeline is populated if LLM returns empty list.
+        - Ensures evidence_intelligence contains exactly one entry per uploaded evidence file.
         """
-        from app.schemas.case_understanding import (
-            CrimeAnalysis,
-            EvidenceAnalysisItem,
-            EvidenceCorrelationItem,
-            MissingInfoItem,
-            MissingEvidenceItem,
-        )
+        from app.schemas.case_understanding import EvidenceIntelligenceItem, TimelineEvent
 
         data = result.model_dump()
 
         # --- Enrich timeline if empty ---
         if not result.timeline:
-            from app.schemas.case_understanding import TimelineEvent
             timeline_events = []
             if context.complaint_text:
-                summary_desc = result.overview.complaint_summary or context.complaint_text[:250]
+                summary_desc = (
+                    result.case_understanding.complaint_summary
+                    or context.complaint_text[:250]
+                )
                 timeline_events.append(
                     TimelineEvent(
                         timestamp="Incident Date",
@@ -89,11 +83,8 @@ class CaseUnderstandingEngine(ICaseUnderstandingEngine):
             for ev in context.evidence:
                 ocr = (ev.ocr_text or "").strip()
                 florence = (ev.florence_description or "").strip()
-                
-                # Determine event label and description based on OCR content
                 label = "Evidence Date"
                 if ocr:
-                    # Clean up multi-line OCR into concise snippet
                     clean_ocr = " ".join(ocr.split())[:200]
                     if any(kw in clean_ocr.lower() for kw in ["transaction", "upi", "debited", "paid", "transfer"]):
                         label = "Transaction Record"
@@ -101,9 +92,6 @@ class CaseUnderstandingEngine(ICaseUnderstandingEngine):
                     elif any(kw in clean_ocr.lower() for kw in ["call", "missed", "incoming", "phone", "dial"]):
                         label = "Call Record"
                         desc = f"Phone record ({ev.filename}): {clean_ocr}"
-                    elif any(kw in clean_ocr.lower() for kw in ["alert", "sbi", "bank", "otp", "code"]):
-                        label = "Bank Alert"
-                        desc = f"Bank alert ({ev.filename}): {clean_ocr}"
                     else:
                         desc = f"Evidence '{ev.filename}' OCR content: {clean_ocr}"
                 elif florence:
@@ -121,253 +109,29 @@ class CaseUnderstandingEngine(ICaseUnderstandingEngine):
                 )
             data["timeline"] = timeline_events
 
-        # --- Enrich evidence_analysis ---
-        if not result.evidence_analysis and context.evidence:
-            enriched = []
-            seen_evidence_files: set[str] = set()
-            for ev in context.evidence:
-                fname_key = ev.filename or ev.id
-                if fname_key in seen_evidence_files:
-                    continue
-                seen_evidence_files.add(fname_key)
+        # --- Ensure evidence_intelligence has exactly one entry per evidence file ---
+        existing_items = data.get("evidence_intelligence") or []
+        existing_ids = {str(item.get("evidence_id")) for item in existing_items if isinstance(item, dict)}
 
+        for ev in context.evidence:
+            if ev.id not in existing_ids:
                 florence = (ev.florence_description or "").strip()
                 ocr = (ev.ocr_text or "").strip()
+                caption_title = f"{ev.filename or 'Evidence'} file"
+                summary_text = florence[:200] if florence else (f"Extracted text: {ocr[:150]}" if ocr else f"Uploaded evidence document {ev.filename}")
 
-                summary_text = florence[:300] if florence else f"Evidence document '{ev.filename}'"
-
-                if ocr and ocr.strip() and ocr.strip() != summary_text.strip():
-                    extracted_info_text = f"Extracted OCR Text: {ocr[:500]}"
-                elif florence and florence[:600] != summary_text:
-                    extracted_info_text = florence[:600]
-                else:
-                    extracted_info_text = "Visual and digital properties verified (no additional text)."
-
-                combined_lower = (florence + " " + ocr).lower()
-
-                # Determine importance from content
-                importance = "medium"
-                if any(kw in combined_lower for kw in [
-                    "injury", "medical", "hospital", "diagnosis", "bruising", "contusion",
-                    "assault", "weapon", "blood", "fracture", "fire", "short circuit", "destroyed"
-                ]):
-                    importance = "critical"
-                elif any(kw in combined_lower for kw in [
-                    "document", "report", "statement", "receipt", "certificate", "inspection"
-                ]):
-                    importance = "high"
-
-                # Build supported allegations from overview + timeline
-                allegations = []
-                if "fire" in combined_lower or "short circuit" in combined_lower:
-                    allegations.append("Property damage and destruction caused by fire incident")
-                if "assault" in combined_lower or "injury" in combined_lower:
-                    allegations.append("Physical assault and injuries caused by suspects")
-                if "bag" in combined_lower or "handbag" in combined_lower:
-                    allegations.append("Personal belongings snatched during robbery")
-                if "medical" in combined_lower or "hospital" in combined_lower:
-                    allegations.append("Medical treatment required for injuries sustained")
-
-                enriched.append(EvidenceAnalysisItem(
-                    evidence_id=ev.id,
-                    filename=ev.filename,
-                    summary=summary_text,
-                    extracted_information=extracted_info_text,
-                    importance=importance,
-                    allegations_supported=allegations,
-                    confidence=0.88,
-                ))
-            data["evidence_analysis"] = [e.model_dump() for e in enriched]
-        elif data.get("evidence_analysis"):
-            # Deduplicate existing evidence_analysis array by filename / evidence_id
-            seen_keys: set[str] = set()
-            deduped_items: list[dict] = []
-            for item in data["evidence_analysis"]:
-                key = item.get("filename") or item.get("evidence_id")
-                if key and key in seen_keys:
-                    continue
-                if key:
-                    seen_keys.add(key)
-
-                summ = (item.get("summary") or "").strip()
-                ext = (item.get("extracted_information") or "").strip()
-                if ext and summ and (ext == summ or summ.startswith(ext) or ext.startswith(summ)):
-                    item["extracted_information"] = "Visual and digital properties verified (no additional text)."
-                deduped_items.append(item)
-            data["evidence_analysis"] = deduped_items
-
-        # --- Enrich evidence_correlation ---
-        if not result.evidence_correlation and data.get("evidence_analysis"):
-            correlations = []
-            for ea in data["evidence_analysis"]:
-                for allegation in ea.get("allegations_supported", []):
-                    correlations.append(EvidenceCorrelationItem(
-                        allegation=allegation,
-                        supporting_evidence_ids=[ea["evidence_id"]],
-                        confidence=0.85,
-                        contradicts_claim=False,
-                        explanation=f"Evidence '{ea['filename']}' ({ea['importance'].upper()}) directly supports this allegation.",
-                    ).model_dump())
-            data["evidence_correlation"] = correlations
-
-        # --- Sync crime_analysis from overview ---
-        ca = result.crime_analysis
-        new_ca = ca.model_dump()
-        if ca.crime_category == "Uncategorized" and result.overview.crime_category:
-            new_ca["crime_category"] = result.overview.crime_category
-            new_ca["crime_subtype"] = result.overview.crime_subtype
-            # Infer modus operandi from timeline if not set
-            if new_ca["modus_operandi"] == "Under investigation" and result.timeline:
-                descriptions = [e.description for e in result.timeline[:4]]
-                new_ca["modus_operandi"] = " → ".join(descriptions[:3])
-            # Infer physical assets from people & vehicles
-            vehicles = [v.value for v in result.people_and_entities.vehicles]
-            if vehicles and not new_ca["physical_assets_involved"]:
-                new_ca["physical_assets_involved"] = vehicles
-
-        # --- Regex fallback: extract financial loss if LLM left it as 0 or None ---
-        if not new_ca.get("estimated_financial_loss"):
-            # Collect complaint text first (most reliable), then OCR
-            complaint_only = context.complaint_text or ""
-            ocr_corpus = ""
-            for ev in context.evidence:
-                if ev.ocr_text:
-                    ocr_corpus += " " + ev.ocr_text
-
-            # ── Pass 1: Look for explicit total/loss context in complaint text ──
-            # e.g. "total amount of ₹1,85,000" / "fraud of Rs. 48,000" / "lost ₹75,000"
-            total_pattern = re.compile(
-                r"(?:total|loss|fraud|cheated|defraud|stolen|debited|amount)\s+(?:of\s+)?(?:₹|Rs\.?|INR)\s*([\d,]+(?:\.\d+)?)",
-                re.IGNORECASE,
-            )
-            # Also match standalone ₹ amounts in complaint text
-            currency_pattern = re.compile(
-                r"(?:₹|Rs\.?|INR)\s*([\d,]+(?:\.\d+)?)",
-                re.IGNORECASE,
-            )
-
-            def parse_amount(raw: str) -> float:
-                try:
-                    val = float(raw.replace(",", ""))
-                    # Plausible fraud amount: ₹1 to ₹1 crore
-                    # Exclude obvious account numbers / timestamps
-                    if 1.0 <= val <= 10_000_000.0:
-                        return val
-                except ValueError:
-                    pass
-                return 0.0
-
-            # Try explicit total-context match first (complaint only)
-            total_amounts = [parse_amount(m.group(1)) for m in total_pattern.finditer(complaint_only)]
-            total_amounts = [a for a in total_amounts if a > 0]
-
-            if total_amounts:
-                # Use the largest explicitly stated total
-                loss = max(total_amounts)
-            else:
-                # Pass 2: collect all plausible ₹ amounts from complaint text
-                all_amounts = [parse_amount(m.group(1)) for m in currency_pattern.finditer(complaint_only)]
-                all_amounts = [a for a in all_amounts if a > 0]
-                if not all_amounts:
-                    # Last resort: scan OCR too
-                    all_amounts = [parse_amount(m.group(1)) for m in currency_pattern.finditer(ocr_corpus)]
-                    all_amounts = [a for a in all_amounts if a > 0]
-                # Take the maximum single amount (avoids double-counting)
-                loss = max(all_amounts) if all_amounts else 0.0
-
-            if loss > 0:
-                new_ca["estimated_financial_loss"] = loss
-                logger.info(
-                    "[enrich] Regex extracted financial loss: %.2f from complaint text",
-                    loss,
-                )
-
-        data["crime_analysis"] = new_ca
-
-        # --- Entity Extraction Fallback for people_and_entities ---
-        pe_dict = data.get("people_and_entities", {})
-        search_corpus = (context.complaint_text or "") + " "
-        for ev in context.evidence:
-            if ev.ocr_text:
-                search_corpus += ev.ocr_text + " "
-
-        # 1. UPI IDs (e.g. rahultraders@okaxis, user@ybl, etc.)
-        if not pe_dict.get("upi_ids"):
-            upi_matches = set(re.findall(r"\b[a-zA-Z0-9\.\-_]+@[a-zA-Z]{2,}\b", search_corpus))
-            if upi_matches:
-                pe_dict["upi_ids"] = [{"value": u, "source_evidence_ids": [], "confidence": 0.95} for u in upi_matches]
-
-        # 2. Phone Numbers (e.g. +919034567812, 9034567812)
-        if not pe_dict.get("phone_numbers"):
-            phone_matches = set(re.findall(r"\b(?:\+91[\s\-]?)?[6-9]\d{9}\b", search_corpus))
-            if phone_matches:
-                pe_dict["phone_numbers"] = [{"value": p, "source_evidence_ids": [], "confidence": 0.9} for p in phone_matches]
-
-        # 3. Bank Account numbers / Masked accounts (e.g. Account XX4582 or A/C 9876543210)
-        if not pe_dict.get("bank_accounts"):
-            acct_matches = set(re.findall(r"\b(?:A/C|Account|Acct|Acc)\b\s*[:\.\-]?\s*([X\*\d]{4,18})\b", search_corpus, re.IGNORECASE))
-            if acct_matches:
-                pe_dict["bank_accounts"] = [{"value": a, "source_evidence_ids": [], "confidence": 0.9} for a in acct_matches if len(a) >= 4]
-
-        data["people_and_entities"] = pe_dict
-
-        # --- Ensure all accumulated evidence items are present in evidence_analysis ---
-        existing_ea_ids = {str(item.get("evidence_id")) for item in data.get("evidence_analysis", []) if isinstance(item, dict)}
-        ea_list = list(data.get("evidence_analysis", []))
-        for ev in context.evidence:
-            if ev.id not in existing_ea_ids:
-                summary_text = ev.florence_description or (f"Extracted text: {ev.ocr_text[:120]}..." if ev.ocr_text else "Uploaded evidence file")
-                ea_list.append({
+                existing_items.append({
                     "evidence_id": ev.id,
                     "filename": ev.filename or ev.id,
+                    "caption": caption_title,
                     "summary": summary_text,
-                    "extracted_information": ev.ocr_text or ev.transcript or ev.pdf_text or summary_text,
+                    "supports": ["Supports complaint allegations"],
                     "importance": "high",
-                    "allegations_supported": ["Corroborates complaint narrative"],
                     "confidence": 0.9,
                 })
-                existing_ea_ids.add(ev.id)
-        data["evidence_analysis"] = ea_list
+                existing_ids.add(ev.id)
 
-        # --- Add basic missing_information if empty ---
-        # Only add a truly generic placeholder — NEVER hardcode complaint-specific entities here.
-        if not result.missing_information:
-            data["missing_information"] = [
-                MissingInfoItem(
-                    item="Identity details of the accused",
-                    reason="Required for FIR registration and suspect identification",
-                    importance="high",
-                ).model_dump(),
-            ]
-
-        # --- Add basic missing_evidence if empty ---
-        # Derive sensible defaults from the complaint category/overview only.
-        if not result.missing_evidence:
-            category_lower = (result.overview.crime_category or "").lower()
-            if "cyber" in category_lower or "fraud" in category_lower or "upi" in category_lower or "banking" in category_lower:
-                data["missing_evidence"] = [
-                    MissingEvidenceItem(
-                        evidence_name="Call Detail Records (CDR)",
-                        reason_relevant="Trace the phone number used by the accused to contact the victim",
-                        related_allegation="Accused contacted victim via phone to perpetrate the fraud",
-                        importance="high",
-                    ).model_dump(),
-                    MissingEvidenceItem(
-                        evidence_name="Bank Transaction Statement",
-                        reason_relevant="Official statement confirming all unauthorized debits and beneficiary details",
-                        related_allegation="Unauthorized financial transactions from victim's account",
-                        importance="high",
-                    ).model_dump(),
-                ]
-            else:
-                data["missing_evidence"] = [
-                    MissingEvidenceItem(
-                        evidence_name="Supporting Documentary Evidence",
-                        reason_relevant="Additional documentation to corroborate the complaint",
-                        related_allegation="As described in the complaint",
-                        importance="medium",
-                    ).model_dump(),
-                ]
+        data["evidence_intelligence"] = existing_items
 
         return result.model_validate(data)
 
@@ -411,23 +175,23 @@ class CaseUnderstandingEngine(ICaseUnderstandingEngine):
                 parsed_dict["original_complaint"] = context.complaint_text
                 parsed_dict["processing_duration_ms"] = round((time.monotonic() - t0) * 1000, 2)
 
-                # Robust default injection for overview section if LLM omits fields
-                overview = parsed_dict.get("overview")
-                if not isinstance(overview, dict):
-                    overview = {}
-                if not overview.get("complaint_summary"):
-                    overview["complaint_summary"] = (context.complaint_text or "Complaint filed")[:300]
-                if not overview.get("incident_overview"):
-                    overview["incident_overview"] = context.complaint_text or "Case under investigation"
-                if not overview.get("crime_category"):
-                    overview["crime_category"] = str(context.complaint_metadata.get("category", "Cybercrime"))
-                if not overview.get("crime_subtype"):
-                    overview["crime_subtype"] = "Online Banking Fraud"
-                if not overview.get("priority"):
-                    overview["priority"] = "high"
-                if not overview.get("confidence"):
-                    overview["confidence"] = 0.95
-                parsed_dict["overview"] = overview
+                # Robust default injection for case_understanding section if LLM omits fields
+                cu_section = parsed_dict.get("case_understanding") or parsed_dict.get("overview")
+                if not isinstance(cu_section, dict):
+                    cu_section = {}
+                if not cu_section.get("complaint_summary"):
+                    cu_section["complaint_summary"] = (context.complaint_text or "Complaint filed")[:300]
+                if not cu_section.get("incident_overview"):
+                    cu_section["incident_overview"] = context.complaint_text or "Case under investigation"
+                if not cu_section.get("crime_category"):
+                    cu_section["crime_category"] = str(context.complaint_metadata.get("category", "Cybercrime"))
+                if not cu_section.get("crime_subtype"):
+                    cu_section["crime_subtype"] = "Online Banking Fraud"
+                if not cu_section.get("priority"):
+                    cu_section["priority"] = "high"
+                if not cu_section.get("confidence"):
+                    cu_section["confidence"] = 0.95
+                parsed_dict["case_understanding"] = cu_section
 
                 # Repair timeline if LLM returns array of strings
                 raw_timeline = parsed_dict.get("timeline")
@@ -440,48 +204,37 @@ class CaseUnderstandingEngine(ICaseUnderstandingEngine):
                             repaired_timeline.append(item)
                     parsed_dict["timeline"] = repaired_timeline
 
-                # Repair missing_information if LLM returns array of strings
-                raw_mi = parsed_dict.get("missing_information")
-                if isinstance(raw_mi, list):
-                    repaired_mi = []
-                    for item in raw_mi:
+                # Repair missing_information_and_evidence if LLM returns array of strings
+                raw_mie = parsed_dict.get("missing_information_and_evidence")
+                if isinstance(raw_mie, list):
+                    repaired_mie = []
+                    for item in raw_mie:
                         if isinstance(item, str):
-                            repaired_mi.append({"item": item, "reason": "Missing from complaint narrative", "importance": "high"})
+                            repaired_mie.append({"title": item, "description": "Clarification or document requested from complainant", "importance": "medium"})
                         elif isinstance(item, dict):
-                            repaired_mi.append(item)
-                    parsed_dict["missing_information"] = repaired_mi
+                            repaired_mie.append(item)
+                    parsed_dict["missing_information_and_evidence"] = repaired_mie
 
-                # Repair missing_evidence if LLM returns array of strings
-                raw_me = parsed_dict.get("missing_evidence")
-                if isinstance(raw_me, list):
-                    repaired_me = []
-                    for item in raw_me:
-                        if isinstance(item, str):
-                            repaired_me.append({"evidence_name": item, "reason_relevant": "Needed for verification", "related_allegation": "Complaint claim", "importance": "high"})
-                        elif isinstance(item, dict):
-                            repaired_me.append(item)
-                    parsed_dict["missing_evidence"] = repaired_me
-
-                # Repair evidence_analysis if LLM returns items with null/missing required fields
-                raw_ea = parsed_dict.get("evidence_analysis")
-                if isinstance(raw_ea, list):
-                    repaired_ea = []
-                    for item in raw_ea:
+                # Repair evidence_intelligence if LLM returns items with missing required fields
+                raw_ei = parsed_dict.get("evidence_intelligence") or parsed_dict.get("evidence_analysis")
+                if isinstance(raw_ei, list):
+                    repaired_ei = []
+                    for item in raw_ei:
                         if isinstance(item, dict):
                             ev_id = str(item.get("evidence_id") or "ev-unknown")
                             fname = str(item.get("filename") or "evidence_file")
-                            summ = str(item.get("summary") or "Evidence provided")
-                            ext_info = str(item.get("extracted_information") or "Extracted evidence details")
-                            repaired_ea.append({
+                            cap = str(item.get("caption") or item.get("summary") or "Evidence file")
+                            summ = str(item.get("summary") or item.get("caption") or "Evidence provided")
+                            repaired_ei.append({
                                 "evidence_id": ev_id,
                                 "filename": fname,
+                                "caption": cap,
                                 "summary": summ,
-                                "extracted_information": ext_info,
+                                "supports": item.get("supports") or item.get("allegations_supported") or [],
                                 "importance": str(item.get("importance") or "medium"),
-                                "allegations_supported": item.get("allegations_supported") or [],
                                 "confidence": float(item.get("confidence") or 0.9),
                             })
-                    parsed_dict["evidence_analysis"] = repaired_ea
+                    parsed_dict["evidence_intelligence"] = repaired_ei
 
                 case_understanding = CaseUnderstanding.model_validate(parsed_dict)
 
@@ -494,7 +247,7 @@ class CaseUnderstandingEngine(ICaseUnderstandingEngine):
                         "case_id": context.case_id,
                         "duration_ms": case_understanding.processing_duration_ms,
                         "events": len(case_understanding.timeline),
-                        "evidence_analyzed": len(case_understanding.evidence_analysis),
+                        "evidence_analyzed": len(case_understanding.evidence_intelligence),
                         "attempt": attempt,
                     },
                 )

@@ -4,13 +4,13 @@ import { HttpStatusCode } from '../../../common/enums/httpStatus.enum';
 import { sendSuccess, sendError } from '../../../shared/utils/response.util';
 
 /**
- * Queries the 'cases' collection (written by the Python complaint intelligence service)
- * and returns the full 9-section CaseUnderstanding JSON for a given complaint _id.
+ * Queries the 'complaints' collection for complaintIntelligence (primary),
+ * falling back to the legacy 'cases' collection if necessary.
  */
 export class CaseUnderstandingController {
   /**
    * GET /api/v1/case-understanding/:id
-   * :id = complaint MongoDB _id (same value stored as case_id in the cases collection)
+   * :id = complaint MongoDB _id or complaintNumber
    */
   getCaseUnderstanding = async (
     req: Request,
@@ -20,7 +20,6 @@ export class CaseUnderstandingController {
     try {
       const { id } = req.params;
 
-      // Access the 'cases' collection directly via the native Mongoose connection
       const db = mongoose.connection.db;
       if (!db) {
         sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, {
@@ -30,32 +29,41 @@ export class CaseUnderstandingController {
         return;
       }
 
-      // 1. Try finding by case_id or _id directly
-      let doc = await db.collection('cases').findOne({ case_id: id });
-      if (!doc) {
-        doc = await db.collection('cases').findOne({ _id: id as any });
+      let doc: any = null;
+
+      // 1. Primary Source: Query 'complaints' collection by _id or complaintNumber
+      const queryOr: any[] = [
+        { complaintNumber: id },
+        { _id: id as any },
+      ];
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        queryOr.push({ _id: new mongoose.Types.ObjectId(id) as any });
       }
-      if (!doc && mongoose.Types.ObjectId.isValid(id)) {
-        doc = await db.collection('cases').findOne({ _id: new mongoose.Types.ObjectId(id) as any });
-      }
-      // 2. Try finding by complaint_number / overview.complaint_number
-      if (!doc) {
-        doc = await db.collection('cases').findOne({ 'overview.complaint_number': id });
-      }
-      if (!doc) {
-        doc = await db.collection('cases').findOne({ complaint_number: id });
-      }
-      // 3. Fallback: resolve complaint by complaintNumber or _id in 'complaints' collection first
-      if (!doc) {
-        const queryOr: any[] = [
-          { complaintNumber: id },
-          { _id: id as any },
-        ];
-        if (mongoose.Types.ObjectId.isValid(id)) {
-          queryOr.push({ _id: new mongoose.Types.ObjectId(id) as any });
+
+      const complaintDoc = await db.collection('complaints').findOne({ $or: queryOr });
+      if (complaintDoc && complaintDoc.complaintIntelligence) {
+        const ci = complaintDoc.complaintIntelligence;
+        if (ci.case_understanding || ci.overview || ci.timeline || ci.case_id) {
+          doc = ci;
         }
-        const complaintDoc = await db.collection('complaints').findOne({ $or: queryOr });
-        if (complaintDoc) {
+      }
+
+      // 2. Secondary Fallback: Query 'cases' collection
+      if (!doc) {
+        doc = await db.collection('cases').findOne({ case_id: id });
+        if (!doc) {
+          doc = await db.collection('cases').findOne({ _id: id as any });
+        }
+        if (!doc && mongoose.Types.ObjectId.isValid(id)) {
+          doc = await db.collection('cases').findOne({ _id: new mongoose.Types.ObjectId(id) as any });
+        }
+        if (!doc) {
+          doc = await db.collection('cases').findOne({ 'overview.complaint_number': id });
+        }
+        if (!doc) {
+          doc = await db.collection('cases').findOne({ complaint_number: id });
+        }
+        if (!doc && complaintDoc) {
           const complaintIdStr = complaintDoc._id.toString();
           doc = await db.collection('cases').findOne({
             $or: [
@@ -75,7 +83,6 @@ export class CaseUnderstandingController {
         return;
       }
 
-      // Return the full document — the frontend CaseUnderstandingView expects this shape
       sendSuccess(res, HttpStatusCode.OK, 'Case understanding retrieved successfully.', doc);
     } catch (error) {
       next(error);

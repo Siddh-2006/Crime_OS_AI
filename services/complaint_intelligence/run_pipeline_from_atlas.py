@@ -432,48 +432,37 @@ async def main():
         print(f"  ✓ Verified CaseUnderstanding saved successfully to MongoDB Atlas collection 'complaints'!")
         print(f"  ✓ Saved Case ID: {target_complaint.get('_id')}\n")
 
-    # Display Output
-    print(f"  [1] OVERVIEW")
-    print(f"      Summary   : {case_understanding.overview.complaint_summary}")
-    print(f"      Category  : {case_understanding.overview.crime_category} / {case_understanding.overview.crime_subtype}")
-    print(f"      Priority  : {case_understanding.overview.priority.upper()} (Confidence: {case_understanding.overview.confidence:.0%})")
+    # Display Output (5 Core Sections)
+    print(f"  [1] CASE UNDERSTANDING")
+    cu = case_understanding.case_understanding
+    print(f"      Summary   : {cu.complaint_summary}")
+    print(f"      Overview  : {cu.incident_overview}")
+    print(f"      Category  : {cu.crime_category} / {cu.crime_subtype}")
+    print(f"      Priority  : {cu.priority.upper()} (Confidence: {cu.confidence:.0%})")
 
     print(f"\n  [2] TIMELINE ({len(case_understanding.timeline)} events)")
     for ev in case_understanding.timeline:
-        print(f"      • [{ev.timestamp}] {ev.description} (Evidence: {', '.join(ev.supporting_evidence_ids)})")
+        refs = f" (Evidence: {', '.join(ev.supporting_evidence_ids)})" if ev.supporting_evidence_ids else ""
+        print(f"      • [{ev.timestamp}] {ev.description}{refs}")
 
-    print(f"\n  [3] PEOPLE & ENTITIES")
-    p = case_understanding.people_and_entities
-    print(f"      Victims       : {[v.value for v in p.victims]}")
-    print(f"      Suspects      : {[s.value for s in p.suspects]}")
-    print(f"      UPI IDs       : {[u.value for u in p.upi_ids]}")
-    print(f"      Vehicles      : {[vh.value for vh in p.vehicles]}")
-    print(f"      Bank Accounts : {[b.value for b in p.bank_accounts]}")
+    print(f"\n  [3] EVIDENCE INTELLIGENCE ({len(case_understanding.evidence_intelligence)} items)")
+    for ei in case_understanding.evidence_intelligence:
+        print(f"      • [{ei.importance.upper()}] {ei.caption or ei.filename}")
+        print(f"        Summary : {ei.summary}")
+        if ei.supports:
+            print(f"        Supports: {', '.join(ei.supports)}")
 
-    print(f"\n  [4] EVIDENCE CORRELATION ({len(case_understanding.evidence_correlation)} correlations)")
-    for corr in case_understanding.evidence_correlation:
-        print(f"      • Allegation  : {corr.allegation}")
-        print(f"        Corroborated: {corr.explanation} (Confidence: {corr.confidence:.0%})")
+    print(f"\n  [4] MISSING INFORMATION & EVIDENCE ({len(case_understanding.missing_information_and_evidence)} items)")
+    for mie in case_understanding.missing_information_and_evidence:
+        print(f"      • [{mie.importance.upper()}] {mie.title} -- {mie.description}")
 
-    print(f"\n  [5] CRIME ANALYSIS")
-    ca = case_understanding.crime_analysis
-    print(f"      Modus Operandi : {ca.modus_operandi}")
-    print(f"      Financial Loss : ₹{ca.estimated_financial_loss:,.2f}" if ca.estimated_financial_loss else "      Financial Loss : N/A")
-
-    print(f"\n  [6] CONTRADICTIONS ({len(case_understanding.contradictions)})")
+    print(f"\n  [5] CONTRADICTIONS ({len(case_understanding.contradictions)})")
     if not case_understanding.contradictions:
         print(f"      None detected across complaint and evidence.")
     else:
         for c in case_understanding.contradictions:
-            print(f"      • {c.description}")
-
-    print(f"\n  [7] MISSING INFORMATION ({len(case_understanding.missing_information)})")
-    for mi in case_understanding.missing_information:
-        print(f"      • [{mi.importance.upper()}] {mi.item} -- {mi.reason}")
-
-    print(f"\n  [8] MISSING EVIDENCE GAPS ({len(case_understanding.missing_evidence)})")
-    for me in case_understanding.missing_evidence:
-        print(f"      • [{me.importance.upper()}] {me.evidence_name} -- {me.reason_relevant}")
+            ids = f" (Involved Evidence: {', '.join(c.related_evidence_ids)})" if c.related_evidence_ids else ""
+            print(f"      • {c.description}{ids}")
 
     print(f"\n{'='*75}")
     print(f"  [OK] FETCH FROM MONGODB ATLAS & SINGLE PIPELINE EXECUTION SUCCESSFUL")

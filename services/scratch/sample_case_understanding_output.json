@@ -1,0 +1,129 @@
+{
+  "case_id": "COMP-55333382-6280-494a-ab79-4665d3dcb3f0",
+  "case_understanding": {
+    "complaint_summary": "The complainant was mugged on July 18, 2026, near CG Road, Ahmedabad, where a man stole his Samsung Galaxy S23 Ultra and subsequently initiated unauthorized UPI transactions of ₹48,500 from his SBI account.",
+    "incident_overview": "On July 18, 2026, around 7:45 PM, the complainant was mugged by a man on a black motorcycle near CG Road, Ahmedabad. Following the theft of the phone containing sensitive documents and banking apps, the complainant discovered unauthorized UPI transactions totaling ₹48,500 from his SBI account shortly thereafter.",
+    "crime_category": "Cybercrime",
+    "crime_subtype": "Theft/Robbery and Financial Fraud (UPI Transaction)",
+    "priority": "high",
+    "confidence": 0.95
+  },
+  "timeline": [
+    {
+      "timestamp": "2026-07-18 19:45:00",
+      "description": "Complainant was walking near CG Road, Navrangpura, Ahmedabad, after leaving a café.",
+      "supporting_evidence_ids": [],
+      "confidence": 1.0
+    },
+    {
+      "timestamp": "2026-07-18 19:45:00",
+      "description": "A man on a black motorcycle approached the complainant from behind and snatched his mobile phone.",
+      "supporting_evidence_ids": [],
+      "confidence": 1.0
+    },
+    {
+      "timestamp": "2026-07-18 19:45:00",
+      "description": "The suspect was described as a male aged approximately 25–30 years, around 5 feet 9 inches tall, medium build, wearing a black helmet, dark blue jacket, and blue jeans. The motorcycle was a black Bajaj Pulsar with a partially visible registration number ending in 4721.",
+      "supporting_evidence_ids": [],
+      "confidence": 1.0
+    },
+    {
+      "timestamp": "2026-07-18 19:45:00",
+      "description": "Approximately twenty minutes later, the complainant noticed multiple unauthorized UPI transactions of ₹48,500 from his SBI bank account to two unknown accounts using Google Pay.",
+      "supporting_evidence_ids": [],
+      "confidence": 1.0
+    },
+    {
+      "timestamp": "2026-07-18 19:45:00",
+      "description": "Complainant immediately blocked his SIM card and contacted SBI customer care to freeze his account.",
+      "supporting_evidence_ids": [],
+      "confidence": 1.0
+    }
+  ],
+  "evidence_intelligence": [
+    {
+      "evidence_id": "6a5cfa6ba5d750495059dbc5",
+      "filename": "evidence_1.png",
+      "caption": "Image evidence 1",
+      "summary": "No visual or text content was extracted from this image.",
+      "supports": [
+        "The incident occurred near CG Road, Navrangpura, Ahmedabad."
+      ],
+      "importance": "low",
+      "confidence": 0.9
+    },
+    {
+      "evidence_id": "6a5cfa6ba5d750495059dbc6",
+      "filename": "evidence_2.png",
+      "caption": "Image evidence 2",
+      "summary": "No visual or text content was extracted from this image.",
+      "supports": [
+        "The incident occurred near CG Road, Navrangpura, Ahmedabad."
+      ],
+      "importance": "low",
+      "confidence": 0.9
+    },
+    {
+      "evidence_id": "6a5cfa6ba5d750495059dbc7",
+      "filename": "evidence_3.png",
+      "caption": "Image evidence 3",
+      "summary": "No visual or text content was extracted from this image.",
+      "supports": [
+        "The incident occurred near CG Road, Navrangpura, Ahmedabad."
+      ],
+      "importance": "low",
+      "confidence": 0.9
+    },
+    {
+      "evidence_id": "6a5cfa6ba5d750495059dbc8",
+      "filename": "evidence_4.png",
+      "caption": "Image evidence 4",
+      "summary": "No visual or text content was extracted from this image.",
+      "supports": [
+        "The incident occurred near CG Road, Navrangpura, Ahmedabad."
+      ],
+      "importance": "low",
+      "confidence": 0.9
+    }
+  ],
+  "missing_information_and_evidence": [
+    {
+      "title": "CCTV Footage Confirmation",
+      "description": "Information regarding whether CCTV cameras outside the shop recorded the motorcycle and the suspect.",
+      "importance": "medium"
+    },
+    {
+      "title": "Vehicle Registration Number",
+      "description": "The full registration number of the black Bajaj Pulsar motorcycle, partially visible as ending in 4721.",
+      "importance": "high"
+    }
+  ],
+  "contradictions": [],
+  "people_and_entities": {
+    "victims": [],
+    "suspects": [],
+    "witnesses": [],
+    "other_persons": [],
+    "organizations": [],
+    "locations": [],
+    "vehicles": [],
+    "phone_numbers": [],
+    "emails": [],
+    "upi_ids": [],
+    "bank_accounts": [],
+    "documents": [],
+    "money": [],
+    "digital_assets": [],
+    "physical_assets": []
+  },
+  "evidence_correlation": [],
+  "crime_analysis": {
+    "crime_category": "Uncategorized",
+    "modus_operandi": "",
+    "digital_assets_involved": [],
+    "physical_assets_involved": []
+  },
+  "original_complaint": "On 18 July 2026, around 7:45 PM, I was walking near CG Road, Navrangpura, Ahmedabad, after leaving a café.\n\nA man riding a black motorcycle suddenly approached me from behind and snatched my mobile phone from my hand before speeding away towards Law Garden.\n\nThe stolen phone is a Samsung Galaxy S23 Ultra (Black, 256GB). The phone contains my banking applications, Aadhaar, PAN card copies, and personal photographs.\n\nAround twenty minutes later, I noticed multiple unauthorized UPI transactions from my SBI bank account. A total amount of ₹48,500 was transferred to two unknown accounts using Google Pay.\n\nI immediately blocked my SIM card and contacted the SBI customer care to freeze my account.\n\nSeveral people nearby witnessed the incident, and a shop owner informed me that CCTV cameras outside the store may have recorded both the motorcycle and the suspect.\n\nThe suspect appeared to be a male aged approximately 25–30 years, around 5 feet 9 inches tall, medium build, wearing a black helmet, dark blue jacket, and blue jeans. The motorcycle appeared to be a black Bajaj Pulsar with a partially visible registration number ending in 4721.\n\nI request the police to investigate the theft, identify the suspect, recover my phone, trace the unauthorized financial transactions, and take appropriate legal action.",
+  "processing_duration_ms": 191312.0,
+  "created_at": "2026-08-06T11:05:21.093641Z"
+}

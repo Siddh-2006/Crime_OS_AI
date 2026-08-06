@@ -23,7 +23,7 @@ class DummyLLMClient(ILLMClient):
 
 def get_sample_valid_json() -> str:
     return json.dumps({
-        "overview": {
+        "case_understanding": {
             "complaint_summary": "Cyber fraud complaint",
             "incident_overview": "Victim cheated online",
             "crime_category": "Financial Cybercrime",
@@ -31,21 +31,33 @@ def get_sample_valid_json() -> str:
             "priority": "high",
             "confidence": 0.9,
         },
-        "timeline": [],
-        "people_and_entities": {
-            "victims": [{"value": "John Doe", "source_evidence_ids": [], "confidence": 0.9}],
-            "suspects": [],
-        },
-        "evidence_analysis": [],
-        "evidence_correlation": [],
-        "crime_analysis": {
-            "crime_category": "Financial Cybercrime",
-            "crime_subtype": "UPI Fraud",
-            "modus_operandi": "Phishing link sent via SMS",
-        },
+        "timeline": [
+            {
+                "timestamp": "2026-08-01 10:00:00",
+                "description": "Initial call received from scammer",
+                "supporting_evidence_ids": ["ev-1"],
+                "confidence": 0.9,
+            }
+        ],
+        "evidence_intelligence": [
+            {
+                "evidence_id": "ev-1",
+                "filename": "screenshot.png",
+                "caption": "Bank Transaction Screenshot",
+                "summary": "Shows unauthorized debit transaction.",
+                "supports": ["Unauthorized money transfer"],
+                "importance": "high",
+                "confidence": 0.95,
+            }
+        ],
+        "missing_information_and_evidence": [
+            {
+                "title": "Bank Transaction UTR",
+                "description": "Complainant should provide reference number.",
+                "importance": "medium",
+            }
+        ],
         "contradictions": [],
-        "missing_information": [],
-        "missing_evidence": [],
     })
 
 
@@ -60,13 +72,13 @@ async def test_engine_successful_single_pass():
     client = DummyLLMClient([valid_json])
     engine = CaseUnderstandingEngine(llm_client=client, max_retries=2)
 
-    context = CaseContext(complaint_text="Money was stolen online.")
+    context = CaseContext(complaint_text="Money was stolen online.", evidence=[EvidenceItem(id="ev-1", filename="screenshot.png", type="image")])
     result = await engine.analyze(context)
 
     assert result.case_id == context.case_id
-    assert result.overview.crime_category == "Financial Cybercrime"
-    assert len(result.people_and_entities.victims) == 1
-    assert result.people_and_entities.victims[0].value == "John Doe"
+    assert result.case_understanding.crime_category == "Financial Cybercrime"
+    assert len(result.evidence_intelligence) == 1
+    assert result.evidence_intelligence[0].caption == "Bank Transaction Screenshot"
     assert client.call_count == 1
 
 
@@ -77,10 +89,10 @@ async def test_engine_retry_on_invalid_json():
     client = DummyLLMClient([invalid_json, valid_json])
     engine = CaseUnderstandingEngine(llm_client=client, max_retries=2)
 
-    context = CaseContext(complaint_text="Money was stolen online.")
+    context = CaseContext(complaint_text="Money was stolen online.", evidence=[EvidenceItem(id="ev-1", filename="screenshot.png", type="image")])
     result = await engine.analyze(context)
 
-    assert result.overview.crime_subtype == "UPI Fraud"
+    assert result.case_understanding.crime_subtype == "UPI Fraud"
     assert client.call_count == 2
 
 
@@ -97,6 +109,6 @@ async def test_engine_max_retries_exceeded():
 
 def test_system_prompt_negative_constraints():
     prompt = CASE_UNDERSTANDING_SYSTEM_PROMPT
-    assert "MUST NEVER recommend investigation actions" in prompt
-    assert "MUST NEVER recommend arrests" in prompt
-    assert "MUST NEVER recommend legal action, IPC or BNS statutory sections" in prompt
+    assert "You must NOT investigate the case or recommend investigative actions." in prompt
+    assert "Never recommend:" in prompt
+    assert "PROHIBITED" in prompt

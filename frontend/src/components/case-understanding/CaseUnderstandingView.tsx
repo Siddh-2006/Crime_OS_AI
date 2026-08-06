@@ -4,15 +4,22 @@ import React, { useState } from 'react';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Modal } from '@/components/ui/Modal';
 import { 
-  FileText, Clock, Users, ShieldAlert, GitCompare, 
-  AlertTriangle, HelpCircle, FileQuestion, CheckCircle2, 
-  Building2, MapPin, Phone, Mail, CreditCard, DollarSign, Smartphone, Send, Loader2, CheckCheck
+  FileText, Clock, ShieldAlert, AlertTriangle, HelpCircle, 
+  CheckCircle2, Send, Loader2, CheckCheck 
 } from 'lucide-react';
 import apiClient from '@/lib/apiClient';
 
 export interface CaseUnderstandingData {
   case_id: string;
-  overview: {
+  case_understanding?: {
+    complaint_summary: string;
+    incident_overview: string;
+    crime_category: string;
+    crime_subtype: string;
+    priority: 'low' | 'medium' | 'high' | 'critical';
+    confidence: number;
+  };
+  overview?: {
     complaint_summary: string;
     incident_overview: string;
     crime_category: string;
@@ -23,65 +30,49 @@ export interface CaseUnderstandingData {
   timeline: Array<{
     timestamp: string;
     description: string;
-    supporting_evidence_ids: string[];
-    confidence: number;
+    supporting_evidence_ids?: string[];
+    confidence?: number;
   }>;
-  people_and_entities: {
-    victims: Array<{ value: string; source_evidence_ids: string[]; confidence: number }>;
-    suspects: Array<{ value: string; source_evidence_ids: string[]; confidence: number }>;
-    witnesses: Array<{ value: string; source_evidence_ids: string[]; confidence: number }>;
-    other_persons: Array<{ value: string; source_evidence_ids: string[]; confidence: number }>;
-    organizations: Array<{ value: string; source_evidence_ids: string[]; confidence: number }>;
-    locations: Array<{ value: string; source_evidence_ids: string[]; confidence: number }>;
-    vehicles: Array<{ value: string; source_evidence_ids: string[]; confidence: number }>;
-    phone_numbers: Array<{ value: string; source_evidence_ids: string[]; confidence: number }>;
-    emails: Array<{ value: string; source_evidence_ids: string[]; confidence: number }>;
-    upi_ids: Array<{ value: string; source_evidence_ids: string[]; confidence: number }>;
-    bank_accounts: Array<{ value: string; source_evidence_ids: string[]; confidence: number }>;
-    documents: Array<{ value: string; source_evidence_ids: string[]; confidence: number }>;
-    money: Array<{ value: string; source_evidence_ids: string[]; confidence: number }>;
-    digital_assets: Array<{ value: string; source_evidence_ids: string[]; confidence: number }>;
-    physical_assets: Array<{ value: string; source_evidence_ids: string[]; confidence: number }>;
-  };
-  evidence_analysis: Array<{
+  evidence_intelligence?: Array<{
+    evidence_id: string;
+    filename: string;
+    caption?: string;
+    summary: string;
+    supports?: string[];
+    extracted_information?: string;
+    importance: 'low' | 'medium' | 'high' | 'critical';
+    confidence?: number;
+  }>;
+  evidence_analysis?: Array<{
     evidence_id: string;
     filename: string;
     summary: string;
-    extracted_information: string;
+    extracted_information?: string;
     importance: 'low' | 'medium' | 'high' | 'critical';
-    allegations_supported: string[];
-    confidence: number;
+    allegations_supported?: string[];
+    confidence?: number;
   }>;
-  evidence_correlation: Array<{
-    allegation: string;
-    supporting_evidence_ids: string[];
-    confidence: number;
-    contradicts_claim: boolean;
-    explanation?: string;
-  }>;
-  crime_analysis: {
-    crime_category: string;
-    crime_subtype: string;
-    modus_operandi: string;
-    estimated_financial_loss?: number;
-    digital_assets_involved: string[];
-    physical_assets_involved: string[];
-  };
-  contradictions: Array<{
+  missing_information_and_evidence?: Array<{
+    title: string;
     description: string;
-    involved_evidence_ids: string[];
-    confidence: number;
+    importance: 'low' | 'medium' | 'high';
   }>;
-  missing_information: Array<{
+  missing_information?: Array<{
     item: string;
     reason: string;
     importance: 'low' | 'medium' | 'high';
   }>;
-  missing_evidence: Array<{
+  missing_evidence?: Array<{
     evidence_name: string;
     reason_relevant: string;
-    related_allegation: string;
+    related_allegation?: string;
     importance: 'low' | 'medium' | 'high';
+  }>;
+  contradictions: Array<{
+    description: string;
+    related_evidence_ids?: string[];
+    involved_evidence_ids?: string[];
+    confidence?: number;
   }>;
   original_complaint?: string;
   processing_duration_ms?: number;
@@ -95,29 +86,43 @@ interface Props {
 
 export function CaseUnderstandingView({ data, caseId }: Props): React.ReactElement {
   const [activeTab, setActiveTab] = useState<string>('overview');
-  const [previewEvidence, setPreviewEvidence] = useState<{id: string, name: string, summary: string, extracted_information: string} | null>(null);
-  // Track which missing items have been requested (key = item string)
+  const [previewEvidence, setPreviewEvidence] = useState<{id: string, name: string, summary: string, caption?: string} | null>(null);
   const [requestedItems, setRequestedItems] = useState<Record<string, 'loading' | 'sent'>>({});
 
+  const overviewData = data.case_understanding || data.overview || {
+    complaint_summary: 'No summary available.',
+    incident_overview: 'No incident overview available.',
+    crime_category: 'Uncategorized',
+    crime_subtype: 'General',
+    priority: 'medium' as const,
+    confidence: 0.9,
+  };
+
+  const evidenceItems = data.evidence_intelligence || data.evidence_analysis || [];
+
+  const missingItems = data.missing_information_and_evidence || [
+    ...(data.missing_information || []).map(m => ({ title: m.item, description: m.reason, importance: m.importance })),
+    ...(data.missing_evidence || []).map(m => ({ title: m.evidence_name, description: m.reason_relevant, importance: m.importance }))
+  ];
+
   const handleRequestFromComplainant = async (
-    item: string,
-    reason: string,
+    title: string,
+    description: string,
     importance: string,
-    type: 'missing_information' | 'missing_evidence',
   ) => {
-    if (!caseId || requestedItems[item]) return;
-    setRequestedItems(prev => ({ ...prev, [item]: 'loading' }));
+    if (!caseId || requestedItems[title]) return;
+    setRequestedItems(prev => ({ ...prev, [title]: 'loading' }));
     try {
       await apiClient.post(`/cases/${caseId}/citizen-request/missing-info`, {
-        item,
-        reason,
+        item: title,
+        reason: description,
         importance,
-        type,
+        type: 'missing_information_and_evidence',
       });
-      setRequestedItems(prev => ({ ...prev, [item]: 'sent' }));
+      setRequestedItems(prev => ({ ...prev, [title]: 'sent' }));
     } catch (err: any) {
       alert(err?.response?.data?.message || 'Failed to send request to complainant');
-      setRequestedItems(prev => { const n = { ...prev }; delete n[item]; return n; });
+      setRequestedItems(prev => { const n = { ...prev }; delete n[title]; return n; });
     }
   };
 
@@ -135,16 +140,12 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
   };
 
   const tabs = [
-    { id: 'overview', label: '1. Overview', icon: FileText },
+    { id: 'overview', label: '1. Case Understanding', icon: FileText },
     { id: 'timeline', label: '2. Timeline', icon: Clock },
-    { id: 'entities', label: '3. People & Entities', icon: Users },
-    { id: 'evidence', label: '4. Evidence Analysis', icon: CheckCircle2 },
-    { id: 'correlation', label: '5. Evidence Correlation', icon: GitCompare },
-    { id: 'crime', label: '6. Crime Analysis', icon: ShieldAlert },
-    { id: 'contradictions', label: '7. Contradictions', icon: AlertTriangle },
-    { id: 'missing_info', label: '8. Missing Info', icon: HelpCircle },
-    { id: 'missing_evidence', label: '9. Missing Evidence', icon: FileQuestion },
-    { id: 'complaint', label: '10. Original Complaint', icon: FileText },
+    { id: 'evidence', label: '3. Evidence Intelligence', icon: CheckCircle2 },
+    { id: 'missing_info', label: '4. Missing Info & Evidence', icon: HelpCircle },
+    { id: 'contradictions', label: '5. Contradictions', icon: AlertTriangle },
+    { id: 'complaint', label: '6. Original Complaint', icon: FileText },
   ];
 
   return (
@@ -154,11 +155,11 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
         <div>
           <div className="flex items-center gap-3">
             <h2 className="text-xl font-bold tracking-tight">Case Understanding Intelligence</h2>
-            {getPriorityBadge(data.overview.priority)}
+            {getPriorityBadge(overviewData.priority)}
           </div>
           <p className="text-slate-400 text-sm mt-1">
-            Category: <strong className="text-white">{data.overview.crime_category}</strong> ({data.overview.crime_subtype})
-            • Confidence: <strong className="text-emerald-400">{(data.overview.confidence * 100).toFixed(0)}%</strong>
+            Category: <strong className="text-white">{overviewData.crime_category}</strong> ({overviewData.crime_subtype})
+            • Confidence: <strong className="text-emerald-400">{(overviewData.confidence * 100).toFixed(0)}%</strong>
           </p>
         </div>
         {data.processing_duration_ms && (
@@ -192,18 +193,18 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
 
       {/* Tab Content */}
       <div className="space-y-6">
-        {/* 1. OVERVIEW */}
+        {/* 1. CASE UNDERSTANDING */}
         {activeTab === 'overview' && (
           <Card className="space-y-4 p-6">
-            <CardHeader title="1. Incident & Complaint Overview" />
+            <CardHeader title="1. Case Understanding Overview" />
             <div className="space-y-4">
               <div>
                 <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400">Complaint Summary</h4>
-                <p className="text-sm font-semibold text-neutral-900 mt-1">{data.overview.complaint_summary}</p>
+                <p className="text-sm font-semibold text-neutral-900 mt-1">{overviewData.complaint_summary}</p>
               </div>
               <div className="border-t border-neutral-100 pt-4">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400">Integrated Incident Overview</h4>
-                <p className="text-sm text-neutral-700 mt-1 leading-relaxed whitespace-pre-line">{data.overview.incident_overview}</p>
+                <p className="text-sm text-neutral-700 mt-1 leading-relaxed whitespace-pre-line">{overviewData.incident_overview}</p>
               </div>
             </div>
           </Card>
@@ -237,87 +238,17 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
           </Card>
         )}
 
-        {/* 3. PEOPLE & ENTITIES */}
-        {activeTab === 'entities' && (
-          <Card className="p-6 space-y-6">
-            <CardHeader title="3. Extracted People & Entities" />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-red-600 flex items-center gap-2">
-                  <Users size={14} /> Suspects ({(data.people_and_entities?.suspects || []).length})
-                </h4>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {(data.people_and_entities?.suspects || []).map((s, i) => (
-                    <span key={i} className="px-2.5 py-1 text-xs font-semibold bg-red-50 text-red-700 border border-red-200 rounded-md">
-                      {s.value}
-                    </span>
-                  ))}
-                  {(!data.people_and_entities?.suspects || data.people_and_entities.suspects.length === 0) && <span className="text-xs text-neutral-400 italic">None</span>}
-                </div>
-              </div>
-
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600 flex items-center gap-2">
-                  <Users size={14} /> Victims ({(data.people_and_entities?.victims || []).length})
-                </h4>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {(data.people_and_entities?.victims || []).map((v, i) => (
-                    <span key={i} className="px-2.5 py-1 text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 rounded-md">
-                      {v.value}
-                    </span>
-                  ))}
-                  {(!data.people_and_entities?.victims || data.people_and_entities.victims.length === 0) && <span className="text-xs text-neutral-400 italic">None</span>}
-                </div>
-              </div>
-
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
-                  <Phone size={14} /> Phone Numbers
-                </h4>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {(data.people_and_entities?.phone_numbers || []).map((p, i) => (
-                    <span key={i} className="px-2.5 py-1 text-xs font-mono bg-slate-100 text-slate-800 rounded-md">
-                      {p.value}
-                    </span>
-                  ))}
-                  {(!data.people_and_entities?.phone_numbers || data.people_and_entities.phone_numbers.length === 0) && <span className="text-xs text-neutral-400 italic">None</span>}
-                </div>
-              </div>
-
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
-                  <CreditCard size={14} /> Bank Accounts & UPI IDs
-                </h4>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {(data.people_and_entities?.upi_ids || []).map((u, i) => (
-                    <span key={i} className="px-2.5 py-1 text-xs font-mono bg-purple-50 text-purple-700 border border-purple-200 rounded-md">
-                      UPI: {u.value}
-                    </span>
-                  ))}
-                  {(data.people_and_entities?.bank_accounts || []).map((b, i) => (
-                    <span key={i} className="px-2.5 py-1 text-xs font-mono bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md">
-                      {b.value}
-                    </span>
-                  ))}
-                  {(!data.people_and_entities?.upi_ids?.length && !data.people_and_entities?.bank_accounts?.length) && <span className="text-xs text-neutral-400 italic">None</span>}
-                </div>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {/* 4. EVIDENCE ANALYSIS */}
+        {/* 3. EVIDENCE INTELLIGENCE */}
         {activeTab === 'evidence' && (
           <Card className="p-6">
-            <CardHeader title="4. Individual Evidence Analysis" />
+            <CardHeader title="3. Evidence Intelligence" />
             <div className="mt-4 space-y-4">
-              {(!data.evidence_analysis || data.evidence_analysis.length === 0) ? (
-                <p className="text-sm text-neutral-500 italic">No individual evidence items analyzed.</p>
+              {(evidenceItems.length === 0) ? (
+                <p className="text-sm text-neutral-500 italic">No evidence items uploaded or analyzed.</p>
               ) : (
                 (() => {
-                  // Deduplicate evidence analysis items by filename or evidence_id
                   const seenKeys = new Set<string>();
-                  const uniqueItems = data.evidence_analysis.filter((ev) => {
+                  const uniqueItems = evidenceItems.filter((ev) => {
                     const key = ev.filename || ev.evidence_id;
                     if (key && seenKeys.has(key)) return false;
                     if (key) seenKeys.add(key);
@@ -325,32 +256,38 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
                   });
 
                   return uniqueItems.map((ev, idx) => {
-                    const summaryClean = (ev.summary || '').trim();
-                    const infoClean = (ev.extracted_information || '').trim();
-                    const isDuplicateText = infoClean && (
-                      infoClean === summaryClean ||
-                      summaryClean.includes(infoClean) ||
-                      infoClean.includes(summaryClean)
-                    );
+                    const evItem = ev as any;
+                    const captionText = evItem.caption || evItem.filename || `Evidence Item ${idx+1}`;
+                    const summaryText = (evItem.summary || '').trim();
+                    const supports: string[] = evItem.supports || evItem.allegations_supported || [];
 
                     return (
                       <div 
                         key={ev.evidence_id || idx} 
-                        className="p-4 border border-neutral-200 rounded-lg space-y-2 bg-neutral-50/50 hover:bg-neutral-100 cursor-pointer transition-colors"
+                        className="p-4 border border-neutral-200 rounded-lg space-y-3 bg-neutral-50/50 hover:bg-neutral-100 cursor-pointer transition-colors"
                         onClick={() => setPreviewEvidence({ 
                           id: ev.evidence_id, 
                           name: ev.filename,
-                          summary: ev.summary,
-                          extracted_information: ev.extracted_information
+                          summary: summaryText,
+                          caption: captionText
                         })}
                       >
                         <div className="flex justify-between items-center">
-                          <span className="font-bold text-sm text-slate-900">{ev.filename}</span>
-                          <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-200 text-slate-800 uppercase">{ev.importance}</span>
+                          <span className="font-bold text-sm text-slate-900">{captionText}</span>
+                          <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-200 text-slate-800 uppercase">{ev.importance || 'medium'}</span>
                         </div>
-                        {summaryClean && <p className="text-xs font-semibold text-slate-700">{summaryClean}</p>}
-                        {!isDuplicateText && infoClean && (
-                          <p className="text-xs text-neutral-600">{infoClean}</p>
+                        {summaryText && <p className="text-xs text-neutral-700 leading-relaxed">{summaryText}</p>}
+                        {supports.length > 0 && (
+                          <div className="pt-2 border-t border-neutral-200/60">
+                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Supports Allegations:</span>
+                            <div className="mt-1 flex flex-wrap gap-1.5">
+                              {supports.map((alg: string, aIdx: number) => (
+                                <span key={aIdx} className="px-2 py-0.5 text-[11px] bg-emerald-50 text-emerald-800 border border-emerald-200 rounded font-medium">
+                                  {alg}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
                         )}
                       </div>
                     );
@@ -361,25 +298,45 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
           </Card>
         )}
 
-        {/* 5. EVIDENCE CORRELATION */}
-        {activeTab === 'correlation' && (
+        {/* 4. MISSING INFORMATION & EVIDENCE */}
+        {activeTab === 'missing_info' && (
           <Card className="p-6">
-            <CardHeader title="5. Evidence Correlation & Corroboration" />
-            <div className="mt-4 space-y-4">
-              {(!data.evidence_correlation || data.evidence_correlation.length === 0) ? (
-                <p className="text-sm text-neutral-500 italic">No evidence correlations found.</p>
+            <CardHeader title="4. Missing Information & Evidence (Complainant Clarifications)" />
+            <div className="mt-4 space-y-3">
+              {(missingItems.length === 0) ? (
+                <p className="text-sm text-emerald-700 bg-emerald-50 p-3 rounded-lg border border-emerald-200">
+                  No missing information or evidence items flagged.
+                </p>
               ) : (
-                data.evidence_correlation.map((corr, idx) => (
-                  <div key={idx} className={`p-4 border rounded-lg space-y-2 ${corr.contradicts_claim ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200'}`}>
-                    <div className="flex justify-between items-center">
-                      <span className="font-bold text-sm text-neutral-900">Allegation: "{corr.allegation}"</span>
-                      <span className="text-xs font-bold px-2 py-0.5 rounded bg-white shadow-xs">
-                        {(corr.confidence * 100).toFixed(0)}% Confidence
-                      </span>
+                missingItems.map((item, i) => (
+                  <div key={i} className="p-3.5 border border-amber-200 bg-amber-50/70 rounded-lg text-xs space-y-2">
+                    <div className="flex justify-between items-start gap-2">
+                      <span className="font-bold text-amber-950 text-sm">{item.title}</span>
+                      <span className="uppercase text-[10px] font-bold bg-amber-200 text-amber-900 px-2 py-0.5 rounded shrink-0">{item.importance}</span>
                     </div>
-                    <p className="text-xs text-neutral-700">{corr.explanation}</p>
-                    {corr.supporting_evidence_ids && (
-                      <p className="text-xs text-neutral-500">Supporting Evidence IDs: {corr.supporting_evidence_ids.join(', ')}</p>
+                    <p className="text-amber-900 leading-relaxed">{item.description}</p>
+                    {caseId && (
+                      <div className="pt-1">
+                        <button
+                          onClick={() => handleRequestFromComplainant(item.title, item.description, item.importance)}
+                          disabled={!!requestedItems[item.title]}
+                          className={`flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-md transition-all ${
+                            requestedItems[item.title] === 'sent'
+                              ? 'bg-green-100 text-green-700 border border-green-200 cursor-default'
+                              : requestedItems[item.title] === 'loading'
+                              ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+                              : 'bg-white text-slate-800 border border-slate-300 hover:bg-slate-100 cursor-pointer shadow-xs'
+                          }`}
+                        >
+                          {requestedItems[item.title] === 'sent' ? (
+                            <><CheckCheck size={12} /> Requested from Complainant</>
+                          ) : requestedItems[item.title] === 'loading' ? (
+                            <><Loader2 size={12} className="animate-spin" /> Sending...</>
+                          ) : (
+                            <><Send size={12} /> Request from Complainant</>
+                          )}
+                        </button>
+                      </div>
                     )}
                   </div>
                 ))
@@ -388,118 +345,36 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
           </Card>
         )}
 
-        {/* 6. CRIME ANALYSIS */}
-        {activeTab === 'crime' && (
-          <Card className="p-6 space-y-4">
-            <CardHeader title="6. Crime Analysis & Modus Operandi" />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs font-bold text-neutral-400 uppercase">Modus Operandi</p>
-                <p className="text-sm font-medium text-neutral-800 mt-1 leading-relaxed">{data.crime_analysis?.modus_operandi || 'N/A'}</p>
-              </div>
-              <div>
-                <p className="text-xs font-bold text-neutral-400 uppercase">Estimated Financial Loss</p>
-                <p className="text-xl font-bold text-emerald-600 mt-1">
-                  {data.crime_analysis?.estimated_financial_loss != null 
-                    ? `₹${data.crime_analysis.estimated_financial_loss.toLocaleString('en-IN')}` 
-                    : 'N/A'}
-                </p>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {/* 7. CONTRADICTIONS */}
+        {/* 5. CONTRADICTIONS */}
         {activeTab === 'contradictions' && (
           <Card className="p-6">
-            <CardHeader title="7. Contradictions & Discrepancies" />
+            <CardHeader title="5. Contradictions & Discrepancies" />
             <div className="mt-4 space-y-3">
               {(!data.contradictions || data.contradictions.length === 0) ? (
-                <p className="text-sm text-emerald-700 bg-emerald-50 p-3 rounded-lg border border-emerald-200">
+                <p className="text-sm text-emerald-700 bg-emerald-50 p-3 rounded-lg border border-emerald-200 font-medium">
                   No contradictions or conflicts detected across complaint and evidence.
                 </p>
               ) : (
-                data.contradictions.map((c, i) => (
-                  <div key={i} className="p-3 border border-red-200 bg-red-50 rounded-lg text-xs text-red-900 font-medium">
-                    • {c.description} (Evidence: {c.involved_evidence_ids?.join(', ') || 'N/A'})
-                  </div>
-                ))
-              )}
-            </div>
-          </Card>
-        )}
-
-        {/* 8. MISSING INFORMATION */}
-        {activeTab === 'missing_info' && (
-          <Card className="p-6">
-            <CardHeader title="8. Missing Complaint Information" />
-            <div className="mt-4 space-y-3">
-              {(!data.missing_information || data.missing_information.length === 0) ? (
-                <p className="text-sm text-neutral-500 italic">No missing information flags recorded.</p>
-              ) : (
-                data.missing_information.map((mi, i) => (
-                  <div key={i} className="p-3 border border-amber-200 bg-amber-50 rounded-lg text-xs space-y-2">
-                    <div className="flex justify-between items-start gap-2">
-                      <span className="font-bold text-amber-900">{mi.item}</span>
-                      <span className="uppercase text-[10px] bg-amber-200 px-1.5 py-0.5 rounded shrink-0">{mi.importance}</span>
+                data.contradictions.map((c, i) => {
+                  const evIds = c.related_evidence_ids || c.involved_evidence_ids || [];
+                  return (
+                    <div key={i} className="p-3 border border-red-200 bg-red-50 rounded-lg text-xs text-red-900 font-medium space-y-1">
+                      <p>• {c.description}</p>
+                      {evIds.length > 0 && (
+                        <p className="text-[11px] text-red-700">Involved Evidence IDs: {evIds.join(', ')}</p>
+                      )}
                     </div>
-                    <p className="text-amber-800">{mi.reason}</p>
-
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </Card>
         )}
 
-        {/* 9. MISSING EVIDENCE */}
-        {activeTab === 'missing_evidence' && (
-          <Card className="p-6">
-            <CardHeader title="9. Recommended Corroborating Evidence Gaps" />
-            <div className="mt-4 space-y-3">
-              {(!data.missing_evidence || data.missing_evidence.length === 0) ? (
-                <p className="text-sm text-neutral-500 italic">No missing evidence recommendations recorded.</p>
-              ) : (
-                data.missing_evidence.map((me, i) => (
-                  <div key={i} className="p-3 border border-slate-200 bg-slate-50 rounded-lg text-xs space-y-2">
-                    <div className="flex justify-between items-start gap-2">
-                      <span className="font-bold text-slate-900">{me.evidence_name}</span>
-                      <span className="uppercase text-[10px] bg-slate-200 px-1.5 py-0.5 rounded shrink-0">{me.importance}</span>
-                    </div>
-                    <p className="text-slate-700">{me.reason_relevant}</p>
-                    <p className="text-slate-500 italic">Allegation: {me.related_allegation}</p>
-                    {caseId && (
-                      <button
-                        onClick={() => handleRequestFromComplainant(me.evidence_name, me.reason_relevant, me.importance, 'missing_evidence')}
-                        disabled={!!requestedItems[me.evidence_name]}
-                        className={`flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-md transition-all ${
-                          requestedItems[me.evidence_name] === 'sent'
-                            ? 'bg-green-100 text-green-700 border border-green-200 cursor-default'
-                            : requestedItems[me.evidence_name] === 'loading'
-                            ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
-                            : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100 cursor-pointer'
-                        }`}
-                      >
-                        {requestedItems[me.evidence_name] === 'sent' ? (
-                          <><CheckCheck size={12} /> Requested</>
-                        ) : requestedItems[me.evidence_name] === 'loading' ? (
-                          <><Loader2 size={12} className="animate-spin" /> Sending...</>
-                        ) : (
-                          <><Send size={12} /> Request from Complainant</>
-                        )}
-                      </button>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-          </Card>
-        )}
-
-        {/* 10. ORIGINAL COMPLAINT */}
+        {/* 6. ORIGINAL COMPLAINT */}
         {activeTab === 'complaint' && (
           <Card className="p-6">
-            <CardHeader title="10. Original Complaint Text" />
+            <CardHeader title="6. Original Complaint Text" />
             <div className="mt-4 p-4 bg-neutral-50 border border-neutral-200 rounded-lg text-xs font-mono text-neutral-800 whitespace-pre-wrap leading-relaxed">
               {data.original_complaint || 'No complaint text available.'}
             </div>
@@ -543,14 +418,14 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
 
             <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4">
               <div>
-                <h3 className="text-sm font-bold text-slate-800 mb-1">AI Summary & Visual Tags</h3>
-                <p className="text-sm text-slate-600">{previewEvidence.summary || 'No visual summary available.'}</p>
+                <h3 className="text-sm font-bold text-slate-800 mb-1">Evidence Title / Caption</h3>
+                <p className="text-sm font-semibold text-slate-900">{previewEvidence.caption || previewEvidence.name}</p>
               </div>
               
               <div>
-                <h3 className="text-sm font-bold text-slate-800 mb-1">Extracted Content (OCR)</h3>
-                <div className="p-3 bg-white border border-slate-200 rounded text-xs text-slate-600 font-mono whitespace-pre-wrap max-h-40 overflow-y-auto">
-                  {previewEvidence.extracted_information || 'No text extracted from this media.'}
+                <h3 className="text-sm font-bold text-slate-800 mb-1">AI Summary & Contribution</h3>
+                <div className="p-3 bg-white border border-slate-200 rounded text-xs text-slate-700 leading-relaxed">
+                  {previewEvidence.summary || 'No summary available.'}
                 </div>
               </div>
             </div>
