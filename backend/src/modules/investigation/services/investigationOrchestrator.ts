@@ -11,6 +11,7 @@ import { Escalation } from '../models/Escalation.model';
 import { CaseChecklist } from '../models/CaseChecklist.model';
 import { EmailQueue } from '../../../shared/queue/EmailQueue';
 import { publishProgress } from '../../../shared/utils/analysisProgress';
+import { triggerComplaintIntelligencePipelineByCaseId } from '../../../shared/services/complaintIntelligenceService';
 import { ILegalSectionSuggestion } from '../models/LegalSection.schema';
 
 import logger from '../../../config/logger';
@@ -174,6 +175,11 @@ export class InvestigationOrchestrator {
    */
   static async runAnalysis(caseId: string, trigger: string = 'manual', language: string = 'en'): Promise<any> {
     logger.info(`[Orchestrator] ▶ Starting analysis for caseId: ${caseId}, trigger: ${trigger}`);
+
+    // Trigger Complaint Intelligence pipeline rerun in background
+    triggerComplaintIntelligencePipelineByCaseId(caseId).catch((err) => {
+      logger.error('[Orchestrator] Error triggering complaint intelligence pipeline rerun:', err);
+    });
 
     // 1. Facts Assembly
     logger.info(`[Orchestrator] [1/7] Assembling facts from MongoDB for caseId: ${caseId}`);

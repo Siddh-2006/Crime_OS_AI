@@ -331,10 +331,12 @@ async def profile_complaint_multimodal(
         missing_fields = []
 
     confidence = parsed_output.get("confidence")
-    try:
-        confidence_value = float(confidence) if confidence is not None else 0.0
-    except Exception:
-        confidence_value = 0.0
+    confidence_value = 0.0
+    if isinstance(confidence, (int, float, str)):
+        try:
+            confidence_value = float(confidence)
+        except Exception:
+            confidence_value = 0.0
 
     summary = _first_non_empty(
         parsed_output.get("summary"),
@@ -414,7 +416,9 @@ async def trigger_full_pipeline(body: TriggerFullPipelineRequest) -> dict[str, o
     if not complaint_number:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="complaint_number is required")
 
-    script_path = Path(__file__).resolve().parents[3] / "run_full_pipeline.py"
+    script_path = Path(__file__).resolve().parents[3] / "run_pipeline_from_atlas.py"
+    if not script_path.exists():
+        script_path = Path(__file__).resolve().parents[3] / "run_full_pipeline.py"
     if not script_path.exists():
         logger.error(
             "Complaint intelligence full-pipeline script not found",
@@ -431,13 +435,13 @@ async def trigger_full_pipeline(body: TriggerFullPipelineRequest) -> dict[str, o
     )
 
     process = subprocess.Popen(
-        [sys.executable, str(script_path), complaint_number],
+        [sys.executable, "-u", str(script_path), complaint_number],
         cwd=str(script_path.parent),
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
         bufsize=1,
-        env={**os.environ, "PYTHONUTF8": "1"},
+        env={**os.environ, "PYTHONUTF8": "1", "PYTHONUNBUFFERED": "1"},
     )
 
     asyncio.create_task(_stream_pipeline_output(process, complaint_number))

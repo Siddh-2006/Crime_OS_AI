@@ -315,46 +315,79 @@ export class ComplaintService {
   // ─── Automated Pipeline Trigger ─────────────────────────────────────────────
   private triggerComplaintIntelligencePipeline(complaintNumber: string): void {
     try {
-      const scriptPath = path.resolve(__dirname, '../../../../../services/complaint_intelligence/run_pipeline_from_atlas.py');
-      const venvPythonIntell = path.resolve(__dirname, '../../../../../services/complaint_intelligence/.venv/Scripts/python.exe');
-      const venvPythonRoot = path.resolve(__dirname, '../../../../../services/.venv/Scripts/python.exe');
-      const pythonExec = process.platform === 'win32'
-        ? (fs.existsSync(venvPythonIntell) ? venvPythonIntell : (fs.existsSync(venvPythonRoot) ? venvPythonRoot : 'python'))
-        : 'python';
-
-      const scriptDir = path.dirname(scriptPath);
       logger.info(`[ComplaintIntelligence] Triggering full pipeline for ${complaintNumber}`);
 
-      const pyProcess = spawn(pythonExec, [scriptPath, complaintNumber], {
-        cwd: scriptDir,
-        stdio: ['ignore', 'pipe', 'pipe'],
-        env: { ...process.env, PYTHONUTF8: '1', MONGODB_DB: 'test' }
-      });
+      // 1. Primary: Microservice HTTP call
+      const microserviceUrl = env.COMPLAINT_INTELLIGENCE_URL || 'http://localhost:8000';
+      axios.post(`${microserviceUrl}/trigger-full-pipeline`, {
+        complaint_number: complaintNumber,
+      }, { timeout: 5000 }).then((response) => {
+        if (response.status === 200 || response.status === 202) {
+          logger.info(`[ComplaintIntelligence] Successfully triggered full pipeline via HTTP API for ${complaintNumber}`);
+        }
+      }).catch((httpError) => {
+        logger.warn(`[ComplaintIntelligence] Microservice HTTP endpoint at ${microserviceUrl} un-reachable (${httpError?.message}). Falling back to local process spawn.`);
 
-      pyProcess.stdout?.on('data', (data: Buffer) => {
-        const lines = data.toString('utf-8').split(/\r?\n/);
-        for (const line of lines) {
-          if (line.trim()) {
-            logger.info(`[ComplaintIntelligence] ${line}`);
+        /* ── Previous direct process spawn code (commented out as fallback) ──
+        const scriptPath = path.resolve(__dirname, '../../../../../services/complaint_intelligence/run_pipeline_from_atlas.py');
+        const venvPythonIntell = path.resolve(__dirname, '../../../../../services/complaint_intelligence/.venv/Scripts/python.exe');
+        const venvPythonRoot = path.resolve(__dirname, '../../../../../services/.venv/Scripts/python.exe');
+        const pythonExec = process.platform === 'win32'
+          ? (fs.existsSync(venvPythonIntell) ? venvPythonIntell : (fs.existsSync(venvPythonRoot) ? venvPythonRoot : 'python'))
+          : 'python';
+
+        const scriptDir = path.dirname(scriptPath);
+        const pyProcess = spawn(pythonExec, [scriptPath, complaintNumber], {
+          cwd: scriptDir,
+          stdio: ['ignore', 'pipe', 'pipe'],
+          env: { ...process.env, PYTHONUTF8: '1', MONGODB_DB: 'test' }
+        });
+
+        pyProcess.stdout?.on('data', (data: Buffer) => {
+          const lines = data.toString('utf-8').split(/\r?\n/);
+          for (const line of lines) {
+            if (line.trim()) logger.info(`[ComplaintIntelligence] ${line}`);
           }
-        }
-      });
+        });
 
-      pyProcess.stderr?.on('data', (data: Buffer) => {
-        const lines = data.toString('utf-8').split(/\r?\n/);
-        for (const line of lines) {
-          if (line.trim()) {
-            logger.error(`[ComplaintIntelligence Error] ${line}`);
+        pyProcess.stderr?.on('data', (data: Buffer) => {
+          const lines = data.toString('utf-8').split(/\r?\n/);
+          for (const line of lines) {
+            if (line.trim()) logger.error(`[ComplaintIntelligence Error] ${line}`);
           }
-        }
-      });
+        });
 
-      pyProcess.on('close', (code: number) => {
-        if (code === 0) {
-          logger.info(`[ComplaintIntelligence] Pipeline completed successfully for ${complaintNumber}`);
-        } else {
-          logger.error(`[ComplaintIntelligence] Pipeline exited with code ${code} for ${complaintNumber}`);
-        }
+        pyProcess.on('close', (code: number) => {
+          if (code === 0) {
+            logger.info(`[ComplaintIntelligence] Pipeline completed successfully for ${complaintNumber}`);
+          } else {
+            logger.error(`[ComplaintIntelligence] Pipeline exited with code ${code} for ${complaintNumber}`);
+          }
+        });
+        ─────────────── */
+
+        // Fallback execution
+        const scriptPath = path.resolve(__dirname, '../../../../../services/complaint_intelligence/run_pipeline_from_atlas.py');
+        const venvPythonIntell = path.resolve(__dirname, '../../../../../services/complaint_intelligence/.venv/Scripts/python.exe');
+        const venvPythonRoot = path.resolve(__dirname, '../../../../../services/.venv/Scripts/python.exe');
+        const pythonExec = process.platform === 'win32'
+          ? (fs.existsSync(venvPythonIntell) ? venvPythonIntell : (fs.existsSync(venvPythonRoot) ? venvPythonRoot : 'python'))
+          : 'python';
+
+        const scriptDir = path.dirname(scriptPath);
+        const pyProcess = spawn(pythonExec, [scriptPath, complaintNumber], {
+          cwd: scriptDir,
+          stdio: ['ignore', 'pipe', 'pipe'],
+          env: { ...process.env, PYTHONUTF8: '1', MONGODB_DB: 'test' }
+        });
+
+        pyProcess.on('close', (code: number) => {
+          if (code === 0) {
+            logger.info(`[ComplaintIntelligence] Fallback pipeline completed successfully for ${complaintNumber}`);
+          } else {
+            logger.error(`[ComplaintIntelligence] Fallback pipeline exited with code ${code} for ${complaintNumber}`);
+          }
+        });
       });
     } catch (err: any) {
       logger.error(`[ComplaintIntelligence] Failed to trigger pipeline for ${complaintNumber}`, { error: err?.message });

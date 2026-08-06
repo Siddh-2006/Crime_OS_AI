@@ -15,6 +15,7 @@
 
 import { google, gmail_v1 } from 'googleapis';
 import { v4 as uuidv4 } from 'uuid';
+import axios from 'axios';
 import env from '../../../config/env';
 import logger from '../../../config/logger';
 
@@ -338,38 +339,62 @@ Update the checklist and analysis based on this new information.`.trim();
 
 function _spawnComplaintIntelligence(complaintNumber: string): void {
   try {
-    const scriptPath = path.resolve(
-      __dirname,
-      '../../../../../services/complaint_intelligence/run_pipeline_from_atlas.py',
-    );
-    const venvPython = path.resolve(
-      __dirname,
-      '../../../../../services/complaint_intelligence/.venv/Scripts/python.exe',
-    );
-    const pythonExec =
-      process.platform === 'win32' && fs.existsSync(venvPython) ? venvPython : 'python';
-    const scriptDir = path.dirname(scriptPath);
+    const microserviceUrl = env.COMPLAINT_INTELLIGENCE_URL || 'http://localhost:8000';
+    axios.post(`${microserviceUrl}/trigger-full-pipeline`, {
+      complaint_number: complaintNumber,
+    }, { timeout: 5000 }).then((res: any) => {
+      if (res.status === 200 || res.status === 202) {
+        logger.info(`[GmailService] Triggered complaint_intelligence pipeline via HTTP API for ${complaintNumber}`);
+      }
+    }).catch((httpErr: any) => {
+      logger.warn(`[GmailService] Microservice HTTP endpoint at ${microserviceUrl} un-reachable (${httpErr?.message}). Falling back to local process spawn.`);
 
-    const pyProcess = spawn(pythonExec, [scriptPath, complaintNumber], {
-      cwd: scriptDir,
-      stdio: ['ignore', 'pipe', 'pipe'],
-      env: { ...process.env, PYTHONUTF8: '1', MONGODB_DB: 'test' },
+      /* ── Previous direct process spawn code (commented out as fallback) ──
+      const scriptPath = path.resolve(
+        __dirname,
+        '../../../../../services/complaint_intelligence/run_pipeline_from_atlas.py',
+      );
+      const venvPython = path.resolve(
+        __dirname,
+        '../../../../../services/complaint_intelligence/.venv/Scripts/python.exe',
+      );
+      const pythonExec =
+        process.platform === 'win32' && fs.existsSync(venvPython) ? venvPython : 'python';
+      const scriptDir = path.dirname(scriptPath);
+
+      const pyProcess = spawn(pythonExec, [scriptPath, complaintNumber], {
+        cwd: scriptDir,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        env: { ...process.env, PYTHONUTF8: '1', MONGODB_DB: 'test' },
+      });
+      pyProcess.on('close', (code: number) =>
+        logger.info(`[ComplaintIntelligence] Pipeline exited with code ${code} for ${complaintNumber}`)
+      );
+      ─────────────── */
+
+      const scriptPath = path.resolve(
+        __dirname,
+        '../../../../../services/complaint_intelligence/run_pipeline_from_atlas.py',
+      );
+      const venvPython = path.resolve(
+        __dirname,
+        '../../../../../services/complaint_intelligence/.venv/Scripts/python.exe',
+      );
+      const pythonExec =
+        process.platform === 'win32' && fs.existsSync(venvPython) ? venvPython : 'python';
+      const scriptDir = path.dirname(scriptPath);
+
+      const pyProcess = spawn(pythonExec, [scriptPath, complaintNumber], {
+        cwd: scriptDir,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        env: { ...process.env, PYTHONUTF8: '1', MONGODB_DB: 'test' },
+      });
+      pyProcess.on('close', (code: number) =>
+        logger.info(`[ComplaintIntelligence] Fallback pipeline exited with code ${code} for ${complaintNumber}`)
+      );
     });
-    pyProcess.stdout?.on('data', (d: Buffer) =>
-      d.toString('utf-8').split(/\r?\n/).filter(Boolean).forEach((l: string) =>
-        logger.info(`[ComplaintIntelligence] ${l}`)
-      )
-    );
-    pyProcess.stderr?.on('data', (d: Buffer) =>
-      d.toString('utf-8').split(/\r?\n/).filter(Boolean).forEach((l: string) =>
-        logger.warn(`[ComplaintIntelligence] ${l}`)
-      )
-    );
-    pyProcess.on('close', (code: number) =>
-      logger.info(`[ComplaintIntelligence] Pipeline exited with code ${code} for ${complaintNumber}`)
-    );
   } catch (err: any) {
-    logger.warn(`[GmailService] Failed to spawn complaint_intelligence for ${complaintNumber}: ${err.message}`);
+    logger.warn(`[GmailService] Failed to trigger complaint_intelligence for ${complaintNumber}: ${err.message}`);
   }
 }
 

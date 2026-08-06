@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { AnalysisQueue } from '../../../shared/queue/AnalysisQueue';
 import { subscribeProgress, publishProgress } from '../../../shared/utils/analysisProgress';
+import { triggerComplaintIntelligencePipelineByCaseId } from '../../../shared/services/complaintIntelligenceService';
 import { getRedisClient } from '../../../config/redis';
 import { RequestComposerService } from '../services/requestComposerService';
 import { InvestigationOrchestrator } from '../services/investigationOrchestrator';
@@ -65,6 +66,11 @@ export class InvestigationController {
       // Enqueue via BullMQ — the worker runs runAnalysis() in the background.
       // lockDuration on the worker is set to 25 min so the lock survives long LLM calls.
       await AnalysisQueue.enqueueAnalyzeCase(id, language);
+
+      // Trigger Complaint Intelligence pipeline in background as well on rerun
+      triggerComplaintIntelligencePipelineByCaseId(id).catch((err) => {
+        logger.error('[InvestigationController] Error triggering complaint intelligence pipeline rerun:', err);
+      });
 
       sendSuccess(res, HttpStatusCode.OK, 'Analysis job enqueued. Connect to /analysis/progress for live updates.');
     } catch (error) {
