@@ -145,7 +145,6 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
     { id: 'evidence', label: '3. Evidence Intelligence', icon: CheckCircle2 },
     { id: 'missing_info', label: '4. Missing Info & Evidence', icon: HelpCircle },
     { id: 'contradictions', label: '5. Contradictions', icon: AlertTriangle },
-    { id: 'complaint', label: '6. Original Complaint', icon: FileText },
   ];
 
   return (

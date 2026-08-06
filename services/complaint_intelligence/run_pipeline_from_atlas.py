@@ -142,6 +142,7 @@ async def main():
             rtype = str(ev.get("resourceType") or ev.get("type") or "image").lower()
             cloudinary_url = str(ev.get("secureUrl") or ev.get("url") or ev.get("cloudinaryUrl") or "")
             ai_meta = ev.get("aiMetadata") or {}
+            short_cap = ai_meta.get("caption") or ""
             ocr_txt = ai_meta.get("ocrText") or ev.get("ocrText")
             florence_desc = ai_meta.get("aiSummary") or ai_meta.get("caption") or ai_meta.get("m4Caption") or ev.get("aiSummary") or ev.get("description")
             transcript = ai_meta.get("speechTranscript") or ai_meta.get("audioTranscript") or ev.get("transcript")
@@ -224,7 +225,7 @@ async def main():
             if "aiMetadata" not in ev or not isinstance(ev["aiMetadata"], dict):
                 ev["aiMetadata"] = {}
             if florence_desc:
-                ev["aiMetadata"]["caption"] = short_cap if 'short_cap' in locals() and short_cap else florence_desc
+                ev["aiMetadata"]["caption"] = short_cap or florence_desc
                 ev["aiMetadata"]["aiSummary"] = florence_desc
             if ocr_txt:
                 ev["aiMetadata"]["ocrText"] = ocr_txt

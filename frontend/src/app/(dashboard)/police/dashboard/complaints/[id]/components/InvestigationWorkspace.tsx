@@ -12,7 +12,8 @@ import { CopilotSidebar } from './CopilotSidebar';
 import { Loader } from '@/components/ui/Loader';
 import { useToast } from '@/hooks/useToast';
 import { ToastContainer } from '@/components/ui/Toast';
-import { Bot, BookOpen, ClipboardList, Send, FolderOpen, Sparkles, Users } from 'lucide-react';
+import { Bot, BookOpen, ClipboardList, Send, FolderOpen, Sparkles, Users, FileText, Brain, Calendar, MapPin, Download, CheckCheck, Loader2, Clock, FileImage, FileVideo, FileAudio, File, ChevronRight, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Card, CardHeader } from '@/components/ui/Card';
 import ThreadViewerModal from './ThreadViewerModal';
 import SnapshotDetailModal from './SnapshotDetailModal';
 import StepDetailModal from './StepDetailModal';
@@ -20,12 +21,14 @@ import { AddEvidenceModal } from './AddEvidenceModal';
 import ComplaintDetailModal from './ComplaintDetailModal';
 import { DiaryDetailModal } from './DiaryDetailModal';
 import { useTranslation } from '@/context/TranslationContext';
+import { CaseUnderstandingView, CaseUnderstandingData } from '@/components/case-understanding/CaseUnderstandingView';
+import { API_ROUTES } from '@/lib/constants';
 
 interface InvestigationWorkspaceProps {
   caseId: string;
 }
 
-type WorkspaceTab = 'analysis' | 'diary' | 'checklist' | 'requests' | 'evidence' | 'participants';
+type WorkspaceTab = 'analysis' | 'diary' | 'checklist' | 'requests' | 'evidence' | 'participants' | 'complaint' | 'case_understanding' | 'timeline';
 
 export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) {
   const { toasts, showToast, removeToast } = useToast();
@@ -43,6 +46,10 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
   const [threads, setThreads] = useState<any[]>([]);
   const [threadFilter, setThreadFilter] = useState<'all' | 'department' | 'citizen'>('all');
   const [evidence, setEvidence] = useState<any[]>([]);
+
+  // Complaint preview & Case Understanding
+  const [complaintData, setComplaintData] = useState<any | null>(null);
+  const [caseUnderstanding, setCaseUnderstanding] = useState<CaseUnderstandingData | null>(null);
 
   // Composer State
   const [composerOpen, setComposerOpen] = useState(false);
@@ -99,6 +106,22 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
         setThreads(threadRes.data.data || []);
       } catch (err) {
         console.error('Failed to fetch threads:', err);
+      }
+
+      // Fetch original complaint data
+      try {
+        const complaintRes = await apiClient.get(API_ROUTES.COMPLAINTS.DETAIL(caseId));
+        if (complaintRes.data?.data) setComplaintData(complaintRes.data.data);
+      } catch (err) {
+        console.error('Failed to fetch complaint data:', err);
+      }
+
+      // Fetch Case Understanding
+      try {
+        const cuRes = await apiClient.get(API_ROUTES.CASE_UNDERSTANDING.DETAIL(caseId));
+        if (cuRes.data?.data) setCaseUnderstanding(cuRes.data.data);
+      } catch {
+        /* case understanding may not be ready yet */
       }
     } catch (error) {
       console.error('Failed to load workspace data', error);
@@ -280,6 +303,9 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
     { id: 'requests', label: 'Requests', icon: <Send size={15} />, badge: departmentThreadCount + citizenThreadCount || undefined },
     { id: 'evidence', label: 'Evidence', icon: <FolderOpen size={15} />, badge: evidence.length || undefined },
     { id: 'participants', label: 'Case Participants', icon: <Users size={15} />, badge: participants.length || undefined },
+    { id: 'complaint', label: 'Original Complaint', icon: <FileText size={15} /> },
+    { id: 'case_understanding', label: 'Case Understanding', icon: <Brain size={15} /> },
+    { id: 'timeline', label: 'Timeline', icon: <Clock size={15} />, badge: caseUnderstanding?.timeline?.length || undefined },
   ];
 
   if (loading && !snapshot && !checklist && diaryEntries.length === 0) {
@@ -372,11 +398,23 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
         )}
 
         {activeTab === 'evidence' && (
-          <EvidencePanel evidence={evidence} caseId={caseId} onRefresh={fetchWorkspaceData} snapshot={snapshot} />
+          <EvidencePanel evidence={evidence} caseId={caseId} onRefresh={fetchWorkspaceData} snapshot={snapshot} caseUnderstanding={caseUnderstanding} />
         )}
 
         {activeTab === 'participants' && (
           <ParticipantsPanel participants={participants} caseId={caseId} onRefresh={fetchWorkspaceData} />
+        )}
+
+        {activeTab === 'complaint' && (
+          <OriginalComplaintPanel complaint={complaintData} />
+        )}
+
+        {activeTab === 'case_understanding' && (
+          <CaseUnderstandingPanel caseUnderstanding={caseUnderstanding} />
+        )}
+
+        {activeTab === 'timeline' && (
+          <TimelinePanel caseUnderstanding={caseUnderstanding} />
         )}
       </div>
 
@@ -464,7 +502,7 @@ const evidenceTypeIcon: Record<string, string> = {
   other: '📄',
 };
 
-function EvidencePanel({ evidence, caseId, onRefresh, snapshot }: { evidence: any[]; caseId: string; onRefresh: () => void; snapshot?: any }) {
+function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstanding }: { evidence: any[]; caseId: string; onRefresh: () => void; snapshot?: any; caseUnderstanding?: import('@/components/case-understanding/CaseUnderstandingView').CaseUnderstandingData | null }) {
   const [selectedEvidence, setSelectedEvidence] = React.useState<any | null>(null);
   const [addModalOpen, setAddModalOpen] = React.useState(false);
   const requestedEvidence = snapshot?.missing_information || [];
@@ -499,110 +537,201 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot }: { evidence: an
           + Add Evidence
         </button>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Render requested evidence blocks as dull blocks */}
-        {requestedEvidence.map((req: string, idx: number) => (
-          <div key={`req-${idx}`} className="bg-neutral-50 border border-dashed border-neutral-300 rounded-xl p-4 shadow-sm flex gap-3 opacity-50 relative">
-            <div className="text-2xl">⏳</div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-neutral-700 truncate">{req}</p>
-              <p className="text-xs text-neutral-500 capitalize">Requested / Yet to upload</p>
-              <div className="mt-2">
-                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border bg-neutral-100 text-neutral-500 border-neutral-300">
-                  PENDING FROM COMPLAINANT
-                </span>
-              </div>
-            </div>
-          </div>
-        ))}
-        {evidence.map((ev: any) => (
-          <div 
-            key={ev.evidence_id || ev._id} 
-            onClick={() => setSelectedEvidence(ev)}
-            className="bg-white border border-neutral-200 rounded-xl p-4 shadow-sm flex gap-3 cursor-pointer hover:border-blue-300 hover:shadow-md transition-all group"
-          >
-            <div className="text-2xl group-hover:scale-110 transition-transform">{evidenceTypeIcon[ev.type] ?? '📄'}</div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-neutral-900 truncate group-hover:text-blue-700 transition-colors">{ev.title || ev.evidence_id}</p>
-              <p className="text-xs text-neutral-500 capitalize">{ev.type?.replace(/_/g, ' ')}</p>
-              
-              {/* Show Source Tag */}
-              <div className="mt-1">
-                <span className="text-[9px] font-medium text-neutral-500 bg-neutral-100 px-1.5 py-0.5 rounded border border-neutral-200">
-                  Added by {ev.source?.replace(/_/g, ' ') || 'complainant'} on {new Date(ev.collected_at || ev.createdAt).toLocaleDateString('en-IN')}
-                </span>
-              </div>
 
-              {ev.ai_description && <p className="text-xs text-neutral-600 mt-2 line-clamp-2">{ev.ai_description}</p>}
-              
-              {ev.ai_tags && ev.ai_tags.length > 0 && (
-                 <div className="flex flex-wrap gap-1 mt-2">
-                   {ev.is_physical && (
-                     <span className="text-[9px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-200 font-bold">
-                       📦 PHYSICAL
-                     </span>
-                   )}
-                   {ev.ai_tags.map((tag: string) => (
-                     <span key={tag} className="text-[9px] bg-neutral-100 text-neutral-500 px-1.5 py-0.5 rounded border border-neutral-200">
-                       #{tag}
-                     </span>
-                   ))}
-                 </div>
-              )}
-
-              {Array.isArray(ev.applicableSections) && ev.applicableSections.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2">
-                  <span className="text-[9px] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded border border-emerald-200 font-bold">
-                    📚 {ev.applicableSections.length} section{ev.applicableSections.length > 1 ? 's' : ''}
+      {/* ── Pending requested blocks ── */}
+      {requestedEvidence.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          {requestedEvidence.map((req: string, idx: number) => (
+            <div key={`req-${idx}`} className="bg-neutral-50 border border-dashed border-neutral-300 rounded-xl p-4 shadow-sm flex gap-3 opacity-50">
+              <div className="text-2xl">⏳</div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-neutral-700 truncate">{req}</p>
+                <p className="text-xs text-neutral-500 capitalize">Requested / Yet to upload</p>
+                <div className="mt-2">
+                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border bg-neutral-100 text-neutral-500 border-neutral-300">
+                    PENDING FROM COMPLAINANT
                   </span>
-                  {ev.applicableSections.slice(0, 2).map((section: any, index: number) => (
-                    <span key={`${section.code}-${index}`} className="text-[9px] bg-white text-neutral-700 px-1.5 py-0.5 rounded border border-neutral-200">
-                      {section.code}
-                    </span>
-                  ))}
                 </div>
-              )}
-              <div className="flex items-center gap-2 mt-2">
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                  ev.status === 'verified' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-yellow-50 text-yellow-700 border-yellow-200'
-                }`}>
-                  {ev.status === 'verified' ? '✓ Verified' : 'Unverified'}
-                </span>
-                {(ev.isPhysical || ev.is_physical) && (ev.physicalDetails?.currentLocation || ev.current_location) && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-neutral-100 text-neutral-700 border-neutral-200 flex items-center gap-1">
-                    📍 {(ev.physicalDetails?.currentLocation || ev.current_location).toUpperCase()}
-                  </span>
-                )}
-                {(ev.isPhysical || ev.is_physical) && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // Show Transfer Modal
-                      // Since we are running out of time, I will just alert for now or implement a quick prompt
-                      const target = prompt('Enter Department Email or ID to transfer evidence:');
-                      if (target) {
-                        apiClient.post(`/complaints/${caseId}/evidence/${ev._id || ev.evidence_id || ev.publicId}/transfer`, {
-                          targetStationEmail: target.includes('@') ? target : '',
-                          manualStationName: target.includes('@') ? 'External Department' : target
-                        }).then(() => {
-                          alert('Evidence transfer request sent successfully.');
-                          onRefresh();
-                        }).catch((err) => {
-                          alert('Failed to transfer evidence: ' + (err.response?.data?.message || err.message));
-                        });
-                      }
-                    }}
-                    className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors z-10 relative"
-                  >
-                    Transfer
-                  </button>
-                )}
               </div>
             </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Evidence cards — from CI evidence_intelligence if available, else raw list ── */}
+      {(() => {
+        const ciItems: any[] = caseUnderstanding?.evidence_intelligence || caseUnderstanding?.evidence_analysis || [];
+
+        // Helper: find matching raw evidence by evidence_id or filename
+        const findRaw = (ciItem: any): any | null =>
+          evidence.find((e: any) =>
+            (e.evidence_id && ciItem.evidence_id && e.evidence_id === ciItem.evidence_id) ||
+            (e.originalFilename && ciItem.filename && e.originalFilename === ciItem.filename) ||
+            (e.title && ciItem.filename && e.title === ciItem.filename)
+          ) || null;
+
+        const importanceBadgeClass = (imp: string) => {
+          switch (imp?.toLowerCase()) {
+            case 'critical': return 'bg-red-100 text-red-800';
+            case 'high':     return 'bg-orange-100 text-orange-800';
+            case 'medium':   return 'bg-amber-100 text-amber-800';
+            default:         return 'bg-slate-100 text-slate-600';
+          }
+        };
+
+        // ── Render from CI evidence_intelligence ──
+        if (ciItems.length > 0) {
+          // De-duplicate by filename/evidence_id
+          const seen = new Set<string>();
+          const unique = ciItems.filter((ci: any) => {
+            const key = ci.filename || ci.evidence_id;
+            if (key && seen.has(key)) return false;
+            if (key) seen.add(key);
+            return true;
+          });
+
+          const importanceBorder = (imp: string) => {
+            switch (imp?.toLowerCase()) {
+              case 'critical': return 'border-l-red-500';
+              case 'high':     return 'border-l-orange-400';
+              case 'medium':   return 'border-l-amber-400';
+              default:         return 'border-l-blue-400';
+            }
+          };
+
+          const importanceBadge = (imp: string) => {
+            switch (imp?.toLowerCase()) {
+              case 'critical': return 'bg-red-100 text-red-800 border-red-200';
+              case 'high':     return 'bg-orange-100 text-orange-800 border-orange-200';
+              case 'medium':   return 'bg-amber-100 text-amber-800 border-amber-200';
+              default:         return 'bg-slate-100 text-slate-600 border-slate-200';
+            }
+          };
+
+          // Lucide icon by file extension
+          const FileIcon = (filename: string) => {
+            const ext = (filename || '').split('.').pop()?.toLowerCase() || '';
+            if (['jpg','jpeg','png','gif','webp','bmp'].includes(ext))
+              return <FileImage size={18} className="text-slate-600" />;
+            if (['mp4','mov','avi','webm'].includes(ext))
+              return <FileVideo size={18} className="text-slate-600" />;
+            if (['mp3','wav','ogg','aac'].includes(ext))
+              return <FileAudio size={18} className="text-slate-600" />;
+            return <File size={18} className="text-slate-600" />;
+          };
+
+          return (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {unique.map((ci: any, idx: number) => {
+                const caption = ci.caption || ci.filename || `Evidence ${idx + 1}`;
+                const summary = (ci.summary || '').trim();
+                const supports: string[] = ci.supports || ci.allegations_supported || [];
+                const rawEv = findRaw(ci);
+
+                return (
+                  <div
+                    key={ci.evidence_id || idx}
+                    onClick={() => setSelectedEvidence(rawEv || ci)}
+                    className={`bg-white border border-neutral-200 border-l-4 ${importanceBorder(ci.importance)} rounded-xl p-4 cursor-pointer hover:shadow-md transition-all group flex flex-col gap-2.5`}
+                  >
+                    {/* Header */}
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center">
+                        {FileIcon(ci.filename || '')}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-sm font-semibold text-neutral-900 leading-snug line-clamp-2 group-hover:text-blue-700 transition-colors">
+                            {caption}
+                          </p>
+                          <span className={`flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded border uppercase tracking-wide ${importanceBadge(ci.importance)}`}>
+                            {ci.importance || 'medium'}
+                          </span>
+                        </div>
+                        {ci.filename && ci.filename !== caption && (
+                          <p className="text-[10px] text-neutral-400 mt-0.5 truncate font-mono">{ci.filename}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Summary */}
+                    {summary && (
+                      <p className="text-xs text-neutral-600 leading-relaxed line-clamp-3">
+                        {summary}
+                      </p>
+                    )}
+
+                    {/* Supports allegations */}
+                    {supports.length > 0 && (
+                      <div className="pt-2 border-t border-neutral-100">
+                        <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider mb-1.5">Supports Allegations</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {supports.map((alg: string, aIdx: number) => (
+                            <span key={aIdx} className="px-2 py-0.5 text-[11px] bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full font-medium">
+                              {alg}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Footer */}
+                    <div className="flex items-center justify-between pt-2 border-t border-neutral-100 mt-auto">
+                      {rawEv ? (
+                        <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                          <CheckCircle2 size={11} className="text-emerald-600" />
+                          Full details available
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-[10px] text-neutral-400">
+                          <AlertCircle size={11} />
+                          AI summary only
+                        </span>
+                      )}
+                      <span className="flex items-center gap-0.5 text-[11px] font-semibold text-blue-600 group-hover:text-blue-800 transition-colors">
+                        View Details <ChevronRight size={12} />
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        }
+
+        // ── Fallback: raw evidence grid (original design) ──
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {evidence.map((ev: any) => (
+              <div
+                key={ev.evidence_id || ev._id}
+                onClick={() => setSelectedEvidence(ev)}
+                className="bg-white border border-neutral-200 rounded-xl p-4 shadow-sm flex gap-3 cursor-pointer hover:border-blue-300 hover:shadow-md transition-all group"
+              >
+                <div className="text-2xl group-hover:scale-110 transition-transform">{evidenceTypeIcon[ev.type] ?? '📄'}</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-neutral-900 truncate group-hover:text-blue-700 transition-colors">{ev.title || ev.evidence_id}</p>
+                  <p className="text-xs text-neutral-500 capitalize">{ev.type?.replace(/_/g, ' ')}</p>
+                  <div className="mt-1">
+                    <span className="text-[9px] font-medium text-neutral-500 bg-neutral-100 px-1.5 py-0.5 rounded border border-neutral-200">
+                      Added by {ev.source?.replace(/_/g, ' ') || 'complainant'} on {new Date(ev.collected_at || ev.createdAt).toLocaleDateString('en-IN')}
+                    </span>
+                  </div>
+                  {ev.ai_description && <p className="text-xs text-neutral-600 mt-2 line-clamp-2">{ev.ai_description}</p>}
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                      ev.status === 'verified' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                    }`}>
+                      {ev.status === 'verified' ? '✓ Verified' : 'Unverified'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        );
+      })()}
+
       
       <EvidenceViewerModal 
         isOpen={!!selectedEvidence} 
@@ -615,7 +744,122 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot }: { evidence: an
         caseId={caseId} 
         onSuccess={onRefresh} 
       />
+
+      {/* ── Missing Info & Evidence (from Case Intelligence) ── */}
+      {(() => {
+        const missingItems = caseUnderstanding?.missing_information_and_evidence || [
+          ...(caseUnderstanding?.missing_information || []).map((m: any) => ({ title: m.item, description: m.reason, importance: m.importance })),
+          ...(caseUnderstanding?.missing_evidence || []).map((m: any) => ({ title: m.evidence_name, description: m.reason_relevant, importance: m.importance })),
+        ];
+        if (!missingItems.length) return null;
+        return (
+          <div className="mt-8">
+            <Card className="p-6">
+              <CardHeader title="Missing Information & Evidence (Complainant Clarifications)" />
+              <div className="mt-4 space-y-3">
+                {missingItems.map((item: any, i: number) => (
+                  <MissingInfoCardIO
+                    key={i}
+                    item={item}
+                    caseId={caseId}
+                  />
+                ))}
+              </div>
+            </Card>
+          </div>
+        );
+      })()}
+
+      {/* ── Contradictions (from Case Intelligence) ── */}
+      {(() => {
+        const contradictions = caseUnderstanding?.contradictions;
+        if (!contradictions || contradictions.length === 0) return (
+          <div className="mt-6">
+            <Card className="p-6">
+              <CardHeader title="Contradictions & Discrepancies" />
+              <div className="mt-4">
+                <p className="text-sm text-emerald-700 bg-emerald-50 p-3 rounded-lg border border-emerald-200 font-medium">
+                  No contradictions or conflicts detected across complaint and evidence.
+                </p>
+              </div>
+            </Card>
+          </div>
+        );
+        return (
+          <div className="mt-6">
+            <Card className="p-6">
+              <CardHeader title="Contradictions & Discrepancies" />
+              <div className="mt-4 space-y-3">
+                {contradictions.map((c: any, i: number) => {
+                  const evIds = c.related_evidence_ids || c.involved_evidence_ids || [];
+                  return (
+                    <div key={i} className="p-3 border border-red-200 bg-red-50 rounded-lg text-xs text-red-900 font-medium space-y-1">
+                      <p>• {c.description}</p>
+                      {evIds.length > 0 && (
+                        <p className="text-[11px] text-red-700">Involved Evidence IDs: {evIds.join(', ')}</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          </div>
+        );
+      })()}
     </>
+  );
+}
+
+// ─── Missing Info Card (IO Evidence Panel) ────────────────────────────────────
+function MissingInfoCardIO({ item, caseId }: { item: { title: string; description: string; importance: string }; caseId: string }) {
+  const [status, setStatus] = React.useState<'idle' | 'loading' | 'sent'>('idle');
+
+  const handleRequest = async () => {
+    if (status !== 'idle') return;
+    setStatus('loading');
+    try {
+      await apiClient.post(`/cases/${caseId}/citizen-request/missing-info`, {
+        item: item.title,
+        reason: item.description,
+        importance: item.importance,
+        type: 'missing_information_and_evidence',
+      });
+      setStatus('sent');
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Failed to send request to complainant');
+      setStatus('idle');
+    }
+  };
+
+  return (
+    <div className="p-3.5 border border-amber-200 bg-amber-50/70 rounded-lg text-xs space-y-2">
+      <div className="flex justify-between items-start gap-2">
+        <span className="font-bold text-amber-950 text-sm">{item.title}</span>
+        <span className="uppercase text-[10px] font-bold bg-amber-200 text-amber-900 px-2 py-0.5 rounded shrink-0">{item.importance}</span>
+      </div>
+      <p className="text-amber-900 leading-relaxed">{item.description}</p>
+      <div className="pt-1">
+        <button
+          onClick={handleRequest}
+          disabled={status !== 'idle'}
+          className={`flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-md transition-all ${
+            status === 'sent'
+              ? 'bg-green-100 text-green-700 border border-green-200 cursor-default'
+              : status === 'loading'
+              ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+              : 'bg-white text-slate-800 border border-slate-300 hover:bg-slate-100 cursor-pointer shadow-xs'
+          }`}
+        >
+          {status === 'sent' ? (
+            <><CheckCheck size={12} /> Requested from Complainant</>
+          ) : status === 'loading' ? (
+            <><Loader2 size={12} className="animate-spin" /> Sending...</>
+          ) : (
+            <><Send size={12} /> Request from Complainant</>
+          )}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -866,6 +1110,239 @@ function ParticipantDetailModal({ participant: p, onClose }: { participant: any;
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+
+// ─── Original Complaint Panel ──────────────────────────────────────────────
+
+function OriginalComplaintPanel({ complaint }: { complaint: any | null }) {
+  if (!complaint) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center space-y-3">
+        <FileText className="h-10 w-10 text-neutral-300" />
+        <p className="text-sm font-semibold text-neutral-600">Loading complaint details...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 py-2">
+      {/* Header */}
+      <div className="flex items-center gap-3 pb-3 border-b border-neutral-200">
+        <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
+          <FileText size={18} />
+        </div>
+        <div>
+          <h2 className="text-base font-bold text-neutral-900">{complaint.complaintNumber}</h2>
+          <p className="text-xs text-neutral-500">
+            Filed on {new Date(complaint.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+          </p>
+        </div>
+        <span className="ml-auto px-2.5 py-1 text-xs font-bold rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+          {complaint.status?.replace(/_/g, ' ')}
+        </span>
+      </div>
+
+      {/* Incident meta */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-neutral-50 rounded-xl border border-neutral-200 p-3">
+          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-1 mb-1">
+            <Calendar size={10} /> Date &amp; Time
+          </p>
+          <p className="text-sm font-semibold text-neutral-800">
+            {new Date(complaint.incidentDate).toLocaleDateString('en-IN')} {complaint.incidentTime || ''}
+          </p>
+        </div>
+        <div className="bg-neutral-50 rounded-xl border border-neutral-200 p-3">
+          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-1 mb-1">
+            <MapPin size={10} /> Place of Occurrence
+          </p>
+          <p className="text-sm font-semibold text-neutral-800">{complaint.incidentPlace}</p>
+        </div>
+        <div className="bg-neutral-50 rounded-xl border border-neutral-200 p-3">
+          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">Category</p>
+          <p className="text-sm font-semibold text-neutral-800 uppercase">
+            {complaint.category?.replace('_', ' ') || 'Uncategorized'}
+          </p>
+        </div>
+      </div>
+
+      {/* Complainant */}
+      <div className="bg-white rounded-xl border border-neutral-200 p-4">
+        <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">Complainant</p>
+        <p className="text-sm font-bold text-neutral-800">
+          {complaint.citizen?.firstName} {complaint.citizen?.lastName}
+        </p>
+        <p className="text-xs text-neutral-500">{complaint.citizen?.phone}</p>
+        <p className="text-xs text-neutral-500">{complaint.citizen?.email}</p>
+      </div>
+
+      {/* Brief Summary */}
+      <div className="bg-white rounded-xl border border-neutral-200 p-4">
+        <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">Brief Summary</p>
+        <p className="text-sm font-semibold text-neutral-800">{complaint.shortDescription}</p>
+      </div>
+
+      {/* Detailed Description */}
+      <div className="bg-white rounded-xl border border-neutral-200 p-4">
+        <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">Detailed Description</p>
+        <p className="text-sm text-neutral-700 whitespace-pre-line leading-relaxed">
+          {complaint.detailedDescription || <span className="text-neutral-400 italic">No detailed description provided.</span>}
+        </p>
+      </div>
+
+      {/* Evidence attachments */}
+      {complaint.evidence?.length > 0 && (
+        <div className="bg-white rounded-xl border border-neutral-200 p-4">
+          <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-3">
+            Attached Evidence ({complaint.evidence.length})
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {complaint.evidence.map((file: any) => (
+              <div key={file.publicId} className="flex items-center justify-between gap-3 p-3 rounded-lg border border-neutral-100 bg-neutral-50 hover:bg-neutral-100 transition-colors">
+                <div className="flex items-center gap-2 min-w-0">
+                  <FileText size={16} className="text-blue-500 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-neutral-800 truncate">{file.originalFilename}</p>
+                    <p className="text-[10px] text-neutral-400">{(file.size / 1024 / 1024).toFixed(2)} MB • {file.extension?.toUpperCase()}</p>
+                  </div>
+                </div>
+                <a href={file.secureUrl} target="_blank" rel="noopener noreferrer" className="flex-shrink-0 p-1.5 rounded hover:bg-neutral-200 text-neutral-500 transition-colors" title="Download">
+                  <Download size={14} />
+                </a>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+// ─── Case Understanding Panel ──────────────────────────────────────────────
+
+function CaseUnderstandingPanel({ caseUnderstanding }: { caseUnderstanding: CaseUnderstandingData | null }) {
+  if (!caseUnderstanding) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center space-y-4">
+        <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-500">
+          <Brain className="h-10 w-10 animate-pulse" />
+        </div>
+        <div className="space-y-1">
+          <p className="text-sm font-bold text-neutral-700">Case Understanding Not Ready</p>
+          <p className="text-xs text-neutral-400 max-w-xs leading-relaxed">
+            The AI Case Understanding pipeline hasn't processed this complaint yet.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const overviewData = caseUnderstanding.case_understanding || caseUnderstanding.overview || {
+    complaint_summary: 'No summary available.',
+    incident_overview: 'No incident overview available.',
+    crime_category: 'Uncategorized',
+    crime_subtype: 'General',
+    priority: 'medium' as const,
+    confidence: 0.9,
+  };
+
+  const getPriorityBadge = (priority: string) => {
+    switch (priority?.toLowerCase()) {
+      case 'critical': return <span className="px-3 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800 border border-red-300 uppercase">Critical Priority</span>;
+      case 'high': return <span className="px-3 py-1 text-xs font-bold rounded-full bg-orange-100 text-orange-800 border border-orange-300 uppercase">High Priority</span>;
+      case 'medium': return <span className="px-3 py-1 text-xs font-bold rounded-full bg-yellow-100 text-yellow-800 border border-yellow-300 uppercase">Medium Priority</span>;
+      default: return <span className="px-3 py-1 text-xs font-bold rounded-full bg-blue-100 text-blue-800 border border-blue-300 uppercase">Low Priority</span>;
+    }
+  };
+
+  return (
+    <div className="space-y-6 py-2">
+      {/* Top Banner */}
+      <div className="bg-slate-900 text-white rounded-xl p-6 shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-bold tracking-tight">Case Understanding Intelligence</h2>
+            {getPriorityBadge(overviewData.priority)}
+          </div>
+          <p className="text-slate-400 text-sm mt-1">
+            Category: <strong className="text-white">{overviewData.crime_category}</strong> ({overviewData.crime_subtype})
+            • Confidence: <strong className="text-emerald-400">{(overviewData.confidence * 100).toFixed(0)}%</strong>
+          </p>
+        </div>
+        {caseUnderstanding.processing_duration_ms && (
+          <div className="text-xs bg-slate-800 px-3 py-1.5 rounded-lg text-slate-300 border border-slate-700">
+            Single-Pass LLM Latency: <strong>{(caseUnderstanding.processing_duration_ms / 1000).toFixed(2)}s</strong>
+          </div>
+        )}
+      </div>
+
+      <Card className="space-y-4 p-6">
+        <CardHeader title="Case Understanding Overview" />
+        <div className="space-y-4">
+          <div>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400">Complaint Summary</h4>
+            <p className="text-sm font-semibold text-neutral-900 mt-1">{overviewData.complaint_summary}</p>
+          </div>
+          <div className="border-t border-neutral-100 pt-4">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400">Integrated Incident Overview</h4>
+            <p className="text-sm text-neutral-700 mt-1 leading-relaxed whitespace-pre-line">{overviewData.incident_overview}</p>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+
+// ─── Timeline Panel ────────────────────────────────────────────────────────
+
+function TimelinePanel({ caseUnderstanding }: { caseUnderstanding: CaseUnderstandingData | null }) {
+  if (!caseUnderstanding) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center space-y-4">
+        <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-500">
+          <Clock className="h-10 w-10 animate-pulse" />
+        </div>
+        <div className="space-y-1">
+          <p className="text-sm font-bold text-neutral-700">Timeline Not Ready</p>
+          <p className="text-xs text-neutral-400 max-w-xs leading-relaxed">
+            The AI Case Understanding pipeline hasn't processed this complaint yet.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="py-2">
+      <Card className="p-6">
+        <CardHeader title="Chronological Case Timeline" />
+        <div className="mt-4 space-y-4">
+          {(!caseUnderstanding.timeline || caseUnderstanding.timeline.length === 0) ? (
+            <p className="text-sm text-neutral-500 italic">No timeline events extracted.</p>
+          ) : (
+            caseUnderstanding.timeline.map((event, idx) => (
+              <div key={idx} className="flex gap-4 items-start border-l-2 border-slate-900 pl-4 py-1">
+                <div className="space-y-1">
+                  <span className="text-xs font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-800">
+                    {event.timestamp}
+                  </span>
+                  <p className="text-sm text-neutral-800 font-medium mt-1">{event.description}</p>
+                  {event.supporting_evidence_ids && event.supporting_evidence_ids.length > 0 && (
+                    <p className="text-xs text-neutral-400">
+                      Evidence Ref: {event.supporting_evidence_ids.join(', ')}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </Card>
     </div>
   );
 }
