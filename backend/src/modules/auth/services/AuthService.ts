@@ -86,24 +86,20 @@ export class AuthService {
       });
     }
 
-    if (!complainant.isEmailVerified) {
-      const otp = await this.otpService.generateAndStoreEmailVerificationOtp(dto.email);
+    const otp = await this.otpService.generateAndStoreEmailVerificationOtp(dto.email);
 
-      try {
-        await EmailQueue.enqueueVerificationOtp({
-          to: dto.email,
-          name: dto.firstName,
-          otp,
-          expiryMinutes: REDIS_TTL.OTP / 60,
-        });
-      } catch (err) {
-        logger.warn('Failed to enqueue complainant verification OTP email (Redis might be down)', { error: err });
-      }
-
-      logger.info('Complainant profile created/found — verification OTP sent', { email: dto.email });
-    } else {
-      logger.info('Complainant profile found — email already verified', { email: dto.email });
+    try {
+      await EmailQueue.enqueueVerificationOtp({
+        to: dto.email,
+        name: dto.firstName,
+        otp,
+        expiryMinutes: REDIS_TTL.OTP / 60,
+      });
+    } catch (err) {
+      logger.warn('Failed to enqueue complainant verification OTP email (Redis might be down)', { error: err });
     }
+
+    logger.info('Complainant profile created/found — verification OTP sent', { email: dto.email });
     return complainant;
   }
 
