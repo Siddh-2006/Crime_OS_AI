@@ -317,7 +317,6 @@ export class ComplaintService {
     try {
       logger.info(`[ComplaintIntelligence] Triggering full pipeline for ${complaintNumber}`);
 
-<<<<<<< HEAD
       // 1. Primary: Microservice HTTP call
       const microserviceUrl = env.COMPLAINT_INTELLIGENCE_URL || 'http://localhost:8000';
       axios.post(`${microserviceUrl}/trigger-full-pipeline`, {
@@ -328,13 +327,11 @@ export class ComplaintService {
         }
       }).catch((httpError) => {
         logger.warn(`[ComplaintIntelligence] Microservice HTTP endpoint at ${microserviceUrl} un-reachable (${httpError?.message}). Falling back to local process spawn.`);
-=======
-      const pyProcess = spawn(pythonExec, [scriptPath, complaintNumber], {
-        cwd: scriptDir,
-        stdio: ['ignore', 'pipe', 'pipe'],
-        env: { ...process.env, PYTHONUTF8: '1', MONGODB_DB: 'crime_os' }
-      });
->>>>>>> 35b1553 (feat/case_diary_implemented)
+      // const pyProcess = spawn(pythonExec, [scriptPath, complaintNumber], {
+      //   cwd: scriptDir,
+      //   stdio: ['ignore', 'pipe', 'pipe'],
+      //   env: { ...process.env, PYTHONUTF8: '1', MONGODB_DB: 'crime_os' }
+      // });
 
         /* ── Previous direct process spawn code (commented out as fallback) ──
         const scriptPath = path.resolve(__dirname, '../../../../../services/complaint_intelligence/run_pipeline_from_atlas.py');
