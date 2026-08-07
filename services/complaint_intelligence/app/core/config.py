@@ -42,8 +42,8 @@ class Settings(BaseSettings):
     REDIS_DB: int = Field(default=0, ge=0, le=15)
 
     # ── MongoDB ───────────────────────────────────────────────────────────────
-    MONGODB_URI: str = "mongodb://localhost:27017/test"
-    MONGODB_DB: str = "test"
+    MONGODB_URI: str = "mongodb://localhost:27017/crime_os"
+    MONGODB_DB: str = "crime_os"
 
     # ── Logging ───────────────────────────────────────────────────────────────
     LOG_LEVEL: str = Field(default="INFO", pattern="^(DEBUG|INFO|WARNING|ERROR|CRITICAL)$")

@@ -65,7 +65,14 @@ router.post('/:id/citizen-request',               CitizenRequestController.creat
 router.post('/:id/escalate',                 InvestigationController.escalateCase);
 
 // State fetchers
+router.get('/:id/diary/history',             InvestigationController.getCaseDiaryHistory);
+router.get('/:id/diary/places',              InvestigationController.getCaseDiaryPlaces);
 router.get('/:id/diary',                     InvestigationController.getCaseDiary);
+router.post('/:id/diary/draft',               InvestigationController.generateDiaryDraft);
+router.put('/:id/diary/draft/:diaryId',       InvestigationController.updateDiaryDraft);
+router.post('/:id/diary/finalize',            InvestigationController.finalizeDiaryDraft);
+router.post('/:id/diary/places',              InvestigationController.addDiaryPlaceVisited);
+router.post('/:id/diary/witnesses',          InvestigationController.addDiaryWitness);
 router.get('/:id/checklist',                 InvestigationController.getCaseChecklist);
 router.post('/:id/checklist/steps',          InvestigationController.addManualStep);
 router.post('/:id/checklist/:stepId/complete', InvestigationController.completeStep);

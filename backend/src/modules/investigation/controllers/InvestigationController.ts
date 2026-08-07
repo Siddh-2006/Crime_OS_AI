@@ -10,17 +10,20 @@ import { AnalysisSnapshot } from '../models/AnalysisSnapshot.model';
 import { DepartmentRequest } from '../models/DepartmentRequest.model';
 import { DiaryEntry } from '../models/DiaryEntry.model';
 import { CaseChecklist } from '../models/CaseChecklist.model';
+import { CaseDiary } from '../models/CaseDiary.model';
 import { Evidence } from '../models/Evidence.model';
 import { Complaint } from '../../complaint/models/Complaint.model';
 import { RequestThread } from '../models/RequestThread.model';
 import { buildFactsObject } from '../services/factsAssemblyService';
+import { CaseDiaryService } from '../services/caseDiaryService';
+import { CaseDiaryQueue } from '../../../shared/queue/CaseDiaryQueue';
+import logger from '../../../config/logger';
 import { sendSuccess, sendError } from '../../../shared/utils/response.util';
 import { HttpStatusCode } from '../../../common/enums/httpStatus.enum';
 import { Types } from 'mongoose';
 import PDFDocument from 'pdfkit';
 import { v4 as uuidv4 } from 'uuid';
 import cloudinary from '../../../config/cloudinary';
-import logger from '../../../config/logger';
 
 export class InvestigationController {
   
@@ -406,6 +409,25 @@ export class InvestigationController {
   }
 
   /**
+   * GET /cases/:id/diary/history
+   * Fetch generated case diary records for the case, including stored PDF URLs.
+   */
+  static async getCaseDiaryHistory(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const diaries = await CaseDiary.find({ case_id: id })
+        .sort({ diary_date: -1, diary_number: -1 })
+        .lean();
+      sendSuccess(res, HttpStatusCode.OK, 'Fetched diary history', diaries);
+    } catch (error) {
+      sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, {
+        code: 'DIARY_HISTORY_FETCH_FAILED',
+        message: 'Failed to fetch diary history'
+      });
+    }
+  }
+
+  /**
    * GET /cases/:id/diary
    * Fetch chronological diary entries.
    */
@@ -418,6 +440,284 @@ export class InvestigationController {
       sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, {
         code: 'DIARY_FETCH_FAILED',
         message: 'Failed to fetch diary entries'
+      });
+    }
+  }
+
+  /**
+   * GET /cases/:id/diary/places
+   * Fetch all manually recorded visited places for the case.
+   */
+  static async getCaseDiaryPlaces(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const places = await CaseDiaryService.getPlacesVisited(id);
+      sendSuccess(res, HttpStatusCode.OK, 'Fetched visited places', places);
+    } catch (error) {
+      sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, {
+        code: 'PLACE_VISITED_FETCH_FAILED',
+        message: 'Failed to fetch visited places'
+      });
+    }
+  }
+
+  /**
+   * POST /cases/:id/diary/draft
+   * Generates a case diary draft from current case context using a single JSON LLM call.
+   */
+  static async generateDiaryDraft(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const {
+        diary_date,
+        title,
+        language = 'en',
+        officerId,
+        officialOfficerId,
+        crimeRegisterNumber,
+        propertyStolen,
+        propertyRecovered,
+        recordOfInvestigation,
+        structuredData,
+        draftLanguage,
+        investigationStartTime,
+        investigationEndTime,
+        custodyStatus,
+        magisterialCustodyDate,
+        lastDiaryNumber,
+        lastDiaryDate,
+      } = req.body;
+
+      if (!diary_date) {
+        sendError(res, HttpStatusCode.BAD_REQUEST, {
+          code: 'INVALID_INPUT',
+          message: 'diary_date is required',
+        });
+        return;
+      }
+
+      logger.info('[Case_Diary] request received', { caseId: id, body: req.body });
+
+      const draft = await CaseDiaryService.createDraft({
+        caseId: id,
+        diaryDate: diary_date,
+        title,
+        language,
+        officerId: officerId || (req as any).user?.sub || 'system',
+        officialOfficerId,
+        crimeRegisterNumber,
+        propertyStolen,
+        propertyRecovered,
+        recordOfInvestigation,
+        structuredData,
+        draftLanguage,
+        investigationStartTime,
+        investigationEndTime,
+        custodyStatus,
+        magisterialCustodyDate,
+        lastDiaryNumber,
+        lastDiaryDate,
+      });
+
+      sendSuccess(res, HttpStatusCode.CREATED, 'Diary draft generated', draft);
+    } catch (error) {
+      sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, {
+        code: 'DIARY_DRAFT_FAILED',
+        message: error instanceof Error ? error.message : 'Failed to generate diary draft',
+      });
+    }
+  }
+
+  /**
+   * PUT /cases/:id/diary/draft/:diaryId
+   * Updates an editable diary draft before final confirmation.
+   */
+  static async updateDiaryDraft(req: Request, res: Response): Promise<void> {
+    try {
+      const { id, diaryId } = req.params;
+      const {
+        title,
+        officialOfficerId,
+        crimeRegisterNumber,
+        propertyStolen,
+        propertyRecovered,
+        recordOfInvestigation,
+        recordOfInvestigationEn,
+        recordOfInvestigationGujEn,
+        structuredData,
+        draftLanguage,
+        investigationStartTime,
+        investigationEndTime,
+        custodyStatus,
+        magisterialCustodyDate,
+        lastDiaryNumber,
+        lastDiaryDate,
+      } = req.body;
+
+      const updated = await CaseDiaryService.updateDraft(diaryId, {
+        title,
+        officialOfficerId,
+        crimeRegisterNumber,
+        propertyStolen,
+        propertyRecovered,
+        recordOfInvestigation,
+        recordOfInvestigationEn,
+        recordOfInvestigationGujEn,
+        structuredData,
+        draftLanguage,
+        investigationStartTime,
+        investigationEndTime,
+        custodyStatus,
+        magisterialCustodyDate,
+        lastDiaryNumber,
+        lastDiaryDate,
+      }, (req as any).user?.sub || 'system');
+
+      logger.info('[Case_Diary] draft updated', { caseId: id, diaryId });
+      sendSuccess(res, HttpStatusCode.OK, 'Diary draft updated', updated);
+    } catch (error) {
+      sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, {
+        code: 'DIARY_UPDATE_FAILED',
+        message: error instanceof Error ? error.message : 'Failed to update diary draft',
+      });
+    }
+  }
+
+  /**
+   * POST /cases/:id/diary/finalize
+   * Finalizes an existing diary draft and stores a follow-up diary event.
+   */
+  static async finalizeDiaryDraft(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const {
+        diary_id,
+        places_visited = [],
+        title,
+        officialOfficerId,
+        crimeRegisterNumber,
+        propertyStolen,
+        propertyRecovered,
+        draftLanguage,
+        recordOfInvestigation,
+        recordOfInvestigationEn,
+        recordOfInvestigationGujEn,
+        structuredData,
+        investigationStartTime,
+        investigationEndTime,
+        custodyStatus,
+        magisterialCustodyDate,
+        lastDiaryNumber,
+        lastDiaryDate,
+      } = req.body;
+
+      if (!diary_id) {
+        sendError(res, HttpStatusCode.BAD_REQUEST, {
+          code: 'INVALID_INPUT',
+          message: 'diary_id is required',
+        });
+        return;
+      }
+
+      const actorId = (req as any).user?.sub || 'system';
+      logger.info('[Case_Diary] draft updated', { caseId: id, diaryId: diary_id });
+
+      const updated = await CaseDiaryService.updateDraft(diary_id, {
+        title,
+        officialOfficerId,
+        crimeRegisterNumber,
+        propertyStolen,
+        propertyRecovered,
+        recordOfInvestigation: recordOfInvestigation || recordOfInvestigationEn || recordOfInvestigationGujEn,
+        recordOfInvestigationEn,
+        recordOfInvestigationGujEn,
+        investigationStartTime,
+        investigationEndTime,
+        custodyStatus,
+        magisterialCustodyDate,
+        lastDiaryNumber,
+        lastDiaryDate,
+        structuredData: {
+          ...(structuredData || {}),
+          places_visited,
+        },
+        draftLanguage,
+      }, actorId);
+
+      const finalized = await CaseDiaryService.completeDraft(diary_id, actorId);
+      logger.info('[Case_Diary] completed', { caseId: id, diaryId: diary_id });
+
+      await CaseDiaryQueue.enqueuePdfGeneration(diary_id, id);
+      logger.info('[Case_Diary] PDF generation queued', { caseId: id, diaryId: diary_id });
+
+      if (Array.isArray(places_visited)) {
+        for (const place of places_visited) {
+          if (place && typeof place === 'object' && typeof place.address === 'string') {
+            await CaseDiaryService.addPlaceVisited({
+              caseId: id,
+              address: place.address,
+              coordinates: place.coordinates,
+              visitDate: place.visitDate || new Date().toISOString(),
+              startTime: place.startTime,
+              endTime: place.endTime,
+              whatWasDone: place.whatWasDone || place.remarks || '',
+              addedBy: actorId,
+              source: 'case_diary_finalization',
+              eventType: 'place_visited_added',
+            });
+          }
+        }
+      }
+
+      sendSuccess(res, HttpStatusCode.OK, 'Diary finalized', finalized || updated);
+    } catch (error) {
+      sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, {
+        code: 'DIARY_FINALIZE_FAILED',
+        message: error instanceof Error ? error.message : 'Failed to finalize diary draft',
+      });
+    }
+  }
+
+  static async addDiaryPlaceVisited(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const place = await CaseDiaryService.addPlaceVisited({
+        caseId: id,
+        address: req.body.address,
+        coordinates: req.body.coordinates,
+        visitDate: req.body.visitDate,
+        startTime: req.body.startTime,
+        endTime: req.body.endTime,
+        whatWasDone: req.body.whatWasDone,
+        addedBy: (req as any).user?.sub || 'system',
+        source: req.body.source || 'case_diary_form',
+        eventType: req.body.eventType || 'place_visited_added',
+      });
+      sendSuccess(res, HttpStatusCode.CREATED, 'Place visited recorded', place);
+    } catch (error) {
+      sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, {
+        code: 'PLACE_VISITED_FAILED',
+        message: error instanceof Error ? error.message : 'Failed to record place visited',
+      });
+    }
+  }
+
+  static async addDiaryWitness(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const witness = await CaseDiaryService.addWitness({
+        caseId: id,
+        name: req.body.name,
+        contact: req.body.contact,
+        statement: req.body.statement,
+        evidenceIds: req.body.evidenceIds || [],
+        addedBy: (req as any).user?.sub || 'system',
+      });
+      sendSuccess(res, HttpStatusCode.CREATED, 'Witness recorded', witness);
+    } catch (error) {
+      sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, {
+        code: 'WITNESS_FAILED',
+        message: error instanceof Error ? error.message : 'Failed to record witness',
       });
     }
   }

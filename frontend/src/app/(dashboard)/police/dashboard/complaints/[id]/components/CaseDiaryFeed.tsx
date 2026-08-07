@@ -35,6 +35,9 @@ export function CaseDiaryFeed({ entries, onEntryClick }: CaseDiaryFeedProps) {
       case 'request_sent': return <Send className="text-indigo-500" size={16} />;
       case 'response_received': return <MessageSquare className="text-teal-500" size={16} />;
       case 'analysis_run': return <Activity className="text-blue-600" size={16} />;
+      case 'diary_draft_generated': return <FileText className="text-indigo-500" size={16} />;
+      case 'diary_finalized': return <ShieldCheck className="text-emerald-600" size={16} />;
+      case 'witness_added': return <User className="text-orange-500" size={16} />;
       case 'escalation_raised': return <AlertTriangle className="text-red-500" size={16} />;
       case 'override_correction': return <User className="text-orange-500" size={16} />;
       default: return <Activity className="text-neutral-500" size={16} />;
@@ -50,6 +53,9 @@ export function CaseDiaryFeed({ entries, onEntryClick }: CaseDiaryFeedProps) {
       case 'request_sent': return 'Department Request Sent';
       case 'response_received': return 'Department Response Received';
       case 'analysis_run': return entry.payload?.manual ? 'Manual Analysis Snapshot Created' : 'AI Analysis Snapshot Generated';
+      case 'diary_draft_generated': return 'Official Daily Diary Draft Generated';
+      case 'diary_finalized': return 'Official Daily Diary Finalized';
+      case 'witness_added': return 'Witness Added to Case';
       case 'escalation_raised': return 'Case Escalation Raised';
       case 'override_correction': return 'Officer AI Correction Override';
       default: return entry.event_type.replace(/_/g, ' ').toUpperCase();
@@ -71,6 +77,9 @@ export function CaseDiaryFeed({ entries, onEntryClick }: CaseDiaryFeedProps) {
     }
     if (entry.event_type === 'evidence_added') {
       return `File: ${entry.payload?.filename}`;
+    }
+    if (entry.event_type === 'diary_draft_generated' || entry.event_type === 'diary_finalized') {
+      return entry.payload?.summary || entry.payload?.title || '';
     }
     return '';
   };

@@ -7,6 +7,7 @@ export const QUEUE_NAMES = {
   FIR:        'fir',
   ANALYSIS:   'analysis',
   GMAIL_POLL: 'gmail-poll',
+  CASE_DIARY: 'case-diary',
 } as const;
 
 /**
@@ -35,4 +36,8 @@ export const FIR_JOB_NAMES = {
  */
 export const ANALYSIS_JOB_NAMES = {
   ANALYZE_CASE: 'analyze_case',
+} as const;
+
+export const CASE_DIARY_JOB_NAMES = {
+  GENERATE_PDF: 'generate_case_diary_pdf',
 } as const;

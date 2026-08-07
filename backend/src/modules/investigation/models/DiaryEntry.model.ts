@@ -19,7 +19,13 @@ export type DiaryEventType =
   | 'escalation_raised'
   | 'participant_recommendation_approved'
   | 'participant_sections_attached'
-  | 'participant_promoted_to_accused';
+  | 'participant_promoted_to_accused'
+  | 'diary_draft_generated'
+  | 'diary_finalized'
+  | 'case_diary_draft_created'
+  | 'case_diary_completed'
+  | 'place_visited_added'
+  | 'witness_added';
 
 export interface IDiaryEntry extends Document {
   case_id: Types.ObjectId;
@@ -54,7 +60,9 @@ const DiaryEntrySchema = new Schema<IDiaryEntry>(
         'analysis_run', 'suggestion_generated', 'officer_note',
         'manual_step_added', 'override_correction', 'escalation_raised',
         'participant_recommendation_approved', 'participant_sections_attached',
-        'participant_promoted_to_accused',
+        'participant_promoted_to_accused', 'diary_draft_generated',
+        'diary_finalized', 'case_diary_draft_created', 'case_diary_completed',
+        'place_visited_added', 'witness_added',
       ],
       required: true,
     },
