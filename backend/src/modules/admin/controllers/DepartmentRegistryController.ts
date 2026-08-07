@@ -11,7 +11,7 @@ import logger from '../../../config/logger';
 // Replaced with: HTTP calls to legal_agent FastAPI /registry/upsert and /registry/:uuid
 // ─────────────────────────────────────────────────────────────────────────────
 
-const legalAgentUrl = env.LEGAL_AGENT_URL; // http://localhost:8001
+const legalAgentUrl = env.LEGAL_AGENT_URL; // http://localhost:8004
 
 /**
  * Call legal_agent to embed a single dept record and upsert into Qdrant.

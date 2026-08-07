@@ -106,7 +106,7 @@ def _build_multimodal_prompt(
             "approximateDateText": "free-form approximate date text if derivable, otherwise null",
             "coordinates": "GPS coordinates if derivable, otherwise null",
             "address": "full address if derivable, otherwise null",
-            "category": "complaint category if derivable, otherwise null",
+            "category": "one of THEFT, ROBBERY, BURGLARY, ASSAULT, DOMESTIC_VIOLENCE, SEXUAL_OFFENCE, CYBERCRIME, FRAUD, PROPERTY_DISPUTE, MISSING_PERSON, ROAD_ACCIDENT, DRUG_OFFENCE, PUBLIC_NUISANCE, HARASSMENT, EXTORTION, MURDER, KIDNAPPING, OTHER — pick the closest match, or null if unclear",
             "missingFields": ["fields that still require manual entry"],
             "confidence": 0.0,
             "summary": "brief textual summary of the evidence-backed draft",
@@ -208,10 +208,19 @@ async def profile_complaint_multimodal(
                     job_id=f"intake-aud-{file_id}",
                 )
                 if audio_res.succeeded and audio_res.output:
-                    transcript = _first_non_empty(
-                        audio_res.output.get("transcript"),
-                        audio_res.output.get("audio_transcript"),
-                    )
+                    audio_output = audio_res.output.get("transcript")
+                    if isinstance(audio_output, dict):
+                        transcript = _first_non_empty(
+                            audio_output.get("translated_text"),
+                            audio_output.get("translatedText"),
+                            audio_output.get("raw_text"),
+                            audio_output.get("rawText"),
+                        )
+                    else:
+                        transcript = _first_non_empty(
+                            audio_output,
+                            audio_res.output.get("audio_transcript"),
+                        )
             except Exception as exc:
                 logger.warning("[complaint] Intake audio worker failed", extra={"filename": filename, "error": str(exc)})
 
@@ -236,8 +245,8 @@ async def profile_complaint_multimodal(
                     job_id=f"intake-pdf-{file_id}",
                 )
                 if pdf_res.succeeded and pdf_res.output:
-                    pdf_text = _first_non_empty(pdf_res.output.get("extracted_text"), pdf_res.output.get("pdf_text"))
-                    ocr_text = _first_non_empty(pdf_res.output.get("ocr_text"))
+                    pdf_text = _first_non_empty(pdf_res.output.get("merged_text"), pdf_res.output.get("mergedText"))
+                    ocr_text = None  # merged_text already contains OCR output for scanned pages
             except Exception as exc:
                 logger.warning("[complaint] Intake PDF worker failed", extra={"filename": filename, "error": str(exc)})
 
@@ -276,7 +285,9 @@ async def profile_complaint_multimodal(
 
     try:
         raw_response = await container.llm_client.generate(user_prompt, system_prompt=system_prompt)
+        logger.info("[complaint] LLM raw response", extra={"raw_response": raw_response[:500] if raw_response else None})
         parsed_output = _clean_json_payload(raw_response)
+        logger.info("[complaint] LLM parsed output keys", extra={"keys": list(parsed_output.keys()), "shortDescription": parsed_output.get("shortDescription"), "incidentDate": parsed_output.get("incidentDate"), "incidentTime": parsed_output.get("incidentTime"), "incidentPlace": parsed_output.get("incidentPlace"), "category": parsed_output.get("category")})
     except Exception as exc:
         logger.warning("[complaint] LLM complaint intake drafting failed; using fallback draft", extra={"error": str(exc)})
 
@@ -331,12 +342,10 @@ async def profile_complaint_multimodal(
         missing_fields = []
 
     confidence = parsed_output.get("confidence")
-    confidence_value = 0.0
-    if isinstance(confidence, (int, float, str)):
-        try:
-            confidence_value = float(confidence)
-        except Exception:
-            confidence_value = 0.0
+    try:
+        confidence_value = float(confidence) if confidence is not None else 0.0  # type: ignore
+    except Exception:
+        confidence_value = 0.0
 
     summary = _first_non_empty(
         parsed_output.get("summary"),
@@ -345,6 +354,8 @@ async def profile_complaint_multimodal(
         complaint_text,
         combined_text,
     ) or ""
+
+    logger.info("[complaint] Final prefill being returned", extra={"prefill": prefill.model_dump()})
 
     return ComplaintDraftIntakeResponse(
         prefill=prefill,

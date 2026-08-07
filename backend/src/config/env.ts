@@ -40,9 +40,9 @@ const env = cleanEnv(process.env, {
   CLOUDINARY_CLOUD_NAME: str(),
   CLOUDINARY_API_KEY: str(),
   CLOUDINARY_API_SECRET: str(),
-  COMPLAINT_INTELLIGENCE_URL: str({ default: 'http://localhost:8000' }),
+  COMPLAINT_INTELLIGENCE_URL: str({ default: 'http://localhost:8001' }),
   // AI_SERVICE_URL: str({ default: 'http://localhost:8000' }),
-  LEGAL_AGENT_URL: str({ default: 'http://localhost:8001' }),
+  LEGAL_AGENT_URL: str({ default: 'http://localhost:8004' }),
   IO_RECOMMENDATION_URL: str({ default: 'http://localhost:8003' }),
   TRANSLATION_SERVICE_URL: str({ default: '' }),
   TRANSLATION_TIMEOUT_MS: num({ default: 30000 }),
@@ -57,10 +57,10 @@ const env = cleanEnv(process.env, {
   GEMINI_MODEL:     str({ default: 'gemini-3.5-flash-lite' }),
 
   // ── LLM — Sarvam-1 via llama.cpp (DISABLED — kept for reference) ─────────────
-  SARVAM_BASE_URL:   str({ default: 'http://localhost:8004' }),
-  SARVAM_MODEL:      str({ default: 'sarvam-1' }),
-  SARVAM_MAX_CTX:    num({ default: 8192 }),
-  SARVAM_TIMEOUT_MS: num({ default: 600000 }),
+  // SARVAM_BASE_URL:   str({ default: 'http://localhost:8004' }),
+  // SARVAM_MODEL:      str({ default: 'sarvam-1' }),
+  // SARVAM_MAX_CTX:    num({ default: 8192 }),
+  // SARVAM_TIMEOUT_MS: num({ default: 600000 }),
 
   // ── Gmail OAuth2 (for sending department request emails + polling responses) ──
   GMAIL_CLIENT_ID: str({ default: '' }),

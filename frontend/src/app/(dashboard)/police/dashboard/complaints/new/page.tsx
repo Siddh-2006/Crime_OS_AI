@@ -726,6 +726,84 @@ export default function NewComplaintPage(): React.ReactElement {
     });
   };
 
+  const categories = [
+    { value: 'THEFT', label: 'Theft' },
+    { value: 'ROBBERY', label: 'Robbery' },
+    { value: 'BURGLARY', label: 'Burglary' },
+    { value: 'ASSAULT', label: 'Assault' },
+    { value: 'DOMESTIC_VIOLENCE', label: 'Domestic Violence' },
+    { value: 'SEXUAL_OFFENCE', label: 'Sexual Offence' },
+    { value: 'CYBERCRIME', label: 'Cyber Crime' },
+    { value: 'FRAUD', label: 'Financial Fraud' },
+    { value: 'PROPERTY_DISPUTE', label: 'Property Dispute' },
+    { value: 'MISSING_PERSON', label: 'Missing Person' },
+    { value: 'ROAD_ACCIDENT', label: 'Road Accident' },
+    { value: 'DRUG_OFFENCE', label: 'Drug Offence' },
+    { value: 'PUBLIC_NUISANCE', label: 'Public Nuisance' },
+    { value: 'HARASSMENT', label: 'Harassment' },
+    { value: 'EXTORTION', label: 'Extortion' },
+    { value: 'MURDER', label: 'Murder' },
+    { value: 'KIDNAPPING', label: 'Kidnapping' },
+    { value: 'OTHER', label: 'Other' },
+  ];
+
+  // Normalize a raw LLM category string to one of the known enum values.
+  const normalizeCategory = (raw: string): string => {
+    const upper = raw.toUpperCase().replace(/[\s\-]+/g, '_').replace(/[^A-Z_]/g, '');
+    // Exact match first
+    if (categories.some((c) => c.value === upper)) return upper;
+    // Label match
+    const byLabel = categories.find(
+      (c) => c.label.toUpperCase() === raw.toUpperCase() ||
+             c.label.toUpperCase().replace(/\s+/g, '_') === upper
+    );
+    if (byLabel) return byLabel.value;
+    // Partial / keyword match (e.g. "cyber crime" → CYBERCRIME)
+    const byPartial = categories.find((c) =>
+      upper.includes(c.value) || c.value.includes(upper)
+    );
+    return byPartial ? byPartial.value : raw.trim();
+  };
+
+  // Normalize a time string from LLM (e.g. "2:30 PM", "14:30", "night") into
+  // either an HH:MM string for the exact-time input or a period keyword.
+  const normalizeTime = (raw: string): { period: string; exact: string } => {
+    const lower = raw.trim().toLowerCase();
+    const broadPeriods = ['morning', 'afternoon', 'evening', 'night', 'unknown'];
+    if (broadPeriods.includes(lower)) return { period: lower, exact: '' };
+
+    // Try to parse a 12-hour time like "2:30 PM" or "2 PM"
+    const match12 = lower.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/);
+    if (match12) {
+      let hours = parseInt(match12[1], 10);
+      const minutes = parseInt(match12[2] ?? '0', 10);
+      const meridiem = match12[3];
+      if (meridiem === 'pm' && hours !== 12) hours += 12;
+      if (meridiem === 'am' && hours === 12) hours = 0;
+      return {
+        period: 'exact',
+        exact: `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`,
+      };
+    }
+
+    // Already HH:MM or HH:MM:SS
+    const match24 = lower.match(/^(\d{1,2}):(\d{2})/);
+    if (match24) {
+      return {
+        period: 'exact',
+        exact: `${match24[1].padStart(2, '0')}:${match24[2]}`,
+      };
+    }
+
+    // Fallback: treat as approximate period if it matches loosely
+    for (const p of broadPeriods) {
+      if (lower.includes(p)) return { period: p, exact: '' };
+    }
+
+    // Give up — keep as-is and let user fix
+    return { period: 'exact', exact: raw.trim() };
+  };
+
   const applyComplaintDraft = (draft: ComplaintDraftResponse | null | undefined) => {
     if (!draft?.prefill) return;
 
@@ -741,14 +819,9 @@ export default function NewComplaintPage(): React.ReactElement {
       setIncidentDate(prefill.incidentDate.trim());
     }
     if (prefill.incidentTime?.trim()) {
-      const normalizedTime = prefill.incidentTime.trim().toLowerCase();
-      if (['morning', 'afternoon', 'evening', 'night', 'unknown'].includes(normalizedTime)) {
-        setTimePeriod(normalizedTime);
-        setIncidentTime('');
-      } else {
-        setTimePeriod('exact');
-        setIncidentTime(prefill.incidentTime.trim());
-      }
+      const { period, exact } = normalizeTime(prefill.incidentTime.trim());
+      setTimePeriod(period);
+      setIncidentTime(exact);
     }
     if (prefill.incidentPlace?.trim()) {
       setIncidentPlace(prefill.incidentPlace.trim());
@@ -764,9 +837,10 @@ export default function NewComplaintPage(): React.ReactElement {
       setIncidentPlace(prefill.address.trim());
     }
     if (prefill.category?.trim()) {
-      setCategory(prefill.category.trim());
+      setCategory(normalizeCategory(prefill.category.trim()));
     }
   };
+
 
   const processComplaintIntake = async (files: File[]) => {
     if (files.length === 0) return;
@@ -801,7 +875,9 @@ export default function NewComplaintPage(): React.ReactElement {
       const analysisResponse = await intakeAnalysisPromise;
       await intakeUploadPromise;
 
+      console.log('[complaint-intake] raw API response:', JSON.stringify(analysisResponse.data, null, 2));
       const payload = (analysisResponse.data?.data ?? analysisResponse.data) as ComplaintDraftResponse;
+      console.log('[complaint-intake] payload to apply:', JSON.stringify(payload, null, 2));
       applyComplaintDraft(payload);
     } catch (err: any) {
       setError(err.response?.data?.message || err.message || 'Complaint media processing failed. You can continue and fill the form manually.');
@@ -1017,27 +1093,6 @@ export default function NewComplaintPage(): React.ReactElement {
       setOtpSubmitting(false);
     }
   };
-
-  const categories = [
-    { value: 'THEFT', label: 'Theft' },
-    { value: 'ROBBERY', label: 'Robbery' },
-    { value: 'BURGLARY', label: 'Burglary' },
-    { value: 'ASSAULT', label: 'Assault' },
-    { value: 'DOMESTIC_VIOLENCE', label: 'Domestic Violence' },
-    { value: 'SEXUAL_OFFENCE', label: 'Sexual Offence' },
-    { value: 'CYBERCRIME', label: 'Cyber Crime' },
-    { value: 'FRAUD', label: 'Financial Fraud' },
-    { value: 'PROPERTY_DISPUTE', label: 'Property Dispute' },
-    { value: 'MISSING_PERSON', label: 'Missing Person' },
-    { value: 'ROAD_ACCIDENT', label: 'Road Accident' },
-    { value: 'DRUG_OFFENCE', label: 'Drug Offence' },
-    { value: 'PUBLIC_NUISANCE', label: 'Public Nuisance' },
-    { value: 'HARASSMENT', label: 'Harassment' },
-    { value: 'EXTORTION', label: 'Extortion' },
-    { value: 'MURDER', label: 'Murder' },
-    { value: 'KIDNAPPING', label: 'Kidnapping' },
-    { value: 'OTHER', label: 'Other' },
-  ];
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">

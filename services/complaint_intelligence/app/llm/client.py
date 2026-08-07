@@ -86,6 +86,10 @@ class OllamaLLMClient(ILLMClient):
                 )
                 if not result:
                     raise LLMError("Gemini returned an empty response")
+                logger.info(
+                    "Gemini fallback responded successfully",
+                    extra={"model": settings.GEMINI_MODEL, "response_length": len(result)},
+                )
                 return result
         except httpx.HTTPStatusError as exc:
             logger.error(

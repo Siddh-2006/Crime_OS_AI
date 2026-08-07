@@ -53,7 +53,7 @@ sys.modules.setdefault("flash_attn.flash_attn_interface", _fa_stub)
 
 import transformers.utils.import_utils as _tiu
 _tiu.is_flash_attn_2_available = lambda: False
-_tiu.is_flash_attn_greater_or_equal_2_10 = lambda: False
+_tiu.is_flash_attn_greater_or_equal_2_10 = lambda: False  # type: ignore
 
 
 from contextlib import asynccontextmanager
@@ -161,7 +161,7 @@ def predict(req: PredictRequest) -> PredictResponse:
             "Running Florence inference",
             extra={"task": req.task, "image_size": f"{image.width}x{image.height}"},
         )
-        inputs = _state.processor(
+        inputs = _state.processor(  # type: ignore
             text=req.task,
             images=image,
             return_tensors="pt",
@@ -184,11 +184,11 @@ def predict(req: PredictRequest) -> PredictResponse:
                 generated_ids, skip_special_tokens=False
             )[0]
         else:
-            generated_text = _state.processor.tokenizer.batch_decode(
+            generated_text = _state.processor.tokenizer.batch_decode(  # type: ignore
                 generated_ids, skip_special_tokens=False
             )[0]
 
-        parsed = _state.processor.post_process_generation(
+        parsed = _state.processor.post_process_generation(  # type: ignore
             generated_text,
             task=req.task,
             image_size=(image.width, image.height),
