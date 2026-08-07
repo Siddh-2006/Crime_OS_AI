@@ -57,10 +57,10 @@ const env = cleanEnv(process.env, {
   GEMINI_MODEL:     str({ default: 'gemini-3.5-flash-lite' }),
 
   // ── LLM — Sarvam-1 via llama.cpp (DISABLED — kept for reference) ─────────────
-  // SARVAM_BASE_URL:   str({ default: 'http://localhost:8004' }),
-  // SARVAM_MODEL:      str({ default: 'sarvam-1' }),
-  // SARVAM_MAX_CTX:    num({ default: 8192 }),
-  // SARVAM_TIMEOUT_MS: num({ default: 600000 }),
+  SARVAM_BASE_URL:   str({ default: 'http://localhost:8005' }),
+  SARVAM_MODEL:      str({ default: 'sarvam-1' }),
+  SARVAM_MAX_CTX:    num({ default: 8192 }),
+  SARVAM_TIMEOUT_MS: num({ default: 600000 }),
 
   // ── Gmail OAuth2 (for sending department request emails + polling responses) ──
   GMAIL_CLIENT_ID: str({ default: '' }),
