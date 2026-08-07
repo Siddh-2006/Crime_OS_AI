@@ -376,20 +376,31 @@ async def _stream_pipeline_output(process: subprocess.Popen[str], complaint_numb
 
     try:
         while True:
-            line = await asyncio.to_thread(process.stdout.readline)
+            try:
+                line = await asyncio.to_thread(process.stdout.readline)
+            except Exception as read_err:
+                logger.warning(f"Error reading stdout line: {read_err}")
+                continue
             if not line:
                 break
             message = line.rstrip()
             if message:
+                print(message, flush=True)
                 logger.info(
                     "Complaint intelligence pipeline output",
                     extra={"complaint_number": complaint_number, "stdout": message},
                 )
+    except Exception as exc:
+        logger.warning(f"Pipeline output stream ended: {exc}")
     finally:
-        return_code = process.wait()
+        if process.poll() is None:
+            try:
+                process.terminate()
+            except Exception:
+                pass
         logger.info(
             "Complaint intelligence pipeline process exited",
-            extra={"complaint_number": complaint_number, "return_code": return_code},
+            extra={"complaint_number": complaint_number, "return_code": process.poll()},
         )
 
 
@@ -423,43 +434,53 @@ async def profile_complaint(
     description="Starts the complaint intelligence orchestration from the Python service and returns immediately.",
 )
 async def trigger_full_pipeline(body: TriggerFullPipelineRequest) -> dict[str, object]:
-    complaint_number = body.complaint_number.strip()
-    if not complaint_number:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="complaint_number is required")
+    try:
+        complaint_number = body.complaint_number.strip()
+        if not complaint_number:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="complaint_number is required")
 
-    script_path = Path(__file__).resolve().parents[3] / "run_pipeline_from_atlas.py"
-    if not script_path.exists():
-        script_path = Path(__file__).resolve().parents[3] / "run_full_pipeline.py"
-    if not script_path.exists():
-        logger.error(
-            "Complaint intelligence full-pipeline script not found",
+        script_path = Path(__file__).resolve().parents[3] / "run_pipeline_from_atlas.py"
+        if not script_path.exists():
+            script_path = Path(__file__).resolve().parents[3] / "run_full_pipeline.py"
+        if not script_path.exists():
+            logger.error(
+                "Complaint intelligence full-pipeline script not found",
+                extra={"complaint_number": complaint_number, "script_path": str(script_path)},
+            )
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Full pipeline script does not exist on disk",
+            )
+
+        logger.info(
+            "Full complaint pipeline trigger received over HTTP",
             extra={"complaint_number": complaint_number, "script_path": str(script_path)},
         )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Full pipeline script does not exist on disk",
+
+        process = subprocess.Popen(
+            [sys.executable, "-u", str(script_path), complaint_number],
+            cwd=str(script_path.parent),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            bufsize=1,
+            env={**os.environ, "PYTHONUTF8": "1", "PYTHONUNBUFFERED": "1"},
         )
 
-    logger.info(
-        "Full complaint pipeline trigger received over HTTP",
-        extra={"complaint_number": complaint_number, "script_path": str(script_path)},
-    )
+        asyncio.create_task(_stream_pipeline_output(process, complaint_number))
 
-    process = subprocess.Popen(
-        [sys.executable, "-u", str(script_path), complaint_number],
-        cwd=str(script_path.parent),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        bufsize=1,
-        env={**os.environ, "PYTHONUTF8": "1", "PYTHONUNBUFFERED": "1"},
-    )
-
-    asyncio.create_task(_stream_pipeline_output(process, complaint_number))
-
-    return {
-        "accepted": True,
-        "complaint_number": complaint_number,
-        "status": "started",
-        "message": "Full complaint intelligence pipeline launch accepted by complaint_intelligence service.",
-    }
+        return {
+            "accepted": True,
+            "complaint_number": complaint_number,
+            "status": "started",
+            "message": "Full complaint intelligence pipeline launch accepted by complaint_intelligence service.",
+        }
+    except Exception as exc:
+        import traceback
+        traceback.print_exc()
+        logger.error(f"[trigger_full_pipeline ERROR] {exc}", exc_info=True)
+        if isinstance(exc, HTTPException):
+            raise exc
+        raise HTTPException(status_code=500, detail=str(exc))

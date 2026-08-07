@@ -1840,13 +1840,14 @@ function CaseUnderstandingPanel({ caseUnderstanding }: { caseUnderstanding: Case
     );
   }
 
-  const overviewData = caseUnderstanding.case_understanding || caseUnderstanding.overview || {
-    complaint_summary: 'No summary available.',
-    incident_overview: 'No incident overview available.',
-    crime_category: 'Uncategorized',
-    crime_subtype: 'General',
-    priority: 'medium' as const,
-    confidence: 0.9,
+  const rawOverview: any = caseUnderstanding.case_understanding || caseUnderstanding.overview || {};
+  const overviewData = {
+    executive_summary: rawOverview.executive_summary || rawOverview.complaint_summary || 'No summary available.',
+    incident_brief: rawOverview.incident_brief || rawOverview.incident_overview || 'No incident brief available.',
+    crime_category: rawOverview.crime_category || 'Uncategorized',
+    crime_subtype: rawOverview.crime_subtype || 'General',
+    priority: rawOverview.priority || 'medium',
+    confidence: rawOverview.confidence ?? 0.9,
   };
 
   const getPriorityBadge = (priority: string) => {
@@ -1883,12 +1884,12 @@ function CaseUnderstandingPanel({ caseUnderstanding }: { caseUnderstanding: Case
         <CardHeader title="Case Understanding Overview" />
         <div className="space-y-4">
           <div>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400">Complaint Summary</h4>
-            <p className="text-sm font-semibold text-neutral-900 mt-1">{overviewData.complaint_summary}</p>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400">Executive Summary</h4>
+            <p className="text-sm font-semibold text-neutral-900 mt-1">{overviewData.executive_summary}</p>
           </div>
           <div className="border-t border-neutral-100 pt-4">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400">Integrated Incident Overview</h4>
-            <p className="text-sm text-neutral-700 mt-1 leading-relaxed whitespace-pre-line">{overviewData.incident_overview}</p>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400">Incident Brief</h4>
+            <p className="text-sm text-neutral-700 mt-1 leading-relaxed whitespace-pre-line">{overviewData.incident_brief}</p>
           </div>
         </div>
       </Card>

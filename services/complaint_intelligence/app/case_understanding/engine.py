@@ -150,6 +150,7 @@ class CaseUnderstandingEngine(ICaseUnderstandingEngine):
 
         for attempt in range(1, self._max_retries + 1):
             try:
+                print(f"  🧠 [LLM Engine] Invoking single-pass LLM Case Understanding analysis (Attempt {attempt}/{self._max_retries})...", flush=True)
                 logger.info(
                     "[case_understanding] Invoking LLM",
                     extra={"case_id": context.case_id, "attempt": attempt},
@@ -158,6 +159,7 @@ class CaseUnderstandingEngine(ICaseUnderstandingEngine):
                     prompt=attempt_prompt,
                     system_prompt=CASE_UNDERSTANDING_SYSTEM_PROMPT,
                 )
+                print(f"  ✓ [LLM Engine] Received response ({len(raw_response)} chars). Parsing 5-section Case Understanding JSON...", flush=True)
 
                 cleaned_json = _clean_json_response(raw_response)
 
@@ -179,10 +181,12 @@ class CaseUnderstandingEngine(ICaseUnderstandingEngine):
                 cu_section = parsed_dict.get("case_understanding") or parsed_dict.get("overview")
                 if not isinstance(cu_section, dict):
                     cu_section = {}
-                if not cu_section.get("complaint_summary"):
-                    cu_section["complaint_summary"] = (context.complaint_text or "Complaint filed")[:300]
-                if not cu_section.get("incident_overview"):
-                    cu_section["incident_overview"] = context.complaint_text or "Case under investigation"
+                exec_sum = cu_section.get("executive_summary") or cu_section.get("complaint_summary") or (context.complaint_text or "Complaint filed")[:300]
+                inc_brief = cu_section.get("incident_brief") or cu_section.get("incident_overview") or (context.complaint_text or "Case under investigation")
+                cu_section["executive_summary"] = exec_sum
+                cu_section["incident_brief"] = inc_brief
+                cu_section["complaint_summary"] = exec_sum
+                cu_section["incident_overview"] = inc_brief
                 if not cu_section.get("crime_category"):
                     cu_section["crime_category"] = str(context.complaint_metadata.get("category", "Cybercrime"))
                 if not cu_section.get("crime_subtype"):

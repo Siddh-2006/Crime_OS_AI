@@ -321,7 +321,7 @@ export class ComplaintService {
       const microserviceUrl = env.COMPLAINT_INTELLIGENCE_URL || 'http://localhost:8000';
       axios.post(`${microserviceUrl}/trigger-full-pipeline`, {
         complaint_number: complaintNumber,
-      }, { timeout: 5000 }).then((response) => {
+      }, { timeout: 15000 }).then((response) => {
         if (response.status === 200 || response.status === 202) {
           logger.info(`[ComplaintIntelligence] Successfully triggered full pipeline via HTTP API for ${complaintNumber}`);
         }

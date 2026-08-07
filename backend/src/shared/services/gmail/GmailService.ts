@@ -342,7 +342,7 @@ function _spawnComplaintIntelligence(complaintNumber: string): void {
     const microserviceUrl = env.COMPLAINT_INTELLIGENCE_URL || 'http://localhost:8000';
     axios.post(`${microserviceUrl}/trigger-full-pipeline`, {
       complaint_number: complaintNumber,
-    }, { timeout: 5000 }).then((res: any) => {
+    }, { timeout: 15000 }).then((res: any) => {
       if (res.status === 200 || res.status === 202) {
         logger.info(`[GmailService] Triggered complaint_intelligence pipeline via HTTP API for ${complaintNumber}`);
       }
