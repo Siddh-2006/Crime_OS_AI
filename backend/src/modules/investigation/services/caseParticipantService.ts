@@ -1,6 +1,6 @@
 import { Types } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
-import { CaseParticipant, ICaseParticipant, ParticipantRole } from '../models/CaseParticipant.model';
+import { CaseParticipant, ICaseParticipant, ParticipantRole, IVictimProfile, IWitnessProfile, ISuspectProfile, IAccusedProfile, IComplainantProfile } from '../models/CaseParticipant.model';
 import { DiaryEntry } from '../models/DiaryEntry.model';
 import { AnalysisSnapshot, IParticipantRecommendation } from '../models/AnalysisSnapshot.model';
 import { ILegalSectionSuggestion, IAppliedLegalSection } from '../models/LegalSection.schema';
@@ -342,5 +342,211 @@ export class CaseParticipantService {
     });
 
     return participant;
+  }
+
+  /**
+   * Create a new participant manually (not from AI recommendations)
+   */
+  static async createParticipant(
+    caseId: string,
+    input: {
+      name: string;
+      roles: ParticipantRole[];
+      contact?: { phone?: string; email?: string; address?: string };
+      identifiers?: Array<{ type: string; value: string }>;
+      victimProfile?: Partial<IVictimProfile>;
+      witnessProfile?: Partial<IWitnessProfile>;
+      suspectProfile?: Partial<ISuspectProfile>;
+      accusedProfile?: Partial<IAccusedProfile>;
+      complainantProfile?: Partial<IComplainantProfile>;
+    },
+  ): Promise<ICaseParticipant> {
+    if (!input.name || !input.name.trim()) {
+      throw new Error('Participant name is required');
+    }
+
+    if (!Array.isArray(input.roles) || input.roles.length === 0) {
+      throw new Error('At least one role is required');
+    }
+
+    const caseObjectId = new Types.ObjectId(caseId);
+
+    // Validate roles
+    const validRoles = input.roles.filter((role): role is ParticipantRole => {
+      return ['Victim', 'Witness', 'Suspect', 'Accused', 'Complainant'].includes(role);
+    });
+
+    if (validRoles.length === 0) {
+      throw new Error('At least one valid role is required');
+    }
+
+    const participant = await CaseParticipant.create({
+      case_id: caseObjectId,
+      participant_id: uuidv4(),
+      name: input.name.trim(),
+      contact: input.contact || {},
+      identifiers: input.identifiers || [],
+      roles: validRoles,
+      victimProfile: input.victimProfile || undefined,
+      witnessProfile: input.witnessProfile || undefined,
+      suspectProfile: input.suspectProfile || undefined,
+      accusedProfile: input.accusedProfile || undefined,
+      complainantProfile: input.complainantProfile || undefined,
+    });
+
+    await DiaryEntry.create({
+      case_id: caseObjectId,
+      entry_id: uuidv4(),
+      actor: { type: 'officer', id: 'system' },
+      event_type: 'participant_added_manually',
+      payload: {
+        participant_id: participant.participant_id,
+        participant_name: participant.name,
+        roles: participant.roles,
+      },
+      ref_ids: { participant_id: participant.participant_id },
+    });
+
+    return participant;
+  }
+
+  /**
+   * Update an existing participant
+   */
+  static async updateParticipant(
+    caseId: string,
+    participantId: string,
+    input: {
+      name?: string;
+      roles?: ParticipantRole[];
+      contact?: { phone?: string; email?: string; address?: string };
+      identifiers?: Array<{ type: string; value: string }>;
+      victimProfile?: Partial<IVictimProfile>;
+      witnessProfile?: Partial<IWitnessProfile>;
+      suspectProfile?: Partial<ISuspectProfile>;
+      accusedProfile?: Partial<IAccusedProfile>;
+      complainantProfile?: Partial<IComplainantProfile>;
+    },
+  ): Promise<ICaseParticipant> {
+    const caseObjectId = new Types.ObjectId(caseId);
+    const participant = await CaseParticipant.findOne({
+      case_id: caseObjectId,
+      participant_id: participantId,
+    }).exec();
+
+    if (!participant) {
+      throw new Error('Participant not found');
+    }
+
+    // Update fields if provided
+    if (input.name) {
+      participant.name = input.name.trim();
+    }
+
+    if (Array.isArray(input.roles) && input.roles.length > 0) {
+      const validRoles = input.roles.filter((role): role is ParticipantRole => {
+        return ['Victim', 'Witness', 'Suspect', 'Accused', 'Complainant'].includes(role);
+      });
+      if (validRoles.length > 0) {
+        participant.roles = validRoles;
+      }
+    }
+
+    if (input.contact) {
+      participant.contact = {
+        ...(participant.contact || {}),
+        ...input.contact,
+      };
+    }
+
+    if (Array.isArray(input.identifiers)) {
+      participant.identifiers = input.identifiers;
+    }
+
+    if (input.victimProfile) {
+      participant.victimProfile = {
+        ...(participant.victimProfile || {}),
+        ...input.victimProfile,
+      };
+    }
+
+    if (input.witnessProfile) {
+      participant.witnessProfile = {
+        ...(participant.witnessProfile || {}),
+        ...input.witnessProfile,
+      } as any;
+    }
+
+    if (input.suspectProfile) {
+      participant.suspectProfile = {
+        ...(participant.suspectProfile || {}),
+        ...input.suspectProfile,
+      } as any;
+    }
+
+    if (input.accusedProfile) {
+      participant.accusedProfile = {
+        ...(participant.accusedProfile || {}),
+        ...input.accusedProfile,
+      } as any;
+    }
+
+    if (input.complainantProfile) {
+      participant.complainantProfile = {
+        ...(participant.complainantProfile || {}),
+        ...input.complainantProfile,
+      } as any;
+    }
+
+    await participant.save();
+
+    await DiaryEntry.create({
+      case_id: caseObjectId,
+      entry_id: uuidv4(),
+      actor: { type: 'officer', id: 'system' },
+      event_type: 'participant_updated',
+      payload: {
+        participant_id: participant.participant_id,
+        participant_name: participant.name,
+        roles: participant.roles,
+      },
+      ref_ids: { participant_id: participant.participant_id },
+    });
+
+    return participant;
+  }
+
+  /**
+   * Delete a participant
+   */
+  static async deleteParticipant(caseId: string, participantId: string): Promise<void> {
+    const caseObjectId = new Types.ObjectId(caseId);
+    const participant = await CaseParticipant.findOne({
+      case_id: caseObjectId,
+      participant_id: participantId,
+    }).exec();
+
+    if (!participant) {
+      throw new Error('Participant not found');
+    }
+
+    const participantName = participant.name;
+
+    await CaseParticipant.deleteOne({
+      case_id: caseObjectId,
+      participant_id: participantId,
+    });
+
+    await DiaryEntry.create({
+      case_id: caseObjectId,
+      entry_id: uuidv4(),
+      actor: { type: 'officer', id: 'system' },
+      event_type: 'participant_deleted',
+      payload: {
+        participant_id: participantId,
+        participant_name: participantName,
+      },
+      ref_ids: { participant_id: participantId },
+    });
   }
 }

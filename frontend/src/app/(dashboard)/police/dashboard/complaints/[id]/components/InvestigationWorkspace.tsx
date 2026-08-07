@@ -1468,6 +1468,11 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
   const [roleFilter, setRoleFilter] = React.useState<string>('All');
   const [selectedParticipant, setSelectedParticipant] = React.useState<any | null>(null);
   const [promotingId, setPromotingId] = React.useState<string | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
+  const [editingParticipant, setEditingParticipant] = React.useState<any | null>(null);
+  const [deleteConfirming, setDeleteConfirming] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState(false);
 
   const uniqueRoles = Array.from(new Set(participants.flatMap((p) => p.roles || [])));
 
@@ -1476,7 +1481,7 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
     : participants.filter((p) => (p.roles || []).includes(roleFilter));
 
   const handlePromote = async (e: React.MouseEvent, p: any) => {
-    e.stopPropagation(); // don't open the detail modal
+    e.stopPropagation();
     setPromotingId(p.participant_id);
     try {
       await apiClient.patch(`/cases/${caseId}/participants/${p.participant_id}/promote-to-accused`);
@@ -1488,7 +1493,20 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
     }
   };
 
-  if (participants.length === 0) {
+  const handleDelete = async (participantId: string) => {
+    setLoading(true);
+    try {
+      await apiClient.delete(`/cases/${caseId}/participants/${participantId}`);
+      setDeleteConfirming(null);
+      onRefresh();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to delete participant.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (participants.length === 0 && !isAddModalOpen) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
         <Users className="h-10 w-10 text-neutral-300" />
@@ -1496,6 +1514,21 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
         <p className="text-xs text-neutral-400 max-w-xs">
           Participants approved via the AI analysis will appear here.
         </p>
+        <button
+          onClick={() => setIsAddModalOpen(true)}
+          className="mt-4 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          + Add Participant
+        </button>
+        <AddParticipantModal
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          caseId={caseId}
+          onSuccess={() => {
+            setIsAddModalOpen(false);
+            onRefresh();
+          }}
+        />
       </div>
     );
   }
@@ -1513,8 +1546,7 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
 
   return (
     <>
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-bold text-neutral-800">Case Participants</h3>
+      <div className="flex items-center justify-between mb-4">
         <select
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value)}
@@ -1523,6 +1555,12 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
           <option value="All">All Roles</option>
           {uniqueRoles.map(r => <option key={r} value={r}>{r}</option>)}
         </select>
+        <button
+          onClick={() => setIsAddModalOpen(true)}
+          className="px-3 py-1.5 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          + Add Participant
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1534,23 +1572,58 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
           return (
             <div
               key={p.participant_id || p._id}
-              onClick={() => setSelectedParticipant(p)}
-              className="bg-white border border-neutral-200 rounded-xl p-4 shadow-sm cursor-pointer hover:border-blue-300 hover:shadow-md transition-all group"
+              className="bg-white border border-neutral-200 rounded-xl p-4 shadow-sm hover:border-blue-300 hover:shadow-md transition-all group relative"
             >
-              <div className="flex justify-between items-start gap-2">
-                <h4 className="text-base font-bold text-neutral-900 group-hover:text-blue-700 transition-colors">{p.name}</h4>
-                {isSuspect && !isAccused && (
+              <div className="flex justify-between items-start gap-2 mb-2">
+                <h4 
+                  className="text-base font-bold text-neutral-900 cursor-pointer group-hover:text-blue-700 transition-colors flex-1"
+                  onClick={() => setSelectedParticipant(p)}
+                >
+                  {p.name}
+                </h4>
+                <div className="flex gap-1 flex-shrink-0">
                   <button
-                    onClick={(e) => handlePromote(e, p)}
-                    disabled={promoting}
-                    className="flex-shrink-0 text-[10px] font-bold px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-60 transition-colors whitespace-nowrap"
+                    onClick={() => {
+                      setEditingParticipant(p);
+                      setIsEditModalOpen(true);
+                    }}
+                    className="p-1 text-neutral-400 hover:text-blue-600 transition-colors" 
+                    title="Edit"
                   >
-                    {promoting ? '...' : '⚖️ Promote to Accused'}
+                    ✏️
                   </button>
-                )}
+                  {deleteConfirming === p.participant_id ? (
+                    <div className="absolute right-2 top-14 bg-white border border-red-200 rounded-lg p-2 shadow-lg z-10 whitespace-nowrap">
+                      <p className="text-xs font-semibold text-red-700 mb-2">Delete?</p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleDelete(p.participant_id)}
+                          disabled={loading}
+                          className="px-2 py-1 text-xs font-semibold bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+                        >
+                          Yes
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirming(null)}
+                          className="px-2 py-1 text-xs font-semibold bg-neutral-200 text-neutral-700 rounded hover:bg-neutral-300"
+                        >
+                          No
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setDeleteConfirming(p.participant_id)}
+                      className="p-1 text-neutral-400 hover:text-red-600 transition-colors"
+                      title="Delete"
+                    >
+                      🗑️
+                    </button>
+                  )}
+                </div>
               </div>
 
-              <div className="flex flex-wrap gap-1 mt-1.5">
+              <div className="flex flex-wrap gap-1">
                 {(p.roles || []).map((role: string) => (
                   <span key={role} className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${roleBadgeColor(role)}`}>
                     {role}
@@ -1566,7 +1639,25 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
                 </p>
               )}
 
-              <p className="text-[10px] text-blue-500 mt-2 group-hover:underline">Click for full details →</p>
+              {isSuspect && !isAccused && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePromote(e, p);
+                  }}
+                  disabled={promoting}
+                  className="mt-3 w-full flex-shrink-0 text-xs font-bold px-2 py-1.5 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-60 transition-colors"
+                >
+                  {promoting ? '...' : '⚖️ Promote to Accused'}
+                </button>
+              )}
+
+              <p 
+                className="text-[10px] text-blue-500 mt-2 cursor-pointer hover:underline"
+                onClick={() => setSelectedParticipant(p)}
+              >
+                Click for full details →
+              </p>
             </div>
           );
         })}
@@ -1577,6 +1668,44 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
         <ParticipantDetailModal
           participant={selectedParticipant}
           onClose={() => setSelectedParticipant(null)}
+          onEdit={(p) => {
+            setEditingParticipant(p);
+            setSelectedParticipant(null);
+            setIsEditModalOpen(true);
+          }}
+          onDelete={(p) => {
+            setSelectedParticipant(null);
+            setDeleteConfirming(p.participant_id);
+          }}
+        />
+      )}
+
+      {/* Add Participant Modal */}
+      <AddParticipantModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        caseId={caseId}
+        onSuccess={() => {
+          setIsAddModalOpen(false);
+          onRefresh();
+        }}
+      />
+
+      {/* Edit Participant Modal */}
+      {editingParticipant && (
+        <EditParticipantModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setEditingParticipant(null);
+          }}
+          participant={editingParticipant}
+          caseId={caseId}
+          onSuccess={() => {
+            setIsEditModalOpen(false);
+            setEditingParticipant(null);
+            onRefresh();
+          }}
         />
       )}
     </>
@@ -1585,7 +1714,17 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
 
 // ─── Participant Detail Modal ────────────────────────────────────────────────
 
-function ParticipantDetailModal({ participant: p, onClose }: { participant: any; onClose: () => void }) {
+function ParticipantDetailModal({ 
+  participant: p, 
+  onClose, 
+  onEdit,
+  onDelete
+}: { 
+  participant: any; 
+  onClose: () => void;
+  onEdit?: (p: any) => void;
+  onDelete?: (p: any) => void;
+}) {
   const roleBadgeColor = (role: string) => {
     switch (role) {
       case 'Accused': return 'bg-red-50 text-red-700 border-red-200';
@@ -1620,7 +1759,27 @@ function ParticipantDetailModal({ participant: p, onClose }: { participant: any;
               ))}
             </div>
           </div>
-          <button onClick={onClose} className="p-1 text-neutral-400 hover:text-neutral-700 transition-colors text-2xl leading-none">×</button>
+          <div className="flex gap-2">
+            {onEdit && (
+              <button
+                onClick={() => onEdit(p)}
+                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                title="Edit"
+              >
+                ✏️
+              </button>
+            )}
+            {onDelete && (
+              <button
+                onClick={() => onDelete(p)}
+                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                title="Delete"
+              >
+                🗑️
+              </button>
+            )}
+            <button onClick={onClose} className="p-1 text-neutral-400 hover:text-neutral-700 transition-colors text-2xl leading-none">×</button>
+          </div>
         </div>
 
         <div className="p-6 space-y-5">
@@ -1943,6 +2102,651 @@ function TimelinePanel({ caseUnderstanding }: { caseUnderstanding: CaseUnderstan
           )}
         </div>
       </Card>
+    </div>
+  );
+}
+
+// ─── Add Participant Modal ─────────────────────────────────────────────────
+
+interface ParticipantFormData {
+  name: string;
+  roles: string[];
+  contact: { phone?: string; email?: string; address?: string };
+  identifiers: Array<{ type: string; value: string }>;
+  victimProfile?: { injuryDetails?: string; lossDetails?: string };
+  witnessProfile?: { statement?: string };
+  complainantProfile?: { relationshipToIncident?: string };
+  [key: string]: any;
+}
+
+function AddParticipantModal({
+  isOpen,
+  onClose,
+  caseId,
+  onSuccess,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  caseId: string;
+  onSuccess: () => void;
+}) {
+  const [formData, setFormData] = React.useState<ParticipantFormData>({
+    name: '',
+    roles: [],
+    contact: {},
+    identifiers: [],
+    victimProfile: {},
+    witnessProfile: {},
+    complainantProfile: {},
+  });
+  const [loading, setLoading] = React.useState(false);
+  const [errors, setErrors] = React.useState<Record<string, string>>({});
+
+  const roleOptions = ['Victim', 'Witness', 'Suspect', 'Accused', 'Complainant'];
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, name: e.target.value });
+    if (errors.name) setErrors({ ...errors, name: '' });
+  };
+
+  const handleRoleToggle = (role: string) => {
+    setFormData({
+      ...formData,
+      roles: formData.roles.includes(role)
+        ? formData.roles.filter(r => r !== role)
+        : [...formData.roles, role],
+    });
+    if (errors.roles) setErrors({ ...errors, roles: '' });
+  };
+
+  const handleContactChange = (field: string, value: string) => {
+    setFormData({
+      ...formData,
+      contact: { ...formData.contact, [field]: value || undefined },
+    });
+  };
+
+  const handleProfileChange = (profileType: string, field: string, value: string) => {
+    setFormData({
+      ...formData,
+      [profileType]: { ...(formData[profileType] || {}), [field]: value || undefined },
+    });
+  };
+
+  const handleAddIdentifier = () => {
+    setFormData({
+      ...formData,
+      identifiers: [...formData.identifiers, { type: '', value: '' }],
+    });
+  };
+
+  const handleIdentifierChange = (index: number, field: string, value: string) => {
+    const newIdentifiers = [...formData.identifiers];
+    newIdentifiers[index] = { ...newIdentifiers[index], [field]: value };
+    setFormData({ ...formData, identifiers: newIdentifiers });
+  };
+
+  const handleRemoveIdentifier = (index: number) => {
+    setFormData({
+      ...formData,
+      identifiers: formData.identifiers.filter((_, i) => i !== index),
+    });
+  };
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    if (!formData.name.trim()) newErrors.name = 'Name is required';
+    if (formData.roles.length === 0) newErrors.roles = 'Select at least one role';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    setLoading(true);
+    try {
+      const payload: any = {
+        name: formData.name.trim(),
+        roles: formData.roles,
+        contact: formData.contact,
+        identifiers: formData.identifiers.filter(id => id.type && id.value),
+      };
+
+      // Add role-specific profile data
+      if (formData.roles.includes('Victim') && (formData.victimProfile?.injuryDetails || formData.victimProfile?.lossDetails)) {
+        payload.victimProfile = formData.victimProfile;
+      }
+      if (formData.roles.includes('Witness') && formData.witnessProfile?.statement) {
+        payload.witnessProfile = formData.witnessProfile;
+      }
+      if (formData.roles.includes('Complainant') && formData.complainantProfile?.relationshipToIncident) {
+        payload.complainantProfile = formData.complainantProfile;
+      }
+
+      await apiClient.post(`/cases/${caseId}/participants`, payload);
+      onSuccess();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to add participant');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={onClose}>
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="sticky top-0 flex items-center justify-between p-6 border-b border-neutral-100 bg-white">
+          <h2 className="text-xl font-bold text-neutral-900">Add New Participant</h2>
+          <button onClick={onClose} className="p-1 text-neutral-400 hover:text-neutral-700 transition-colors text-2xl leading-none">×</button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {/* Name */}
+          <div>
+            <label className="text-sm font-semibold text-neutral-700 mb-2 block">
+              Full Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={handleNameChange}
+              placeholder="Enter full name"
+              className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 ${
+                errors.name
+                  ? 'border-red-300 focus:ring-red-200'
+                  : 'border-neutral-300 focus:ring-blue-200'
+              }`}
+            />
+            {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
+          </div>
+
+          {/* Roles */}
+          <div>
+            <label className="text-sm font-semibold text-neutral-700 mb-3 block">
+              Roles <span className="text-red-500">*</span>
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              {roleOptions.map(role => (
+                <label key={role} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.roles.includes(role)}
+                    onChange={() => handleRoleToggle(role)}
+                    className="w-4 h-4 accent-blue-600 cursor-pointer"
+                  />
+                  <span className="text-sm text-neutral-700">{role}</span>
+                </label>
+              ))}
+            </div>
+            {errors.roles && <p className="text-xs text-red-600 mt-1">{errors.roles}</p>}
+          </div>
+
+          {/* Contact Information */}
+          <div className="space-y-3">
+            <label className="text-sm font-semibold text-neutral-700">Contact Information</label>
+            <input
+              type="tel"
+              value={formData.contact.phone || ''}
+              onChange={(e) => handleContactChange('phone', e.target.value)}
+              placeholder="Phone number"
+              className="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+            />
+            <input
+              type="email"
+              value={formData.contact.email || ''}
+              onChange={(e) => handleContactChange('email', e.target.value)}
+              placeholder="Email address"
+              className="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+            />
+            <input
+              type="text"
+              value={formData.contact.address || ''}
+              onChange={(e) => handleContactChange('address', e.target.value)}
+              placeholder="Address"
+              className="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+            />
+          </div>
+
+          {/* Identifiers */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-sm font-semibold text-neutral-700">Identifiers (Optional)</label>
+              <button
+                type="button"
+                onClick={handleAddIdentifier}
+                className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+              >
+                + Add Identifier
+              </button>
+            </div>
+            <div className="space-y-2">
+              {formData.identifiers.map((id, idx) => (
+                <div key={idx} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={id.type}
+                    onChange={(e) => handleIdentifierChange(idx, 'type', e.target.value)}
+                    placeholder="Type (e.g., Aadhar, PAN, License)"
+                    className="flex-1 px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  />
+                  <input
+                    type="text"
+                    value={id.value}
+                    onChange={(e) => handleIdentifierChange(idx, 'value', e.target.value)}
+                    placeholder="Value"
+                    className="flex-1 px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveIdentifier(idx)}
+                    className="px-2 py-2 text-red-600 hover:bg-red-50 rounded transition-colors"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Victim Profile */}
+          {formData.roles.includes('Victim') && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
+              <label className="text-sm font-semibold text-green-800 block">Victim Profile Details</label>
+              <input
+                type="text"
+                value={formData.victimProfile?.injuryDetails || ''}
+                onChange={(e) => handleProfileChange('victimProfile', 'injuryDetails', e.target.value)}
+                placeholder="Injury details (optional)"
+                className="w-full px-4 py-2.5 border border-green-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
+              />
+              <textarea
+                value={formData.victimProfile?.lossDetails || ''}
+                onChange={(e) => handleProfileChange('victimProfile', 'lossDetails', e.target.value)}
+                placeholder="Loss details (optional)"
+                rows={3}
+                className="w-full px-4 py-2.5 border border-green-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
+              />
+            </div>
+          )}
+
+          {/* Witness Profile */}
+          {formData.roles.includes('Witness') && (
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-3">
+              <label className="text-sm font-semibold text-purple-800 block">Witness Profile Details</label>
+              <textarea
+                value={formData.witnessProfile?.statement || ''}
+                onChange={(e) => handleProfileChange('witnessProfile', 'statement', e.target.value)}
+                placeholder="Witness statement (optional)"
+                rows={4}
+                className="w-full px-4 py-2.5 border border-purple-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-200"
+              />
+            </div>
+          )}
+
+          {/* Complainant Profile */}
+          {formData.roles.includes('Complainant') && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+              <label className="text-sm font-semibold text-blue-800 block">Complainant Profile Details</label>
+              <input
+                type="text"
+                value={formData.complainantProfile?.relationshipToIncident || ''}
+                onChange={(e) => handleProfileChange('complainantProfile', 'relationshipToIncident', e.target.value)}
+                placeholder="Relationship to incident (optional)"
+                className="w-full px-4 py-2.5 border border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+              />
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex gap-3 pt-4 border-t border-neutral-100">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2.5 border border-neutral-300 text-neutral-700 font-semibold rounded-lg hover:bg-neutral-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 px-4 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-60 transition-colors"
+            >
+              {loading ? 'Adding...' : 'Add Participant'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ─── Edit Participant Modal ────────────────────────────────────────────────
+
+function EditParticipantModal({
+  isOpen,
+  onClose,
+  participant,
+  caseId,
+  onSuccess,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  participant: any;
+  caseId: string;
+  onSuccess: () => void;
+}) {
+  const [formData, setFormData] = React.useState<ParticipantFormData>({
+    name: '',
+    roles: [],
+    contact: {},
+    identifiers: [],
+  });
+  const [loading, setLoading] = React.useState(false);
+  const [errors, setErrors] = React.useState<Record<string, string>>({});
+
+  const roleOptions = ['Victim', 'Witness', 'Suspect', 'Accused', 'Complainant'];
+
+  React.useEffect(() => {
+    if (participant) {
+      setFormData({
+        name: participant.name || '',
+        roles: participant.roles || [],
+        contact: participant.contact || {},
+        identifiers: participant.identifiers || [],
+        victimProfile: participant.victimProfile || {},
+        witnessProfile: participant.witnessProfile || {},
+        complainantProfile: participant.complainantProfile || {},
+      });
+    }
+  }, [participant, isOpen]);
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, name: e.target.value });
+    if (errors.name) setErrors({ ...errors, name: '' });
+  };
+
+  const handleRoleToggle = (role: string) => {
+    setFormData({
+      ...formData,
+      roles: formData.roles.includes(role)
+        ? formData.roles.filter(r => r !== role)
+        : [...formData.roles, role],
+    });
+  };
+
+  const handleContactChange = (field: string, value: string) => {
+    setFormData({
+      ...formData,
+      contact: { ...formData.contact, [field]: value || undefined },
+    });
+  };
+
+  const handleProfileChange = (profileType: string, field: string, value: string) => {
+    setFormData({
+      ...formData,
+      [profileType]: { ...(formData[profileType] || {}), [field]: value || undefined },
+    });
+  };
+
+  const handleAddIdentifier = () => {
+    setFormData({
+      ...formData,
+      identifiers: [...formData.identifiers, { type: '', value: '' }],
+    });
+  };
+
+  const handleIdentifierChange = (index: number, field: string, value: string) => {
+    const newIdentifiers = [...formData.identifiers];
+    newIdentifiers[index] = { ...newIdentifiers[index], [field]: value };
+    setFormData({ ...formData, identifiers: newIdentifiers });
+  };
+
+  const handleRemoveIdentifier = (index: number) => {
+    setFormData({
+      ...formData,
+      identifiers: formData.identifiers.filter((_, i) => i !== index),
+    });
+  };
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    if (!formData.name.trim()) newErrors.name = 'Name is required';
+    if (formData.roles.length === 0) newErrors.roles = 'Select at least one role';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    setLoading(true);
+    try {
+      const payload: any = {
+        name: formData.name.trim(),
+        roles: formData.roles,
+        contact: formData.contact,
+        identifiers: formData.identifiers.filter(id => id.type && id.value),
+      };
+
+      // Add role-specific profile data
+      if (formData.roles.includes('Victim') && (formData.victimProfile?.injuryDetails || formData.victimProfile?.lossDetails)) {
+        payload.victimProfile = formData.victimProfile;
+      }
+      if (formData.roles.includes('Witness') && formData.witnessProfile?.statement) {
+        payload.witnessProfile = formData.witnessProfile;
+      }
+      if (formData.roles.includes('Complainant') && formData.complainantProfile?.relationshipToIncident) {
+        payload.complainantProfile = formData.complainantProfile;
+      }
+
+      await apiClient.patch(`/cases/${caseId}/participants/${participant.participant_id}`, payload);
+      onSuccess();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to update participant');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={onClose}>
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="sticky top-0 flex items-center justify-between p-6 border-b border-neutral-100 bg-white">
+          <h2 className="text-xl font-bold text-neutral-900">Edit Participant</h2>
+          <button onClick={onClose} className="p-1 text-neutral-400 hover:text-neutral-700 transition-colors text-2xl leading-none">×</button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {/* Name */}
+          <div>
+            <label className="text-sm font-semibold text-neutral-700 mb-2 block">
+              Full Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={handleNameChange}
+              placeholder="Enter full name"
+              className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 ${
+                errors.name
+                  ? 'border-red-300 focus:ring-red-200'
+                  : 'border-neutral-300 focus:ring-blue-200'
+              }`}
+            />
+            {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
+          </div>
+
+          {/* Roles */}
+          <div>
+            <label className="text-sm font-semibold text-neutral-700 mb-3 block">
+              Roles <span className="text-red-500">*</span>
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              {roleOptions.map(role => (
+                <label key={role} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.roles.includes(role)}
+                    onChange={() => handleRoleToggle(role)}
+                    className="w-4 h-4 accent-blue-600 cursor-pointer"
+                  />
+                  <span className="text-sm text-neutral-700">{role}</span>
+                </label>
+              ))}
+            </div>
+            {errors.roles && <p className="text-xs text-red-600 mt-1">{errors.roles}</p>}
+          </div>
+
+          {/* Contact Information */}
+          <div className="space-y-3">
+            <label className="text-sm font-semibold text-neutral-700">Contact Information</label>
+            <input
+              type="tel"
+              value={formData.contact.phone || ''}
+              onChange={(e) => handleContactChange('phone', e.target.value)}
+              placeholder="Phone number"
+              className="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+            />
+            <input
+              type="email"
+              value={formData.contact.email || ''}
+              onChange={(e) => handleContactChange('email', e.target.value)}
+              placeholder="Email address"
+              className="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+            />
+            <input
+              type="text"
+              value={formData.contact.address || ''}
+              onChange={(e) => handleContactChange('address', e.target.value)}
+              placeholder="Address"
+              className="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+            />
+          </div>
+
+          {/* Identifiers */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-sm font-semibold text-neutral-700">Identifiers (Optional)</label>
+              <button
+                type="button"
+                onClick={handleAddIdentifier}
+                className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+              >
+                + Add Identifier
+              </button>
+            </div>
+            <div className="space-y-2">
+              {formData.identifiers.map((id, idx) => (
+                <div key={idx} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={id.type}
+                    onChange={(e) => handleIdentifierChange(idx, 'type', e.target.value)}
+                    placeholder="Type (e.g., Aadhar, PAN, License)"
+                    className="flex-1 px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  />
+                  <input
+                    type="text"
+                    value={id.value}
+                    onChange={(e) => handleIdentifierChange(idx, 'value', e.target.value)}
+                    placeholder="Value"
+                    className="flex-1 px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveIdentifier(idx)}
+                    className="px-2 py-2 text-red-600 hover:bg-red-50 rounded transition-colors"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Victim Profile */}
+          {formData.roles.includes('Victim') && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
+              <label className="text-sm font-semibold text-green-800 block">Victim Profile Details</label>
+              <input
+                type="text"
+                value={formData.victimProfile?.injuryDetails || ''}
+                onChange={(e) => handleProfileChange('victimProfile', 'injuryDetails', e.target.value)}
+                placeholder="Injury details (optional)"
+                className="w-full px-4 py-2.5 border border-green-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
+              />
+              <textarea
+                value={formData.victimProfile?.lossDetails || ''}
+                onChange={(e) => handleProfileChange('victimProfile', 'lossDetails', e.target.value)}
+                placeholder="Loss details (optional)"
+                rows={3}
+                className="w-full px-4 py-2.5 border border-green-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
+              />
+            </div>
+          )}
+
+          {/* Witness Profile */}
+          {formData.roles.includes('Witness') && (
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-3">
+              <label className="text-sm font-semibold text-purple-800 block">Witness Profile Details</label>
+              <textarea
+                value={formData.witnessProfile?.statement || ''}
+                onChange={(e) => handleProfileChange('witnessProfile', 'statement', e.target.value)}
+                placeholder="Witness statement (optional)"
+                rows={4}
+                className="w-full px-4 py-2.5 border border-purple-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-200"
+              />
+            </div>
+          )}
+
+          {/* Complainant Profile */}
+          {formData.roles.includes('Complainant') && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+              <label className="text-sm font-semibold text-blue-800 block">Complainant Profile Details</label>
+              <input
+                type="text"
+                value={formData.complainantProfile?.relationshipToIncident || ''}
+                onChange={(e) => handleProfileChange('complainantProfile', 'relationshipToIncident', e.target.value)}
+                placeholder="Relationship to incident (optional)"
+                className="w-full px-4 py-2.5 border border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+              />
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex gap-3 pt-4 border-t border-neutral-100">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2.5 border border-neutral-300 text-neutral-700 font-semibold rounded-lg hover:bg-neutral-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 px-4 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-60 transition-colors"
+            >
+              {loading ? 'Updating...' : 'Update Participant'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

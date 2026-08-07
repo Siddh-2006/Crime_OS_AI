@@ -51,6 +51,8 @@ export class ChargeSheetService {
 
     const annexures: Array<{ title: string; type: string; url?: string; referenceId?: string; source?: string }> = [];
     const pushAnnexure = (entry: { title: string; type: string; url?: string; referenceId?: string; source?: string }) => {
+      // Use referenceId as primary deduplication key to avoid duplicate links
+      // Only add if this referenceId+type combo hasn't been added yet
       const key = `${entry.type}:${entry.referenceId || entry.title}`.toLowerCase();
       if (!annexures.some((item) => `${item.type}:${item.referenceId || item.title}`.toLowerCase() === key)) {
         annexures.push(entry);
@@ -59,7 +61,11 @@ export class ChargeSheetService {
     const resolveUrl = (candidate: any): string | undefined => {
       const raw = candidate?.secureUrl || candidate?.storage_ref || candidate?.cloudinary_url || candidate?.response_ref || candidate?.firPdfUrl || candidate?.url;
       if (typeof raw !== 'string') return undefined;
-      return /^https?:\/\//i.test(raw) ? raw : undefined;
+      // Add https:// protocol if URL doesn't already have http:// or https://
+      if (!/^https?:\/\//i.test(raw)) {
+        return `https://${raw}`;
+      }
+      return raw;
     };
 
     if (complaint.firPdfUrl) {

@@ -100,4 +100,79 @@ export class CaseParticipantController {
       });
     }
   }
+
+  static async createParticipant(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { name, roles, contact, identifiers, victimProfile, witnessProfile, suspectProfile, accusedProfile, complainantProfile } = req.body;
+
+      if (!name || !Array.isArray(roles) || roles.length === 0) {
+        sendError(res, HttpStatusCode.BAD_REQUEST, {
+          code: 'INVALID_INPUT',
+          message: 'name and roles are required',
+        });
+        return;
+      }
+
+      const participant = await CaseParticipantService.createParticipant(id, {
+        name,
+        roles,
+        contact,
+        identifiers,
+        victimProfile,
+        witnessProfile,
+        suspectProfile,
+        accusedProfile,
+        complainantProfile,
+      });
+
+      sendSuccess(res, HttpStatusCode.CREATED, 'Participant created successfully', participant);
+    } catch (error) {
+      sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, {
+        code: 'PARTICIPANT_CREATE_FAILED',
+        message: error instanceof Error ? error.message : 'Failed to create participant',
+      });
+    }
+  }
+
+  static async updateParticipant(req: Request, res: Response): Promise<void> {
+    try {
+      const { id, participantId } = req.params;
+      const { name, roles, contact, identifiers, victimProfile, witnessProfile, suspectProfile, accusedProfile, complainantProfile } = req.body;
+
+      const participant = await CaseParticipantService.updateParticipant(id, participantId, {
+        name,
+        roles,
+        contact,
+        identifiers,
+        victimProfile,
+        witnessProfile,
+        suspectProfile,
+        accusedProfile,
+        complainantProfile,
+      });
+
+      sendSuccess(res, HttpStatusCode.OK, 'Participant updated successfully', participant);
+    } catch (error) {
+      sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, {
+        code: 'PARTICIPANT_UPDATE_FAILED',
+        message: error instanceof Error ? error.message : 'Failed to update participant',
+      });
+    }
+  }
+
+  static async deleteParticipant(req: Request, res: Response): Promise<void> {
+    try {
+      const { id, participantId } = req.params;
+
+      await CaseParticipantService.deleteParticipant(id, participantId);
+
+      sendSuccess(res, HttpStatusCode.OK, 'Participant deleted successfully', null);
+    } catch (error) {
+      sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, {
+        code: 'PARTICIPANT_DELETE_FAILED',
+        message: error instanceof Error ? error.message : 'Failed to delete participant',
+      });
+    }
+  }
 }
