@@ -1,6 +1,6 @@
 import { Types } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
-import { CaseParticipant, ICaseParticipant, ParticipantRole, IVictimProfile, IWitnessProfile, ISuspectProfile, IAccusedProfile, IComplainantProfile } from '../models/CaseParticipant.model';
+import { CaseParticipant, ICaseParticipant, ParticipantRole, IVictimProfile, IWitnessProfile, ISuspectProfile, IAccusedProfile, IComplainantProfile, IParticipantStatement, IParticipantReasoning } from '../models/CaseParticipant.model';
 import { DiaryEntry } from '../models/DiaryEntry.model';
 import { AnalysisSnapshot, IParticipantRecommendation } from '../models/AnalysisSnapshot.model';
 import { ILegalSectionSuggestion, IAppliedLegalSection } from '../models/LegalSection.schema';
@@ -512,6 +512,130 @@ export class CaseParticipantService {
       },
       ref_ids: { participant_id: participant.participant_id },
     });
+
+    return participant;
+  }
+
+  /**
+   * Add a statement to a participant (any role).
+   */
+  static async addStatement(
+    caseId: string,
+    participantId: string,
+    input: { content: string; recordedAt: Date },
+  ): Promise<ICaseParticipant> {
+    const caseObjectId = new Types.ObjectId(caseId);
+    const participant = await CaseParticipant.findOne({ case_id: caseObjectId, participant_id: participantId }).exec();
+    if (!participant) throw new Error('Participant not found');
+
+    const statement: IParticipantStatement = {
+      id: uuidv4(),
+      content: input.content,
+      recordedAt: input.recordedAt,
+    };
+
+    participant.statements.push(statement);
+    await participant.save();
+
+    await DiaryEntry.create({
+      case_id: caseObjectId,
+      entry_id: uuidv4(),
+      actor: { type: 'officer', id: 'system' },
+      event_type: 'participant_statement_added',
+      payload: {
+        participant_id: participant.participant_id,
+        participant_name: participant.name,
+        statement_id: statement.id,
+        recorded_at: statement.recordedAt,
+      },
+      ref_ids: { participant_id: participant.participant_id },
+    });
+
+    return participant;
+  }
+
+  /**
+   * Delete a statement from a participant.
+   */
+  static async deleteStatement(caseId: string, participantId: string, statementId: string): Promise<ICaseParticipant> {
+    const caseObjectId = new Types.ObjectId(caseId);
+    const participant = await CaseParticipant.findOne({ case_id: caseObjectId, participant_id: participantId }).exec();
+    if (!participant) throw new Error('Participant not found');
+
+    participant.statements = participant.statements.filter((s) => s.id !== statementId);
+    await participant.save();
+
+    return participant;
+  }
+
+  /**
+   * Add a reasoning entry (from AI panel or officer manually).
+   */
+  static async addReasoning(
+    caseId: string,
+    participantId: string,
+    input: { content: string; source: 'ai' | 'officer' },
+  ): Promise<ICaseParticipant> {
+    const caseObjectId = new Types.ObjectId(caseId);
+    const participant = await CaseParticipant.findOne({ case_id: caseObjectId, participant_id: participantId }).exec();
+    if (!participant) throw new Error('Participant not found');
+
+    const reasoning: IParticipantReasoning = {
+      id: uuidv4(),
+      content: input.content,
+      source: input.source,
+      createdAt: new Date(),
+    };
+
+    participant.reasoning.push(reasoning);
+    await participant.save();
+
+    await DiaryEntry.create({
+      case_id: caseObjectId,
+      entry_id: uuidv4(),
+      actor: { type: 'officer', id: 'system' },
+      event_type: 'participant_reasoning_attached',
+      payload: {
+        participant_id: participant.participant_id,
+        participant_name: participant.name,
+        reasoning_id: reasoning.id,
+        source: reasoning.source,
+      },
+      ref_ids: { participant_id: participant.participant_id },
+    });
+
+    return participant;
+  }
+
+  /**
+   * Update an existing reasoning entry (officer editing).
+   */
+  static async updateReasoning(caseId: string, participantId: string, reasoningId: string, content: string): Promise<ICaseParticipant> {
+    const caseObjectId = new Types.ObjectId(caseId);
+    const participant = await CaseParticipant.findOne({ case_id: caseObjectId, participant_id: participantId }).exec();
+    if (!participant) throw new Error('Participant not found');
+
+    const entry = participant.reasoning.find((r) => r.id === reasoningId);
+    if (!entry) throw new Error('Reasoning entry not found');
+
+    entry.content = content;
+    // Mark as officer-edited regardless of original source
+    entry.source = 'officer';
+    await participant.save();
+
+    return participant;
+  }
+
+  /**
+   * Delete a reasoning entry.
+   */
+  static async deleteReasoning(caseId: string, participantId: string, reasoningId: string): Promise<ICaseParticipant> {
+    const caseObjectId = new Types.ObjectId(caseId);
+    const participant = await CaseParticipant.findOne({ case_id: caseObjectId, participant_id: participantId }).exec();
+    if (!participant) throw new Error('Participant not found');
+
+    participant.reasoning = participant.reasoning.filter((r) => r.id !== reasoningId);
+    await participant.save();
 
     return participant;
   }

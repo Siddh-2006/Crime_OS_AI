@@ -17,6 +17,7 @@ export interface IParticipantRecommendation {
   supporting_evidence_ids: string[];
   contradicting_evidence_ids: string[];
   recommended_sections?: IParticipantRecommendationLegalSection[];
+  suggested_reasoning?: string;
 }
 
 export interface IRankedNextStep {
@@ -100,6 +101,7 @@ const ParticipantRecommendationSchema = new Schema<IParticipantRecommendation>(
     supporting_evidence_ids:     [{ type: String }],
     contradicting_evidence_ids:  [{ type: String }],
     recommended_sections:        { type: [ParticipantRecommendationLegalSectionSchema], default: [] },
+    suggested_reasoning:         { type: String },
   },
   { _id: false },
 );

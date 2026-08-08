@@ -478,6 +478,33 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
     }
   };
 
+  const handleAttachReasoning = async (recommendation: any, reasoningContent: string) => {
+    setActionLoading(true);
+    try {
+      // Find or create the participant first
+      let participant = findMatchingParticipant(recommendation);
+      if (!participant) {
+        const approvalResponse = await apiClient.post(`/cases/${caseId}/participants/recommendations/approve`, {
+          recommendation,
+          snapshot_id: snapshot?.snapshot_id,
+        });
+        participant = approvalResponse.data.data;
+      }
+
+      await apiClient.post(`/cases/${caseId}/participants/${participant.participant_id}/reasoning`, {
+        content: reasoningContent,
+        source: 'ai',
+      });
+
+      showToast(`AI reasoning attached to ${participant.name}.`, 'success');
+      await fetchWorkspaceData();
+    } catch (error: any) {
+      showToast(error.response?.data?.message || 'Failed to attach reasoning.', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const getDiaryPreviewUrl = (url: string) => {
     if (!url) return url;
     return url.replace(/\/upload\/fl_attachment\//, '/upload/');
@@ -566,6 +593,7 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
             onAttachEvidenceSections={handleAttachEvidenceSections}
             onAcceptRecommendedSection={handleAcceptRecommendedSection}
             onApproveParticipant={handleApproveParticipant}
+            onAttachReasoning={handleAttachReasoning}
             actionLoading={actionLoading}
           />
         )}
@@ -1464,8 +1492,7 @@ function MissingInfoCardIO({ item, caseId }: { item: { title: string; descriptio
 
 // ─── Participants Panel ──────────────────────────────────────────────────────
 
-function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: any[]; caseId: string; onRefresh: () => void }) {
-  const [roleFilter, setRoleFilter] = React.useState<string>('All');
+function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: any[]; caseId: string; onRefresh: () => void }) {  const [roleFilter, setRoleFilter] = React.useState<string>('All');
   const [selectedParticipant, setSelectedParticipant] = React.useState<any | null>(null);
   const [promotingId, setPromotingId] = React.useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
@@ -1667,7 +1694,12 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
       {selectedParticipant && (
         <ParticipantDetailModal
           participant={selectedParticipant}
+          caseId={caseId}
           onClose={() => setSelectedParticipant(null)}
+          onRefresh={() => {
+            onRefresh();
+            // keep modal open but data refreshes underneath
+          }}
           onEdit={(p) => {
             setEditingParticipant(p);
             setSelectedParticipant(null);
@@ -1716,15 +1748,33 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
 
 function ParticipantDetailModal({ 
   participant: p, 
+  caseId,
   onClose, 
   onEdit,
-  onDelete
+  onDelete,
+  onRefresh,
 }: { 
   participant: any; 
+  caseId: string;
   onClose: () => void;
   onEdit?: (p: any) => void;
   onDelete?: (p: any) => void;
+  onRefresh?: () => void;
 }) {
+  const [stmtContent, setStmtContent] = React.useState('');
+  const [stmtDate, setStmtDate] = React.useState(() => new Date().toISOString().slice(0, 16));
+  const [stmtLoading, setStmtLoading] = React.useState(false);
+
+  // Audio transcription state
+  const [transcribing, setTranscribing] = React.useState(false);
+  const [transcribeError, setTranscribeError] = React.useState<string | null>(null);
+  const audioInputRef = React.useRef<HTMLInputElement>(null);
+
+  const [reasoningContent, setReasoningContent] = React.useState('');
+  const [reasoningLoading, setReasoningLoading] = React.useState(false);
+  const [editingReasoningId, setEditingReasoningId] = React.useState<string | null>(null);
+  const [editingReasoningContent, setEditingReasoningContent] = React.useState('');
+
   const roleBadgeColor = (role: string) => {
     switch (role) {
       case 'Accused': return 'bg-red-50 text-red-700 border-red-200';
@@ -1741,10 +1791,123 @@ function ParticipantDetailModal({
     ...(p.suspectProfile?.appliedSections || []),
   ];
 
+  const handleAddStatement = async () => {
+    if (!stmtContent.trim() || !stmtDate) return;
+    setStmtLoading(true);
+    try {
+      await apiClient.post(`/cases/${caseId}/participants/${p.participant_id}/statements`, {
+        content: stmtContent.trim(),
+        recordedAt: new Date(stmtDate).toISOString(),
+      });
+      setStmtContent('');
+      setStmtDate(new Date().toISOString().slice(0, 16));
+      onRefresh?.();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to add statement');
+    } finally {
+      setStmtLoading(false);
+    }
+  };
+
+  const handleDeleteStatement = async (statementId: string) => {
+    if (!confirm('Delete this statement?')) return;
+    try {
+      await apiClient.delete(`/cases/${caseId}/participants/${p.participant_id}/statements/${statementId}`);
+      onRefresh?.();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to delete statement');
+    }
+  };
+
+  const handleAudioFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Reset the input so the same file can be re-selected if needed
+    e.target.value = '';
+
+    setTranscribing(true);
+    setTranscribeError(null);
+
+    try {
+      const form = new FormData();
+      form.append('file', file);
+
+      const res = await apiClient.post(
+        `/cases/${caseId}/participants/${p.participant_id}/statements/transcribe`,
+        form,
+        { headers: { 'Content-Type': 'multipart/form-data' } },
+      );
+
+      const { transcript, detectedLanguage, translatedText } = res.data.data;
+
+      // Auto-fill the statement textarea with the original-language text
+      // Append if there's already some content (officer may have typed some)
+      setStmtContent((prev) => {
+        const base = prev.trim();
+        return base ? `${base}\n\n${transcript}` : transcript;
+      });
+
+      // Show a subtle hint if translation is also available
+      if (translatedText && detectedLanguage && detectedLanguage !== 'en') {
+        setTranscribeError(`Detected language: ${detectedLanguage}. English translation also available — check below.`);
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Transcription failed. Ensure the Python service is running.';
+      setTranscribeError(msg);
+    } finally {
+      setTranscribing(false);
+    }
+  };
+
+  const handleAddReasoning = async () => {
+    if (!reasoningContent.trim()) return;
+    setReasoningLoading(true);
+    try {
+      await apiClient.post(`/cases/${caseId}/participants/${p.participant_id}/reasoning`, {
+        content: reasoningContent.trim(),
+        source: 'officer',
+      });
+      setReasoningContent('');
+      onRefresh?.();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to add reasoning');
+    } finally {
+      setReasoningLoading(false);
+    }
+  };
+
+  const handleUpdateReasoning = async (reasoningId: string) => {
+    if (!editingReasoningContent.trim()) return;
+    setReasoningLoading(true);
+    try {
+      await apiClient.patch(`/cases/${caseId}/participants/${p.participant_id}/reasoning/${reasoningId}`, {
+        content: editingReasoningContent.trim(),
+      });
+      setEditingReasoningId(null);
+      setEditingReasoningContent('');
+      onRefresh?.();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to update reasoning');
+    } finally {
+      setReasoningLoading(false);
+    }
+  };
+
+  const handleDeleteReasoning = async (reasoningId: string) => {
+    if (!confirm('Delete this reasoning entry?')) return;
+    try {
+      await apiClient.delete(`/cases/${caseId}/participants/${p.participant_id}/reasoning/${reasoningId}`);
+      onRefresh?.();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to delete reasoning');
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[85vh] overflow-y-auto"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -1761,22 +1924,10 @@ function ParticipantDetailModal({
           </div>
           <div className="flex gap-2">
             {onEdit && (
-              <button
-                onClick={() => onEdit(p)}
-                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                title="Edit"
-              >
-                ✏️
-              </button>
+              <button onClick={() => onEdit(p)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">✏️</button>
             )}
             {onDelete && (
-              <button
-                onClick={() => onDelete(p)}
-                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                title="Delete"
-              >
-                🗑️
-              </button>
+              <button onClick={() => onDelete(p)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete">🗑️</button>
             )}
             <button onClick={onClose} className="p-1 text-neutral-400 hover:text-neutral-700 transition-colors text-2xl leading-none">×</button>
           </div>
@@ -1820,21 +1971,8 @@ function ParticipantDetailModal({
             </section>
           )}
 
-          {/* Witness Profile */}
-          {p.witnessProfile?.statement && (
-            <section>
-              <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">Witness Statement</h3>
-              <div className="bg-purple-50 border border-purple-100 rounded-lg p-3 text-sm text-neutral-700">
-                <p>{p.witnessProfile.statement}</p>
-                {p.witnessProfile.statementRecordedAt && (
-                  <p className="text-xs text-neutral-400 mt-1">Recorded: {new Date(p.witnessProfile.statementRecordedAt).toLocaleString('en-IN')}</p>
-                )}
-              </div>
-            </section>
-          )}
-
           {/* Suspect Profile (only show if not also accused) */}
-          {p.suspectProfile && !(p.roles || []).includes('Accused') && (
+          {p.suspectProfile && !(p.roles || []).includes('Accused') && (p.suspectProfile.motive || p.suspectProfile.alibi) && (
             <section>
               <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">Suspect Profile</h3>
               <div className="bg-orange-50 border border-orange-100 rounded-lg p-3 text-sm text-neutral-700 space-y-1">
@@ -1866,6 +2004,196 @@ function ParticipantDetailModal({
               <p className="text-sm text-neutral-700">Relation to Incident: {p.complainantProfile.relationshipToIncident}</p>
             </section>
           )}
+
+          {/* ── Statements ──────────────────────────────────────────────── */}
+          <section>
+            <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-3">Statements</h3>
+
+            {/* Existing statements */}
+            {Array.isArray(p.statements) && p.statements.length > 0 ? (
+              <div className="space-y-2 mb-3">
+                {p.statements.map((stmt: any) => (
+                  <div key={stmt.id} className="bg-purple-50 border border-purple-100 rounded-lg p-3 text-sm">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-neutral-800 flex-1">{stmt.content}</p>
+                      <button
+                        onClick={() => handleDeleteStatement(stmt.id)}
+                        className="text-neutral-300 hover:text-red-500 transition-colors flex-shrink-0 text-xs"
+                        title="Delete statement"
+                      >🗑️</button>
+                    </div>
+                    <p className="text-xs text-neutral-400 mt-1">
+                      🕐 {stmt.recordedAt ? new Date(stmt.recordedAt).toLocaleString('en-IN') : 'No date'}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-neutral-400 mb-3">No statements recorded yet.</p>
+            )}
+
+            {/* Add statement form */}
+            <div className="border border-neutral-200 rounded-lg p-3 bg-neutral-50 space-y-2">
+              <p className="text-xs font-semibold text-neutral-600">Add New Statement</p>
+              <textarea
+                value={stmtContent}
+                onChange={(e) => setStmtContent(e.target.value)}
+                placeholder="Enter statement content..."
+                rows={3}
+                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-200 resize-none"
+              />
+
+              {/* Audio upload row */}
+              <div className="flex items-center gap-2">
+                <input
+                  ref={audioInputRef}
+                  type="file"
+                  accept="audio/*,.mp3,.wav,.ogg,.flac,.m4a,.webm,.opus,.aac"
+                  className="hidden"
+                  onChange={handleAudioFileChange}
+                />
+                <button
+                  type="button"
+                  onClick={() => audioInputRef.current?.click()}
+                  disabled={transcribing}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
+                    transcribing
+                      ? 'bg-neutral-100 text-neutral-400 border-neutral-200 cursor-not-allowed'
+                      : 'bg-white text-purple-700 border-purple-300 hover:bg-purple-50 cursor-pointer'
+                  }`}
+                  title="Upload audio file to auto-fill transcript"
+                >
+                  {transcribing ? (
+                    <>
+                      <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                      </svg>
+                      Transcribing...
+                    </>
+                  ) : (
+                    <>🎙️ Upload Audio</>
+                  )}
+                </button>
+                <span className="text-[10px] text-neutral-400">MP3, WAV, OGG, M4A, FLAC, WEBM • max 50 MB</span>
+              </div>
+
+              {/* Transcription feedback */}
+              {transcribeError && (
+                <p className={`text-xs px-2 py-1 rounded ${
+                  transcribeError.startsWith('Detected language')
+                    ? 'bg-blue-50 text-blue-700 border border-blue-100'
+                    : 'bg-red-50 text-red-600 border border-red-100'
+                }`}>
+                  {transcribeError}
+                </p>
+              )}
+
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <label className="text-xs text-neutral-500 mb-1 block">Recorded At</label>
+                  <input
+                    type="datetime-local"
+                    value={stmtDate}
+                    onChange={(e) => setStmtDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-200"
+                  />
+                </div>
+                <button
+                  onClick={handleAddStatement}
+                  disabled={stmtLoading || !stmtContent.trim()}
+                  className="self-end px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors"
+                >
+                  {stmtLoading ? '...' : '+ Add'}
+                </button>
+              </div>
+            </div>
+          </section>
+
+          {/* ── Reasoning ───────────────────────────────────────────────── */}
+          <section>
+            <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-3">Reasoning</h3>
+
+            {/* Existing reasoning entries */}
+            {Array.isArray(p.reasoning) && p.reasoning.length > 0 ? (
+              <div className="space-y-2 mb-3">
+                {p.reasoning.map((r: any) => (
+                  <div key={r.id} className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm">
+                    {editingReasoningId === r.id ? (
+                      <div className="space-y-2">
+                        <textarea
+                          value={editingReasoningContent}
+                          onChange={(e) => setEditingReasoningContent(e.target.value)}
+                          rows={3}
+                          className="w-full px-3 py-2 border border-blue-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleUpdateReasoning(r.id)}
+                            disabled={reasoningLoading}
+                            className="px-3 py-1 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                          >
+                            {reasoningLoading ? '...' : 'Save'}
+                          </button>
+                          <button
+                            onClick={() => { setEditingReasoningId(null); setEditingReasoningContent(''); }}
+                            className="px-3 py-1 border border-neutral-300 text-neutral-600 text-xs font-semibold rounded-lg hover:bg-neutral-50"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${r.source === 'ai' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                              {r.source === 'ai' ? '🤖 AI' : '👮 Officer'}
+                            </span>
+                            <span className="text-xs text-neutral-400">{new Date(r.createdAt).toLocaleString('en-IN')}</span>
+                          </div>
+                          <p className="text-neutral-800">{r.content}</p>
+                        </div>
+                        <div className="flex gap-1 flex-shrink-0">
+                          <button
+                            onClick={() => { setEditingReasoningId(r.id); setEditingReasoningContent(r.content); }}
+                            className="text-neutral-300 hover:text-blue-500 transition-colors text-xs"
+                            title="Edit"
+                          >✏️</button>
+                          <button
+                            onClick={() => handleDeleteReasoning(r.id)}
+                            className="text-neutral-300 hover:text-red-500 transition-colors text-xs"
+                            title="Delete"
+                          >🗑️</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-neutral-400 mb-3">No reasoning entries yet.</p>
+            )}
+
+            {/* Add reasoning form */}
+            <div className="border border-neutral-200 rounded-lg p-3 bg-neutral-50 space-y-2">
+              <p className="text-xs font-semibold text-neutral-600">Add Reasoning Note</p>
+              <textarea
+                value={reasoningContent}
+                onChange={(e) => setReasoningContent(e.target.value)}
+                placeholder="Add investigative reasoning or observation..."
+                rows={3}
+                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none"
+              />
+              <button
+                onClick={handleAddReasoning}
+                disabled={reasoningLoading || !reasoningContent.trim()}
+                className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                {reasoningLoading ? '...' : '+ Add Reasoning'}
+              </button>
+            </div>
+          </section>
         </div>
       </div>
     </div>
@@ -2218,9 +2546,6 @@ function AddParticipantModal({
       if (formData.roles.includes('Victim') && (formData.victimProfile?.injuryDetails || formData.victimProfile?.lossDetails)) {
         payload.victimProfile = formData.victimProfile;
       }
-      if (formData.roles.includes('Witness') && formData.witnessProfile?.statement) {
-        payload.witnessProfile = formData.witnessProfile;
-      }
       if (formData.roles.includes('Complainant') && formData.complainantProfile?.relationshipToIncident) {
         payload.complainantProfile = formData.complainantProfile;
       }
@@ -2377,20 +2702,6 @@ function AddParticipantModal({
             </div>
           )}
 
-          {/* Witness Profile */}
-          {formData.roles.includes('Witness') && (
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-3">
-              <label className="text-sm font-semibold text-purple-800 block">Witness Profile Details</label>
-              <textarea
-                value={formData.witnessProfile?.statement || ''}
-                onChange={(e) => handleProfileChange('witnessProfile', 'statement', e.target.value)}
-                placeholder="Witness statement (optional)"
-                rows={4}
-                className="w-full px-4 py-2.5 border border-purple-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-200"
-              />
-            </div>
-          )}
-
           {/* Complainant Profile */}
           {formData.roles.includes('Complainant') && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
@@ -2404,6 +2715,8 @@ function AddParticipantModal({
               />
             </div>
           )}
+
+          <p className="text-xs text-neutral-400 italic">Statements and reasoning can be added from the participant detail view after creation.</p>
 
           {/* Actions */}
           <div className="flex gap-3 pt-4 border-t border-neutral-100">
@@ -2540,9 +2853,6 @@ function EditParticipantModal({
       // Add role-specific profile data
       if (formData.roles.includes('Victim') && (formData.victimProfile?.injuryDetails || formData.victimProfile?.lossDetails)) {
         payload.victimProfile = formData.victimProfile;
-      }
-      if (formData.roles.includes('Witness') && formData.witnessProfile?.statement) {
-        payload.witnessProfile = formData.witnessProfile;
       }
       if (formData.roles.includes('Complainant') && formData.complainantProfile?.relationshipToIncident) {
         payload.complainantProfile = formData.complainantProfile;
@@ -2700,20 +3010,6 @@ function EditParticipantModal({
             </div>
           )}
 
-          {/* Witness Profile */}
-          {formData.roles.includes('Witness') && (
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-3">
-              <label className="text-sm font-semibold text-purple-800 block">Witness Profile Details</label>
-              <textarea
-                value={formData.witnessProfile?.statement || ''}
-                onChange={(e) => handleProfileChange('witnessProfile', 'statement', e.target.value)}
-                placeholder="Witness statement (optional)"
-                rows={4}
-                className="w-full px-4 py-2.5 border border-purple-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-200"
-              />
-            </div>
-          )}
-
           {/* Complainant Profile */}
           {formData.roles.includes('Complainant') && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
@@ -2727,6 +3023,8 @@ function EditParticipantModal({
               />
             </div>
           )}
+
+          <p className="text-xs text-neutral-400 italic">Statements and reasoning are managed from the participant detail view.</p>
 
           {/* Actions */}
           <div className="flex gap-3 pt-4 border-t border-neutral-100">

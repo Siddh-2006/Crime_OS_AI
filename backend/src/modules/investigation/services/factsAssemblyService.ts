@@ -134,11 +134,22 @@ export interface ComplaintFacts {
 export interface ParticipantProfileFacts {
   injuryDetails?: string;
   lossDetails?: string;
-  statement?: string;
-  statementRecordedAt?: Date;
   evidenceIds?: string[];
   appliedSections?: ILegalSectionSuggestion[];
   relationshipToIncident?: string;
+}
+
+export interface IParticipantStatementFacts {
+  id: string;
+  content: string;
+  recordedAt: Date;
+}
+
+export interface IParticipantReasoningFacts {
+  id: string;
+  content: string;
+  source: 'ai' | 'officer';
+  createdAt: Date;
 }
 
 export interface ParticipantFactsRow {
@@ -152,6 +163,8 @@ export interface ParticipantFactsRow {
     address?: string;
   };
   identifiers: Array<{ type: string; value: string }>;
+  statements: IParticipantStatementFacts[];
+  reasoning: IParticipantReasoningFacts[];
   victim_profile?: ParticipantProfileFacts;
   witness_profile?: ParticipantProfileFacts;
   suspect_profile?: ParticipantProfileFacts;
@@ -159,10 +172,6 @@ export interface ParticipantFactsRow {
   complainant_profile?: ParticipantProfileFacts;
   evidence_ids: string[];
   evidence: EvidenceRow[];
-  // metadata: {
-  //   created_at?: Date;
-  //   updated_at?: Date;
-  // };
 }
 
 export interface ParticipantFactsGroup {
@@ -337,10 +346,19 @@ export async function buildFactsObject(caseId: string): Promise<FactsObject> {
       roles,
       contact: participant.contact ? { ...participant.contact } : undefined,
       identifiers: (participant.identifiers ?? []).map((identifier) => ({ type: identifier.type, value: identifier.value })),
+      statements: (participant.statements ?? []).map((s: any) => ({
+        id: s.id,
+        content: s.content,
+        recordedAt: s.recordedAt,
+      })),
+      reasoning: (participant.reasoning ?? []).map((r: any) => ({
+        id: r.id,
+        content: r.content,
+        source: r.source,
+        createdAt: r.createdAt,
+      })),
       victim_profile: baseProfile(participant.victimProfile) as ParticipantProfileFacts | undefined,
       witness_profile: participant.witnessProfile ? {
-        statement: participant.witnessProfile.statement,
-        statementRecordedAt: participant.witnessProfile.statementRecordedAt,
         evidenceIds: (participant.witnessProfile.evidenceIds ?? []).map((evidenceId) => evidenceId.toString()),
       } : undefined,
       suspect_profile: participant.suspectProfile ? {
@@ -354,10 +372,6 @@ export async function buildFactsObject(caseId: string): Promise<FactsObject> {
       } : undefined,
       evidence_ids: linkedEvidence.map((evidence) => evidence.evidence_id),
       evidence: linkedEvidence,
-      // metadata: {
-      //   created_at: participant.createdAt,
-      //   updated_at: participant.updatedAt,
-      // },
     };
   });
 

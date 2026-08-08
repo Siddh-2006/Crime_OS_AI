@@ -191,6 +191,27 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
                         <p><span className="font-semibold text-neutral-500">Address:</span> {victim.contact?.address}</p>
                         {victim.victimProfile?.injuryDetails && <p><span className="font-semibold text-neutral-500">Injuries:</span> {victim.victimProfile.injuryDetails}</p>}
                         {victim.victimProfile?.lossDetails && <p><span className="font-semibold text-neutral-500">Loss:</span> {victim.victimProfile.lossDetails}</p>}
+                        {Array.isArray(victim.statements) && victim.statements.length > 0 && (
+                          <div className="mt-2 space-y-1">
+                            <p className="font-semibold text-neutral-500 text-xs uppercase tracking-wide">Statements</p>
+                            {victim.statements.map((stmt: any, sIdx: number) => (
+                              <div key={sIdx} className="bg-white border border-neutral-200 rounded p-2">
+                                <p className="text-xs text-neutral-400 mb-0.5">{stmt.recordedAt ? new Date(stmt.recordedAt).toLocaleString('en-IN') : ''}</p>
+                                <p className="italic text-neutral-700">{stmt.content}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {Array.isArray(victim.reasoning) && victim.reasoning.length > 0 && (
+                          <div className="mt-2 space-y-1">
+                            <p className="font-semibold text-neutral-500 text-xs uppercase tracking-wide">Reasoning</p>
+                            {victim.reasoning.map((r: any, rIdx: number) => (
+                              <div key={rIdx} className="bg-blue-50 border border-blue-100 rounded p-2 text-xs text-neutral-700">
+                                <span className="font-semibold text-blue-600 mr-1">[{r.source === 'ai' ? 'AI' : 'Officer'}]</span>{r.content}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -206,6 +227,27 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
                       <div key={idx} className="text-sm p-3 bg-neutral-50 rounded border">
                         <p><span className="font-semibold text-neutral-500">Name:</span> {accused.name}</p>
                         <p><span className="font-semibold text-neutral-500">Contact:</span> {accused.contact?.phone} | {accused.contact?.address}</p>
+                        {Array.isArray(accused.statements) && accused.statements.length > 0 && (
+                          <div className="mt-2 space-y-1">
+                            <p className="font-semibold text-neutral-500 text-xs uppercase tracking-wide">Statements</p>
+                            {accused.statements.map((stmt: any, sIdx: number) => (
+                              <div key={sIdx} className="bg-white border border-neutral-200 rounded p-2">
+                                <p className="text-xs text-neutral-400 mb-0.5">{stmt.recordedAt ? new Date(stmt.recordedAt).toLocaleString('en-IN') : ''}</p>
+                                <p className="italic text-neutral-700">{stmt.content}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {Array.isArray(accused.reasoning) && accused.reasoning.length > 0 && (
+                          <div className="mt-2 space-y-1">
+                            <p className="font-semibold text-neutral-500 text-xs uppercase tracking-wide">Reasoning</p>
+                            {accused.reasoning.map((r: any, rIdx: number) => (
+                              <div key={rIdx} className="bg-blue-50 border border-blue-100 rounded p-2 text-xs text-neutral-700">
+                                <span className="font-semibold text-blue-600 mr-1">[{r.source === 'ai' ? 'AI' : 'Officer'}]</span>{r.content}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -258,13 +300,41 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
               {/* 9. Witnesses */}
               {data.section9_witnesses?.length > 0 && (
                 <section>
-                  <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">{sectionNumbers.witnesses ?? 9}. Witnesses</h3>
+                  <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">{sectionNumbers.witnesses ?? 9}. Witnesses & Participant Statements</h3>
                   <div className="space-y-3">
                     {data.section9_witnesses.map((witness: any, idx: number) => (
                       <div key={idx} className="text-sm p-3 bg-neutral-50 rounded border">
                         <p><span className="font-semibold text-neutral-500">Name:</span> {witness.name}</p>
                         <p><span className="font-semibold text-neutral-500">Contact:</span> {witness.contact?.phone} | {witness.contact?.address}</p>
-                        {witness.witnessProfile?.statement && <p className="mt-1"><span className="font-semibold text-neutral-500">Statement:</span> <span className="italic">{witness.witnessProfile.statement}</span></p>}
+                        {/* New: statements list */}
+                        {Array.isArray(witness.statements) && witness.statements.length > 0 && (
+                          <div className="mt-2 space-y-1">
+                            <p className="font-semibold text-neutral-500 text-xs uppercase tracking-wide">Statements</p>
+                            {witness.statements.map((stmt: any, sIdx: number) => (
+                              <div key={sIdx} className="bg-white border border-neutral-200 rounded p-2">
+                                <p className="text-xs text-neutral-400 mb-0.5">{stmt.recordedAt ? new Date(stmt.recordedAt).toLocaleString('en-IN') : ''}</p>
+                                <p className="italic text-neutral-700">{stmt.content}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {/* Backward compat for old single statement */}
+                        {!Array.isArray(witness.statements) || witness.statements.length === 0 ? (
+                          witness.witnessProfile?.statement && (
+                            <p className="mt-1"><span className="font-semibold text-neutral-500">Statement:</span> <span className="italic">{witness.witnessProfile.statement}</span></p>
+                          )
+                        ) : null}
+                        {/* Reasoning */}
+                        {Array.isArray(witness.reasoning) && witness.reasoning.length > 0 && (
+                          <div className="mt-2 space-y-1">
+                            <p className="font-semibold text-neutral-500 text-xs uppercase tracking-wide">Reasoning</p>
+                            {witness.reasoning.map((r: any, rIdx: number) => (
+                              <div key={rIdx} className="bg-blue-50 border border-blue-100 rounded p-2 text-xs text-neutral-700">
+                                <span className="font-semibold text-blue-600 mr-1">[{r.source === 'ai' ? 'AI' : 'Officer'}]</span>{r.content}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

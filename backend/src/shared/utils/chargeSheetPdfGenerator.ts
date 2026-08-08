@@ -135,7 +135,7 @@ if (chargeSheetData.section3_complainantDetails) {
   );
 }
 
-    // 4. Victim Details
+// 4. Victim Details
 if (chargeSheetData.section4_victimDetails?.length > 0) {
   renderSectionHeading('victimDetails', 'Victim Details');
 
@@ -152,6 +152,20 @@ if (chargeSheetData.section4_victimDetails?.length > 0) {
     if (victim.victimProfile?.lossDetails) {
       addTextRow('Loss', victim.victimProfile.lossDetails);
     }
+
+    if (Array.isArray(victim.statements) && victim.statements.length > 0) {
+      victim.statements.forEach((stmt: any, sIdx: number) => {
+        const dt = stmt.recordedAt ? new Date(stmt.recordedAt).toLocaleString('en-IN') : 'N/A';
+        addTextRow(`Statement ${sIdx + 1} (${dt})`, stmt.content || 'N/A');
+      });
+    }
+
+    if (Array.isArray(victim.reasoning) && victim.reasoning.length > 0) {
+      victim.reasoning.forEach((r: any, rIdx: number) => {
+        const src = r.source === 'ai' ? 'AI' : 'Officer';
+        addTextRow(`Reasoning ${rIdx + 1} [${src}]`, r.content || 'N/A');
+      });
+    }
   });
 }
 
@@ -163,6 +177,20 @@ if (chargeSheetData.section5_accusedDetails?.length > 0) {
     addTextRow(`Accused ${idx + 1}`, ' ');
     addTextRow('Name', accused.name || 'N/A');
     addTextRow('Contact', `${accused.contact?.phone || 'N/A'} | ${accused.contact?.address || 'N/A'}`);
+
+    if (Array.isArray(accused.statements) && accused.statements.length > 0) {
+      accused.statements.forEach((stmt: any, sIdx: number) => {
+        const dt = stmt.recordedAt ? new Date(stmt.recordedAt).toLocaleString('en-IN') : 'N/A';
+        addTextRow(`Statement ${sIdx + 1} (${dt})`, stmt.content || 'N/A');
+      });
+    }
+
+    if (Array.isArray(accused.reasoning) && accused.reasoning.length > 0) {
+      accused.reasoning.forEach((r: any, rIdx: number) => {
+        const src = r.source === 'ai' ? 'AI' : 'Officer';
+        addTextRow(`Reasoning ${rIdx + 1} [${src}]`, r.content || 'N/A');
+      });
+    }
   });
 }
 
@@ -198,17 +226,30 @@ if (chargeSheetData.section7_evidenceLinkedSections?.length > 0) {
     renderSectionHeading('investigationSummary', 'Investigation Summary');
     addLongText(chargeSheetData.section8_investigationSummary);
 
-// 9. Witnesses
+// 9. Witnesses / All participants with statements
 if (chargeSheetData.section9_witnesses?.length > 0) {
-  renderSectionHeading('witnesses', 'Witnesses');
+  renderSectionHeading('witnesses', 'Witnesses & Participant Statements');
 
   chargeSheetData.section9_witnesses.forEach((witness: any, idx: number) => {
     addTextRow(`Witness ${idx + 1}`, ' ');
     addTextRow('Name', witness.name || 'N/A');
     addTextRow('Contact', `${witness.contact?.phone || 'N/A'} | ${witness.contact?.address || 'N/A'}`);
 
-    if (witness.witnessProfile?.statement) {
+    if (Array.isArray(witness.statements) && witness.statements.length > 0) {
+      witness.statements.forEach((stmt: any, sIdx: number) => {
+        const dt = stmt.recordedAt ? new Date(stmt.recordedAt).toLocaleString('en-IN') : 'N/A';
+        addTextRow(`Statement ${sIdx + 1} (${dt})`, stmt.content || 'N/A');
+      });
+    } else if (witness.witnessProfile?.statement) {
+      // Backward compat
       addTextRow('Statement', witness.witnessProfile.statement);
+    }
+
+    if (Array.isArray(witness.reasoning) && witness.reasoning.length > 0) {
+      witness.reasoning.forEach((r: any, rIdx: number) => {
+        const src = r.source === 'ai' ? 'AI' : 'Officer';
+        addTextRow(`Reasoning ${rIdx + 1} [${src}]`, r.content || 'N/A');
+      });
     }
   });
 }

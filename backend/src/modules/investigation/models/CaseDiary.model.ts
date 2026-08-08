@@ -12,7 +12,6 @@ export interface ICaseDiary extends Document {
   content: Record<string, unknown>;
   places_visited: string[];
   place_visited_ids?: Types.ObjectId[];
-  witness_ids?: Types.ObjectId[];
   language_preference?: string;
   draft_language?: string;
   official_officer_id?: string;
@@ -51,7 +50,6 @@ const CaseDiarySchema = new Schema<ICaseDiary>(
     content: { type: Schema.Types.Mixed, default: {} },
     places_visited: { type: [String], default: [] },
     place_visited_ids: [{ type: Schema.Types.ObjectId, ref: 'PlaceVisited' }],
-    witness_ids: [{ type: Schema.Types.ObjectId, ref: 'CaseParticipant' }],
     language_preference: { type: String, trim: true },
     draft_language: { type: String, trim: true },
     official_officer_id: { type: String, trim: true },
