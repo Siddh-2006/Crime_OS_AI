@@ -35,9 +35,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         extra={"service": settings.APP_NAME, "version": settings.APP_VERSION, "env": settings.APP_ENV},
     )
 
-    # Ensure MongoDB B-Tree indexes for sub-ms queries
+    # Ensure MongoDB B-Tree indexes asynchronously in background
+    import asyncio
     from app.core.mongo import ensure_mongo_indexes
-    await ensure_mongo_indexes()
+    asyncio.create_task(ensure_mongo_indexes())
 
     redis_ok = await ping_redis()
     if redis_ok:

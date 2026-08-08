@@ -10,14 +10,28 @@ export interface IParticipantIdentifier {
   value: string;
 }
 
+/** A single recorded statement from a participant (any role). */
+export interface IParticipantStatement {
+  id: string;
+  content: string;
+  recordedAt: Date;
+}
+
+/** A reasoning note — can be attached from the AI analysis panel or edited manually. */
+export interface IParticipantReasoning {
+  id: string;
+  content: string;
+  source: 'ai' | 'officer';
+  createdAt: Date;
+}
+
 export interface IVictimProfile {
   injuryDetails?: string;
   lossDetails?: string;
 }
 
+/** witnessProfile is retained only to hold evidence linkage. Statement is now top-level. */
 export interface IWitnessProfile {
-  statement?: string;
-  statementRecordedAt?: Date;
   evidenceIds: Types.ObjectId[];
 }
 
@@ -44,6 +58,8 @@ export interface ICaseParticipant extends Document {
   };
   identifiers: IParticipantIdentifier[];
   roles: ParticipantRole[];
+  statements: IParticipantStatement[];
+  reasoning: IParticipantReasoning[];
   victimProfile?: IVictimProfile;
   witnessProfile?: IWitnessProfile;
   suspectProfile?: ISuspectProfile;
@@ -68,6 +84,25 @@ const ContactSchema = new Schema(
   { _id: false },
 );
 
+const ParticipantStatementSchema = new Schema<IParticipantStatement>(
+  {
+    id: { type: String, required: true, default: uuidv4 },
+    content: { type: String, required: true, trim: true },
+    recordedAt: { type: Date, required: true },
+  },
+  { _id: false },
+);
+
+const ParticipantReasoningSchema = new Schema<IParticipantReasoning>(
+  {
+    id: { type: String, required: true, default: uuidv4 },
+    content: { type: String, required: true, trim: true },
+    source: { type: String, enum: ['ai', 'officer'], required: true, default: 'officer' },
+    createdAt: { type: Date, required: true, default: Date.now },
+  },
+  { _id: false },
+);
+
 const VictimProfileSchema = new Schema<IVictimProfile>(
   {
     injuryDetails: { type: String, trim: true },
@@ -78,8 +113,6 @@ const VictimProfileSchema = new Schema<IVictimProfile>(
 
 const WitnessProfileSchema = new Schema<IWitnessProfile>(
   {
-    statement: { type: String, trim: true },
-    statementRecordedAt: { type: Date },
     evidenceIds: [{ type: Schema.Types.ObjectId, ref: 'Evidence' }],
   },
   { _id: false },
@@ -114,6 +147,8 @@ const CaseParticipantSchema = new Schema<ICaseParticipant>(
     contact: { type: ContactSchema },
     identifiers: { type: [ParticipantIdentifierSchema], default: [] },
     roles: { type: [{ type: String, enum: ParticipantRoles }], required: true, default: [] },
+    statements: { type: [ParticipantStatementSchema], default: [] },
+    reasoning: { type: [ParticipantReasoningSchema], default: [] },
     victimProfile: { type: VictimProfileSchema },
     witnessProfile: { type: WitnessProfileSchema },
     suspectProfile: { type: SuspectProfileSchema },

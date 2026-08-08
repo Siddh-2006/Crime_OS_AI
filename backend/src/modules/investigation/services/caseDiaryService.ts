@@ -323,9 +323,12 @@ CRITICAL INSTRUCTIONS FOR RECORD OF INVESTIGATION:
       name: input.name,
       contact: input.contact,
       roles: ['Witness'],
+      statements: input.statement ? [{
+        id: uuidv4(),
+        content: input.statement,
+        recordedAt: new Date(),
+      }] : [],
       witnessProfile: {
-        statement: input.statement,
-        statementRecordedAt: new Date(),
         evidenceIds: (input.evidenceIds || []).map((item) => new Types.ObjectId(item)),
       },
     });
@@ -338,7 +341,7 @@ CRITICAL INSTRUCTIONS FOR RECORD OF INVESTIGATION:
       payload: {
         participant_id: participant.participant_id,
         participant_name: participant.name,
-        statement: participant.witnessProfile?.statement,
+        statement: participant.statements?.[0]?.content,
       },
       ref_ids: { participant_id: participant.participant_id },
     });
@@ -426,7 +429,7 @@ CRITICAL INSTRUCTIONS FOR RECORD OF INVESTIGATION:
       complainants: complainants.map((participant: any) => ({ name: participant.name, contact: participant.contact, identifiers: participant.identifiers })),
       accused: accused.map((participant: any) => ({ name: participant.name, contact: participant.contact, identifiers: participant.identifiers, appliedSections: participant.accusedProfile?.appliedSections })),
       suspects: suspects.map((participant: any) => ({ name: participant.name, contact: participant.contact, identifiers: participant.identifiers, appliedSections: participant.suspectProfile?.appliedSections })),
-      witnesses: witnessesList.map((participant: any) => ({ name: participant.name, statement: participant.witnessProfile?.statement, contact: participant.contact })),
+      witnesses: witnessesList.map((participant: any) => ({ name: participant.name, statement: participant.statements?.[0]?.content, contact: participant.contact })),
       placesVisited: placesVisited.map((place: any) => ({ address: place.address, visitDate: place.visit_date, whatWasDone: place.what_was_done, coordinates: place.coordinates })),
       departmentRequests: departmentRequests.map((req: any) => ({
         request_type: req.request_type,

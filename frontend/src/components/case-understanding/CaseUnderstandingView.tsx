@@ -12,16 +12,20 @@ import apiClient from '@/lib/apiClient';
 export interface CaseUnderstandingData {
   case_id: string;
   case_understanding?: {
-    complaint_summary: string;
-    incident_overview: string;
+    executive_summary?: string;
+    incident_brief?: string;
+    complaint_summary?: string;
+    incident_overview?: string;
     crime_category: string;
     crime_subtype: string;
     priority: 'low' | 'medium' | 'high' | 'critical';
     confidence: number;
   };
   overview?: {
-    complaint_summary: string;
-    incident_overview: string;
+    executive_summary?: string;
+    incident_brief?: string;
+    complaint_summary?: string;
+    incident_overview?: string;
     crime_category: string;
     crime_subtype: string;
     priority: 'low' | 'medium' | 'high' | 'critical';
@@ -89,13 +93,14 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
   const [previewEvidence, setPreviewEvidence] = useState<{id: string, name: string, summary: string, caption?: string} | null>(null);
   const [requestedItems, setRequestedItems] = useState<Record<string, 'loading' | 'sent'>>({});
 
-  const overviewData = data.case_understanding || data.overview || {
-    complaint_summary: 'No summary available.',
-    incident_overview: 'No incident overview available.',
-    crime_category: 'Uncategorized',
-    crime_subtype: 'General',
-    priority: 'medium' as const,
-    confidence: 0.9,
+  const rawOverview: any = data.case_understanding || data.overview || {};
+  const overviewData = {
+    executive_summary: rawOverview.executive_summary || rawOverview.complaint_summary || 'No summary available.',
+    incident_brief: rawOverview.incident_brief || rawOverview.incident_overview || 'No incident brief available.',
+    crime_category: rawOverview.crime_category || 'Uncategorized',
+    crime_subtype: rawOverview.crime_subtype || 'General',
+    priority: (rawOverview.priority || 'medium') as 'low' | 'medium' | 'high' | 'critical',
+    confidence: rawOverview.confidence ?? 0.9,
   };
 
   const evidenceItems = data.evidence_intelligence || data.evidence_analysis || [];
@@ -198,12 +203,12 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
             <CardHeader title="1. Case Understanding Overview" />
             <div className="space-y-4">
               <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400">Complaint Summary</h4>
-                <p className="text-sm font-semibold text-neutral-900 mt-1">{overviewData.complaint_summary}</p>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400">Executive Summary</h4>
+                <p className="text-sm font-semibold text-neutral-900 mt-1">{overviewData.executive_summary}</p>
               </div>
               <div className="border-t border-neutral-100 pt-4">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400">Integrated Incident Overview</h4>
-                <p className="text-sm text-neutral-700 mt-1 leading-relaxed whitespace-pre-line">{overviewData.incident_overview}</p>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400">Incident Brief</h4>
+                <p className="text-sm text-neutral-700 mt-1 leading-relaxed whitespace-pre-line">{overviewData.incident_brief}</p>
               </div>
             </div>
           </Card>

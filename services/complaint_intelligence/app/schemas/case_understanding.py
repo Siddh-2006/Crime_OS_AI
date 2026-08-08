@@ -6,16 +6,30 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Any, List, Optional
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, computed_field, field_validator, model_validator
 
 
 class CaseUnderstandingOverview(BaseModel):
-    complaint_summary: str = Field(default="", description="A concise summary of the complaint")
-    incident_overview: str = Field(default="", description="Unified understanding of the incident by correlating complaint with evidence")
+    executive_summary: str = Field(default="", description="Concise executive summary of the complaint (30-60 words)")
+    incident_brief: str = Field(default="", description="Detailed, structured narrative of the incident (200-500 words)")
+    complaint_summary: str = Field(default="", description="Legacy field alias for executive_summary")
+    incident_overview: str = Field(default="", description="Legacy field alias for incident_brief")
     crime_category: str = Field(default="Uncategorized", description="High-level category of crime")
     crime_subtype: str = Field(default="General", description="Specific sub-category of crime")
     priority: str = Field(default="medium", description="Priority level: low | medium | high | critical")
     confidence: float = Field(default=0.9, ge=0.0, le=1.0)
+
+    @model_validator(mode="before")
+    @classmethod
+    def sync_overview_fields(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            exec_sum = data.get("executive_summary") or data.get("complaint_summary") or ""
+            inc_brief = data.get("incident_brief") or data.get("incident_overview") or ""
+            data["executive_summary"] = exec_sum
+            data["incident_brief"] = inc_brief
+            data["complaint_summary"] = exec_sum
+            data["incident_overview"] = inc_brief
+        return data
 
 
 # Backward compatibility alias
@@ -181,21 +195,25 @@ class CaseUnderstanding(BaseModel):
     processing_duration_ms: Optional[float] = Field(default=None, description="Pipeline processing duration in milliseconds")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+    @computed_field
     @property
     def overview(self) -> CaseUnderstandingOverview:
         """Backward compatibility property mapping overview -> case_understanding."""
         return self.case_understanding
 
+    @computed_field
     @property
     def evidence_analysis(self) -> List[EvidenceIntelligenceItem]:
         """Backward compatibility property mapping evidence_analysis -> evidence_intelligence."""
         return self.evidence_intelligence
 
+    @computed_field
     @property
     def missing_information(self) -> List[MissingInformationAndEvidenceItem]:
         """Backward compatibility property."""
         return self.missing_information_and_evidence
 
+    @computed_field
     @property
     def missing_evidence(self) -> List[MissingInformationAndEvidenceItem]:
         """Backward compatibility property."""
@@ -207,9 +225,9 @@ class CaseUnderstanding(BaseModel):
         if isinstance(data, dict):
             # Map legacy "overview" -> "case_understanding"
             if "case_understanding" not in data or not data.get("case_understanding"):
-                if "overview" in data and isinstance(data["overview"], dict):
+                if "overview" in data and data["overview"] is not None:
                     data["case_understanding"] = data["overview"]
-                elif "summary" in data and isinstance(data["summary"], dict):
+                elif "summary" in data and data["summary"] is not None:
                     data["case_understanding"] = data["summary"]
 
             # Map legacy "evidence_analysis" -> "evidence_intelligence"

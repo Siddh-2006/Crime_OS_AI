@@ -70,6 +70,7 @@ ${DEPT_ENTITY_ID_INSTRUCTION(deptEntityWhitelist)}
 - supporting_evidence_ids
 - contradicting_evidence_ids
 Only include recommended_sections when the roles include Suspect or Accused, and every code in recommended_sections must be a BNS code from the retrieved legal context. These are AI suggestions only and must NOT update CaseParticipants automatically. For Suspect or Accused recommendations, include at least two relevant BNS sections when the legal context supports them; for Witness, Victim, or Complainant roles, leave recommended_sections empty.
+Additionally, each participant recommendation MAY include a "suggested_reasoning" field (string) — include this ONLY when there is a materially significant observation about that participant that is NOT already captured in their existing reasoning entries (visible in the facts under participants[].reasoning). Do not include "suggested_reasoning" if the participant already has reasoning entries covering the same ground. Use this sparingly — only for genuinely new or major observations such as: newly linked evidence, a role change, a contradiction with prior statements, or a significant connection to the crime not previously noted.
 7. evidence_section_recommendations MUST identify applicable BSA sections for each evidence item. Use the evidence metadata and the legal context to map each evidence to its most relevant statutory provisions. Each entry must include:
 - evidence_id
 - evidence_title
@@ -105,6 +106,7 @@ JSON SCHEMA:
       "reason": "...",
       "supporting_evidence_ids": ["ev1"],
       "contradicting_evidence_ids": [],
+      "suggested_reasoning": "Optional: only include if there is a major new observation about this participant not already in their existing reasoning.",
       "recommended_sections": [
         {
           "code": "BNS-117",
@@ -177,7 +179,7 @@ REQUIREMENTS:
 ${DEPT_ENTITY_ID_INSTRUCTION(deptEntityWhitelist)}
 5. Do not wrap JSON in markdown \`\`\` blocks, just return raw JSON text.
 6. participant_recommendations MUST be updated only as a recommendation set. Do not create or modify CaseParticipants in the output narrative or reasoning.
-7. For participant_recommendations, only include recommended_sections for Suspect or Accused roles, and only use BNS codes. For those sensitive roles, include at least two BNS sections when supported by the legal context; for Witness, Victim, or Complainant roles, leave recommended_sections empty.
+7. For participant_recommendations, only include recommended_sections for Suspect or Accused roles, and only use BNS codes. For those sensitive roles, include at least two BNS sections when supported by the legal context; for Witness, Victim, or Complainant roles, leave recommended_sections empty. Each recommendation MAY include a "suggested_reasoning" field (string) — only when there is a materially new observation not already in the participant's existing reasoning entries in the facts.
 8. For evidence_section_recommendations, return a section list for each evidence item using the current case evidence and the provided legal context. Preserve any sections already present in the previous analysis output when they still apply, and add or refine sections if needed. Evidence sections must be BSA only, never BNS.
 9. For suggested_legal_sections, return an array of objects with code/title/reason and include every relevant case-level section the legal context supports. Do not reduce this to just one item.
 10. For ranked_next_steps, if a step requires an external department, set "target" to "department_entity" and "department_entity_id" to the name of the department (e.g., BANK, ISP, TELECOM). If it requires the complainant to provide info, set "target" to "complainant". Otherwise leave target blank for IO internal tasks.
@@ -203,6 +205,7 @@ JSON SCHEMA:
     "reason": "...",
     "supporting_evidence_ids": [...],
     "contradicting_evidence_ids": [...],
+    "suggested_reasoning": "Optional: major new observation not already captured in existing reasoning.",
     "recommended_sections": [
       {
         "code": "BNS-117",

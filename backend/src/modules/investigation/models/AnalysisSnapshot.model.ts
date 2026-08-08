@@ -17,6 +17,7 @@ export interface IParticipantRecommendation {
   supporting_evidence_ids: string[];
   contradicting_evidence_ids: string[];
   recommended_sections?: IParticipantRecommendationLegalSection[];
+  suggested_reasoning?: string;
 }
 
 export interface IRankedNextStep {
@@ -93,13 +94,14 @@ const ParticipantRecommendationLegalSectionSchema = new Schema<IParticipantRecom
 
 const ParticipantRecommendationSchema = new Schema<IParticipantRecommendation>(
   {
-    name: { type: String, required: true },
-    roles: [{ type: String, enum: ['Victim', 'Witness', 'Suspect', 'Accused', 'Complainant'], required: true }],
-    confidence: { type: Number, required: true, min: 0, max: 1 },
-    reason: { type: String, required: true },
-    supporting_evidence_ids: [{ type: String }],
-    contradicting_evidence_ids: [{ type: String }],
-    recommended_sections: { type: [ParticipantRecommendationLegalSectionSchema], default: [] },
+    name:                        { type: String, required: true },
+    roles:                       [{ type: String, enum: ['Victim', 'Witness', 'Suspect', 'Accused', 'Complainant'], required: true }],
+    confidence:                  { type: Number, required: true, min: 0, max: 1 },
+    reason:                      { type: String, required: true },
+    supporting_evidence_ids:     [{ type: String }],
+    contradicting_evidence_ids:  [{ type: String }],
+    recommended_sections:        { type: [ParticipantRecommendationLegalSectionSchema], default: [] },
+    suggested_reasoning:         { type: String },
   },
   { _id: false },
 );

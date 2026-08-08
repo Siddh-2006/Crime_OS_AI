@@ -845,7 +845,7 @@ export class InvestigationController {
         $or: [
           { evidence_id: normalizedEvidenceId },
           { evidence_id: evidenceId },
-          { _id: normalizedEvidenceId },
+          ...(Types.ObjectId.isValid(normalizedEvidenceId) ? [{ _id: normalizedEvidenceId }] : []),
         ],
       }).exec();
       let targetEvidence: any = evidenceDoc;
@@ -906,10 +906,13 @@ export class InvestigationController {
         await evidenceDoc.save();
       }
 
+      // Convert case_id to ObjectId for diary entry
+      const caseObjectId = Types.ObjectId.isValid(id) ? new Types.ObjectId(id) : id;
+      
       await DiaryEntry.create({
-        case_id: id,
+        case_id: caseObjectId,
         entry_id: uuidv4(),
-        actor: { type: 'officer', id: officerId },
+        actor: { type: 'officer', id: officerId || 'system' },
         event_type: 'evidence_sections_attached',
         payload: {
           evidence_id: targetEvidenceId,

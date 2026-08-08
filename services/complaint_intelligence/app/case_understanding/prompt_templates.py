@@ -43,8 +43,8 @@ Use exactly this structure:
   "case_id": "...",
 
   "case_understanding": {
-    "complaint_summary": "...",
-    "incident_overview": "...",
+    "executive_summary": "...",
+    "incident_brief": "...",
     "crime_category": "...",
     "crime_subtype": "...",
     "priority": "low|medium|high|critical",
@@ -93,13 +93,43 @@ Use exactly this structure:
 CASE UNDERSTANDING
 --------------------------------------------------------
 
-Generate:
+Generate two distinct summaries that serve different purposes.
 
-• Complaint Summary
-A concise summary of the complaint.
+1. Executive Summary
 
-• Incident Overview
-A unified understanding of the incident by correlating the complaint with all uploaded evidence.
+Provide a concise overview of the complaint in 30–60 words.
+
+The objective is to allow an Investigating Officer to understand the case within a few seconds.
+
+Focus only on:
+
+• Nature of the incident
+• Primary allegation
+• Victim/complainant (if relevant)
+• Overall outcome
+
+Do not include unnecessary details or background information.
+
+2. Incident Brief
+
+Provide a detailed, structured narrative of the incident in approximately 200–500 words.
+
+This should be an intelligent case briefing created by correlating the complaint with all uploaded evidence.
+
+The Incident Brief should:
+
+• Explain the incident from beginning to end in chronological order.
+• Correlate information from the complaint and all uploaded evidence.
+• Naturally incorporate important findings from the evidence where they support the complaint.
+• Mention corroborating or conflicting evidence where applicable.
+• Present the facts in a coherent, easy-to-read narrative suitable for police officers.
+• Focus on understanding the incident rather than repeating the complaint verbatim.
+
+Do NOT simply rewrite or paraphrase the complaint.
+
+Instead, produce a semantically enriched understanding of the incident using all available information.
+
+Also generate:
 
 • Crime Category
 • Crime Subtype

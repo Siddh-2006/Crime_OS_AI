@@ -125,6 +125,9 @@ function normalizeParticipantRecommendations(recommendations: unknown): IPartici
         title: section.title,
         reason: typeof section.reason === 'string' && section.reason.trim().length > 0 ? section.reason : reasonText,
       })) : [],
+      ...(typeof candidate.suggested_reasoning === 'string' && candidate.suggested_reasoning.trim().length > 0
+        ? { suggested_reasoning: candidate.suggested_reasoning.trim() }
+        : {}),
     }];
   });
 }

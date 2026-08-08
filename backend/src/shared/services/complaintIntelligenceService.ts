@@ -28,7 +28,7 @@ export async function triggerComplaintIntelligencePipelineByCaseId(caseId: strin
     try {
       const response = await axios.post(`${microserviceUrl}/trigger-full-pipeline`, {
         complaint_number: complaintNumber,
-      }, { timeout: 5000 });
+      }, { timeout: 15000 });
 
       if (response.status === 200 || response.status === 202) {
         logger.info(`[ComplaintIntelligence] Successfully triggered pipeline via HTTP microservice API for ${complaintNumber}`);

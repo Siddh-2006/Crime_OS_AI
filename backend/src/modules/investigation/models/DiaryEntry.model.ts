@@ -18,8 +18,14 @@ export type DiaryEventType =
   | 'override_correction'
   | 'escalation_raised'
   | 'participant_recommendation_approved'
+  | 'participant_added_manually'
+  | 'participant_updated'
+  | 'participant_deleted'
   | 'participant_sections_attached'
   | 'participant_promoted_to_accused'
+  | 'participant_statement_added'
+  | 'participant_reasoning_attached'
+  | 'evidence_sections_attached'
   | 'diary_draft_generated'
   | 'diary_finalized'
   | 'case_diary_draft_created'
@@ -59,10 +65,12 @@ const DiaryEntrySchema = new Schema<IDiaryEntry>(
         'request_drafted', 'request_sent', 'response_received',
         'analysis_run', 'suggestion_generated', 'officer_note',
         'manual_step_added', 'override_correction', 'escalation_raised',
-        'participant_recommendation_approved', 'participant_sections_attached',
-        'participant_promoted_to_accused', 'diary_draft_generated',
-        'diary_finalized', 'case_diary_draft_created', 'case_diary_completed',
-        'place_visited_added', 'witness_added',
+        'participant_recommendation_approved', 'participant_added_manually',
+        'participant_updated', 'participant_deleted', 'participant_sections_attached',
+        'participant_promoted_to_accused', 'participant_statement_added',
+        'participant_reasoning_attached', 'evidence_sections_attached',
+        'diary_draft_generated', 'diary_finalized', 'case_diary_draft_created',
+        'case_diary_completed', 'place_visited_added', 'witness_added',
       ],
       required: true,
     },

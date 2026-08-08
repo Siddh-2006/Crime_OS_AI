@@ -16,8 +16,8 @@ def test_full_case_understanding_5section_schema_validation():
     sample_data = {
         "case_id": "test-case-001",
         "case_understanding": {
-            "complaint_summary": "Victim cheated of RS 50000 by investment scam.",
-            "incident_overview": "Victim joined WhatsApp group and paid to fake bank accounts.",
+            "executive_summary": "Victim cheated of RS 50000 by investment scam.",
+            "incident_brief": "Victim joined WhatsApp group and paid to fake bank accounts.",
             "crime_category": "Cyber Fraud",
             "crime_subtype": "Investment Scam",
             "priority": "high",
@@ -61,6 +61,10 @@ def test_full_case_understanding_5section_schema_validation():
 
     model = CaseUnderstanding.model_validate(sample_data)
     assert model.case_id == "test-case-001"
+    assert model.case_understanding.executive_summary == "Victim cheated of RS 50000 by investment scam."
+    assert model.case_understanding.complaint_summary == "Victim cheated of RS 50000 by investment scam."
+    assert model.case_understanding.incident_brief == "Victim joined WhatsApp group and paid to fake bank accounts."
+    assert model.case_understanding.incident_overview == "Victim joined WhatsApp group and paid to fake bank accounts."
     assert model.case_understanding.crime_category == "Cyber Fraud"
     assert model.overview.crime_category == "Cyber Fraud"
     assert len(model.evidence_intelligence) == 1

@@ -156,8 +156,14 @@ async def main():
 
             is_already_processed = ("--force" not in sys.argv) and (has_real_ocr or has_real_caption or has_real_transcript or has_real_pdf)
 
+            print(f"\n  [Evidence {i+1}/{len(raw_evidence)}] Inspecting '{fname}' (Type: {rtype})...")
+
+            if is_already_processed:
+                print(f"     ⚡ [CACHED] Florence/OCR metadata already present in MongoDB. Skipping re-analysis.")
+
             # 1. Florence-2 Visual Captioning (if missing) — fetch both <CAPTION> and <MORE_DETAILED_CAPTION>
             if not is_already_processed and not florence_desc and cloudinary_url and rtype in ("image", "png", "jpeg", "jpg"):
+                print(f"     📷 [FLORENCE] Calling Florence-2 vision model ({settings.FLORENCE_BASE_URL})...")
                 try:
                     img_res = await http_client.get(cloudinary_url)
                     if img_res.status_code == 200:
@@ -182,11 +188,11 @@ async def main():
 
                         if detailed_cap or short_cap:
                             florence_desc = detailed_cap or short_cap
-                            print(f"  ✓ Florence-2 visual captions generated for {fname}:")
+                            print(f"     ✓ Florence-2 visual captions generated for {fname}:")
                             if short_cap:
-                                print(f"     • Caption (Short)   : {short_cap}")
+                                print(f"        • Short Caption: {short_cap}")
                             if detailed_cap:
-                                print(f"     • aiSummary (Detail): {detailed_cap[:120]}...")
+                                print(f"        • Detail Summary: {detailed_cap[:120]}...")
 
                             ai_meta["caption"] = short_cap or detailed_cap
                             ai_meta["aiSummary"] = detailed_cap or short_cap
@@ -198,28 +204,28 @@ async def main():
                         settings.FLORENCE_BASE_URL,
                         exc
                     )
-                    print(f"  ⚠️ [SERVICE UNREACHABLE] Florence-2 vision service ({settings.FLORENCE_BASE_URL}) is NOT running!")
+                    print(f"     ⚠️ [SERVICE UNREACHABLE] Florence-2 vision service ({settings.FLORENCE_BASE_URL}) is NOT running!")
 
             # 2. PaddleOCR Text Extraction (if missing)
             if not is_already_processed and not ocr_txt and cloudinary_url and rtype in ("image", "png", "jpeg", "jpg"):
-                print(f"  [OCR] Downloading & running PaddleOCR for {fname}...")
+                print(f"     🔤 [OCR] Downloading & running PaddleOCR for {fname}...")
                 try:
                     res = await http_client.get(cloudinary_url)
                     if res.status_code == 200:
                         ocr_res = await ocr_engine.run(res.content)
                         if ocr_res.raw_text and ocr_res.raw_text.strip():
                             ocr_txt = ocr_res.raw_text.strip()
-                            print(f"  ✓ Extracted {len(ocr_txt)} chars of text via PaddleOCR!")
+                            print(f"     ✓ Extracted {len(ocr_txt)} chars of text via PaddleOCR!")
                             if not florence_desc:
                                 florence_desc = f"Evidence screenshot '{fname}'. Extracted OCR Text: {ocr_txt[:300]}"
                         else:
                             logger.info("[OCR SERVICE] PaddleOCR completed with 0 text detected for '%s'", fname)
                     else:
                         logger.error("[DOWNLOAD ERROR] Cloudinary returned status %s for '%s'", res.status_code, fname)
-                        print(f"  ❌ [DOWNLOAD ERROR] Cloudinary status {res.status_code} for {fname}")
+                        print(f"     ❌ [DOWNLOAD ERROR] Cloudinary status {res.status_code} for {fname}")
                 except Exception as exc:
                     logger.error("[OCR SERVICE ERROR] PaddleOCR extraction failed for '%s': %s", fname, exc)
-                    print(f"  ❌ [OCR SERVICE ERROR] Could not process {fname}: {exc}")
+                    print(f"     ❌ [OCR SERVICE ERROR] Could not process {fname}: {exc}")
 
             # Store extracted OCR and Florence captions back into ev['aiMetadata'] for persistence
             if "aiMetadata" not in ev or not isinstance(ev["aiMetadata"], dict):
@@ -233,9 +239,6 @@ async def main():
                 ev["aiMetadata"]["speechTranscript"] = transcript
             if pdf_txt:
                 ev["aiMetadata"]["pdfText"] = pdf_txt
-
-            if is_already_processed:
-                print(f"  ⚡ [SKIPPED] Evidence '{fname}' is already fully processed (Status: PROCESSED / OCR/Caption present).")
 
             metadata = {
                 "url": cloudinary_url,
@@ -436,8 +439,8 @@ async def main():
     # Display Output (5 Core Sections)
     print(f"  [1] CASE UNDERSTANDING")
     cu = case_understanding.case_understanding
-    print(f"      Summary   : {cu.complaint_summary}")
-    print(f"      Overview  : {cu.incident_overview}")
+    print(f"      Exec Summary: {cu.executive_summary or cu.complaint_summary}")
+    print(f"      Incident Brief: {cu.incident_brief or cu.incident_overview}")
     print(f"      Category  : {cu.crime_category} / {cu.crime_subtype}")
     print(f"      Priority  : {cu.priority.upper()} (Confidence: {cu.confidence:.0%})")
 

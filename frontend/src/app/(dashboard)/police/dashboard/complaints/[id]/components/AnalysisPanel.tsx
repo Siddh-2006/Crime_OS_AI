@@ -36,6 +36,7 @@ interface ParticipantRecommendation {
   confidence: number;
   reason: string;
   recommended_sections?: SuggestedLegalSection[];
+  suggested_reasoning?: string;
 }
 
 interface EvidenceSectionRecommendation {
@@ -87,6 +88,7 @@ interface AnalysisPanelProps {
   onAttachEvidenceSections: (evidenceId: string, sections: SuggestedLegalSection[]) => Promise<void>;
   onAcceptRecommendedSection: (recommendation: ParticipantRecommendation, section: SuggestedLegalSection) => Promise<void>;
   onApproveParticipant?: (recommendation: ParticipantRecommendation) => Promise<void>;
+  onAttachReasoning?: (recommendation: ParticipantRecommendation, reasoningContent: string) => Promise<void>;
   actionLoading: boolean;
 }
 
@@ -165,6 +167,7 @@ export function AnalysisPanel({
   onAttachEvidenceSections,
   onAcceptRecommendedSection,
   onApproveParticipant,
+  onAttachReasoning,
   onAnalysisComplete,
   actionLoading,
 }: AnalysisPanelProps) {
@@ -242,6 +245,14 @@ export function AnalysisPanel({
     const key = `participant:${recommendation.name}`;
     setLoadingItemKey(key);
     await onApproveParticipant(recommendation);
+    setLoadingItemKey(null);
+  };
+
+  const handleAttachReasoningWrap = async (recommendation: ParticipantRecommendation) => {
+    if (!onAttachReasoning || !recommendation.suggested_reasoning) return;
+    const key = `reasoning:${recommendation.name}`;
+    setLoadingItemKey(key);
+    await onAttachReasoning(recommendation, recommendation.suggested_reasoning);
     setLoadingItemKey(null);
   };
 
@@ -527,8 +538,14 @@ export function AnalysisPanel({
                             {safeArray(recommendation.roles).join(', ')} • {(Number(recommendation.confidence) * 100).toFixed(0)}% confidence
                           </p>
                           <p className="text-xs text-neutral-600 mt-1">{safeText(recommendation.reason)}</p>
+                          {recommendation.suggested_reasoning && (
+                            <div className="mt-2 bg-indigo-50 border border-indigo-100 rounded p-2">
+                              <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-wide mb-0.5">🧠 AI Observation</p>
+                              <p className="text-xs text-indigo-800">{safeText(recommendation.suggested_reasoning)}</p>
+                            </div>
+                          )}
                         </div>
-                        <div className="flex flex-col gap-2 items-end">
+                      <div className="flex flex-col gap-2 items-end">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
                             AI Suggestion
                           </span>
@@ -546,6 +563,31 @@ export function AnalysisPanel({
                           {isApproved && (
                             <span className="text-[10px] font-bold text-green-700">Added ✓</span>
                           )}
+                          {/* Attach Reasoning button — shown when AI suggests a major observation */}
+                          {recommendation.suggested_reasoning && onAttachReasoning && (() => {
+                            const reasoningKey = `reasoning:${safeText(recommendation.name)}`;
+                            const participantObj = participants.find(
+                              (p) => safeText(p.name).trim().toLowerCase() === safeText(recommendation.name).trim().toLowerCase()
+                            );
+                            const existingReasoning: any[] = participantObj?.reasoning || [];
+                            const alreadyAttached = existingReasoning.some(
+                              (r) => r.content.trim() === recommendation.suggested_reasoning!.trim()
+                            );
+                            return alreadyAttached ? (
+                              <span className="text-[10px] font-bold text-blue-600">Reasoning Attached ✓</span>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleAttachReasoningWrap(recommendation)}
+                                isLoading={loadingItemKey === reasoningKey}
+                                disabled={actionLoading && loadingItemKey !== reasoningKey}
+                                className="!px-2.5 !py-1 text-[11px] border border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                              >
+                                🧠 Attach Reasoning
+                              </Button>
+                            );
+                          })()}
                         </div>
                       </div>
 
