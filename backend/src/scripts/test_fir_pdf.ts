@@ -1,46 +1,20 @@
-import { Job } from 'bullmq';
-import PDFDocument from 'pdfkit';
 import path from 'path';
 import fs from 'fs';
-import { createWorker } from '../../config/bullmq';
-import { QUEUE_NAMES } from '../constants/queue.constants';
-import { EmailQueue } from './EmailQueue';
-import cloudinary from '../../config/cloudinary';
-import logger from '../../config/logger';
-import type { FirPdfJobData } from './FirQueue';
-import type { IFirFormData } from '../../modules/investigation/services/firService';
+import PDFDocument from 'pdfkit';
+import { IFirFormData } from '../modules/investigation/services/firService';
 
-async function getComplaintModel() {
-  const { Complaint } = await import('../../modules/complaint/models/Complaint.model');
-  return Complaint;
-}
-
-function getGujaratiFont(): { regular: string | null; bold: string | null } {
-  const bases = [
-    path.resolve(process.cwd(), 'src/assets/fonts'),
-    path.resolve(process.cwd(), 'dist/assets/fonts'),
-    path.join(__dirname, '../../assets/fonts'),
+function getFontPath(): string | null {
+  const possiblePaths = [
+    path.resolve(process.cwd(), 'src/assets/fonts/NotoSansGujarati.ttf'),
+    path.resolve(process.cwd(), 'dist/assets/fonts/NotoSansGujarati.ttf'),
+    path.join(__dirname, '../assets/fonts/NotoSansGujarati.ttf'),
   ];
-  const names = ['NotoSansGujarati', 'Nirmala'];
-  for (const base of bases) {
-    for (const name of names) {
-      const reg = path.join(base, `${name}.ttf`);
-      const bold = path.join(base, `${name}Bold.ttf`);
-      if (fs.existsSync(reg)) {
-        return { regular: reg, bold: fs.existsSync(bold) ? bold : reg };
-      }
-    }
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) return p;
   }
-  return { regular: null, bold: null };
+  return null;
 }
 
-/**
- * Sanitizes Gujarati text to avoid fontkit GPOS null-anchor crash.
- * fontkit's compiled GPOSProcessor crashes on certain Gujarati vowel+Anusvara
- * sequences (e.g. \u0A85\u0A82 'અં') because the GPOS table has null anchors
- * for those glyph pairs. Replacing them with nasal equivalents prevents the crash
- * without any visible difference in most FIR contexts.
- */
 function sanitizeGujaratiText(str: string): string {
   if (!str) return '';
   return str
@@ -52,10 +26,6 @@ function sanitizeGujaratiText(str: string): string {
     .replace(/\u0A8A\u0A82/g, 'ઊન\u0ACD'); // ઊં → ઊન્
 }
 
-/**
- * Generates an official Gujarat Police FIR PDF.
- * lang = 'en' → English only; lang = 'guj' → Gujarati-English mixed.
- */
 async function generateFirPdf(form: IFirFormData, lang: 'en' | 'guj'): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 40, autoFirstPage: true });
@@ -64,13 +34,11 @@ async function generateFirPdf(form: IFirFormData, lang: 'en' | 'guj'): Promise<B
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
 
-    const gujaratiFont = getGujaratiFont();
-    const hasGuj = lang === 'guj' && gujaratiFont.regular !== null;
+    const gujFontPath = getFontPath();
+    const hasGuj = lang === 'guj' && gujFontPath !== null;
 
-    // Register Gujarati fonts if available
-    if (hasGuj && gujaratiFont.regular) {
-      doc.registerFont('Guj', gujaratiFont.regular);
-      doc.registerFont('GujBold', gujaratiFont.bold || gujaratiFont.regular);
+    if (hasGuj && gujFontPath) {
+      doc.registerFont('GujaratiFont', gujFontPath);
     }
 
     const PAGE_W = doc.page.width;   // 595.28
@@ -78,23 +46,21 @@ async function generateFirPdf(form: IFirFormData, lang: 'en' | 'guj'): Promise<B
     const RIGHT = PAGE_W - 40;
     const WIDTH = RIGHT - LEFT;      // 515.28
 
-    // Sanitize Gujarati strings before rendering to avoid fontkit GPOS crash
-    const clean = (t: string) => (hasGuj ? sanitizeGujaratiText(t) : t);
+    const clean = (t: string) => (lang === 'guj' ? sanitizeGujaratiText(t) : t);
 
     const useFont = (bold: boolean, size: number) => {
       if (hasGuj) {
-        doc.font(bold ? 'GujBold' : 'Guj').fontSize(size);
+        doc.font('GujaratiFont').fontSize(size);
       } else {
         doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(size);
       }
     };
 
-    // Helper: add page if near bottom
     const checkPage = (needed = 60) => {
       if (doc.y > doc.page.height - needed) doc.addPage();
     };
 
-    // Helper: section number label (e.g. "1)" at left, content inline)
+    // Helper: section number label (e.g. "1)")
     const sectionLine = (num: string, text: string) => {
       checkPage(20);
       useFont(true, 9.5);
@@ -130,7 +96,6 @@ async function generateFirPdf(form: IFirFormData, lang: 'en' | 'guj'): Promise<B
         width: WIDTH - indent,
         align: 'left',
         lineGap: 2.5,
-        indent: 0,
       });
       doc.moveDown(0.5);
     };
@@ -216,15 +181,10 @@ async function generateFirPdf(form: IFirFormData, lang: 'en' | 'guj'): Promise<B
     subLine(lang === 'en' ? '(3)' : '(૩)', lang === 'en' ? 'Date/Year of Birth' : 'જન્મ તારીખ/વર્ષ', form.complainantDOB);
     subLine(lang === 'en' ? '(4)' : '(૪)', lang === 'en' ? 'Nationality' : 'રાષ્ટ્રીયતા', form.complainantNationality);
 
-    checkPage(20);
     const passportLine = lang === 'en'
       ? `Passport Number: ${form.complainantPassportNumber}   Issue Date: ${form.complainantPassportIssueDate}   Issue Place: ${form.complainantPassportIssuePlace}`
       : `પાસપોર્ટ નંબર: ${form.complainantPassportNumber}   જારી તારીખ: ${form.complainantPassportIssueDate}   જારી કર્યા સ્થળ: ${form.complainantPassportIssuePlace}`;
-    const f6_5 = lang === 'en' ? '(5)' : '(૫)';
-    useFont(false, 9.5);
-    doc.text(clean(f6_5) + '  ', LEFT + 15, doc.y, { continued: true });
-    doc.text(clean(passportLine), { width: WIDTH - 43 });
-    doc.moveDown(0.15);
+    subLine(lang === 'en' ? '(5)' : '(૫)', '', passportLine);
 
     subLine(lang === 'en' ? '(6)' : '(૬)', lang === 'en' ? 'Occupation' : 'ધંધો', form.complainantOccupation);
     subLine(lang === 'en' ? '(7)' : '(૭)', lang === 'en' ? 'Address' : 'સરનામું', `${form.complainantAddress}   Mobile: ${form.complainantMobileNumbers}`);
@@ -264,7 +224,6 @@ async function generateFirPdf(form: IFirFormData, lang: 'en' | 'guj'): Promise<B
     doc.text(clean(lang === 'en' ? 'Details of First Information Report (Attach separate sheet if required):' : 'પ્રથમ માહિતી અહેવાલની વિગત (જરૂ જણાય તો અલાયદો કાગળ જોડવો)'), { width: WIDTH });
     doc.moveDown(0.4);
 
-    // FIR Statement date centered
     useFont(true, 10);
     doc.text(clean(`${lang === 'en' ? 'Date:' : 'તા.'} ${form.firStatementDate}`), LEFT, doc.y, {
       width: WIDTH,
@@ -272,7 +231,6 @@ async function generateFirPdf(form: IFirFormData, lang: 'en' | 'guj'): Promise<B
     });
     doc.moveDown(0.4);
 
-    // Narrative paragraphs
     const narrative = lang === 'en' ? form.firStatementEn : form.firStatement;
     const paragraphs = (narrative || '').split('\n').filter((p) => p.trim().length > 0);
     for (const p of paragraphs) {
@@ -295,12 +253,10 @@ async function generateFirPdf(form: IFirFormData, lang: 'en' | 'guj'): Promise<B
     doc.text(clean(closingLine), LEFT + 28, doc.y, { width: WIDTH - 28, align: 'left' });
     doc.moveDown(0.3);
 
-    const inPersonLabel = lang === 'en' ? 'In Person:' : 'રૂબરૂ:';
     useFont(true, 9.5);
-    doc.text(clean(inPersonLabel), LEFT, doc.y, { width: 120 });
+    doc.text(clean(lang === 'en' ? 'In Person:' : 'રૂબરૂ:'), LEFT, doc.y, { width: 120 });
     doc.moveDown(0.5);
 
-    // Dotted signature line (left) + Officer block (right)
     checkPage(80);
     const sigY = doc.y;
     doc.text('......................................................', LEFT, sigY, { width: 200 });
@@ -330,139 +286,99 @@ async function generateFirPdf(form: IFirFormData, lang: 'en' | 'guj'): Promise<B
     subLine(lang === 'en' ? '(4)' : '(૪)', lang === 'en' ? 'Transferred to Police Station' : 'તબદીલ કરેલ છે તે પો.સ્ટે.', `-----   ${lang === 'en' ? 'District' : 'જિલ્લો'}`);
     doc.moveDown(0.4);
 
-    // ROAC paragraph
     const roacPara = lang === 'en'
       ? 'The FIR was read over to the complainant/informant, who agreed it was accurately recorded, and a free copy was provided.'
       : 'પ્રથમ માહિતી અહેવાલ ફરિયાદી/બાતમીદારને વાંચી સભળાવેલ છે અને ફરિયાદીએ લખ્યાવ્યા પ્રમાણેજ નોંધવામાં આવેલ છે. તેવું ફરિયાદી/બાતમીદારે સ્વીકારેલ છે અને ફરિયાદી/બાતમીદારને તેની નકલ વિના મૂલ્યે આપવામાં આવી છે.';
     para(roacPara, 20);
-
-    checkPage(20);
-    useFont(true, 9.5);
-    doc.text('R.O.A.C.', LEFT, doc.y);
-    doc.moveDown(0.5);
-
-    // ─── FIELD 14 — Signatures ───────────────────────────────────────────────
-    checkPage(80);
-    const sig14Y = doc.y;
-    useFont(true, 9);
-    const complSigLabel = lang === 'en' ? '14)  Complainant / Informant Signature / Thumb Impression:' : '૧૪).  ફરિયાદી/બાતમીદારની સહી/\n       અંગુઠાની છાપ.';
-    doc.text(clean(complSigLabel), LEFT, sig14Y, { width: 250 });
-
-    const officerSigLabel = lang === 'en'
-      ? `Officer In-charge Signature:\nName: ${form.officerInChargeName}\nRank: ${form.officerInChargeRank} (Buckle No. ${form.officerInChargeBuckleNumber})`
-      : `પોલીસ મથકનો હવાલો ધરાવતા અધિકારીની સહી.\nનામ-${form.officerInChargeName}\nહોદ્દો.- ${form.officerInChargeRank} (Buckle No. ${form.officerInChargeBuckleNumber})`;
-    useFont(false, 9);
-    doc.text(clean(officerSigLabel), LEFT + 310, sig14Y, { width: 220 });
-    doc.moveDown(1.5);
-
-    // ─── FIELD 15 — Date Sent to Court ──────────────────────────────────────
-    checkPage(30);
-    const f15label = lang === 'en' ? '15)' : '૧૫)';
-    const f15text = lang === 'en'
-      ? `Date and Time Sent to Court: ${form.dateSentToCourt}`
-      : `ફરિયાદ કોર્ટમાં રવાના કર્યાની તારીખ- ${form.dateSentToCourt}   અને સમય:-`;
-    sectionLine(f15label, f15text);
     doc.moveDown(0.4);
 
-    // ─── BRIEF SUMMARY ───────────────────────────────────────────────────────
-    checkPage(60);
-    doc.moveTo(LEFT, doc.y).lineTo(RIGHT, doc.y).lineWidth(0.5).stroke();
-    doc.moveDown(0.3);
-    useFont(true, 9.5);
-    doc.text(clean(lang === 'en' ? 'Brief Summary of Offense:' : 'ગુન્હાનો ટૂંકો સારાંશ:'), LEFT, doc.y, { width: WIDTH });
-    doc.moveDown(0.2);
-    para(lang === 'en' ? form.briefSummary : form.briefSummaryGujEn, 10);
+    // Signature Block
+    checkPage(80);
+    const endY = doc.y;
+    useFont(false, 9);
+    doc.text(clean(lang === 'en' ? 'Complainant / Informant Signature' : 'ફરિયાદી / બાતમીદાર ની સહી કે અંગુઠાનું નિશાન'), LEFT, endY, { width: 220 });
+    doc.text('......................................................', LEFT, endY + 15, { width: 220 });
 
-    // ─── FOOTER ──────────────────────────────────────────────────────────────
-    const footerY = doc.page.height - 30;
-    doc.moveTo(LEFT, footerY - 4).lineTo(RIGHT, footerY - 4).lineWidth(0.3).stroke();
-    doc.font('Helvetica').fontSize(7).fillColor('#888888')
-      .text(
-        `FIR: ${form.firNumber || form.complaintNumber}  |  Generated by Gujarat Police Crime OS  |  ${new Date().toISOString()}`,
-        LEFT, footerY, { width: WIDTH, align: 'center' }
-      );
+    const shoBlock = lang === 'en'
+      ? `Officer in Charge: ${form.officerInChargeName}\nRank: ${form.officerInChargeRank}   Buckle No.: ${form.officerInChargeBuckleNumber}`
+      : `પોલીસ સ્ટેશન ના ઇન્ચાર્જ અધિકારી: ${form.officerInChargeName}\nહોદ્દો: ${form.officerInChargeRank}   બકલ નં.: ${form.officerInChargeBuckleNumber}`;
+    doc.text(clean(shoBlock), LEFT + 260, endY, { width: 250, align: 'right' });
+    doc.moveDown(1.5);
+
+    // ─── FIELD 15 — Court Date ───────────────────────────────────────────────
+    const f15label = lang === 'en' ? '15)' : '૧૫)';
+    sectionLine(f15label, lang === 'en' ? `Date and Time of Dispatch to Court:   ${form.dateSentToCourt}` : `કોર્ટમાં મોકલ્યા તારીખ અને સમય:   ${form.dateSentToCourt}`);
+    doc.moveDown(0.5);
+
+    // ─── BRIEF SUMMARY BOX ──────────────────────────────────────────────────
+    checkPage(80);
+    const boxY = doc.y;
+    useFont(true, 10);
+    doc.text(clean(lang === 'en' ? 'Brief Summary of Offense:' : 'ગુન્હાની સંક્ષિપ્ત વિગત:'), LEFT, boxY);
+    doc.moveDown(0.2);
+    const summaryText = lang === 'en' ? form.briefSummary : form.briefSummaryGujEn;
+    para(summaryText, 0);
 
     doc.end();
   });
 }
 
-async function uploadPdf(buffer: Buffer, folder: string, publicId: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      { folder, public_id: publicId, resource_type: 'raw', format: 'pdf', overwrite: true },
-      (err, result) => {
-        if (err || !result) return reject(err ?? new Error('Upload failed'));
-        const url = (result as any).secure_url as string;
-        // Return raw URL without fl_attachment so browser iframe & preview tab view inline
-        resolve(url);
-      }
-    );
-    stream.end(buffer);
-  });
+async function run() {
+  const dummyForm: IFirFormData = {
+    district: 'Ahmedabad',
+    policeStation: 'Sardarnagar Police Station',
+    year: 2026,
+    complaintNumber: 'COMP-a8cc08a6-768e-4745-8e33-85cb1a6f3ae3',
+    firDate: '08/08/2026',
+    firNumber: 'COMP-a8cc08a6-768e-4745-8e33-85cb1a6f3ae3',
+    actAndSections: 'BNS S-190: Cat, BNS S-318: Cheating, IT Act S-66D: Computer Fraud',
+    crimeStartDate: '12/10/2024',
+    crimeStartTime: '22:30',
+    crimeEndDate: '24/10/2024',
+    crimeEndTime: '18:00',
+    dateInfoReceived: '08/08/2026',
+    stationDiaryEntryNumber: '____/2026',
+    informationType: 'Oral',
+    directionDistanceFromStation: '-----',
+    incidentAddress: 'Devarshi 1/14 Avenue, Ambika Niketan Road, Pale Point, Surat',
+    outsideJurisdiction: '-----',
+    complainantName: 'Govardhan Dahyabhai Reshamwala',
+    complainantFatherName: 'Dahyabhai',
+    complainantDOB: '15/01/1934 (Age: 90 years)',
+    complainantNationality: 'Indian',
+    complainantPassportNumber: '-----',
+    complainantPassportIssueDate: '-----',
+    complainantPassportIssuePlace: '-----',
+    complainantOccupation: '-----',
+    complainantAddress: 'Saibaba Nagar, Mumbai',
+    complainantMobileNumbers: '9892362104',
+    accusedDetails: '(1) Name: Rahul Kumar | Role: Suspect — Fraudster identifying as DHL Courier representative via phone +91 9952630491\n(2) Name: Rajesh Pradhan | Role: Suspect — Fraudster impersonating fake Mumbai Police officer (badge no. 62000)\n(3) Name: Prakash Agarwal | Role: Suspect — Fraudster posing as CBI Director intimidating victim',
+    delayReason: 'Complainant was under extreme coercion and mental distress.',
+    stolenPropertyDetails: 'RTGS Transfers to fraudulently provided bank accounts',
+    stolenPropertyValue: 'Rs. 1,15,500,000/-',
+    inquestReportNumber: '-----',
+    firStatementDate: '08/08/2026',
+    firStatement: 'હું અત્રે પો.સ્ટે. આવી રૂબરૂ હકીકત જણાવું છું કે... જે અંગે State Bank of India ના ખાતામાંથી રૂ. 1,15,50,000/- ટ્રાન્સફર થઇ ગયેલ છે.\n\nએટલી મારી હકીકત મારા લખ્યાવ્યા મુજબની બરાબર અને ખરી છે.',
+    firStatementEn: 'I am stating the facts in person at the Police Station that the complainant Govardhan Dahyabhai Reshamwala, aged 90 years, received a call from +91 9952630491 claiming a parcel containing illegal items was intercepted...\n\nThe above statement is true and correct as dictated by me.',
+    investigatingOfficerName: '-----',
+    investigatingOfficerRank: 'Police Inspector',
+    officerInChargeName: '-----',
+    officerInChargeRank: 'Inspector',
+    officerInChargeBuckleNumber: '-----',
+    dateSentToCourt: '-----',
+    briefSummary: 'Digital arrest fraud amounting to Rs. 1.15 Crores.',
+    briefSummaryGujEn: 'ડિજિટલ અરેસ્ટ સાયબર ફ્રોડ દ્વારા રૂ. ૧.૧૫ કરોડની છેતરપિંડી.',
+  };
+
+  console.log('Generating Fixed English FIR PDF...');
+  const bufEn = await generateFirPdf(dummyForm, 'en');
+  fs.writeFileSync('test_fir_en.pdf', bufEn);
+  console.log('🎉 SUCCESSFULLY generated test_fir_en.pdf (Size: ' + bufEn.length + ' bytes)');
+
+  console.log('Generating Fixed Gujarati FIR PDF...');
+  const bufGuj = await generateFirPdf(dummyForm, 'guj');
+  fs.writeFileSync('test_fir_guj.pdf', bufGuj);
+  console.log('🎉 SUCCESSFULLY generated test_fir_guj.pdf (Size: ' + bufGuj.length + ' bytes)');
 }
 
-export function startFirWorker(): void {
-  createWorker<FirPdfJobData>(QUEUE_NAMES.FIR, async (job: Job<FirPdfJobData>) => {
-    const { complaintId } = job.data.payload;
-    const firFormData = job.data.payload.firFormData as IFirFormData | undefined;
-    logger.info('[FirWorker] Processing FIR PDF generation', { complaintId });
-
-    const Complaint = await getComplaintModel();
-    const complaint = await Complaint.findById(complaintId)
-      .populate('policeStation', 'name code city district state')
-      .populate('assignedIO', 'officerName badgeNumber')
-      .populate('citizen', 'firstName lastName email phone address city district state')
-      .exec();
-
-    if (!complaint) throw new Error(`Complaint ${complaintId} not found for FIR generation`);
-
-    // Use provided firFormData or build a basic fallback from complaint fields
-    let form: IFirFormData;
-    if (firFormData) {
-      form = firFormData;
-    } else {
-      // Lazy import to avoid circular deps
-      const { prepareFirData } = await import('../../modules/investigation/services/firService');
-      form = await prepareFirData(complaintId);
-    }
-
-    const folder = `crime-os/fir/${complaintId}`;
-    const safeId = (form.firNumber || form.complaintNumber).replace(/[^a-zA-Z0-9_-]/g, '_');
-
-    // Generate both PDFs concurrently
-    const [pdfEn, pdfGuj] = await Promise.all([
-      generateFirPdf(form, 'en'),
-      generateFirPdf(form, 'guj'),
-    ]);
-
-    const [urlEn, urlGuj] = await Promise.all([
-      uploadPdf(pdfEn, folder, `fir_en_${safeId}`),
-      uploadPdf(pdfGuj, folder, `fir_guj_${safeId}`),
-    ]);
-
-    // Keep legacy firPdfUrl pointing at English for backward compat
-    await Complaint.findByIdAndUpdate(complaintId, {
-      firPdfUrl: urlEn,
-      firPdfUrlEn: urlEn,
-      firPdfUrlGujEn: urlGuj,
-    });
-
-    logger.info('[FirWorker] FIR PDFs uploaded to Cloudinary', {
-      complaintId,
-      firNumber: form.firNumber,
-      urlEn,
-      urlGuj,
-    });
-
-    const citizen = complaint.citizen as any;
-    await EmailQueue.enqueueFirRegisteredEmail({
-      to: citizen?.email ?? '',
-      name: `${citizen?.firstName ?? ''} ${citizen?.lastName ?? ''}`.trim(),
-      complaintNumber: complaint.complaintNumber,
-      firNumber: complaint.firNumber!,
-      firPdfUrl: urlEn,
-    });
-  });
-
-  logger.info('[FirWorker] FIR PDF worker started');
-}
+run();

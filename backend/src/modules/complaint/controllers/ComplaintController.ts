@@ -162,13 +162,24 @@ export class ComplaintController {
     }
   };
 
+  prepareFir = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const data = await this.complaintService.prepareFirData(id);
+      sendSuccess(res, HttpStatusCode.OK, 'FIR data prepared successfully', data);
+    } catch (err) {
+      next(err);
+    }
+  };
+
   registerFir = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params;
       const officerId = req.user!.sub;
       const ip = req.ip ?? 'unknown';
+      const firFormData = req.body?.firFormData ?? undefined;
 
-      const complaint = await this.complaintService.registerFir(id, officerId, ip);
+      const complaint = await this.complaintService.registerFir(id, officerId, ip, firFormData);
       sendSuccess(res, HttpStatusCode.OK, 'FIR registered successfully', complaint);
     } catch (err) {
       next(err);

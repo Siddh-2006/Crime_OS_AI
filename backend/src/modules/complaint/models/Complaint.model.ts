@@ -130,8 +130,11 @@ export interface IComplaint extends Document {
   firNumber?: string;
   firRegisteredAt?: Date;
   firRegisteredBy?: Types.ObjectId;
-  firPdfUrl?: string;
+  firPdfUrl?: string;       // legacy single PDF (kept for backward compat)
   firPdfPublicId?: string;
+  firPdfUrlEn?: string;     // English FIR PDF
+  firPdfUrlGujEn?: string;  // Gujarati-English FIR PDF
+  firFormData?: Record<string, any>; // cached FIR form JSON for SHO editing
 
   rejectionReason?: string;
   rejectedAt?: Date;
@@ -262,6 +265,9 @@ const ComplaintSchema = new Schema<IComplaint>(
     firRegisteredBy: { type: Schema.Types.ObjectId, ref: 'Officer' },
     firPdfUrl: { type: String },
     firPdfPublicId: { type: String },
+    firPdfUrlEn: { type: String },
+    firPdfUrlGujEn: { type: String },
+    firFormData: { type: Schema.Types.Mixed },
 
     rejectionReason: { type: String },
     rejectedAt: { type: Date },
