@@ -97,7 +97,7 @@ export default function EvidenceViewerModal({ isOpen, onClose, evidence }: Evide
                 href={url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 border border-blue-200 rounded-lg px-4 py-2 bg-white hover:bg-blue-50 transition-colors"
+                className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 border border-blue-200 rounded-lg px-4 py-2 bg-neutral-900/50 hover:bg-blue-50 transition-colors"
               >
                 <ExternalLink size={14} /> Open Document
               </a>
@@ -131,7 +131,7 @@ export default function EvidenceViewerModal({ isOpen, onClose, evidence }: Evide
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="bg-neutral-900/50 rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
 
         {/* Header */}
         <div className="flex items-start justify-between p-4 border-b border-neutral-100 shrink-0">
@@ -159,7 +159,7 @@ export default function EvidenceViewerModal({ isOpen, onClose, evidence }: Evide
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
             {/* Main Preview */}
-            <div className="md:col-span-2 bg-white rounded-xl border border-neutral-200 p-2 min-h-[300px] flex items-center justify-center">
+            <div className="md:col-span-2 bg-neutral-900/50 rounded-xl border border-neutral-700 p-2 min-h-[300px] flex items-center justify-center">
               {renderContent()}
             </div>
 
@@ -204,7 +204,7 @@ export default function EvidenceViewerModal({ isOpen, onClose, evidence }: Evide
               return (
                 <div className="space-y-4">
                   {/* AI Analysis */}
-                  <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
+                  <div className="bg-neutral-900/50 rounded-xl border border-neutral-700 p-4 shadow-sm">
                     <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">AI Analysis</h3>
                     <p className="text-sm text-neutral-800 leading-relaxed">
                       {summaryText}
@@ -223,7 +223,7 @@ export default function EvidenceViewerModal({ isOpen, onClose, evidence }: Evide
                         <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">Tags</h3>
                         <div className="flex flex-wrap gap-1">
                           {tagsList.map((tag: string) => (
-                            <span key={tag} className="text-[10px] bg-neutral-100 text-neutral-600 px-2 py-1 rounded border border-neutral-200 font-medium">
+                            <span key={tag} className="text-[10px] bg-neutral-100 text-neutral-600 px-2 py-1 rounded border border-neutral-700 font-medium">
                               #{tag}
                             </span>
                           ))}
@@ -251,7 +251,7 @@ export default function EvidenceViewerModal({ isOpen, onClose, evidence }: Evide
                   </div>
 
               {/* System Metadata */}
-              <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
+              <div className="bg-neutral-900/50 rounded-xl border border-neutral-700 p-4 shadow-sm">
                 <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">System Metadata</h3>
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between items-center">
@@ -279,7 +279,7 @@ export default function EvidenceViewerModal({ isOpen, onClose, evidence }: Evide
 
               {/* Chain of Custody (physical only) */}
               {evidence.is_physical && (
-                <div className="bg-white rounded-xl border border-indigo-200 p-4 shadow-sm">
+                <div className="bg-neutral-900/50 rounded-xl border border-indigo-200 p-4 shadow-sm">
                   <h3 className="text-xs font-bold text-indigo-700 uppercase tracking-wider mb-3">Chain of Custody</h3>
                   <div className="relative border-l-2 border-indigo-100 ml-2 space-y-4">
                     {evidence.custody_chain?.map((transfer: any, idx: number) => (

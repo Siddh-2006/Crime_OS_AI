@@ -72,34 +72,67 @@ export class AuthService {
     logger.info('Citizen registered — verification OTP sent', { email: dto.email });
   }
 
+  async sendPreVerificationOtp(email: string): Promise<void> {
+    const otp = await this.otpService.generateAndStoreEmailVerificationOtp(email);
+    try {
+      await EmailQueue.enqueueVerificationOtp({
+        to: email,
+        name: 'Complainant',
+        otp,
+        expiryMinutes: REDIS_TTL.OTP / 60,
+      });
+    } catch (err) {
+      logger.warn('Failed to enqueue pre-verification OTP email (Redis might be down)', { error: err });
+    }
+    logger.info('Pre-verification OTP sent', { email });
+  }
+
+  async verifyPreRegistrationOtp(email: string, otp: string): Promise<void> {
+    await this.otpService.verifyEmailVerificationOtp(email, otp);
+    const redis = require('../../../config/redis').getRedisClient();
+    const { REDIS_KEYS } = require('../../../shared/constants/redis.constants');
+    await redis.setex(REDIS_KEYS.PRE_VERIFIED_EMAIL(email), REDIS_TTL.OTP * 12, 'true'); // valid for 1 hour
+    logger.info('Pre-registration email verified successfully', { email });
+  }
+
   async createComplainantProfile(dto: CreateComplainantProfileDto): Promise<IUser> {
+    const redis = require('../../../config/redis').getRedisClient();
+    const { REDIS_KEYS } = require('../../../shared/constants/redis.constants');
+    const isPreVerified = await redis.get(REDIS_KEYS.PRE_VERIFIED_EMAIL(dto.email));
+
     let complainant = await this.userRepository.findByEmail(dto.email);
     if (!complainant) {
       complainant = await this.userRepository.create({
         ...dto,
         dateOfBirth: new Date(dto.dateOfBirth),
-        isEmailVerified: false,
+        isEmailVerified: !!isPreVerified,
         username: undefined,
         password: undefined,
         securityQuestion: undefined,
         securityAnswer: undefined,
       });
+    } else if (isPreVerified && !complainant.isEmailVerified) {
+      await this.userRepository.updateById(String(complainant._id), { isEmailVerified: true });
+      complainant.isEmailVerified = true;
     }
 
-    const otp = await this.otpService.generateAndStoreEmailVerificationOtp(dto.email);
-
-    try {
-      await EmailQueue.enqueueVerificationOtp({
-        to: dto.email,
-        name: dto.firstName,
-        otp,
-        expiryMinutes: REDIS_TTL.OTP / 60,
-      });
-    } catch (err) {
-      logger.warn('Failed to enqueue complainant verification OTP email (Redis might be down)', { error: err });
+    if (!isPreVerified && !complainant.isEmailVerified) {
+      const otp = await this.otpService.generateAndStoreEmailVerificationOtp(dto.email);
+      try {
+        await EmailQueue.enqueueVerificationOtp({
+          to: dto.email,
+          name: dto.firstName,
+          otp,
+          expiryMinutes: REDIS_TTL.OTP / 60,
+        });
+      } catch (err) {
+        logger.warn('Failed to enqueue complainant verification OTP email', { error: err });
+      }
+      logger.info('Complainant profile created/found — verification OTP sent', { email: dto.email });
+    } else {
+      logger.info('Complainant profile created/found — already pre-verified', { email: dto.email });
     }
 
-    logger.info('Complainant profile created/found — verification OTP sent', { email: dto.email });
     return complainant;
   }
 

@@ -2,12 +2,14 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { useRouter, usePathname } from 'next/navigation';
-import { ShieldCheck, LayoutDashboard, LogOut, FileText, Bell, Plus } from 'lucide-react';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { ShieldCheck, LayoutDashboard, LogOut, FileText, Bell, Plus, Bot, ClipboardList, BookOpen, MapPin, Send, FolderOpen, Users, Brain, Clock, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { APP_ROUTES, ROLE } from '@/lib/constants';
 import { Loader } from '@/components/ui/Loader';
 import { LanguageSelector } from '@/components/common/LanguageSelector';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { Watermark } from '@/components/Watermark';
 
 interface NavItem {
   label: string;
@@ -25,6 +27,20 @@ const policeNavItems: NavItem[] = [
   { label: 'Dashboard', href: '/police/dashboard', icon: <LayoutDashboard size={18} /> },
   { label: 'File a Complaint', href: APP_ROUTES.FILE_COMPLAINT, icon: <Plus size={18} /> },
   { label: 'Station Complaints', href: '/police/dashboard/complaints', icon: <FileText size={18} /> },
+];
+
+// Case-level tabs shown in the sidebar when an IO opens a complaint
+const caseNavItems = [
+  { id: 'analysis', label: 'AI Analysis', icon: <Bot size={15} /> },
+  { id: 'checklist', label: 'Checklist', icon: <ClipboardList size={15} /> },
+  { id: 'diary', label: 'Case Diary', icon: <BookOpen size={15} /> },
+  { id: 'placesVisited', label: 'Places Visited', icon: <MapPin size={15} /> },
+  { id: 'requests', label: 'Requests', icon: <Send size={15} /> },
+  { id: 'evidence', label: 'Evidence', icon: <FolderOpen size={15} /> },
+  { id: 'participants', label: 'Participants', icon: <Users size={15} /> },
+  { id: 'complaint', label: 'Original Complaint', icon: <FileText size={15} /> },
+  { id: 'case_understanding', label: 'Case Understanding', icon: <Brain size={15} /> },
+  { id: 'timeline', label: 'Timeline', icon: <Clock size={15} /> },
 ];
 
 /**
@@ -50,48 +66,51 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   return (
-    <div className="flex min-h-screen bg-neutral-100">
-      {/* ── Sidebar ─────────────────────────────────────────────────────── */}
+    <div className="flex h-screen bg-background overflow-hidden">
+      <Watermark />
+      {/* ── Sidebar ────────────────────────────────────────────────────────────── */}
       <CollapsibleSidebar
         navItems={navItems}
         pathname={pathname}
         displayName={displayName}
         userRole={user?.role ?? ''}
         onLogout={handleLogout}
+        isPolice={isPolice}
       />
 
       {/* ── Main content ─────────────────────────────────────────────────── */}
-      <div className="flex flex-1 flex-col min-w-0">
+      <div className="flex flex-1 flex-col min-w-0 bg-background text-text-primary relative z-10 overflow-y-auto">
         {/* Top bar */}
-        <header className="flex items-center justify-between border-b border-neutral-200 bg-white px-6 py-4 shadow-sm">
+        <header className="sticky top-0 flex items-center justify-between border-b border-neutral-800 bg-surface px-6 py-4 shadow-sm z-30">
           <div className="lg:hidden flex items-center gap-3">
-            <ShieldCheck size={20} className="text-primary-800" />
-            <span className="font-bold text-primary-900 text-sm">Crime OS</span>
+            <ShieldCheck size={20} className="text-brand-primary" />
+            <span className="font-bold text-text-primary text-sm">Crime OS</span>
           </div>
           <div className="hidden lg:block" />
           <div className="flex items-center gap-4">
-            <div className="text-neutral-700">
+            <div className="text-text-primary">
               <LanguageSelector />
             </div>
+            <ThemeToggle />
             <button
-              className="relative rounded-full p-2 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
+              className="relative rounded-full p-2 text-text-secondary hover:bg-neutral-800 transition-colors"
               aria-label="Notifications"
             >
               <Bell size={18} />
             </button>
             <div className="hidden sm:flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-800 text-white text-xs font-bold">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-primary/10 border border-brand-primary/30 text-brand-primary text-xs font-bold">
                 {displayName?.charAt(0).toUpperCase()}
               </div>
-              <span className="text-sm font-medium text-neutral-700">{displayName}</span>
+              <span className="text-sm font-medium text-text-primary">{displayName}</span>
             </div>
           </div>
         </header>
 
-        <main className="flex-1 p-6 lg:p-8">{children}</main>
+        <main className="flex-1 p-6 lg:p-8 relative z-10">{children}</main>
 
-        <footer className="border-t border-neutral-200 bg-white px-6 py-3 text-center">
-          <p className="text-xs text-neutral-400">
+        <footer className="border-t border-neutral-800 bg-surface px-6 py-3 text-center relative z-10">
+          <p className="text-xs text-text-secondary">
             &copy; {new Date().getFullYear()} Gujarat Police Crime OS — Secure Government Portal
           </p>
         </footer>
@@ -108,6 +127,7 @@ interface CollapsibleSidebarProps {
   displayName: string | undefined;
   userRole: string;
   onLogout: () => void;
+  isPolice?: boolean;
 }
 
 function CollapsibleSidebar({
@@ -116,7 +136,13 @@ function CollapsibleSidebar({
   displayName,
   userRole,
   onLogout,
+  isPolice,
 }: CollapsibleSidebarProps): React.ReactElement {
+  const searchParams = useSearchParams();
+  // Detect if we're inside a complaint detail page
+  const caseMatch = pathname.match(/\/police\/dashboard\/complaints\/([^/]+)$/);
+  const caseId = caseMatch ? caseMatch[1] : null;
+  const activeIoTab = searchParams.get('tab') || 'analysis';
   const [collapsed, setCollapsed] = React.useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('sidebar-collapsed') === 'true';
@@ -136,7 +162,7 @@ function CollapsibleSidebar({
     <aside
       style={{ transition: 'width 0.3s ease' }}
       className={[
-        'hidden lg:flex flex-shrink-0 flex-col bg-primary-900 text-white relative',
+        'hidden lg:flex flex-shrink-0 flex-col bg-surface border-r border-neutral-800 text-text-primary relative z-20',
         collapsed ? 'w-16' : 'w-60',
       ].join(' ')}
     >
@@ -145,7 +171,7 @@ function CollapsibleSidebar({
         onClick={toggle}
         aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        className="absolute -right-3 top-7 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-primary-700 text-white shadow-md hover:bg-primary-500 transition-colors border border-primary-600"
+        className="absolute -right-3 top-7 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-brand-primary text-black shadow-md hover:bg-brand-primary/80 transition-colors border border-brand-primary"
       >
         {/* Chevron icon — rotates when collapsed */}
         <svg
@@ -167,19 +193,19 @@ function CollapsibleSidebar({
       {/* Brand */}
       <div
         className={[
-          'flex items-center border-b border-primary-800 py-5',
+          'flex items-center border-b border-neutral-800 py-5',
           collapsed ? 'justify-center px-2' : 'gap-3 px-5',
         ].join(' ')}
       >
-        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary-700">
-          <ShieldCheck size={20} />
+        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-white border border-neutral-800 p-0.5">
+          <img src="/image.png" alt="Gujarat Police Logo" className="w-full h-full object-contain" />
         </div>
         {!collapsed && (
           <div className="overflow-hidden">
-            <p className="text-[9px] font-semibold uppercase tracking-widest text-primary-400">
+            <p className="text-[9px] font-bold uppercase tracking-widest text-brand-primary mb-0.5">
               Gujarat Police
             </p>
-            <p className="text-sm font-bold">Crime OS</p>
+            <p className="text-sm font-bold text-white">Crime OS</p>
           </div>
         )}
       </div>
@@ -196,8 +222,8 @@ function CollapsibleSidebar({
                 'flex items-center rounded-lg py-2.5 text-sm font-medium transition-colors group relative',
                 collapsed ? 'justify-center px-2' : 'gap-3 px-3',
                 isActive
-                  ? 'bg-primary-700 text-white'
-                  : 'text-primary-200 hover:bg-primary-800 hover:text-white',
+                  ? 'bg-brand-primary/10 text-brand-primary border border-brand-primary/20'
+                  : 'text-text-secondary hover:bg-neutral-800 hover:text-white',
               ].join(' ')}
             >
               <span className="flex-shrink-0">{item.icon}</span>
@@ -206,19 +232,73 @@ function CollapsibleSidebar({
 
               {/* Floating tooltip shown on hover when collapsed */}
               {collapsed && (
-                <span className="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-md bg-neutral-900 px-2.5 py-1.5 text-xs text-white shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50">
+                <span className="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-md bg-neutral-900 px-2.5 py-1.5 text-xs text-white shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 border border-neutral-800">
                   {item.label}
                 </span>
               )}
             </Link>
           );
         })}
+
+        {/* Case-level navigation — shown when inside a complaint page (IO) */}
+        {isPolice && caseId && !collapsed && (
+          <div className="mt-4 pt-4 border-t border-neutral-800">
+            <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-600 px-3 mb-2">Case Navigation</p>
+            <div className="space-y-0.5">
+              {caseNavItems.map((tab) => {
+                const isTabActive = activeIoTab === tab.id;
+                return (
+                  <Link
+                    key={tab.id}
+                    href={`${pathname}?tab=${tab.id}`}
+                    className={[
+                      'flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium transition-colors group relative',
+                      isTabActive
+                        ? 'bg-brand-primary/10 text-brand-primary border border-brand-primary/20'
+                        : 'text-text-secondary hover:bg-neutral-800 hover:text-white',
+                    ].join(' ')}
+                  >
+                    <span className="flex-shrink-0 opacity-80">{tab.icon}</span>
+                    <span>{tab.label}</span>
+                    {isTabActive && <ChevronRight size={10} className="ml-auto" />}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Collapsed case nav — icon only */}
+        {isPolice && caseId && collapsed && (
+          <div className="mt-4 pt-4 border-t border-neutral-800 space-y-0.5">
+            {caseNavItems.map((tab) => {
+              const isTabActive = activeIoTab === tab.id;
+              return (
+                <Link
+                  key={tab.id}
+                  href={`${pathname}?tab=${tab.id}`}
+                  className={[
+                    'flex items-center justify-center rounded-lg p-2 transition-colors group relative',
+                    isTabActive
+                      ? 'bg-brand-primary/10 text-brand-primary border border-brand-primary/20'
+                      : 'text-text-secondary hover:bg-neutral-800 hover:text-white',
+                  ].join(' ')}
+                >
+                  <span className="flex-shrink-0">{tab.icon}</span>
+                  <span className="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-md bg-neutral-900 px-2.5 py-1.5 text-xs text-white shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 border border-neutral-800">
+                    {tab.label}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </nav>
 
       {/* User footer */}
       <div
         className={[
-          'border-t border-primary-800 p-3 space-y-2',
+          'border-t border-neutral-800 p-3 space-y-2',
           collapsed ? 'flex flex-col items-center' : '',
         ].join(' ')}
       >
@@ -226,8 +306,8 @@ function CollapsibleSidebar({
           <>
             <LanguageSelector />
             <div className="min-w-0">
-              <p className="text-xs text-primary-400 truncate">{displayName}</p>
-              <p className="text-xs font-semibold text-secondary-400 uppercase tracking-wide">
+              <p className="text-xs text-text-primary truncate">{displayName}</p>
+              <p className="text-[10px] font-semibold text-brand-primary uppercase tracking-wide">
                 {userRole}
               </p>
             </div>
@@ -238,14 +318,14 @@ function CollapsibleSidebar({
         <button
           onClick={onLogout}
           className={[
-            'flex items-center rounded-lg py-2 text-primary-200 hover:bg-primary-800 hover:text-white transition-colors w-full group relative',
+            'flex items-center rounded-lg py-2 text-text-secondary hover:bg-neutral-800 hover:text-white transition-colors w-full group relative',
             collapsed ? 'justify-center px-2' : 'gap-2 px-3',
           ].join(' ')}
         >
           <LogOut size={15} className="flex-shrink-0" />
           {!collapsed && <span className="text-sm font-medium">Sign Out</span>}
           {collapsed && (
-            <span className="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-md bg-neutral-900 px-2.5 py-1.5 text-xs text-white shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50">
+            <span className="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-md bg-neutral-900 px-2.5 py-1.5 text-xs text-white shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 border border-neutral-800">
               Sign Out
             </span>
           )}

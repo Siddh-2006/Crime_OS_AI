@@ -2,6 +2,9 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
 import { TranslationProvider } from '@/context/TranslationContext';
+import { ThemeProvider } from '@/components/ThemeProvider';
+
+import { AppLoader } from '@/components/AppLoader';
 
 export const metadata: Metadata = {
   title: 'Crime OS — Gujarat Police',
@@ -26,8 +29,11 @@ export default function RootLayout({ children }: RootLayoutProps): React.ReactEl
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body className="min-h-screen font-sans antialiased">
+        <AppLoader />
         <AuthProvider>
-          <TranslationProvider>{children}</TranslationProvider>
+          <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark">
+            <TranslationProvider>{children}</TranslationProvider>
+          </ThemeProvider>
         </AuthProvider>
       </body>
     </html>

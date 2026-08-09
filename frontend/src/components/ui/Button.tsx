@@ -14,15 +14,15 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    'bg-primary-800 text-white hover:bg-primary-900 active:bg-primary-950 focus-visible:ring-primary-500 disabled:bg-primary-300',
+    'bg-brand-primary text-white hover:opacity-90 active:opacity-80 focus-visible:ring-brand-primary disabled:bg-neutral-300 dark:disabled:bg-neutral-700',
   secondary:
-    'bg-secondary-500 text-primary-900 hover:bg-secondary-600 active:bg-secondary-700 focus-visible:ring-secondary-400 disabled:bg-secondary-200',
+    'bg-brand-accent text-white hover:opacity-90 active:opacity-80 focus-visible:ring-brand-accent disabled:bg-neutral-800 dark:disabled:bg-neutral-700',
   ghost:
-    'bg-transparent text-primary-800 hover:bg-primary-50 active:bg-primary-100 focus-visible:ring-primary-500 border border-primary-200',
+    'bg-transparent text-text-primary hover:bg-neutral-800 dark:hover:bg-neutral-800 active:bg-neutral-800 dark:active:bg-neutral-700 focus-visible:ring-brand-primary',
   danger:
-    'bg-danger-700 text-white hover:bg-danger-700 active:bg-danger-700 focus-visible:ring-danger-500 disabled:bg-danger-100',
+    'bg-semantic-critical text-white hover:opacity-90 active:opacity-80 focus-visible:ring-semantic-critical disabled:opacity-50',
   outline:
-    'bg-transparent text-primary-800 hover:bg-primary-50 active:bg-primary-100 focus-visible:ring-primary-500 border border-primary-200',
+    'bg-transparent text-text-primary hover:bg-neutral-800 dark:hover:bg-neutral-800 active:bg-neutral-800 dark:active:bg-neutral-700 focus-visible:ring-brand-primary border border-neutral-700 dark:border-neutral-700',
 };
 
 const sizeClasses: Record<ButtonSize, string> = {

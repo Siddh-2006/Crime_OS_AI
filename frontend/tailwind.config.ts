@@ -1,6 +1,7 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: 'class',
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -9,6 +10,22 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        background: 'var(--background)',
+        surface: 'var(--surface)',
+        'text-primary': 'var(--text-primary)',
+        'text-secondary': 'var(--text-secondary)',
+        
+        brand: {
+          primary: 'var(--brand-primary)',
+          accent: 'var(--brand-accent)',
+        },
+        semantic: {
+          critical: 'var(--semantic-critical)',
+          pending: 'var(--semantic-pending)',
+          success: 'var(--semantic-success)',
+          info: 'var(--semantic-info)',
+        },
+        
         primary: {
           50:  '#e8eaf6',
           100: '#c5cae9',
@@ -63,6 +80,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'monospace'],
       },
       boxShadow: {
         'card': '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',

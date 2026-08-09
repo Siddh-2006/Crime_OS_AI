@@ -134,13 +134,13 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
   const getPriorityBadge = (priority: string) => {
     switch (priority?.toLowerCase()) {
       case 'critical':
-        return <span className="px-3 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800 border border-red-300 uppercase">Critical Priority</span>;
+        return <span className="px-3 py-1 text-xs font-bold rounded-full bg-red-900/30 text-red-400 border border-red-700 uppercase">Critical Priority</span>;
       case 'high':
-        return <span className="px-3 py-1 text-xs font-bold rounded-full bg-orange-100 text-orange-800 border border-orange-300 uppercase">High Priority</span>;
+        return <span className="px-3 py-1 text-xs font-bold rounded-full bg-orange-900/30 text-orange-400 border border-orange-700 uppercase">High Priority</span>;
       case 'medium':
-        return <span className="px-3 py-1 text-xs font-bold rounded-full bg-yellow-100 text-yellow-800 border border-yellow-300 uppercase">Medium Priority</span>;
+        return <span className="px-3 py-1 text-xs font-bold rounded-full bg-yellow-900/30 text-yellow-400 border border-yellow-700 uppercase">Medium Priority</span>;
       default:
-        return <span className="px-3 py-1 text-xs font-bold rounded-full bg-blue-100 text-blue-800 border border-blue-300 uppercase">Low Priority</span>;
+        return <span className="px-3 py-1 text-xs font-bold rounded-full bg-blue-900/30 text-blue-400 border border-blue-700 uppercase">Low Priority</span>;
     }
   };
 
@@ -174,7 +174,7 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex flex-wrap gap-2 border-b border-neutral-200 pb-2">
+      <div className="flex flex-wrap gap-2 border-b border-neutral-800 pb-2">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -184,8 +184,8 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
                 isActive 
-                  ? 'bg-slate-900 text-white shadow-sm' 
-                  : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 hover:text-neutral-900'
+                  ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-600/40 shadow-sm' 
+                  : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white border border-neutral-700'
               }`}
             >
               <Icon size={14} />
@@ -203,12 +203,12 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
             <CardHeader title="1. Case Understanding Overview" />
             <div className="space-y-4">
               <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400">Executive Summary</h4>
-                <p className="text-sm font-semibold text-neutral-900 mt-1">{overviewData.executive_summary}</p>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-500">Executive Summary</h4>
+                <p className="text-sm font-semibold text-text-primary mt-1">{overviewData.executive_summary}</p>
               </div>
-              <div className="border-t border-neutral-100 pt-4">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400">Incident Brief</h4>
-                <p className="text-sm text-neutral-700 mt-1 leading-relaxed whitespace-pre-line">{overviewData.incident_brief}</p>
+              <div className="border-t border-neutral-800 pt-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-500">Incident Brief</h4>
+                <p className="text-sm text-text-secondary mt-1 leading-relaxed whitespace-pre-line">{overviewData.incident_brief}</p>
               </div>
             </div>
           </Card>
@@ -223,14 +223,14 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
                 <p className="text-sm text-neutral-500 italic">No timeline events extracted.</p>
               ) : (
                 data.timeline.map((event, idx) => (
-                  <div key={idx} className="flex gap-4 items-start border-l-2 border-slate-900 pl-4 py-1">
+                  <div key={idx} className="flex gap-4 items-start border-l-2 border-indigo-700 pl-4 py-1">
                     <div className="space-y-1">
-                      <span className="text-xs font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-800">
+                      <span className="text-xs font-bold px-2 py-0.5 rounded bg-indigo-900/30 text-indigo-300 border border-indigo-800">
                         {event.timestamp}
                       </span>
-                      <p className="text-sm text-neutral-800 font-medium mt-1">{event.description}</p>
+                      <p className="text-sm text-text-primary font-medium mt-1">{event.description}</p>
                       {event.supporting_evidence_ids && event.supporting_evidence_ids.length > 0 && (
-                        <p className="text-xs text-neutral-400">
+                        <p className="text-xs text-neutral-500">
                           Evidence Ref: {event.supporting_evidence_ids.join(', ')}
                         </p>
                       )}
@@ -268,7 +268,7 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
                     return (
                       <div 
                         key={ev.evidence_id || idx} 
-                        className="p-4 border border-neutral-200 rounded-lg space-y-3 bg-neutral-50/50 hover:bg-neutral-100 cursor-pointer transition-colors"
+                        className="p-4 border border-neutral-800 rounded-lg space-y-3 bg-neutral-900/50 hover:bg-neutral-800/70 cursor-pointer transition-colors"
                         onClick={() => setPreviewEvidence({ 
                           id: ev.evidence_id, 
                           name: ev.filename,
@@ -277,16 +277,16 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
                         })}
                       >
                         <div className="flex justify-between items-center">
-                          <span className="font-bold text-sm text-slate-900">{captionText}</span>
-                          <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-200 text-slate-800 uppercase">{ev.importance || 'medium'}</span>
+                          <span className="font-bold text-sm text-text-primary">{captionText}</span>
+                          <span className="text-xs font-semibold px-2 py-0.5 rounded bg-neutral-700 text-neutral-300 uppercase border border-neutral-600">{ev.importance || 'medium'}</span>
                         </div>
-                        {summaryText && <p className="text-xs text-neutral-700 leading-relaxed">{summaryText}</p>}
+                        {summaryText && <p className="text-xs text-text-secondary leading-relaxed">{summaryText}</p>}
                         {supports.length > 0 && (
-                          <div className="pt-2 border-t border-neutral-200/60">
-                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Supports Allegations:</span>
+                          <div className="pt-2 border-t border-neutral-800">
+                            <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider">Supports Allegations:</span>
                             <div className="mt-1 flex flex-wrap gap-1.5">
                               {supports.map((alg: string, aIdx: number) => (
-                                <span key={aIdx} className="px-2 py-0.5 text-[11px] bg-emerald-50 text-emerald-800 border border-emerald-200 rounded font-medium">
+                                <span key={aIdx} className="px-2 py-0.5 text-[11px] bg-emerald-900/30 text-emerald-400 border border-emerald-800 rounded font-medium">
                                   {alg}
                                 </span>
                               ))}
@@ -308,17 +308,17 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
             <CardHeader title="4. Missing Information & Evidence (Complainant Clarifications)" />
             <div className="mt-4 space-y-3">
               {(missingItems.length === 0) ? (
-                <p className="text-sm text-emerald-700 bg-emerald-50 p-3 rounded-lg border border-emerald-200">
+                <p className="text-sm text-emerald-400 bg-emerald-900/20 p-3 rounded-lg border border-emerald-800">
                   No missing information or evidence items flagged.
                 </p>
               ) : (
                 missingItems.map((item, i) => (
-                  <div key={i} className="p-3.5 border border-amber-200 bg-amber-50/70 rounded-lg text-xs space-y-2">
+                  <div key={i} className="p-3.5 border border-amber-800/50 bg-amber-900/20 rounded-lg text-xs space-y-2">
                     <div className="flex justify-between items-start gap-2">
-                      <span className="font-bold text-amber-950 text-sm">{item.title}</span>
-                      <span className="uppercase text-[10px] font-bold bg-amber-200 text-amber-900 px-2 py-0.5 rounded shrink-0">{item.importance}</span>
+                      <span className="font-bold text-amber-300 text-sm">{item.title}</span>
+                      <span className="uppercase text-[10px] font-bold bg-amber-900/40 text-amber-400 border border-amber-700 px-2 py-0.5 rounded shrink-0">{item.importance}</span>
                     </div>
-                    <p className="text-amber-900 leading-relaxed">{item.description}</p>
+                    <p className="text-amber-200/80 leading-relaxed">{item.description}</p>
                     {caseId && (
                       <div className="pt-1">
                         <button
@@ -326,10 +326,10 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
                           disabled={!!requestedItems[item.title]}
                           className={`flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-md transition-all ${
                             requestedItems[item.title] === 'sent'
-                              ? 'bg-green-100 text-green-700 border border-green-200 cursor-default'
+                              ? 'bg-green-900/30 text-green-400 border border-green-700 cursor-default'
                               : requestedItems[item.title] === 'loading'
-                              ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
-                              : 'bg-white text-slate-800 border border-slate-300 hover:bg-slate-100 cursor-pointer shadow-xs'
+                              ? 'bg-neutral-800 text-neutral-500 border border-neutral-700 cursor-not-allowed'
+                              : 'bg-neutral-800 text-neutral-200 border border-neutral-600 hover:bg-neutral-700 cursor-pointer'
                           }`}
                         >
                           {requestedItems[item.title] === 'sent' ? (
@@ -355,17 +355,17 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
             <CardHeader title="5. Contradictions & Discrepancies" />
             <div className="mt-4 space-y-3">
               {(!data.contradictions || data.contradictions.length === 0) ? (
-                <p className="text-sm text-emerald-700 bg-emerald-50 p-3 rounded-lg border border-emerald-200 font-medium">
+                <p className="text-sm text-emerald-400 bg-emerald-900/20 p-3 rounded-lg border border-emerald-800 font-medium">
                   No contradictions or conflicts detected across complaint and evidence.
                 </p>
               ) : (
                 data.contradictions.map((c, i) => {
                   const evIds = c.related_evidence_ids || c.involved_evidence_ids || [];
                   return (
-                    <div key={i} className="p-3 border border-red-200 bg-red-50 rounded-lg text-xs text-red-900 font-medium space-y-1">
+                    <div key={i} className="p-3 border border-red-800/50 bg-red-900/20 rounded-lg text-xs text-red-300 font-medium space-y-1">
                       <p>• {c.description}</p>
                       {evIds.length > 0 && (
-                        <p className="text-[11px] text-red-700">Involved Evidence IDs: {evIds.join(', ')}</p>
+                        <p className="text-[11px] text-red-400">Involved Evidence IDs: {evIds.join(', ')}</p>
                       )}
                     </div>
                   );
@@ -379,7 +379,7 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
         {activeTab === 'complaint' && (
           <Card className="p-6">
             <CardHeader title="6. Original Complaint Text" />
-            <div className="mt-4 p-4 bg-neutral-50 border border-neutral-200 rounded-lg text-xs font-mono text-neutral-800 whitespace-pre-wrap leading-relaxed">
+            <div className="mt-4 p-4 bg-neutral-900 border border-neutral-800 rounded-lg text-xs font-mono text-text-secondary whitespace-pre-wrap leading-relaxed">
               {data.original_complaint || 'No complaint text available.'}
             </div>
           </Card>
@@ -420,15 +420,15 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
               )}
             </div>
 
-            <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4">
+            <div className="bg-neutral-900 p-4 rounded-lg border border-neutral-800 space-y-4">
               <div>
-                <h3 className="text-sm font-bold text-slate-800 mb-1">Evidence Title / Caption</h3>
-                <p className="text-sm font-semibold text-slate-900">{previewEvidence.caption || previewEvidence.name}</p>
+                <h3 className="text-sm font-bold text-neutral-400 mb-1">Evidence Title / Caption</h3>
+                <p className="text-sm font-semibold text-text-primary">{previewEvidence.caption || previewEvidence.name}</p>
               </div>
               
               <div>
-                <h3 className="text-sm font-bold text-slate-800 mb-1">AI Summary & Contribution</h3>
-                <div className="p-3 bg-white border border-slate-200 rounded text-xs text-slate-700 leading-relaxed">
+                <h3 className="text-sm font-bold text-neutral-400 mb-1">AI Summary &amp; Contribution</h3>
+                <div className="p-3 bg-neutral-800 border border-neutral-700 rounded text-xs text-text-secondary leading-relaxed">
                   {previewEvidence.summary || 'No summary available.'}
                 </div>
               </div>

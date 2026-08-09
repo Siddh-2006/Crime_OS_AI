@@ -24,7 +24,7 @@ export function Loader({ size = 'md', label = 'Loading...', fullPage = false, co
   const spinner = (
     <div className="flex flex-col items-center gap-3" role="status" aria-label={label}>
       <svg
-        className={['animate-spin', color ? '' : 'text-primary-700', resolvedSizeClass].join(' ')}
+        className={['animate-spin', color ? '' : 'text-brand-primary', resolvedSizeClass].join(' ')}
         style={resolvedStyle}
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
@@ -44,7 +44,7 @@ export function Loader({ size = 'md', label = 'Loading...', fullPage = false, co
 
   if (fullPage) {
     return (
-      <div className="fixed inset-0 z-40 flex items-center justify-center bg-white/70 backdrop-blur-sm">
+      <div className="fixed inset-0 z-40 flex items-center justify-center bg-background/70 backdrop-blur-sm">
         {spinner}
       </div>
     );

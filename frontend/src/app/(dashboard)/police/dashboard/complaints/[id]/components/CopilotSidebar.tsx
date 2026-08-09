@@ -50,15 +50,15 @@ function ProposalCard({
         </span>
       </div>
 
-      <pre className="p-3 text-[11px] font-mono text-slate-700 bg-amber-50 overflow-x-auto whitespace-pre-wrap break-words">
+      <pre className="p-3 text-[11px] font-mono text-text-secondary bg-amber-50 overflow-x-auto whitespace-pre-wrap break-words">
         {JSON.stringify(proposal.payload, null, 2)}
       </pre>
 
-      <div className="p-2 border-t border-amber-200 bg-white">
+      <div className="p-2 border-t border-amber-200 bg-neutral-900/50">
         <button
           className={`w-full flex items-center justify-center gap-2 text-xs font-semibold py-2 rounded-lg transition-all ${
             applied
-              ? 'bg-green-100 text-green-700 cursor-default'
+              ? 'bg-green-900/30 text-green-400 cursor-default'
               : 'bg-amber-500 hover:bg-amber-600 text-white'
           }`}
           onClick={onApply}
@@ -182,11 +182,11 @@ export function CopilotSidebar({ caseId, onStateChangeApplied, onClose }: Copilo
   ];
 
   return (
-    <div className="flex flex-col h-full bg-white border-l border-slate-200 shadow-lg" style={{ minHeight: 0 }}>
+    <div className="flex flex-col h-full bg-neutral-900/50 border-l border-neutral-700 shadow-lg" style={{ minHeight: 0 }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex-shrink-0">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-700 bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex-shrink-0">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center">
+          <div className="w-7 h-7 rounded-full bg-neutral-900/50/20 flex items-center justify-center">
             <Bot size={15} />
           </div>
           <div>
@@ -213,8 +213,8 @@ export function CopilotSidebar({ caseId, onStateChangeApplied, onClose }: Copilo
               <div
                 className={`max-w-[92%] rounded-2xl rounded-tl-sm px-4 py-3 text-sm shadow-sm border ${
                   msg.isError
-                    ? 'bg-red-50 border-red-200 text-red-700'
-                    : 'bg-slate-50 border-slate-200 text-slate-800'
+                    ? 'bg-red-900/20 border-red-800/50 text-red-400'
+                    : 'bg-neutral-800 border-neutral-700 text-white'
                 }`}
               >
                 <div className="prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0 prose-headings:text-sm">
@@ -236,7 +236,7 @@ export function CopilotSidebar({ caseId, onStateChangeApplied, onClose }: Copilo
 
         {loading && (
           <div className="flex items-start">
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-2 text-slate-500 text-sm">
+            <div className="bg-neutral-800 border border-neutral-700 rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-2 text-neutral-500 text-sm">
               <Loader2 size={14} className="animate-spin text-blue-500" />
               <span>Thinking…</span>
             </div>
@@ -249,7 +249,7 @@ export function CopilotSidebar({ caseId, onStateChangeApplied, onClose }: Copilo
       {/* Quick suggestions (only show when no user messages yet) */}
       {messages.length === 1 && (
         <div className="px-4 pb-2 space-y-1.5 flex-shrink-0">
-          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide flex items-center gap-1">
+          <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide flex items-center gap-1">
             <Sparkles size={10} /> Suggested questions
           </p>
           <div className="flex flex-col gap-1.5">
@@ -257,7 +257,7 @@ export function CopilotSidebar({ caseId, onStateChangeApplied, onClose }: Copilo
               <button
                 key={p}
                 onClick={() => setInput(p)}
-                className="text-left text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg px-3 py-1.5 border border-blue-100 transition-colors"
+                className="text-left text-xs bg-blue-900/20 hover:bg-blue-900/30 text-blue-400 rounded-lg px-3 py-1.5 border border-blue-800/50 transition-colors"
               >
                 {p}
               </button>
@@ -267,7 +267,7 @@ export function CopilotSidebar({ caseId, onStateChangeApplied, onClose }: Copilo
       )}
 
       {/* Input */}
-      <div className="p-3 border-t border-slate-200 bg-white flex-shrink-0">
+      <div className="p-3 border-t border-neutral-700 bg-neutral-900/50 flex-shrink-0">
         <form
           onSubmit={e => {
             e.preventDefault();
@@ -277,7 +277,7 @@ export function CopilotSidebar({ caseId, onStateChangeApplied, onClose }: Copilo
         >
           <input
             type="text"
-            className="flex-1 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-slate-50"
+            className="flex-1 border border-neutral-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-neutral-800"
             placeholder="Ask anything about this case…"
             value={input}
             onChange={e => setInput(e.target.value)}

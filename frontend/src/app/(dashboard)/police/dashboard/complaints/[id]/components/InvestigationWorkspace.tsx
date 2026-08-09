@@ -27,15 +27,16 @@ import { API_ROUTES } from '@/lib/constants';
 
 interface InvestigationWorkspaceProps {
   caseId: string;
+  activeTab: WorkspaceTab;
+  setActiveTab: (tab: WorkspaceTab) => void;
 }
 
-type WorkspaceTab = 'analysis' | 'diary' | 'checklist' | 'requests' | 'evidence' | 'participants' | 'complaint' | 'case_understanding' | 'timeline' | 'placesVisited';
+export type WorkspaceTab = 'analysis' | 'diary' | 'checklist' | 'requests' | 'evidence' | 'participants' | 'complaint' | 'case_understanding' | 'timeline' | 'placesVisited';
 
-export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) {
+export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: InvestigationWorkspaceProps) {
   const { toasts, showToast, removeToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<WorkspaceTab>('analysis');
   const [copilotOpen, setCopilotOpen] = useState(true);
   const { language } = useTranslation();
 
@@ -507,7 +508,7 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
 
   const getDiaryPreviewUrl = (url: string) => {
     if (!url) return url;
-    return url.replace(/\/upload\/fl_attachment\//, '/upload/');
+    return url.replace('/upload/fl_attachment/', '/upload/');
   };
 
   const openComposer = (stepId: string, deptId: string) => {
@@ -519,7 +520,7 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
   const departmentThreadCount = threads.filter((t: any) => t.request_type !== 'citizen_request').length;
   const citizenThreadCount = threads.filter((t: any) => t.request_type === 'citizen_request').length;
 
-  const tabs: { id: WorkspaceTab; label: string; icon: React.ReactNode; badge?: number }[] = [
+  const tabs = [
     { id: 'analysis', label: 'AI Analysis', icon: <Bot size={15} /> },
     { id: 'checklist', label: 'Investigation Checklist', icon: <ClipboardList size={15} />, badge: checklist?.steps?.filter((s: any) => s.status !== 'completed').length },
     { id: 'diary', label: 'Case Diary', icon: <BookOpen size={15} />, badge: diaryEntries.length },
@@ -533,50 +534,17 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
   ];
 
   if (loading && !snapshot && !checklist && diaryEntries.length === 0) {
-    return <div className="py-20 flex justify-center"><Loader /></div>;
+    return (
+      <div className="py-20 flex justify-center">
+        <Loader />
+      </div>
+    );
   }
 
   return (
     <div className="flex gap-4 items-start overflow-hidden" style={{ minHeight: '600px' }}>
       {/* Main workspace — takes all available width, never overflows */}
       <div className="flex-1 min-w-0 overflow-hidden space-y-4">
-      {/* Tab Bar */}
-      <div className="flex gap-1 border-b border-neutral-200 overflow-x-auto items-center">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors relative ${
-              activeTab === tab.id
-                ? 'text-blue-700 border-b-2 border-blue-600'
-                : 'text-neutral-500 hover:text-neutral-800'
-            }`}
-          >
-            {tab.icon}
-            {tab.label}
-            {tab.badge !== undefined && tab.badge > 0 && (
-              <span className={`ml-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                activeTab === tab.id ? 'bg-blue-100 text-blue-700' : 'bg-neutral-200 text-neutral-600'
-              }`}>
-                {tab.badge}
-              </span>
-            )}
-          </button>
-        ))}
-        {/* Copilot toggle */}
-        <button
-          onClick={() => setCopilotOpen(o => !o)}
-          className={`ml-auto flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex-shrink-0 mr-1 ${
-            copilotOpen
-              ? 'bg-blue-600 text-white shadow-sm'
-              : 'bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200'
-          }`}
-        >
-          <Sparkles size={13} />
-          Copilot
-        </button>
-      </div>
-
       {/* Tab Content */}
       <div className="min-h-[500px]">
         {activeTab === 'analysis' && (
@@ -610,8 +578,8 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
 
         {activeTab === 'diary' && (
           <div className="space-y-4">
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-gradient-to-r from-slate-900 to-slate-700 p-4 text-white md:flex-row md:items-end md:justify-between">
+            <div className="rounded-2xl border border-neutral-700 bg-neutral-900/50 p-4 shadow-sm">
+              <div className="flex flex-col gap-3 rounded-xl border border-neutral-700 bg-gradient-to-r from-slate-900 to-slate-700 p-4 text-white md:flex-row md:items-end md:justify-between">
                 <div>
                   <h3 className="text-lg font-semibold">Official Daily Diary</h3>
                   <p className="mt-1 text-sm text-slate-200">Generate a formal draft from the latest case context and finalize it for the record.</p>
@@ -621,12 +589,12 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
                     type="date"
                     value={diaryDate}
                     onChange={(e) => setDiaryDate(e.target.value)}
-                    className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"
+                    className="rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-text-secondary"
                   />
                   <button
                     onClick={handleGenerateDiaryDraft}
                     disabled={diaryDraftLoading}
-                    className="rounded-lg bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-100 disabled:cursor-not-allowed disabled:bg-slate-200"
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {diaryDraftLoading ? 'Working…' : 'Generate Draft'}
                   </button>
@@ -634,7 +602,7 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
                     <button
                       onClick={handleSaveDiaryDraft}
                       disabled={diaryDraftLoading}
-                      className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed"
+                      className="rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm font-semibold text-text-secondary hover:bg-neutral-800 disabled:cursor-not-allowed"
                     >
                       {diaryDraftLoading ? 'Saving…' : 'Save Draft'}
                     </button>
@@ -642,124 +610,124 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
                 </div>
               </div>
 
-              {diaryDraftError && <p className="mt-3 text-sm text-red-600">{diaryDraftError}</p>}
+              {diaryDraftError && <p className="mt-3 text-sm text-red-500">{diaryDraftError}</p>}
 
               {diaryDraft && (
-                <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="mt-4 rounded-xl border border-neutral-700 bg-neutral-800 p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-semibold text-slate-800">{diaryDraft.title}</p>
-                      <p className="text-xs uppercase tracking-wide text-slate-500">Status: {diaryDraft.status || 'draft'}</p>
+                      <p className="text-sm font-semibold text-text-primary">{diaryDraft.title}</p>
+                      <p className="text-xs uppercase tracking-wide text-neutral-500">Status: {diaryDraft.status || 'draft'}</p>
                     </div>
                     <button
                       onClick={handleFinalizeDiaryDraft}
                       disabled={diaryDraftLoading}
-                      className="rounded-lg border border-emerald-600 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed"
+                      className="rounded-lg border border-emerald-600 bg-neutral-900/50 px-3 py-2 text-sm font-semibold text-emerald-400 hover:bg-neutral-800 disabled:cursor-not-allowed"
                     >
                       {diaryDraftLoading ? 'Saving…' : 'Finalize'}
                     </button>
                   </div>
-                  <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+                  <div className="mt-4 rounded-xl border border-neutral-700 bg-neutral-900/50 p-4">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
-                        <p className="text-sm font-semibold text-slate-800">Official Case Diary Form (16 Standard Fields)</p>
-                        <p className="text-xs text-slate-500">Edit any values before finalization. The generated PDFs will format these fields into the official two-column Police Roznamcha table layout.</p>
+                        <p className="text-sm font-semibold text-text-primary">Official Case Diary Form (16 Standard Fields)</p>
+                        <p className="text-xs text-neutral-500">Edit any values before finalization. The generated PDFs will format these fields into the official two-column Police Roznamcha table layout.</p>
                       </div>
                     </div>
                     <div className="mt-4 grid gap-4 lg:grid-cols-2">
                       <div>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Title</label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Title</label>
                         <input
                           value={diaryForm.title}
                           onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, title: e.target.value }))}
-                          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                          className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary"
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Investigation Officer</label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Investigation Officer</label>
                         <input
                           value={diaryForm.officialOfficerId}
                           onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, officialOfficerId: e.target.value }))}
-                          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                          className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary"
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Crime Register No. and Section</label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Crime Register No. and Section</label>
                         <input
                           value={diaryForm.crimeRegisterNumber}
                           onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, crimeRegisterNumber: e.target.value }))}
-                          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                          className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary"
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Investigation Start & End Time (Field 14)</label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Investigation Start & End Time (Field 14)</label>
                         <div className="flex items-center gap-2 mt-1">
                           <input
                             placeholder="Start (e.g. 19/40)"
                             value={diaryForm.investigationStartTime}
                             onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, investigationStartTime: e.target.value }))}
-                            className="w-1/2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                            className="w-1/2 rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary"
                           />
-                          <span className="text-xs text-slate-400">to</span>
+                          <span className="text-xs text-neutral-500">to</span>
                           <input
                             placeholder="End (e.g. 23/00)"
                             value={diaryForm.investigationEndTime}
                             onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, investigationEndTime: e.target.value }))}
-                            className="w-1/2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                            className="w-1/2 rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary"
                           />
                         </div>
                       </div>
                       <div>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Custody Status (Field 7a)</label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Custody Status (Field 7a)</label>
                         <input
                           placeholder="e.g. ----- or In Police Custody"
                           value={diaryForm.custodyStatus}
                           onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, custodyStatus: e.target.value }))}
-                          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                          className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary"
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Magisterial Custody Date (Field 7b)</label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Magisterial Custody Date (Field 7b)</label>
                         <input
                           placeholder="e.g. -----"
                           value={diaryForm.magisterialCustodyDate}
                           onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, magisterialCustodyDate: e.target.value }))}
-                          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                          className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary"
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Property Stolen</label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Property Stolen</label>
                         <input
                           value={diaryForm.propertyStolen}
                           onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, propertyStolen: e.target.value }))}
-                          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                          className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary"
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Property Recovered</label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Property Recovered</label>
                         <input
                           value={diaryForm.propertyRecovered}
                           onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, propertyRecovered: e.target.value }))}
-                          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                          className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary"
                         />
                       </div>
-                      <div className="lg:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Record of Investigation (Gujarati-English Transliterated)</label>
+                      <div className="lg:col-span-2 rounded-xl border border-neutral-700 bg-neutral-800 p-3">
+                        <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Record of Investigation (Gujarati-English Transliterated)</label>
                         <textarea
                           value={diaryForm.recordOfInvestigationGujEn}
                           onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, recordOfInvestigationGujEn: e.target.value }))}
                           rows={6}
-                          className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 font-mono"
+                          className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary font-mono"
                           placeholder="Enter the Gujarati-English narrative for the official diary."
                         />
                       </div>
-                      <div className="lg:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Record of Investigation (English Version)</label>
+                      <div className="lg:col-span-2 rounded-xl border border-neutral-700 bg-neutral-800 p-3">
+                        <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Record of Investigation (English Version)</label>
                         <textarea
                           value={diaryForm.recordOfInvestigationEn}
                           onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, recordOfInvestigationEn: e.target.value }))}
                           rows={6}
-                          className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 font-mono"
+                          className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary font-mono"
                           placeholder="Enter the English version for the final official record."
                         />
                       </div>
@@ -768,17 +736,17 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
                 </div>
               )}
 
-              <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="mt-4 rounded-2xl border border-neutral-700 bg-neutral-900/50 p-4 shadow-sm">
                 <div className="flex items-center justify-between gap-3 mb-3">
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">Finalized Case Diary Records</p>
-                    <p className="text-xs text-slate-500">Preview or download official bilingual (Gujarati-English & English) PDF copies.</p>
+                    <p className="text-sm font-semibold text-text-primary">Finalized Case Diary Records</p>
+                    <p className="text-xs text-neutral-500">Preview or download official bilingual (Gujarati-English & English) PDF copies.</p>
                   </div>
-                  <span className="text-xs font-medium text-slate-500">{diaryHistory.length} items</span>
+                  <span className="text-xs font-medium text-neutral-500">{diaryHistory.length} items</span>
                 </div>
 
                 {diaryHistory.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+                  <div className="rounded-xl border border-dashed border-neutral-700 bg-neutral-800 px-4 py-6 text-center text-sm text-neutral-500">
                     No finalized case diary PDFs generated yet. Finalize a draft above to render official PDFs.
                   </div>
                 ) : (
@@ -788,27 +756,27 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
                       const enUrl = record.pdf_url_en;
 
                       return (
-                        <div key={record.diary_id} className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:flex-row md:items-center md:justify-between">
+                        <div key={record.diary_id} className="flex flex-col gap-3 rounded-xl border border-neutral-700 bg-neutral-800 p-3 md:flex-row md:items-center md:justify-between">
                           <div>
-                            <p className="font-semibold text-slate-900">{record.title || `Case Diary No. ${record.diary_number}`}</p>
-                            <p className="text-xs text-slate-500">
-                              Date: {new Date(record.diary_date).toLocaleDateString('en-IN')} • Status: <span className="font-semibold uppercase text-emerald-700">{record.status || 'completed'}</span>
+                            <p className="font-semibold text-text-primary">{record.title || `Case Diary No. ${record.diary_number}`}</p>
+                            <p className="text-xs text-neutral-500">
+                              Date: {new Date(record.diary_date).toLocaleDateString('en-IN')} • Status: <span className="font-semibold uppercase text-emerald-400">{record.status || 'completed'}</span>
                             </p>
                             {record.crime_register_number && (
-                              <p className="text-xs text-slate-500">CR No.: {record.crime_register_number}</p>
+                              <p className="text-xs text-neutral-500">CR No.: {record.crime_register_number}</p>
                             )}
                           </div>
                           <div className="flex flex-wrap gap-2">
                             {gujEnUrl ? (
-                              <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200">
-                                <span className="text-[10px] font-bold text-slate-500 px-1">Guj-Eng:</span>
+                              <div className="flex items-center gap-1 bg-neutral-900/50 p-1 rounded-lg border border-neutral-700">
+                                <span className="text-[10px] font-bold text-neutral-500 px-1">Guj-Eng:</span>
                                 <button
                                   type="button"
                                   onClick={() => {
                                     setPreviewPdfUrl(gujEnUrl);
                                     setIsDiaryPreviewOpen(true);
                                   }}
-                                  className="rounded px-2 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-50"
+                                  className="rounded px-2 py-1 text-xs font-semibold text-blue-400 hover:bg-blue-900/20"
                                 >
                                   Preview
                                 </button>
@@ -817,25 +785,24 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   download
-                                  className="rounded px-2 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
-                                >
+                                  className="rounded px-2 py-1 text-xs font-semibold text-emerald-400 hover:bg-neutral-900/50">
                                   Download
                                 </a>
                               </div>
                             ) : (
-                              <span className="rounded bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700">Guj-Eng PDF Pending</span>
+                              <span className="rounded bg-neutral-900/50 px-2 py-1 text-xs font-semibold text-amber-400">Guj-Eng PDF Pending</span>
                             )}
 
                             {enUrl ? (
-                              <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200">
-                                <span className="text-[10px] font-bold text-slate-500 px-1">English:</span>
+                              <div className="flex items-center gap-1 bg-neutral-900/50 p-1 rounded-lg border border-neutral-700">
+                                <span className="text-[10px] font-bold text-neutral-500 px-1">English:</span>
                                 <button
                                   type="button"
                                   onClick={() => {
                                     setPreviewPdfUrl(enUrl);
                                     setIsDiaryPreviewOpen(true);
                                   }}
-                                  className="rounded px-2 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-50"
+                                  className="rounded px-2 py-1 text-xs font-semibold text-blue-400 hover:bg-blue-900/20"
                                 >
                                   Preview
                                 </button>
@@ -844,13 +811,12 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   download
-                                  className="rounded px-2 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
-                                >
+                                  className="rounded px-2 py-1 text-xs font-semibold text-emerald-400 hover:bg-neutral-900/50">
                                   Download
                                 </a>
                               </div>
                             ) : (
-                              <span className="rounded bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700">English PDF Pending</span>
+                              <span className="rounded bg-neutral-900/50 px-2 py-1 text-xs font-semibold text-amber-400">English PDF Pending</span>
                             )}
                           </div>
                         </div>
@@ -866,72 +832,72 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
 
         {activeTab === 'placesVisited' && (
           <div className="space-y-4">
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="rounded-2xl border border-neutral-700 bg-neutral-900/50 p-4 shadow-sm">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold text-slate-900">Places Visited</h3>
-                  <p className="text-sm text-slate-500">Manually recorded locations visited by the investigation officer. These entries are tied to the case diary timeline.</p>
+                  <h3 className="text-lg font-semibold text-text-primary">Places Visited</h3>
+                  <p className="text-sm text-neutral-500">Manually recorded locations visited by the investigation officer. These entries are tied to the case diary timeline.</p>
                 </div>
-                <div className="rounded-full bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700">
+                <div className="rounded-full bg-blue-900/20 px-3 py-1 text-sm font-semibold text-blue-400">
                   {placesVisited.length} recorded place{placesVisited.length === 1 ? '' : 's'}
                 </div>
               </div>
 
               <div className="mt-6 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Add New Place</div>
+                <div className="rounded-2xl border border-neutral-700 bg-neutral-800 p-4">
+                  <div className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-neutral-500">Add New Place</div>
                   <div className="space-y-4">
                     <div>
-                      <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Location</label>
+                      <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Location</label>
                       <input
                         value={placeForm.address}
                         onChange={(e) => setPlaceForm((prev: any) => ({ ...prev, address: e.target.value }))}
                         placeholder="123 Main Street, Surat, Gujarat"
-                        className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                        className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary"
                       />
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Visit date</label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Visit date</label>
                         <input
                           type="date"
                           value={placeForm.visitDate}
                           onChange={(e) => setPlaceForm((prev: any) => ({ ...prev, visitDate: e.target.value }))}
-                          className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                          className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary"
                         />
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Start time</label>
+                          <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Start time</label>
                           <input
                             type="time"
                             value={placeForm.startTime}
                             onChange={(e) => setPlaceForm((prev: any) => ({ ...prev, startTime: e.target.value }))}
-                            className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                            className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary"
                           />
                         </div>
                         <div>
-                          <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">End time</label>
+                          <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">End time</label>
                           <input
                             type="time"
                             value={placeForm.endTime}
                             onChange={(e) => setPlaceForm((prev: any) => ({ ...prev, endTime: e.target.value }))}
-                            className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                            className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary"
                           />
                         </div>
                       </div>
                     </div>
                     <div>
-                      <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">What was done</label>
+                      <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">What was done</label>
                       <textarea
                         value={placeForm.whatWasDone}
                         onChange={(e) => setPlaceForm((prev: any) => ({ ...prev, whatWasDone: e.target.value }))}
                         rows={4}
                         placeholder="Search, meet witness, collect evidence, record statement..."
-                        className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                        className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary"
                       />
                     </div>
-                    {placeFormError && <p className="text-sm text-red-600">{placeFormError}</p>}
+                    {placeFormError && <p className="text-sm text-red-500">{placeFormError}</p>}
                     <button
                       type="button"
                       onClick={handleAddPlaceVisited}
@@ -943,33 +909,33 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="rounded-2xl border border-neutral-700 bg-neutral-900/50 p-4">
                   <div className="flex items-center justify-between gap-3 mb-4">
                     <div>
-                      <p className="text-sm font-semibold text-slate-900">Recent Visited Places</p>
-                      <p className="text-xs text-slate-500">These entries are visible in the case diary timeline once recorded.</p>
+                      <p className="text-sm font-semibold text-text-primary">Recent Visited Places</p>
+                      <p className="text-xs text-neutral-500">These entries are visible in the case diary timeline once recorded.</p>
                     </div>
-                    <span className="text-xs font-semibold text-slate-500">{placesVisited.length} entries</span>
+                    <span className="text-xs font-semibold text-neutral-500">{placesVisited.length} entries</span>
                   </div>
 
                   {placesVisited.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500">
+                    <div className="rounded-2xl border border-dashed border-neutral-700 bg-neutral-800 p-6 text-center text-sm text-neutral-500">
                       No visited places have been recorded yet.
                     </div>
                   ) : (
                     <div className="space-y-3">
                       {placesVisited.map((place) => (
-                        <div key={place.place_id || place._id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <div key={place.place_id || place._id} className="rounded-2xl border border-neutral-700 bg-neutral-800 p-4">
                           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                             <div>
-                              <p className="font-semibold text-slate-900">{place.address}</p>
-                              <p className="text-xs text-slate-500 mt-1">
+                              <p className="font-semibold text-text-primary">{place.address}</p>
+                              <p className="text-xs text-neutral-500 mt-1">
                                 {new Date(place.visit_date).toLocaleDateString('en-IN')} · {place.start_time || 'N/A'} - {place.end_time || 'N/A'}
                               </p>
                             </div>
-                            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-700">Recorded</span>
+                            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-400">Recorded</span>
                           </div>
-                          <p className="mt-3 text-sm leading-6 text-slate-600">{place.what_was_done || 'No description provided.'}</p>
+                          <p className="mt-3 text-sm leading-6 text-text-secondary">{place.what_was_done || 'No description provided.'}</p>
                         </div>
                       ))}
                     </div>
@@ -1073,7 +1039,7 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
       >
         <div className="space-y-4">
           {previewPdfUrl ? (
-            <div className="h-[70vh] rounded-lg overflow-hidden border border-slate-200">
+            <div className="h-[70vh] rounded-lg overflow-hidden border border-neutral-700">
               <iframe
                 src={getDiaryPreviewUrl(previewPdfUrl)}
                 title="Diary PDF Preview"
@@ -1081,14 +1047,14 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
               />
             </div>
           ) : (
-            <p className="text-sm text-slate-600">No preview URL is available.</p>
+            <p className="text-sm text-text-secondary">No preview URL is available.</p>
           )}
           {previewPdfUrl && (
             <a
               href={getDiaryPreviewUrl(previewPdfUrl)}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+              className="inline-flex items-center rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm font-semibold text-text-secondary hover:bg-neutral-800"
             >
               Open in browser
             </a>
@@ -1098,7 +1064,7 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
       </div>
       {/* Copilot Sidebar — hidden on small screens */}
       {copilotOpen && (
-        <div className="hidden xl:block w-80 flex-shrink-0 rounded-xl overflow-hidden border border-slate-200 shadow-md" style={{ height: '700px', position: 'sticky', top: '80px' }}>
+        <div className="hidden xl:block w-80 flex-shrink-0 rounded-xl overflow-hidden border border-neutral-700 shadow-md" style={{ height: '700px', position: 'sticky', top: '80px' }}>
           <CopilotSidebar
             caseId={caseId}
             onStateChangeApplied={fetchWorkspaceData}
@@ -1135,7 +1101,7 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
         <FolderOpen className="h-10 w-10 text-neutral-300" />
-        <p className="text-sm font-semibold text-neutral-600">No evidence attached yet</p>
+        <p className="text-sm font-semibold text-text-secondary">No evidence attached yet</p>
         <p className="text-xs text-neutral-400 max-w-xs">
           Evidence items added via the investigation workflow appear here.
         </p>
@@ -1153,10 +1119,10 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
   return (
     <>
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-bold text-neutral-800">Case Evidence File</h3>
+        <h3 className="text-lg font-bold text-white">Case Evidence File</h3>
         <button 
           onClick={() => setAddModalOpen(true)}
-          className="px-3 py-1.5 bg-blue-50 text-blue-700 text-sm font-bold border border-blue-200 rounded hover:bg-blue-100 transition-colors"
+          className="px-3 py-1.5 bg-blue-900/20 text-blue-400 text-sm font-bold border border-blue-800/50 rounded hover:bg-blue-900/30 transition-colors"
         >
           + Add Evidence
         </button>
@@ -1166,13 +1132,13 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
       {requestedEvidence.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           {requestedEvidence.map((req: string, idx: number) => (
-            <div key={`req-${idx}`} className="bg-neutral-50 border border-dashed border-neutral-300 rounded-xl p-4 shadow-sm flex gap-3 opacity-50">
+            <div key={`req-${idx}`} className="bg-neutral-900/50 border border-dashed border-neutral-700 rounded-xl p-4 shadow-sm flex gap-3 opacity-50">
               <div className="text-2xl">⏳</div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-neutral-700 truncate">{req}</p>
+                <p className="text-sm font-bold text-text-secondary truncate">{req}</p>
                 <p className="text-xs text-neutral-500 capitalize">Requested / Yet to upload</p>
                 <div className="mt-2">
-                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border bg-neutral-100 text-neutral-500 border-neutral-300">
+                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border bg-neutral-800 text-neutral-500 border-neutral-700">
                     PENDING FROM COMPLAINANT
                   </span>
                 </div>
@@ -1196,10 +1162,10 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
 
         const importanceBadgeClass = (imp: string) => {
           switch (imp?.toLowerCase()) {
-            case 'critical': return 'bg-red-100 text-red-800';
-            case 'high':     return 'bg-orange-100 text-orange-800';
-            case 'medium':   return 'bg-amber-100 text-amber-800';
-            default:         return 'bg-slate-100 text-slate-600';
+            case 'critical': return 'bg-red-900/30 text-red-400';
+            case 'high':     return 'bg-orange-900/30 text-orange-400';
+            case 'medium':   return 'bg-amber-900/30 text-amber-400';
+            default:         return 'bg-neutral-800 text-text-secondary';
           }
         };
 
@@ -1225,10 +1191,10 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
 
           const importanceBadge = (imp: string) => {
             switch (imp?.toLowerCase()) {
-              case 'critical': return 'bg-red-100 text-red-800 border-red-200';
-              case 'high':     return 'bg-orange-100 text-orange-800 border-orange-200';
-              case 'medium':   return 'bg-amber-100 text-amber-800 border-amber-200';
-              default:         return 'bg-slate-100 text-slate-600 border-slate-200';
+              case 'critical': return 'bg-red-900/30 text-red-400 border-red-800/50';
+              case 'high':     return 'bg-orange-900/30 text-orange-400 border-orange-800/50';
+              case 'medium':   return 'bg-amber-900/30 text-amber-400 border-amber-800/50';
+              default:         return 'bg-neutral-800 text-text-secondary border-neutral-700';
             }
           };
 
@@ -1236,12 +1202,12 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
           const FileIcon = (filename: string) => {
             const ext = (filename || '').split('.').pop()?.toLowerCase() || '';
             if (['jpg','jpeg','png','gif','webp','bmp'].includes(ext))
-              return <FileImage size={18} className="text-slate-600" />;
+              return <FileImage size={18} className="text-text-secondary" />;
             if (['mp4','mov','avi','webm'].includes(ext))
-              return <FileVideo size={18} className="text-slate-600" />;
+              return <FileVideo size={18} className="text-text-secondary" />;
             if (['mp3','wav','ogg','aac'].includes(ext))
-              return <FileAudio size={18} className="text-slate-600" />;
-            return <File size={18} className="text-slate-600" />;
+              return <FileAudio size={18} className="text-text-secondary" />;
+            return <File size={18} className="text-text-secondary" />;
           };
 
           return (
@@ -1256,16 +1222,16 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
                   <div
                     key={ci.evidence_id || idx}
                     onClick={() => setSelectedEvidence(rawEv || ci)}
-                    className={`bg-white border border-neutral-200 border-l-4 ${importanceBorder(ci.importance)} rounded-xl p-4 cursor-pointer hover:shadow-md transition-all group flex flex-col gap-2.5`}
+                    className={`bg-neutral-900/50 border border-neutral-700 border-l-4 ${importanceBorder(ci.importance)} rounded-xl p-4 cursor-pointer hover:shadow-md transition-all group flex flex-col gap-2.5`}
                   >
                     {/* Header */}
                     <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center">
+                      <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-neutral-800 border border-neutral-700 flex items-center justify-center">
                         {FileIcon(ci.filename || '')}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
-                          <p className="text-sm font-semibold text-neutral-900 leading-snug line-clamp-2 group-hover:text-blue-700 transition-colors">
+                          <p className="text-sm font-semibold text-white leading-snug line-clamp-2 group-hover:text-blue-400 transition-colors">
                             {caption}
                           </p>
                           <span className={`flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded border uppercase tracking-wide ${importanceBadge(ci.importance)}`}>
@@ -1280,18 +1246,18 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
 
                     {/* Summary */}
                     {summary && (
-                      <p className="text-xs text-neutral-600 leading-relaxed line-clamp-3">
+                      <p className="text-xs text-text-secondary leading-relaxed line-clamp-3">
                         {summary}
                       </p>
                     )}
 
                     {/* Supports allegations */}
                     {supports.length > 0 && (
-                      <div className="pt-2 border-t border-neutral-100">
+                      <div className="pt-2 border-t border-neutral-700">
                         <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider mb-1.5">Supports Allegations</p>
                         <div className="flex flex-wrap gap-1.5">
                           {supports.map((alg: string, aIdx: number) => (
-                            <span key={aIdx} className="px-2 py-0.5 text-[11px] bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full font-medium">
+                            <span key={aIdx} className="px-2 py-0.5 text-[11px] bg-emerald-900/20 text-emerald-400 border border-emerald-800/50 rounded-full font-medium">
                               {alg}
                             </span>
                           ))}
@@ -1300,10 +1266,10 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
                     )}
 
                     {/* Footer */}
-                    <div className="flex items-center justify-between pt-2 border-t border-neutral-100 mt-auto">
+                    <div className="flex items-center justify-between pt-2 border-t border-neutral-700 mt-auto">
                       {rawEv ? (
-                        <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                          <CheckCircle2 size={11} className="text-emerald-600" />
+                        <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-400 bg-emerald-900/20 px-2 py-0.5 rounded-full border border-emerald-800/50">
+                          <CheckCircle2 size={11} className="text-emerald-500" />
                           Full details available
                         </span>
                       ) : (
@@ -1312,7 +1278,7 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
                           AI summary only
                         </span>
                       )}
-                      <span className="flex items-center gap-0.5 text-[11px] font-semibold text-blue-600 group-hover:text-blue-800 transition-colors">
+                      <span className="flex items-center gap-0.5 text-[11px] font-semibold text-blue-500 group-hover:text-blue-800 transition-colors">
                         View Details <ChevronRight size={12} />
                       </span>
                     </div>
@@ -1330,21 +1296,21 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
               <div
                 key={ev.evidence_id || ev._id}
                 onClick={() => setSelectedEvidence(ev)}
-                className="bg-white border border-neutral-200 rounded-xl p-4 shadow-sm flex gap-3 cursor-pointer hover:border-blue-300 hover:shadow-md transition-all group"
+                className="bg-neutral-900/50 border border-neutral-700 rounded-xl p-4 shadow-sm flex gap-3 cursor-pointer hover:border-blue-300 hover:shadow-md transition-all group"
               >
                 <div className="text-2xl group-hover:scale-110 transition-transform">{evidenceTypeIcon[ev.type] ?? '📄'}</div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-neutral-900 truncate group-hover:text-blue-700 transition-colors">{ev.title || ev.evidence_id}</p>
+                  <p className="text-sm font-bold text-white truncate group-hover:text-blue-400 transition-colors">{ev.title || ev.evidence_id}</p>
                   <p className="text-xs text-neutral-500 capitalize">{ev.type?.replace(/_/g, ' ')}</p>
                   <div className="mt-1">
-                    <span className="text-[9px] font-medium text-neutral-500 bg-neutral-100 px-1.5 py-0.5 rounded border border-neutral-200">
+                    <span className="text-[9px] font-medium text-neutral-500 bg-neutral-800 px-1.5 py-0.5 rounded border border-neutral-700">
                       Added by {ev.source?.replace(/_/g, ' ') || 'complainant'} on {new Date(ev.collected_at || ev.createdAt).toLocaleDateString('en-IN')}
                     </span>
                   </div>
-                  {ev.ai_description && <p className="text-xs text-neutral-600 mt-2 line-clamp-2">{ev.ai_description}</p>}
+                  {ev.ai_description && <p className="text-xs text-text-secondary mt-2 line-clamp-2">{ev.ai_description}</p>}
                   <div className="flex items-center gap-2 mt-2">
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                      ev.status === 'verified' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                      ev.status === 'verified' ? 'bg-green-900/20 text-green-400 border-green-800/50' : 'bg-yellow-900/20 text-yellow-400 border-yellow-800/50'
                     }`}>
                       {ev.status === 'verified' ? '✓ Verified' : 'Unverified'}
                     </span>
@@ -1402,7 +1368,7 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
             <Card className="p-6">
               <CardHeader title="Contradictions & Discrepancies" />
               <div className="mt-4">
-                <p className="text-sm text-emerald-700 bg-emerald-50 p-3 rounded-lg border border-emerald-200 font-medium">
+                <p className="text-sm text-emerald-400 bg-emerald-900/20 p-3 rounded-lg border border-emerald-800/50 font-medium">
                   No contradictions or conflicts detected across complaint and evidence.
                 </p>
               </div>
@@ -1417,10 +1383,10 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
                 {contradictions.map((c: any, i: number) => {
                   const evIds = c.related_evidence_ids || c.involved_evidence_ids || [];
                   return (
-                    <div key={i} className="p-3 border border-red-200 bg-red-50 rounded-lg text-xs text-red-900 font-medium space-y-1">
+                    <div key={i} className="p-3 border border-red-800/50 bg-red-900/20 rounded-lg text-xs text-red-900 font-medium space-y-1">
                       <p>• {c.description}</p>
                       {evIds.length > 0 && (
-                        <p className="text-[11px] text-red-700">Involved Evidence IDs: {evIds.join(', ')}</p>
+                        <p className="text-[11px] text-red-400">Involved Evidence IDs: {evIds.join(', ')}</p>
                       )}
                     </div>
                   );
@@ -1456,22 +1422,22 @@ function MissingInfoCardIO({ item, caseId }: { item: { title: string; descriptio
   };
 
   return (
-    <div className="p-3.5 border border-amber-200 bg-amber-50/70 rounded-lg text-xs space-y-2">
+    <div className="p-3.5 border border-amber-800/50 bg-amber-900/20 rounded-lg text-xs space-y-2">
       <div className="flex justify-between items-start gap-2">
-        <span className="font-bold text-amber-950 text-sm">{item.title}</span>
-        <span className="uppercase text-[10px] font-bold bg-amber-200 text-amber-900 px-2 py-0.5 rounded shrink-0">{item.importance}</span>
+        <span className="font-bold text-white text-sm">{item.title}</span>
+        <span className="uppercase text-[10px] font-bold bg-amber-900/50 text-amber-400 px-2 py-0.5 rounded shrink-0">{item.importance}</span>
       </div>
-      <p className="text-amber-900 leading-relaxed">{item.description}</p>
+      <p className="text-amber-100 leading-relaxed">{item.description}</p>
       <div className="pt-1">
         <button
           onClick={handleRequest}
           disabled={status !== 'idle'}
           className={`flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-md transition-all ${
             status === 'sent'
-              ? 'bg-green-100 text-green-700 border border-green-200 cursor-default'
+              ? 'bg-green-900/30 text-green-400 border border-green-800/50 cursor-default'
               : status === 'loading'
-              ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
-              : 'bg-white text-slate-800 border border-slate-300 hover:bg-slate-100 cursor-pointer shadow-xs'
+              ? 'bg-neutral-800 text-neutral-500 border border-neutral-700 cursor-not-allowed'
+              : 'bg-neutral-900/50 text-text-primary border border-neutral-700 hover:bg-neutral-800 cursor-pointer shadow-xs'
           }`}
         >
           {status === 'sent' ? (
@@ -1534,7 +1500,7 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
         <Users className="h-10 w-10 text-neutral-300" />
-        <p className="text-sm font-semibold text-neutral-600">No participants found</p>
+        <p className="text-sm font-semibold text-text-secondary">No participants found</p>
         <p className="text-xs text-neutral-400 max-w-xs">
           Participants approved via the AI analysis will appear here.
         </p>
@@ -1559,12 +1525,12 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
 
   const roleBadgeColor = (role: string) => {
     switch (role) {
-      case 'Accused': return 'bg-red-50 text-red-700 border-red-200';
-      case 'Suspect': return 'bg-orange-50 text-orange-700 border-orange-200';
-      case 'Victim': return 'bg-green-50 text-green-700 border-green-200';
-      case 'Witness': return 'bg-purple-50 text-purple-700 border-purple-200';
-      case 'Complainant': return 'bg-blue-50 text-blue-700 border-blue-200';
-      default: return 'bg-neutral-50 text-neutral-700 border-neutral-200';
+      case 'Accused': return 'bg-red-900/20 text-red-400 border-red-800/50';
+      case 'Suspect': return 'bg-neutral-900/50 text-orange-400 border-neutral-700';
+      case 'Victim': return 'bg-green-900/20 text-green-400 border-green-800/50';
+      case 'Witness': return 'bg-neutral-900/50 text-purple-700 border-neutral-700';
+      case 'Complainant': return 'bg-blue-900/20 text-blue-400 border-blue-800/50';
+      default: return 'bg-neutral-900/50 text-text-secondary border-neutral-700';
     }
   };
 
@@ -1574,7 +1540,7 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
         <select
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value)}
-          className="text-sm border border-neutral-300 rounded px-3 py-1.5 bg-white text-neutral-700"
+          className="text-sm border border-neutral-700 rounded px-3 py-1.5 bg-neutral-900/50 text-text-secondary"
         >
           <option value="All">All Roles</option>
           {uniqueRoles.map(r => <option key={r} value={r}>{r}</option>)}
@@ -1596,11 +1562,11 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
           return (
             <div
               key={p.participant_id || p._id}
-              className="bg-white border border-neutral-200 rounded-xl p-4 shadow-sm hover:border-blue-300 hover:shadow-md transition-all group relative"
+              className="bg-neutral-900/50 border border-neutral-700 rounded-xl p-4 shadow-sm hover:border-blue-300 hover:shadow-md transition-all group relative"
             >
               <div className="flex justify-between items-start gap-2 mb-2">
                 <h4 
-                  className="text-base font-bold text-neutral-900 cursor-pointer group-hover:text-blue-700 transition-colors flex-1"
+                  className="text-base font-bold text-white cursor-pointer group-hover:text-blue-400 transition-colors flex-1"
                   onClick={() => setSelectedParticipant(p)}
                 >
                   {p.name}
@@ -1611,14 +1577,14 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
                       setEditingParticipant(p);
                       setIsEditModalOpen(true);
                     }}
-                    className="p-1 text-neutral-400 hover:text-blue-600 transition-colors" 
+                    className="p-1 text-neutral-400 hover:text-blue-500 transition-colors" 
                     title="Edit"
                   >
                     ✏️
                   </button>
                   {deleteConfirming === p.participant_id ? (
-                    <div className="absolute right-2 top-14 bg-white border border-red-200 rounded-lg p-2 shadow-lg z-10 whitespace-nowrap">
-                      <p className="text-xs font-semibold text-red-700 mb-2">Delete?</p>
+                    <div className="absolute right-2 top-14 bg-neutral-900/50 border border-red-800/50 rounded-lg p-2 shadow-lg z-10 whitespace-nowrap">
+                      <p className="text-xs font-semibold text-red-400 mb-2">Delete?</p>
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleDelete(p.participant_id)}
@@ -1629,7 +1595,7 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
                         </button>
                         <button
                           onClick={() => setDeleteConfirming(null)}
-                          className="px-2 py-1 text-xs font-semibold bg-neutral-200 text-neutral-700 rounded hover:bg-neutral-300"
+                          className="px-2 py-1 text-xs font-semibold bg-neutral-800 text-text-secondary rounded hover:bg-neutral-300"
                         >
                           No
                         </button>
@@ -1638,7 +1604,7 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
                   ) : (
                     <button
                       onClick={() => setDeleteConfirming(p.participant_id)}
-                      className="p-1 text-neutral-400 hover:text-red-600 transition-colors"
+                      className="p-1 text-neutral-400 hover:text-red-500 transition-colors"
                       title="Delete"
                     >
                       🗑️
@@ -1774,12 +1740,12 @@ function ParticipantDetailModal({
 
   const roleBadgeColor = (role: string) => {
     switch (role) {
-      case 'Accused': return 'bg-red-50 text-red-700 border-red-200';
-      case 'Suspect': return 'bg-orange-50 text-orange-700 border-orange-200';
-      case 'Victim': return 'bg-green-50 text-green-700 border-green-200';
-      case 'Witness': return 'bg-purple-50 text-purple-700 border-purple-200';
-      case 'Complainant': return 'bg-blue-50 text-blue-700 border-blue-200';
-      default: return 'bg-neutral-50 text-neutral-700 border-neutral-200';
+      case 'Accused': return 'bg-red-900/20 text-red-400 border-red-800/50';
+      case 'Suspect': return 'bg-neutral-900/50 text-orange-400 border-neutral-700';
+      case 'Victim': return 'bg-green-900/20 text-green-400 border-green-800/50';
+      case 'Witness': return 'bg-neutral-900/50 text-purple-700 border-neutral-700';
+      case 'Complainant': return 'bg-blue-900/20 text-blue-400 border-blue-800/50';
+      default: return 'bg-neutral-900/50 text-text-secondary border-neutral-700';
     }
   };
 
@@ -1904,13 +1870,13 @@ function ParticipantDetailModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto"
+        className="bg-neutral-900/50 rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-start justify-between p-6 border-b border-neutral-100">
           <div>
-            <h2 className="text-xl font-bold text-neutral-900">{p.name}</h2>
+            <h2 className="text-xl font-bold text-white">{p.name}</h2>
             <div className="flex flex-wrap gap-1.5 mt-2">
               {(p.roles || []).map((role: string) => (
                 <span key={role} className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${roleBadgeColor(role)}`}>
@@ -1921,12 +1887,12 @@ function ParticipantDetailModal({
           </div>
           <div className="flex gap-2">
             {onEdit && (
-              <button onClick={() => onEdit(p)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">✏️</button>
+              <button onClick={() => onEdit(p)} className="p-2 text-blue-500 hover:bg-blue-900/20 rounded-lg transition-colors" title="Edit">✏️</button>
             )}
             {onDelete && (
-              <button onClick={() => onDelete(p)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete">🗑️</button>
+              <button onClick={() => onDelete(p)} className="p-2 text-red-500 hover:bg-red-900/20 rounded-lg transition-colors" title="Delete">🗑️</button>
             )}
-            <button onClick={onClose} className="p-1 text-neutral-400 hover:text-neutral-700 transition-colors text-2xl leading-none">×</button>
+            <button onClick={onClose} className="p-1 text-neutral-400 hover:text-text-secondary transition-colors text-2xl leading-none">×</button>
           </div>
         </div>
 
@@ -1935,7 +1901,7 @@ function ParticipantDetailModal({
           {(p.contact?.phone || p.contact?.email || p.contact?.address) && (
             <section>
               <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">Contact Information</h3>
-              <div className="bg-neutral-50 rounded-lg p-3 text-sm text-neutral-700 space-y-1 border border-neutral-100">
+              <div className="bg-neutral-900/50 rounded-lg p-3 text-sm text-text-secondary space-y-1 border border-neutral-100">
                 {p.contact.phone && <p>📞 {p.contact.phone}</p>}
                 {p.contact.email && <p>✉️ {p.contact.email}</p>}
                 {p.contact.address && <p>📍 {p.contact.address}</p>}
@@ -1949,7 +1915,7 @@ function ParticipantDetailModal({
               <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">Identifiers</h3>
               <div className="flex flex-wrap gap-2">
                 {p.identifiers.map((id: any, i: number) => (
-                  <span key={i} className="text-xs bg-neutral-100 text-neutral-700 px-2 py-1 rounded border border-neutral-200">
+                  <span key={i} className="text-xs bg-neutral-800 text-text-secondary px-2 py-1 rounded border border-neutral-700">
                     <span className="font-semibold">{id.type}:</span> {id.value}
                   </span>
                 ))}
@@ -1961,7 +1927,7 @@ function ParticipantDetailModal({
           {p.victimProfile && (p.victimProfile.injuryDetails || p.victimProfile.lossDetails) && (
             <section>
               <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">Victim Profile</h3>
-              <div className="bg-green-50 border border-green-100 rounded-lg p-3 text-sm text-neutral-700 space-y-1">
+              <div className="bg-green-900/20 border border-green-100 rounded-lg p-3 text-sm text-text-secondary space-y-1">
                 {p.victimProfile.injuryDetails && <p><span className="font-semibold">Injury:</span> {p.victimProfile.injuryDetails}</p>}
                 {p.victimProfile.lossDetails && <p><span className="font-semibold">Loss:</span> {p.victimProfile.lossDetails}</p>}
               </div>
@@ -1972,7 +1938,7 @@ function ParticipantDetailModal({
           {p.suspectProfile && !(p.roles || []).includes('Accused') && (p.suspectProfile.motive || p.suspectProfile.alibi) && (
             <section>
               <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">Suspect Profile</h3>
-              <div className="bg-orange-50 border border-orange-100 rounded-lg p-3 text-sm text-neutral-700 space-y-1">
+              <div className="bg-neutral-900/50 border border-orange-100 rounded-lg p-3 text-sm text-text-secondary space-y-1">
                 {p.suspectProfile.motive && <p><span className="font-semibold">Motive:</span> {p.suspectProfile.motive}</p>}
                 {p.suspectProfile.alibi && <p><span className="font-semibold">Alibi:</span> {p.suspectProfile.alibi}</p>}
               </div>
@@ -1985,9 +1951,9 @@ function ParticipantDetailModal({
               <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">Applied Legal Sections</h3>
               <div className="space-y-2">
                 {appliedSections.map((sec: any, i: number) => (
-                  <div key={i} className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm">
+                  <div key={i} className="bg-blue-900/20 border border-blue-100 rounded-lg p-3 text-sm">
                     <p className="font-bold text-blue-800">{sec.code} — {sec.title}</p>
-                    {sec.reason && <p className="text-xs text-neutral-600 mt-1">{sec.reason}</p>}
+                    {sec.reason && <p className="text-xs text-text-secondary mt-1">{sec.reason}</p>}
                   </div>
                 ))}
               </div>
@@ -1998,7 +1964,7 @@ function ParticipantDetailModal({
           {p.complainantProfile?.relationshipToIncident && (
             <section>
               <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">Complainant</h3>
-              <p className="text-sm text-neutral-700">Relation to Incident: {p.complainantProfile.relationshipToIncident}</p>
+              <p className="text-sm text-text-secondary">Relation to Incident: {p.complainantProfile.relationshipToIncident}</p>
             </section>
           )}
 
@@ -2010,9 +1976,9 @@ function ParticipantDetailModal({
             {Array.isArray(p.statements) && p.statements.length > 0 ? (
               <div className="space-y-2 mb-3">
                 {p.statements.map((stmt: any) => (
-                  <div key={stmt.id} className="bg-purple-50 border border-purple-100 rounded-lg p-3 text-sm">
+                  <div key={stmt.id} className="bg-neutral-900/50 border border-purple-100 rounded-lg p-3 text-sm">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-neutral-800 flex-1">{stmt.content}</p>
+                      <p className="text-text-primary flex-1">{stmt.content}</p>
                       <button
                         onClick={() => handleDeleteStatement(stmt.id)}
                         className="text-neutral-300 hover:text-red-500 transition-colors flex-shrink-0 text-xs"
@@ -2030,14 +1996,14 @@ function ParticipantDetailModal({
             )}
 
             {/* Add statement form */}
-            <div className="border border-neutral-200 rounded-lg p-3 bg-neutral-50 space-y-2">
-              <p className="text-xs font-semibold text-neutral-600">Add New Statement</p>
+            <div className="border border-neutral-700 rounded-lg p-3 bg-neutral-900/50 space-y-2">
+              <p className="text-xs font-semibold text-text-secondary">Add New Statement</p>
               <textarea
                 value={stmtContent}
                 onChange={(e) => setStmtContent(e.target.value)}
                 placeholder="Enter statement content..."
                 rows={3}
-                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-200 resize-none"
+                className="w-full px-3 py-2 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-200 resize-none"
               />
 
               {/* Audio upload row */}
@@ -2055,8 +2021,8 @@ function ParticipantDetailModal({
                   disabled={transcribing}
                   className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
                     transcribing
-                      ? 'bg-neutral-100 text-neutral-400 border-neutral-200 cursor-not-allowed'
-                      : 'bg-white text-purple-700 border-purple-300 hover:bg-purple-50 cursor-pointer'
+                      ? 'bg-neutral-800 text-neutral-400 border-neutral-700 cursor-not-allowed'
+                      : 'bg-neutral-900/50 text-purple-700 border-purple-300 hover:bg-neutral-900/50 cursor-pointer'
                   }`}
                   title="Upload audio file to auto-fill transcript"
                 >
@@ -2079,8 +2045,8 @@ function ParticipantDetailModal({
               {transcribeError && (
                 <p className={`text-xs px-2 py-1 rounded ${
                   transcribeError.startsWith('Detected language')
-                    ? 'bg-blue-50 text-blue-700 border border-blue-100'
-                    : 'bg-red-50 text-red-600 border border-red-100'
+                    ? 'bg-blue-900/20 text-blue-400 border border-blue-100'
+                    : 'bg-red-900/20 text-red-500 border border-red-100'
                 }`}>
                   {transcribeError}
                 </p>
@@ -2093,7 +2059,7 @@ function ParticipantDetailModal({
                     type="datetime-local"
                     value={stmtDate}
                     onChange={(e) => setStmtDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-200"
+                    className="w-full px-3 py-2 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-200"
                   />
                 </div>
                 <button
@@ -2115,7 +2081,7 @@ function ParticipantDetailModal({
             {Array.isArray(p.reasoning) && p.reasoning.length > 0 ? (
               <div className="space-y-2 mb-3">
                 {p.reasoning.map((r: any) => (
-                  <div key={r.id} className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm">
+                  <div key={r.id} className="bg-blue-900/20 border border-blue-100 rounded-lg p-3 text-sm">
                     {editingReasoningId === r.id ? (
                       <div className="space-y-2">
                         <textarea
@@ -2134,8 +2100,7 @@ function ParticipantDetailModal({
                           </button>
                           <button
                             onClick={() => { setEditingReasoningId(null); setEditingReasoningContent(''); }}
-                            className="px-3 py-1 border border-neutral-300 text-neutral-600 text-xs font-semibold rounded-lg hover:bg-neutral-50"
-                          >
+                            className="px-3 py-1 border border-neutral-700 text-text-secondary text-xs font-semibold rounded-lg hover:bg-neutral-900/50">
                             Cancel
                           </button>
                         </div>
@@ -2144,12 +2109,12 @@ function ParticipantDetailModal({
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${r.source === 'ai' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${r.source === 'ai' ? 'bg-neutral-800 text-indigo-400' : 'bg-neutral-800 text-emerald-400'}`}>
                               {r.source === 'ai' ? '🤖 AI' : '👮 Officer'}
                             </span>
                             <span className="text-xs text-neutral-400">{new Date(r.createdAt).toLocaleString('en-IN')}</span>
                           </div>
-                          <p className="text-neutral-800">{r.content}</p>
+                          <p className="text-text-primary">{r.content}</p>
                         </div>
                         <div className="flex gap-1 flex-shrink-0">
                           <button
@@ -2173,14 +2138,14 @@ function ParticipantDetailModal({
             )}
 
             {/* Add reasoning form */}
-            <div className="border border-neutral-200 rounded-lg p-3 bg-neutral-50 space-y-2">
-              <p className="text-xs font-semibold text-neutral-600">Add Reasoning Note</p>
+            <div className="border border-neutral-700 rounded-lg p-3 bg-neutral-900/50 space-y-2">
+              <p className="text-xs font-semibold text-text-secondary">Add Reasoning Note</p>
               <textarea
                 value={reasoningContent}
                 onChange={(e) => setReasoningContent(e.target.value)}
                 placeholder="Add investigative reasoning or observation..."
                 rows={3}
-                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none"
+                className="w-full px-3 py-2 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none"
               />
               <button
                 onClick={handleAddReasoning}
@@ -2205,7 +2170,7 @@ function OriginalComplaintPanel({ complaint }: { complaint: any | null }) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center space-y-3">
         <FileText className="h-10 w-10 text-neutral-300" />
-        <p className="text-sm font-semibold text-neutral-600">Loading complaint details...</p>
+        <p className="text-sm font-semibold text-text-secondary">Loading complaint details...</p>
       </div>
     );
   }
@@ -2213,49 +2178,49 @@ function OriginalComplaintPanel({ complaint }: { complaint: any | null }) {
   return (
     <div className="space-y-6 py-2">
       {/* Header */}
-      <div className="flex items-center gap-3 pb-3 border-b border-neutral-200">
-        <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
+      <div className="flex items-center gap-3 pb-3 border-b border-neutral-700">
+        <div className="p-2 rounded-lg bg-blue-900/20 text-blue-500">
           <FileText size={18} />
         </div>
         <div>
-          <h2 className="text-base font-bold text-neutral-900">{complaint.complaintNumber}</h2>
+          <h2 className="text-base font-bold text-white">{complaint.complaintNumber}</h2>
           <p className="text-xs text-neutral-500">
             Filed on {new Date(complaint.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
           </p>
         </div>
-        <span className="ml-auto px-2.5 py-1 text-xs font-bold rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+        <span className="ml-auto px-2.5 py-1 text-xs font-bold rounded-full bg-blue-900/20 text-blue-400 border border-blue-800/50">
           {complaint.status?.replace(/_/g, ' ')}
         </span>
       </div>
 
       {/* Incident meta */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-neutral-50 rounded-xl border border-neutral-200 p-3">
+        <div className="bg-neutral-900/50 rounded-xl border border-neutral-700 p-3">
           <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-1 mb-1">
             <Calendar size={10} /> Date &amp; Time
           </p>
-          <p className="text-sm font-semibold text-neutral-800">
+          <p className="text-sm font-semibold text-text-primary">
             {new Date(complaint.incidentDate).toLocaleDateString('en-IN')} {complaint.incidentTime || ''}
           </p>
         </div>
-        <div className="bg-neutral-50 rounded-xl border border-neutral-200 p-3">
+        <div className="bg-neutral-900/50 rounded-xl border border-neutral-700 p-3">
           <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-1 mb-1">
             <MapPin size={10} /> Place of Occurrence
           </p>
-          <p className="text-sm font-semibold text-neutral-800">{complaint.incidentPlace}</p>
+          <p className="text-sm font-semibold text-text-primary">{complaint.incidentPlace}</p>
         </div>
-        <div className="bg-neutral-50 rounded-xl border border-neutral-200 p-3">
+        <div className="bg-neutral-900/50 rounded-xl border border-neutral-700 p-3">
           <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">Category</p>
-          <p className="text-sm font-semibold text-neutral-800 uppercase">
+          <p className="text-sm font-semibold text-text-primary uppercase">
             {complaint.category?.replace('_', ' ') || 'Uncategorized'}
           </p>
         </div>
       </div>
 
       {/* Complainant */}
-      <div className="bg-white rounded-xl border border-neutral-200 p-4">
+      <div className="bg-neutral-900/50 rounded-xl border border-neutral-700 p-4">
         <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">Complainant</p>
-        <p className="text-sm font-bold text-neutral-800">
+        <p className="text-sm font-bold text-text-primary">
           {complaint.citizen?.firstName} {complaint.citizen?.lastName}
         </p>
         <p className="text-xs text-neutral-500">{complaint.citizen?.phone}</p>
@@ -2263,36 +2228,36 @@ function OriginalComplaintPanel({ complaint }: { complaint: any | null }) {
       </div>
 
       {/* Brief Summary */}
-      <div className="bg-white rounded-xl border border-neutral-200 p-4">
+      <div className="bg-neutral-900/50 rounded-xl border border-neutral-700 p-4">
         <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">Brief Summary</p>
-        <p className="text-sm font-semibold text-neutral-800">{complaint.shortDescription}</p>
+        <p className="text-sm font-semibold text-text-primary">{complaint.shortDescription}</p>
       </div>
 
       {/* Detailed Description */}
-      <div className="bg-white rounded-xl border border-neutral-200 p-4">
+      <div className="bg-neutral-900/50 rounded-xl border border-neutral-700 p-4">
         <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">Detailed Description</p>
-        <p className="text-sm text-neutral-700 whitespace-pre-line leading-relaxed">
+        <p className="text-sm text-text-secondary whitespace-pre-line leading-relaxed">
           {complaint.detailedDescription || <span className="text-neutral-400 italic">No detailed description provided.</span>}
         </p>
       </div>
 
       {/* Evidence attachments */}
       {complaint.evidence?.length > 0 && (
-        <div className="bg-white rounded-xl border border-neutral-200 p-4">
+        <div className="bg-neutral-900/50 rounded-xl border border-neutral-700 p-4">
           <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-3">
             Attached Evidence ({complaint.evidence.length})
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {complaint.evidence.map((file: any) => (
-              <div key={file.publicId} className="flex items-center justify-between gap-3 p-3 rounded-lg border border-neutral-100 bg-neutral-50 hover:bg-neutral-100 transition-colors">
+              <div key={file.publicId} className="flex items-center justify-between gap-3 p-3 rounded-lg border border-neutral-100 bg-neutral-900/50 hover:bg-neutral-800 transition-colors">
                 <div className="flex items-center gap-2 min-w-0">
                   <FileText size={16} className="text-blue-500 flex-shrink-0" />
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold text-neutral-800 truncate">{file.originalFilename}</p>
+                    <p className="text-xs font-semibold text-text-primary truncate">{file.originalFilename}</p>
                     <p className="text-[10px] text-neutral-400">{(file.size / 1024 / 1024).toFixed(2)} MB • {file.extension?.toUpperCase()}</p>
                   </div>
                 </div>
-                <a href={file.secureUrl} target="_blank" rel="noopener noreferrer" className="flex-shrink-0 p-1.5 rounded hover:bg-neutral-200 text-neutral-500 transition-colors" title="Download">
+                <a href={file.secureUrl} target="_blank" rel="noopener noreferrer" className="flex-shrink-0 p-1.5 rounded hover:bg-neutral-800 text-neutral-500 transition-colors" title="Download">
                   <Download size={14} />
                 </a>
               </div>
@@ -2311,11 +2276,11 @@ function CaseUnderstandingPanel({ caseUnderstanding }: { caseUnderstanding: Case
   if (!caseUnderstanding) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center space-y-4">
-        <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-500">
+        <div className="p-4 rounded-2xl bg-neutral-900/50 border border-neutral-700 text-indigo-500">
           <Brain className="h-10 w-10 animate-pulse" />
         </div>
         <div className="space-y-1">
-          <p className="text-sm font-bold text-neutral-700">Case Understanding Not Ready</p>
+          <p className="text-sm font-bold text-text-secondary">Case Understanding Not Ready</p>
           <p className="text-xs text-neutral-400 max-w-xs leading-relaxed">
             The AI Case Understanding pipeline hasn't processed this complaint yet.
           </p>
@@ -2336,10 +2301,10 @@ function CaseUnderstandingPanel({ caseUnderstanding }: { caseUnderstanding: Case
 
   const getPriorityBadge = (priority: string) => {
     switch (priority?.toLowerCase()) {
-      case 'critical': return <span className="px-3 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800 border border-red-300 uppercase">Critical Priority</span>;
-      case 'high': return <span className="px-3 py-1 text-xs font-bold rounded-full bg-orange-100 text-orange-800 border border-orange-300 uppercase">High Priority</span>;
-      case 'medium': return <span className="px-3 py-1 text-xs font-bold rounded-full bg-yellow-100 text-yellow-800 border border-yellow-300 uppercase">Medium Priority</span>;
-      default: return <span className="px-3 py-1 text-xs font-bold rounded-full bg-blue-100 text-blue-800 border border-blue-300 uppercase">Low Priority</span>;
+      case 'critical': return <span className="px-3 py-1 text-xs font-bold rounded-full bg-red-900/30 text-red-800 border border-red-300 uppercase">Critical Priority</span>;
+      case 'high': return <span className="px-3 py-1 text-xs font-bold rounded-full bg-neutral-800 text-orange-800 border border-orange-300 uppercase">High Priority</span>;
+      case 'medium': return <span className="px-3 py-1 text-xs font-bold rounded-full bg-yellow-900/30 text-yellow-800 border border-yellow-300 uppercase">Medium Priority</span>;
+      default: return <span className="px-3 py-1 text-xs font-bold rounded-full bg-blue-900/30 text-blue-800 border border-blue-300 uppercase">Low Priority</span>;
     }
   };
 
@@ -2352,7 +2317,7 @@ function CaseUnderstandingPanel({ caseUnderstanding }: { caseUnderstanding: Case
             <h2 className="text-xl font-bold tracking-tight">Case Understanding Intelligence</h2>
             {getPriorityBadge(overviewData.priority)}
           </div>
-          <p className="text-slate-400 text-sm mt-1">
+          <p className="text-neutral-500 text-sm mt-1">
             Category: <strong className="text-white">{overviewData.crime_category}</strong> ({overviewData.crime_subtype})
             • Confidence: <strong className="text-emerald-400">{(overviewData.confidence * 100).toFixed(0)}%</strong>
           </p>
@@ -2369,11 +2334,11 @@ function CaseUnderstandingPanel({ caseUnderstanding }: { caseUnderstanding: Case
         <div className="space-y-4">
           <div>
             <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400">Executive Summary</h4>
-            <p className="text-sm font-semibold text-neutral-900 mt-1">{overviewData.executive_summary}</p>
+            <p className="text-sm font-semibold text-white mt-1">{overviewData.executive_summary}</p>
           </div>
           <div className="border-t border-neutral-100 pt-4">
             <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400">Incident Brief</h4>
-            <p className="text-sm text-neutral-700 mt-1 leading-relaxed whitespace-pre-line">{overviewData.incident_brief}</p>
+            <p className="text-sm text-text-secondary mt-1 leading-relaxed whitespace-pre-line">{overviewData.incident_brief}</p>
           </div>
         </div>
       </Card>
@@ -2388,11 +2353,11 @@ function TimelinePanel({ caseUnderstanding }: { caseUnderstanding: CaseUnderstan
   if (!caseUnderstanding) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center space-y-4">
-        <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-500">
+        <div className="p-4 rounded-2xl bg-neutral-900/50 border border-neutral-700 text-indigo-500">
           <Clock className="h-10 w-10 animate-pulse" />
         </div>
         <div className="space-y-1">
-          <p className="text-sm font-bold text-neutral-700">Timeline Not Ready</p>
+          <p className="text-sm font-bold text-text-secondary">Timeline Not Ready</p>
           <p className="text-xs text-neutral-400 max-w-xs leading-relaxed">
             The AI Case Understanding pipeline hasn't processed this complaint yet.
           </p>
@@ -2410,12 +2375,12 @@ function TimelinePanel({ caseUnderstanding }: { caseUnderstanding: CaseUnderstan
             <p className="text-sm text-neutral-500 italic">No timeline events extracted.</p>
           ) : (
             caseUnderstanding.timeline.map((event, idx) => (
-              <div key={idx} className="flex gap-4 items-start border-l-2 border-slate-900 pl-4 py-1">
+              <div key={idx} className="flex gap-4 items-start border-l-2 border-neutral-700 pl-4 py-1">
                 <div className="space-y-1">
-                  <span className="text-xs font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-800">
+                  <span className="text-xs font-bold px-2 py-0.5 rounded bg-neutral-800 text-text-primary">
                     {event.timestamp}
                   </span>
-                  <p className="text-sm text-neutral-800 font-medium mt-1">{event.description}</p>
+                  <p className="text-sm text-text-primary font-medium mt-1">{event.description}</p>
                   {event.supporting_evidence_ids && event.supporting_evidence_ids.length > 0 && (
                     <p className="text-xs text-neutral-400">
                       Evidence Ref: {event.supporting_evidence_ids.join(', ')}
@@ -2561,19 +2526,19 @@ function AddParticipantModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+        className="bg-neutral-900/50 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 flex items-center justify-between p-6 border-b border-neutral-100 bg-white">
-          <h2 className="text-xl font-bold text-neutral-900">Add New Participant</h2>
-          <button onClick={onClose} className="p-1 text-neutral-400 hover:text-neutral-700 transition-colors text-2xl leading-none">×</button>
+        <div className="sticky top-0 flex items-center justify-between p-6 border-b border-neutral-100 bg-neutral-900/50">
+          <h2 className="text-xl font-bold text-white">Add New Participant</h2>
+          <button onClick={onClose} className="p-1 text-neutral-400 hover:text-text-secondary transition-colors text-2xl leading-none">×</button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {/* Name */}
           <div>
-            <label className="text-sm font-semibold text-neutral-700 mb-2 block">
+            <label className="text-sm font-semibold text-text-secondary mb-2 block">
               Full Name <span className="text-red-500">*</span>
             </label>
             <input
@@ -2584,15 +2549,15 @@ function AddParticipantModal({
               className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 ${
                 errors.name
                   ? 'border-red-300 focus:ring-red-200'
-                  : 'border-neutral-300 focus:ring-blue-200'
+                  : 'border-neutral-700 focus:ring-blue-200'
               }`}
             />
-            {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
+            {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
           </div>
 
           {/* Roles */}
           <div>
-            <label className="text-sm font-semibold text-neutral-700 mb-3 block">
+            <label className="text-sm font-semibold text-text-secondary mb-3 block">
               Roles <span className="text-red-500">*</span>
             </label>
             <div className="grid grid-cols-2 gap-3">
@@ -2604,47 +2569,47 @@ function AddParticipantModal({
                     onChange={() => handleRoleToggle(role)}
                     className="w-4 h-4 accent-blue-600 cursor-pointer"
                   />
-                  <span className="text-sm text-neutral-700">{role}</span>
+                  <span className="text-sm text-text-secondary">{role}</span>
                 </label>
               ))}
             </div>
-            {errors.roles && <p className="text-xs text-red-600 mt-1">{errors.roles}</p>}
+            {errors.roles && <p className="text-xs text-red-500 mt-1">{errors.roles}</p>}
           </div>
 
           {/* Contact Information */}
           <div className="space-y-3">
-            <label className="text-sm font-semibold text-neutral-700">Contact Information</label>
+            <label className="text-sm font-semibold text-text-secondary">Contact Information</label>
             <input
               type="tel"
               value={formData.contact.phone || ''}
               onChange={(e) => handleContactChange('phone', e.target.value)}
               placeholder="Phone number"
-              className="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+              className="w-full px-4 py-2.5 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
             />
             <input
               type="email"
               value={formData.contact.email || ''}
               onChange={(e) => handleContactChange('email', e.target.value)}
               placeholder="Email address"
-              className="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+              className="w-full px-4 py-2.5 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
             />
             <input
               type="text"
               value={formData.contact.address || ''}
               onChange={(e) => handleContactChange('address', e.target.value)}
               placeholder="Address"
-              className="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+              className="w-full px-4 py-2.5 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
             />
           </div>
 
           {/* Identifiers */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <label className="text-sm font-semibold text-neutral-700">Identifiers (Optional)</label>
+              <label className="text-sm font-semibold text-text-secondary">Identifiers (Optional)</label>
               <button
                 type="button"
                 onClick={handleAddIdentifier}
-                className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+                className="text-xs font-semibold text-blue-500 hover:text-blue-400 transition-colors"
               >
                 + Add Identifier
               </button>
@@ -2657,19 +2622,19 @@ function AddParticipantModal({
                     value={id.type}
                     onChange={(e) => handleIdentifierChange(idx, 'type', e.target.value)}
                     placeholder="Type (e.g., Aadhar, PAN, License)"
-                    className="flex-1 px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    className="flex-1 px-3 py-2 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
                   />
                   <input
                     type="text"
                     value={id.value}
                     onChange={(e) => handleIdentifierChange(idx, 'value', e.target.value)}
                     placeholder="Value"
-                    className="flex-1 px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    className="flex-1 px-3 py-2 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
                   />
                   <button
                     type="button"
                     onClick={() => handleRemoveIdentifier(idx)}
-                    className="px-2 py-2 text-red-600 hover:bg-red-50 rounded transition-colors"
+                    className="px-2 py-2 text-red-500 hover:bg-red-900/20 rounded transition-colors"
                   >
                     🗑️
                   </button>
@@ -2680,35 +2645,35 @@ function AddParticipantModal({
 
           {/* Victim Profile */}
           {formData.roles.includes('Victim') && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
+            <div className="bg-green-900/20 border border-green-800/50 rounded-lg p-4 space-y-3">
               <label className="text-sm font-semibold text-green-800 block">Victim Profile Details</label>
               <input
                 type="text"
                 value={formData.victimProfile?.injuryDetails || ''}
                 onChange={(e) => handleProfileChange('victimProfile', 'injuryDetails', e.target.value)}
                 placeholder="Injury details (optional)"
-                className="w-full px-4 py-2.5 border border-green-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
+                className="w-full px-4 py-2.5 border border-green-800/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
               />
               <textarea
                 value={formData.victimProfile?.lossDetails || ''}
                 onChange={(e) => handleProfileChange('victimProfile', 'lossDetails', e.target.value)}
                 placeholder="Loss details (optional)"
                 rows={3}
-                className="w-full px-4 py-2.5 border border-green-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
+                className="w-full px-4 py-2.5 border border-green-800/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
               />
             </div>
           )}
 
           {/* Complainant Profile */}
           {formData.roles.includes('Complainant') && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+            <div className="bg-blue-900/20 border border-blue-800/50 rounded-lg p-4 space-y-3">
               <label className="text-sm font-semibold text-blue-800 block">Complainant Profile Details</label>
               <input
                 type="text"
                 value={formData.complainantProfile?.relationshipToIncident || ''}
                 onChange={(e) => handleProfileChange('complainantProfile', 'relationshipToIncident', e.target.value)}
                 placeholder="Relationship to incident (optional)"
-                className="w-full px-4 py-2.5 border border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                className="w-full px-4 py-2.5 border border-blue-800/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
               />
             </div>
           )}
@@ -2720,7 +2685,7 @@ function AddParticipantModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 border border-neutral-300 text-neutral-700 font-semibold rounded-lg hover:bg-neutral-50 transition-colors"
+              className="flex-1 px-4 py-2.5 border border-neutral-700 text-text-secondary font-semibold rounded-lg hover:bg-neutral-900/50 transition-colors"
             >
               Cancel
             </button>
@@ -2869,19 +2834,19 @@ function EditParticipantModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+        className="bg-neutral-900/50 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 flex items-center justify-between p-6 border-b border-neutral-100 bg-white">
-          <h2 className="text-xl font-bold text-neutral-900">Edit Participant</h2>
-          <button onClick={onClose} className="p-1 text-neutral-400 hover:text-neutral-700 transition-colors text-2xl leading-none">×</button>
+        <div className="sticky top-0 flex items-center justify-between p-6 border-b border-neutral-100 bg-neutral-900/50">
+          <h2 className="text-xl font-bold text-white">Edit Participant</h2>
+          <button onClick={onClose} className="p-1 text-neutral-400 hover:text-text-secondary transition-colors text-2xl leading-none">×</button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {/* Name */}
           <div>
-            <label className="text-sm font-semibold text-neutral-700 mb-2 block">
+            <label className="text-sm font-semibold text-text-secondary mb-2 block">
               Full Name <span className="text-red-500">*</span>
             </label>
             <input
@@ -2892,15 +2857,15 @@ function EditParticipantModal({
               className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 ${
                 errors.name
                   ? 'border-red-300 focus:ring-red-200'
-                  : 'border-neutral-300 focus:ring-blue-200'
+                  : 'border-neutral-700 focus:ring-blue-200'
               }`}
             />
-            {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
+            {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
           </div>
 
           {/* Roles */}
           <div>
-            <label className="text-sm font-semibold text-neutral-700 mb-3 block">
+            <label className="text-sm font-semibold text-text-secondary mb-3 block">
               Roles <span className="text-red-500">*</span>
             </label>
             <div className="grid grid-cols-2 gap-3">
@@ -2912,47 +2877,47 @@ function EditParticipantModal({
                     onChange={() => handleRoleToggle(role)}
                     className="w-4 h-4 accent-blue-600 cursor-pointer"
                   />
-                  <span className="text-sm text-neutral-700">{role}</span>
+                  <span className="text-sm text-text-secondary">{role}</span>
                 </label>
               ))}
             </div>
-            {errors.roles && <p className="text-xs text-red-600 mt-1">{errors.roles}</p>}
+            {errors.roles && <p className="text-xs text-red-500 mt-1">{errors.roles}</p>}
           </div>
 
           {/* Contact Information */}
           <div className="space-y-3">
-            <label className="text-sm font-semibold text-neutral-700">Contact Information</label>
+            <label className="text-sm font-semibold text-text-secondary">Contact Information</label>
             <input
               type="tel"
               value={formData.contact.phone || ''}
               onChange={(e) => handleContactChange('phone', e.target.value)}
               placeholder="Phone number"
-              className="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+              className="w-full px-4 py-2.5 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
             />
             <input
               type="email"
               value={formData.contact.email || ''}
               onChange={(e) => handleContactChange('email', e.target.value)}
               placeholder="Email address"
-              className="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+              className="w-full px-4 py-2.5 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
             />
             <input
               type="text"
               value={formData.contact.address || ''}
               onChange={(e) => handleContactChange('address', e.target.value)}
               placeholder="Address"
-              className="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+              className="w-full px-4 py-2.5 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
             />
           </div>
 
           {/* Identifiers */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <label className="text-sm font-semibold text-neutral-700">Identifiers (Optional)</label>
+              <label className="text-sm font-semibold text-text-secondary">Identifiers (Optional)</label>
               <button
                 type="button"
                 onClick={handleAddIdentifier}
-                className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+                className="text-xs font-semibold text-blue-500 hover:text-blue-400 transition-colors"
               >
                 + Add Identifier
               </button>
@@ -2965,19 +2930,19 @@ function EditParticipantModal({
                     value={id.type}
                     onChange={(e) => handleIdentifierChange(idx, 'type', e.target.value)}
                     placeholder="Type (e.g., Aadhar, PAN, License)"
-                    className="flex-1 px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    className="flex-1 px-3 py-2 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
                   />
                   <input
                     type="text"
                     value={id.value}
                     onChange={(e) => handleIdentifierChange(idx, 'value', e.target.value)}
                     placeholder="Value"
-                    className="flex-1 px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    className="flex-1 px-3 py-2 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
                   />
                   <button
                     type="button"
                     onClick={() => handleRemoveIdentifier(idx)}
-                    className="px-2 py-2 text-red-600 hover:bg-red-50 rounded transition-colors"
+                    className="px-2 py-2 text-red-500 hover:bg-red-900/20 rounded transition-colors"
                   >
                     🗑️
                   </button>
@@ -2988,35 +2953,35 @@ function EditParticipantModal({
 
           {/* Victim Profile */}
           {formData.roles.includes('Victim') && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
+            <div className="bg-green-900/20 border border-green-800/50 rounded-lg p-4 space-y-3">
               <label className="text-sm font-semibold text-green-800 block">Victim Profile Details</label>
               <input
                 type="text"
                 value={formData.victimProfile?.injuryDetails || ''}
                 onChange={(e) => handleProfileChange('victimProfile', 'injuryDetails', e.target.value)}
                 placeholder="Injury details (optional)"
-                className="w-full px-4 py-2.5 border border-green-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
+                className="w-full px-4 py-2.5 border border-green-800/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
               />
               <textarea
                 value={formData.victimProfile?.lossDetails || ''}
                 onChange={(e) => handleProfileChange('victimProfile', 'lossDetails', e.target.value)}
                 placeholder="Loss details (optional)"
                 rows={3}
-                className="w-full px-4 py-2.5 border border-green-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
+                className="w-full px-4 py-2.5 border border-green-800/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
               />
             </div>
           )}
 
           {/* Complainant Profile */}
           {formData.roles.includes('Complainant') && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+            <div className="bg-blue-900/20 border border-blue-800/50 rounded-lg p-4 space-y-3">
               <label className="text-sm font-semibold text-blue-800 block">Complainant Profile Details</label>
               <input
                 type="text"
                 value={formData.complainantProfile?.relationshipToIncident || ''}
                 onChange={(e) => handleProfileChange('complainantProfile', 'relationshipToIncident', e.target.value)}
                 placeholder="Relationship to incident (optional)"
-                className="w-full px-4 py-2.5 border border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                className="w-full px-4 py-2.5 border border-blue-800/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
               />
             </div>
           )}
@@ -3028,7 +2993,7 @@ function EditParticipantModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 border border-neutral-300 text-neutral-700 font-semibold rounded-lg hover:bg-neutral-50 transition-colors"
+              className="flex-1 px-4 py-2.5 border border-neutral-700 text-text-secondary font-semibold rounded-lg hover:bg-neutral-900/50 transition-colors"
             >
               Cancel
             </button>

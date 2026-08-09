@@ -82,17 +82,17 @@ export default function PoliceComplaintQueuePage(): React.ReactElement {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'SUBMITTED':
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-200">Submitted</span>;
+        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-900/20 text-blue-400 border border-blue-800">Submitted</span>;
       case 'UNDER_REVIEW':
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-orange-50 text-orange-700 border border-orange-200">Under Review</span>;
+        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-orange-900/20 text-orange-400 border border-orange-800">Under Review</span>;
       case 'ASSIGNED_TO_IO':
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-yellow-50 text-yellow-800 border border-yellow-200">Assigned to IO</span>;
+        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-yellow-900/20 text-yellow-400 border border-yellow-800">Assigned to IO</span>;
       case 'REJECTED':
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-red-50 text-red-700 border border-red-200">Rejected</span>;
+        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-red-900/20 text-red-400 border border-red-800">Rejected</span>;
       case 'FIR_REGISTERED':
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-green-50 text-green-700 border border-green-200">FIR Registered</span>;
+        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-green-900/20 text-green-400 border border-green-800">FIR Registered</span>;
       default:
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-neutral-100 text-neutral-800">{status}</span>;
+        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-neutral-800 text-text-secondary">{status}</span>;
     }
   };
 
@@ -100,24 +100,24 @@ export default function PoliceComplaintQueuePage(): React.ReactElement {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-neutral-900">Station Complaint Queue</h1>
-        <p className="text-sm text-neutral-500 mt-1">Review e-applications and process FIR registrations</p>
+        <h1 className="text-2xl font-bold text-text-primary">Station Complaint Queue</h1>
+        <p className="text-sm text-text-secondary mt-1">Review e-applications and process FIR registrations</p>
       </div>
 
       {/* Filter and Search Panel */}
-      <Card>
+      <Card className="bg-surface border-neutral-800">
         <form onSubmit={handleSearchSubmit} className="flex flex-col md:flex-row gap-4 items-end">
           <div className="flex-1 w-full">
-            <label className="block text-xs font-bold text-neutral-400 uppercase mb-1.5">Search</label>
+            <label className="block text-xs font-bold text-text-secondary uppercase mb-1.5">Search</label>
             <div className="relative">
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by Complaint No, short description, FIR..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-sm"
+                className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-neutral-800 bg-[#0a0f1c] text-text-primary focus:ring-2 focus:ring-brand-primary focus:border-transparent outline-none transition-all text-sm placeholder:text-neutral-500"
               />
-              <Search className="absolute left-3 top-3 h-4 w-4 text-neutral-400" />
+              <Search className="absolute left-3 top-3 h-4 w-4 text-neutral-500" />
             </div>
           </div>
 
@@ -146,7 +146,7 @@ export default function PoliceComplaintQueuePage(): React.ReactElement {
       </Card>
 
       {error && (
-        <div className="flex items-center gap-2 p-4 bg-danger-50 border border-danger-200 text-danger-700 rounded-lg text-sm">
+        <div className="flex items-center gap-2 p-4 bg-red-900/20 border border-red-800 text-red-400 rounded-lg text-sm">
           <AlertCircle size={18} />
           <span>{error}</span>
         </div>
@@ -158,22 +158,22 @@ export default function PoliceComplaintQueuePage(): React.ReactElement {
           <Loader />
         </div>
       ) : complaints.length === 0 ? (
-        <Card className="flex flex-col items-center justify-center text-center py-12">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-neutral-100 text-neutral-400 mb-4">
+        <Card className="flex flex-col items-center justify-center text-center py-12 bg-surface border-neutral-800">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-neutral-800 text-neutral-400 mb-4">
             <FileText size={28} />
           </div>
-          <h3 className="text-lg font-semibold text-neutral-800">No complaints found</h3>
-          <p className="text-sm text-neutral-500 mt-1 max-w-sm">
+          <h3 className="text-lg font-semibold text-text-primary">No complaints found</h3>
+          <p className="text-sm text-text-secondary mt-1 max-w-sm">
             There are currently no complaints matching the search criteria or status.
           </p>
         </Card>
       ) : (
         <div className="space-y-4">
-          <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-sm">
+          <div className="bg-surface border border-neutral-800 rounded-xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-neutral-50 border-b border-neutral-200 text-xs font-bold text-neutral-500 uppercase">
+                  <tr className="bg-neutral-800/50 border-b border-neutral-800 text-xs font-bold text-text-secondary uppercase">
                     <th className="p-4">Complaint Number</th>
                     <th className="p-4">Complainant</th>
                     <th className="p-4">Incident Date</th>
@@ -183,38 +183,38 @@ export default function PoliceComplaintQueuePage(): React.ReactElement {
                     <th className="p-4 text-right">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-neutral-100 text-sm">
+                <tbody className="divide-y divide-neutral-800 text-sm">
                   {complaints.map((c) => (
-                    <tr key={c._id} className="hover:bg-neutral-50/50 transition-colors">
-                      <td className="p-4 font-semibold text-neutral-800">{c.complaintNumber}</td>
+                    <tr key={c._id} className="hover:bg-neutral-800/30 transition-colors">
+                      <td className="p-4 font-semibold text-text-primary">{c.complaintNumber}</td>
                       <td className="p-4">
                         <div className="flex flex-col">
-                          <span className="font-medium text-neutral-800">
+                          <span className="font-medium text-text-primary">
                             {c.citizen.firstName} {c.citizen.lastName}
                           </span>
-                          <span className="text-xs text-neutral-400">{c.citizen.phone}</span>
+                          <span className="text-xs text-text-secondary">{c.citizen.phone}</span>
                         </div>
                       </td>
-                      <td className="p-4 text-neutral-600">
+                      <td className="p-4 text-text-secondary">
                         {new Date(c.incidentDate).toLocaleDateString('en-IN')}
                       </td>
-                      <td className="p-4 uppercase text-xs font-semibold text-neutral-500">
+                      <td className="p-4 uppercase text-xs font-semibold text-text-secondary">
                         {c.category ? c.category.replace('_', ' ') : 'UNCATEGORIZED'}
                       </td>
                       <td className="p-4">{getStatusBadge(c.status)}</td>
                       <td className="p-4">
                         {c.assignedIO ? (
                           <div className="flex flex-col">
-                            <span className="text-neutral-800 font-medium">{c.assignedIO.officerName}</span>
-                            <span className="text-xs text-neutral-400">{c.assignedIO.badgeNumber}</span>
+                            <span className="text-text-primary font-medium">{c.assignedIO.officerName}</span>
+                            <span className="text-xs text-text-secondary">{c.assignedIO.badgeNumber}</span>
                           </div>
                         ) : (
-                          <span className="text-xs text-neutral-400 italic">Unassigned</span>
+                          <span className="text-xs text-text-secondary italic">Unassigned</span>
                         )}
                       </td>
                       <td className="p-4 text-right">
                         <Link href={APP_ROUTES.POLICE_COMPLAINT_DETAIL(c._id)}>
-                          <Button variant="ghost" size="sm" leftIcon={<Eye size={14} />}>
+                          <Button variant="secondary" size="sm" leftIcon={<Eye size={14} />}>
                             Review Case
                           </Button>
                         </Link>
@@ -228,13 +228,13 @@ export default function PoliceComplaintQueuePage(): React.ReactElement {
 
           {/* Pagination Controls */}
           {totalPages > 1 && (
-            <div className="flex justify-between items-center bg-white border border-neutral-200 rounded-xl p-4 shadow-sm">
-              <span className="text-xs text-neutral-500">
+            <div className="flex justify-between items-center bg-surface border border-neutral-800 rounded-xl p-4 shadow-sm">
+              <span className="text-xs text-text-secondary">
                 Page {page} of {totalPages}
               </span>
               <div className="flex gap-2">
                 <Button
-                  variant="ghost"
+                  variant="secondary"
                   size="sm"
                   disabled={page === 1}
                   onClick={() => setPage(page - 1)}

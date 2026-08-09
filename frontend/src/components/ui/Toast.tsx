@@ -10,23 +10,23 @@ const variantConfig: Record<
 > = {
   success: {
     icon: <CheckCircle size={18} />,
-    containerClass: 'bg-success-50 border-success-500 text-success-700',
-    iconClass: 'text-success-600',
+    containerClass: 'bg-neutral-900/50 dark:bg-green-950 border-semantic-success text-green-400 dark:text-green-400',
+    iconClass: 'text-semantic-success',
   },
   error: {
     icon: <XCircle size={18} />,
-    containerClass: 'bg-danger-50 border-danger-500 text-danger-700',
-    iconClass: 'text-danger-600',
+    containerClass: 'bg-neutral-900/50 dark:bg-red-950 border-semantic-critical text-red-400 dark:text-red-400',
+    iconClass: 'text-semantic-critical',
   },
   warning: {
     icon: <AlertTriangle size={18} />,
-    containerClass: 'bg-secondary-50 border-secondary-500 text-secondary-700',
-    iconClass: 'text-secondary-600',
+    containerClass: 'bg-neutral-900/50 dark:bg-amber-950 border-semantic-pending text-amber-400 dark:text-amber-400',
+    iconClass: 'text-semantic-pending',
   },
   info: {
     icon: <Info size={18} />,
-    containerClass: 'bg-primary-50 border-primary-500 text-primary-700',
-    iconClass: 'text-primary-600',
+    containerClass: 'bg-neutral-900/50 dark:bg-blue-950 border-semantic-info text-blue-400 dark:text-blue-400',
+    iconClass: 'text-semantic-info',
   },
 };
 
@@ -42,7 +42,7 @@ function ToastItem({ toast, onRemove }: ToastItemProps): React.ReactElement {
     <div
       role="alert"
       className={[
-        'flex items-start gap-3 rounded-lg border px-4 py-3 shadow-card',
+        'flex items-start gap-3 rounded-lg border px-4 py-3 shadow-card bg-surface',
         'animate-in slide-in-from-right-4 duration-200',
         config.containerClass,
       ].join(' ')}

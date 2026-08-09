@@ -98,6 +98,16 @@ const ComplaintIntelligenceSchema = new Schema<IComplaintIntelligence>({
   recommendedEvidence: [{ type: Schema.Types.Mixed }]
 }, { _id: false, strict: false });
 
+export interface ICredibilityMetrics {
+  specificityDensity: number;
+  consistencyFlags: Array<{ field: string; message: string; severity: 'low' | 'medium' | 'high' }>;
+  evidenceCoverageRatio: number;
+  crossCorroborationCount: number;
+  patternMatches: number;
+  responseResolutionRate: number;
+  completenessScore: number;
+}
+
 export interface IComplaint extends Document {
   complaintNumber: string; // UUID
   status: ComplaintStatus;
@@ -144,6 +154,7 @@ export interface IComplaint extends Document {
 
   processingStatus: 'PENDING' | 'PROCESSED' | 'FAILED';
   complaintIntelligence: IComplaintIntelligence;
+  credibilityMetrics?: ICredibilityMetrics;
 
   isDeleted: boolean;
   createdAt: Date;

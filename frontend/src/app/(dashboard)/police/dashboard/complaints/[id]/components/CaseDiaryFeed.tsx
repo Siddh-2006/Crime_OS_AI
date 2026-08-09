@@ -85,34 +85,34 @@ export function CaseDiaryFeed({ entries, onEntryClick }: CaseDiaryFeedProps) {
   };
 
   return (
-    <Card className="h-full max-h-[800px] flex flex-col">
-      <CardHeader title="Case Diary" />
-      <div className="flex-1 overflow-y-auto p-4 border-t border-neutral-100 bg-neutral-50/50">
+    <Card className="h-full max-h-[800px] flex flex-col border-neutral-800 bg-surface">
+      <CardHeader title="Case Diary" className="border-b border-neutral-800" />
+      <div className="flex-1 overflow-y-auto p-4 bg-surface">
         {entries.length === 0 ? (
           <p className="text-sm text-neutral-400 italic text-center py-8">No diary events recorded yet.</p>
         ) : (
-          <div className="relative pl-6 border-l-2 border-neutral-200 space-y-6 pb-4">
+          <div className="relative pl-6 border-l-2 border-neutral-700 space-y-6 pb-4">
             {entries.map((entry) => (
               <div key={entry.entry_id} className="relative">
-                <span className="absolute -left-[33px] top-1 flex h-6 w-6 items-center justify-center rounded-full bg-white border border-neutral-200 shadow-sm">
+                <span className="absolute -left-[33px] top-1 flex h-6 w-6 items-center justify-center rounded-full bg-neutral-900 border border-neutral-700 shadow-sm">
                   {getEventIcon(entry.event_type)}
                 </span>
                 <div 
-                  className={`bg-white p-3 rounded-lg border border-neutral-200 shadow-sm transition-colors ${onEntryClick ? 'cursor-pointer hover:border-blue-300 hover:bg-blue-50' : ''}`}
+                  className={`bg-neutral-900/50 p-3 rounded-lg border border-neutral-700 shadow-sm transition-colors ${onEntryClick ? 'cursor-pointer hover:border-blue-500/50 hover:bg-neutral-800' : ''}`}
                   onClick={() => onEntryClick && onEntryClick(entry)}
                 >
                   <div className="flex justify-between items-start mb-1">
-                    <p className="text-xs font-bold text-neutral-900">{getEventTitle(entry)}</p>
+                    <p className="text-xs font-bold text-text-primary">{getEventTitle(entry)}</p>
                     <p className="text-[10px] text-neutral-400 font-medium whitespace-nowrap ml-2">
                       {new Date(entry.timestamp).toLocaleString('en-IN')}
                     </p>
                   </div>
                   <p className="text-xs text-neutral-500 mb-1 flex items-center gap-1">
-                    <span className="font-semibold capitalize">{entry.actor.type}</span> 
-                    <span className="text-neutral-400">({entry.actor.id})</span>
+                    <span className="font-semibold capitalize text-text-secondary">{entry.actor.type}</span> 
+                    <span className="text-neutral-500">({entry.actor.id})</span>
                   </p>
                   {getEventDescription(entry) && (
-                    <div className={`mt-2 p-2 bg-neutral-50 border border-neutral-100 rounded text-xs text-neutral-700 italic ${onEntryClick ? 'group-hover:bg-white' : ''}`}>
+                    <div className={`mt-2 p-2 bg-neutral-900 border border-neutral-800 rounded text-xs text-text-secondary italic ${onEntryClick ? 'group-hover:bg-neutral-800' : ''}`}>
                       {getEventDescription(entry)}
                     </div>
                   )}

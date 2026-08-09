@@ -288,7 +288,7 @@ export default function AdminDashboardPage(): React.ReactElement {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-100 flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Top Header */}
       <AdminNavbar />
 

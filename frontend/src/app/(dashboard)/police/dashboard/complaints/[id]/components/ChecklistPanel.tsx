@@ -51,30 +51,30 @@ interface ChecklistPanelProps {
 const STATUS_CONFIG = {
   completed: {
     icon: <CheckCircle2 size={16} />,
-    pill: 'bg-green-100 text-green-700 border-green-200',
+    pill: 'bg-green-900/30 text-green-400 border-green-800/50',
     bar:  'bg-green-500',
-    row:  'border-l-4 border-green-400 bg-green-50/20',
+    row:  'border-l-4 border-green-400 bg-green-900/10',
     label: 'Completed',
   },
   in_progress: {
     icon: <Clock size={16} className="animate-pulse" />,
-    pill: 'bg-blue-100 text-blue-700 border-blue-200',
+    pill: 'bg-blue-900/30 text-blue-400 border-blue-800/50',
     bar:  'bg-blue-500',
-    row:  'border-l-4 border-blue-400 bg-blue-50/20',
+    row:  'border-l-4 border-blue-400 bg-blue-900/10',
     label: 'In Progress',
   },
   blocked: {
     icon: <Lock size={16} />,
-    pill: 'bg-red-100 text-red-700 border-red-200',
+    pill: 'bg-red-900/30 text-red-400 border-red-800/50',
     bar:  'bg-red-400',
-    row:  'border-l-4 border-red-400 bg-red-50/20',
+    row:  'border-l-4 border-red-400 bg-red-900/10',
     label: 'Blocked',
   },
   pending: {
     icon: <Circle size={16} />,
-    pill: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+    pill: 'bg-yellow-900/30 text-yellow-400 border-yellow-800/50',
     bar:  'bg-yellow-400',
-    row:  'border-l-4 border-yellow-400 bg-white',
+    row:  'border-l-4 border-yellow-400 bg-neutral-900/50',
     label: 'Pending',
   },
 } as const;
@@ -135,7 +135,7 @@ function StepRow({
         {/* Main row */}
         <div className="flex items-start gap-3 p-3">
           {/* Step number */}
-          <div className="flex-shrink-0 w-6 h-6 rounded-full bg-neutral-100 border border-neutral-200 flex items-center justify-center text-[11px] font-bold text-neutral-500 mt-0.5">
+          <div className="flex-shrink-0 w-6 h-6 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center text-[11px] font-bold text-neutral-500 mt-0.5">
             {index + 1}
           </div>
 
@@ -151,7 +151,7 @@ function StepRow({
               )}
 
               {/* Title */}
-              <span className="text-sm font-semibold text-neutral-900 capitalize leading-snug">
+              <span className="text-sm font-semibold text-white capitalize leading-snug">
                 {title}
               </span>
 
@@ -163,7 +163,7 @@ function StepRow({
 
               {/* Locked badge */}
               {isLocked && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-500 border border-neutral-200">
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-neutral-800 text-neutral-500 border border-neutral-700">
                   <Lock size={10} /> Awaiting response
                 </span>
               )}
@@ -172,12 +172,12 @@ function StepRow({
             {/* Target badge */}
             <div className="mt-1.5 flex items-center gap-2 flex-wrap">
               {isDept && step.department_entity_id && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-blue-900/20 text-blue-400 border border-blue-800/50">
                   <Building2 size={10} /> {step.department_entity_id}
                 </span>
               )}
               {isCitizen && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-yellow-50 text-yellow-700 border border-yellow-200">
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-yellow-900/20 text-yellow-400 border border-yellow-800/50">
                   <UserCheck size={10} /> Complainant
                 </span>
               )}
@@ -199,7 +199,7 @@ function StepRow({
 
             {/* Evidence progress bar */}
             {evNeeded.length > 0 && (
-              <div className="mt-2 w-full bg-neutral-200 rounded-full h-1">
+              <div className="mt-2 w-full bg-neutral-800 rounded-full h-1">
                 <div
                   className={`h-1 rounded-full transition-all ${evPct === 100 ? 'bg-green-500' : 'bg-blue-400'}`}
                   style={{ width: `${evPct}%` }}
@@ -275,8 +275,8 @@ function StepRow({
                         key={ev}
                         className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded border ${
                           collected
-                            ? 'bg-green-100 text-green-700 border-green-200'
-                            : 'bg-white text-neutral-500 border-neutral-200'
+                            ? 'bg-green-900/30 text-green-400 border-green-800/50'
+                            : 'bg-neutral-900/50 text-neutral-500 border-neutral-700'
                         }`}
                       >
                         {collected ? <CheckCircle2 size={9} /> : <Circle size={9} />}
@@ -324,16 +324,16 @@ export function ChecklistPanel({ checklist, onOpenComposer, evidenceList, caseId
   return (
     <div className="space-y-4">
       {/* Header + summary */}
-      <div className="bg-white rounded-xl border border-neutral-200 shadow-sm p-4">
+      <div className="bg-neutral-900/50 rounded-xl border border-neutral-700 shadow-sm p-4">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold text-neutral-900">Investigation Checklist</h3>
+          <h3 className="text-sm font-bold text-white">Investigation Checklist</h3>
           <span className="text-xs font-semibold text-neutral-500">
             {completed}/{steps.length} complete
           </span>
         </div>
 
         {/* Overall progress bar */}
-        <div className="w-full bg-neutral-200 rounded-full h-2 mb-3">
+        <div className="w-full bg-neutral-800 rounded-full h-2 mb-3">
           <div
             className="h-2 rounded-full bg-green-500 transition-all duration-500"
             style={{ width: `${pct}%` }}
@@ -342,21 +342,21 @@ export function ChecklistPanel({ checklist, onOpenComposer, evidenceList, caseId
 
         {/* Status counts */}
         <div className="grid grid-cols-4 gap-2 text-center text-[10px] font-semibold">
-          <div className="bg-green-50 border border-green-200 rounded-lg py-1.5">
-            <div className="text-lg font-black text-green-600">{completed}</div>
-            <div className="text-green-600 uppercase tracking-wider">Done</div>
+          <div className="bg-green-900/20 border border-green-800/50 rounded-lg py-1.5">
+            <div className="text-lg font-black text-green-500">{completed}</div>
+            <div className="text-green-500 uppercase tracking-wider">Done</div>
           </div>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg py-1.5">
-            <div className="text-lg font-black text-blue-600">{inProgress}</div>
-            <div className="text-blue-600 uppercase tracking-wider">Active</div>
+          <div className="bg-blue-900/20 border border-blue-800/50 rounded-lg py-1.5">
+            <div className="text-lg font-black text-blue-500">{inProgress}</div>
+            <div className="text-blue-500 uppercase tracking-wider">Active</div>
           </div>
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg py-1.5">
-            <div className="text-lg font-black text-yellow-600">{pending}</div>
-            <div className="text-yellow-600 uppercase tracking-wider">Pending</div>
+          <div className="bg-yellow-900/20 border border-yellow-800/50 rounded-lg py-1.5">
+            <div className="text-lg font-black text-yellow-500">{pending}</div>
+            <div className="text-yellow-500 uppercase tracking-wider">Pending</div>
           </div>
-          <div className="bg-red-50 border border-red-200 rounded-lg py-1.5">
-            <div className="text-lg font-black text-red-600">{blocked}</div>
-            <div className="text-red-600 uppercase tracking-wider">Blocked</div>
+          <div className="bg-red-900/20 border border-red-800/50 rounded-lg py-1.5">
+            <div className="text-lg font-black text-red-500">{blocked}</div>
+            <div className="text-red-500 uppercase tracking-wider">Blocked</div>
           </div>
         </div>
 

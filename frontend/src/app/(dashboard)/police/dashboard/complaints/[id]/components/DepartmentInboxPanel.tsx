@@ -66,7 +66,7 @@ export function DepartmentInboxPanel({ threads, onRefresh, caseId, filter, onFil
 
   if (filteredThreads.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center space-y-3 bg-white border border-neutral-200 rounded-xl shadow-sm">
+      <div className="flex flex-col items-center justify-center py-20 text-center space-y-3 bg-neutral-900/50 border border-neutral-700 rounded-xl shadow-sm">
         <Send className="h-10 w-10 text-neutral-300" />
         <p className="text-sm font-semibold text-neutral-600">No requests found</p>
         <p className="text-xs text-neutral-400 max-w-xs">
@@ -77,11 +77,11 @@ export function DepartmentInboxPanel({ threads, onRefresh, caseId, filter, onFil
   }
 
   return (
-    <div className="flex bg-white border border-neutral-200 rounded-xl shadow-sm overflow-hidden min-h-[600px] max-h-[600px]">
+    <div className="flex bg-neutral-900/50 border border-neutral-700 rounded-xl shadow-sm overflow-hidden min-h-[600px] max-h-[600px]">
       
       {/* LEFT PANE: Inbox List */}
-      <div className="w-1/3 border-r border-neutral-200 bg-neutral-50/30 flex flex-col">
-        <div className="p-4 border-b border-neutral-200 bg-white">
+      <div className="w-1/3 border-r border-neutral-700 bg-neutral-50/30 flex flex-col">
+        <div className="p-4 border-b border-neutral-700 bg-neutral-900/50">
           <div className="flex justify-between items-center mb-3">
             <h3 className="text-sm font-bold text-neutral-800">Requests ({filteredThreads.length})</h3>
             <button onClick={onRefresh} className="text-xs text-blue-600 hover:underline">Refresh</button>
@@ -145,10 +145,10 @@ export function DepartmentInboxPanel({ threads, onRefresh, caseId, filter, onFil
       </div>
 
       {/* RIGHT PANE: Conversation Thread */}
-      <div className="w-2/3 flex flex-col bg-white">
+      <div className="w-2/3 flex flex-col bg-neutral-900/50">
         {selectedThread ? (
           <>
-            <div className="p-4 border-b border-neutral-200">
+            <div className="p-4 border-b border-neutral-700">
               <h2 className="text-lg font-bold text-neutral-900">{selectedThread.step_title}</h2>
               <p className="text-sm text-neutral-500">Conversation with {selectedThread.department_entity_id}</p>
             </div>
@@ -173,7 +173,7 @@ export function DepartmentInboxPanel({ threads, onRefresh, caseId, filter, onFil
                     <div className={`p-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
                       msg.sender === 'io' 
                         ? 'bg-blue-600 text-white rounded-tr-none shadow-sm' 
-                        : 'bg-white border border-neutral-200 text-neutral-800 rounded-tl-none shadow-sm'
+                        : 'bg-neutral-900/50 border border-neutral-700 text-neutral-800 rounded-tl-none shadow-sm'
                     }`}>
                       {msg.content}
                     </div>
@@ -187,7 +187,7 @@ export function DepartmentInboxPanel({ threads, onRefresh, caseId, filter, onFil
                           return (
                             <div 
                               key={isObj ? att.evidence_id : att} 
-                              className={`flex items-center gap-1 text-[10px] font-medium px-2 py-1 bg-white border border-neutral-200 rounded-full text-neutral-600 shadow-sm ${isValidUrl ? 'cursor-pointer hover:bg-neutral-50 hover:text-blue-600 transition-colors' : ''}`}
+                              className={`flex items-center gap-1 text-[10px] font-medium px-2 py-1 bg-neutral-900/50 border border-neutral-700 rounded-full text-neutral-600 shadow-sm ${isValidUrl ? 'cursor-pointer hover:bg-neutral-50 hover:text-blue-600 transition-colors' : ''}`}
                               onClick={() => {
                                 if (isValidUrl) {
                                   if (isObj) setViewingEvidence(att);
@@ -208,10 +208,10 @@ export function DepartmentInboxPanel({ threads, onRefresh, caseId, filter, onFil
               ))}
             </div>
 
-            <div className="p-4 border-t border-neutral-200 bg-white">
+            <div className="p-4 border-t border-neutral-700 bg-neutral-900/50">
               <div className="flex flex-col gap-2">
                 <textarea 
-                  className="w-full border border-neutral-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  className="w-full border border-neutral-700 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                   placeholder="Type a follow-up message..."
                   rows={3}
                   value={replyContent}

@@ -2,6 +2,8 @@ import React from 'react';
 import type { Metadata } from 'next';
 import { PortalBrand } from '@/components/common/PortalBrand';
 
+import { Watermark } from '@/components/Watermark';
+
 export const metadata: Metadata = {
   title: 'Authentication — Crime OS Gujarat Police',
 };
@@ -10,56 +12,55 @@ interface AuthLayoutProps {
   children: React.ReactNode;
 }
 
-/**
- * Shared layout for all authentication pages.
- * Split-pane design: branding panel on left, form on right.
- */
 export default function AuthLayout({ children }: AuthLayoutProps): React.ReactElement {
   return (
-    <div className="flex min-h-screen">
-      {/* ── Left branding panel ─────────────────────────────────────────── */}
-      <div className="hidden lg:flex lg:w-[420px] xl:w-[480px] flex-col justify-between bg-primary-900 px-10 py-12 text-white flex-shrink-0">
-        <PortalBrand />
+    <div className="relative min-h-screen flex bg-background overflow-hidden">
+      <div className="relative z-10 flex w-full min-h-screen">
+        
+        {/* Left Side: Branding & Quote */}
+        <div className="hidden lg:flex lg:flex-1 flex-col justify-between px-16 py-16 relative">
+          {/* Subtle Watermark isolated to left side */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-20 pointer-events-none">
+            <Watermark />
+          </div>
 
-        <div>
-          <blockquote className="border-l-2 border-secondary-400 pl-4">
-            <p className="text-lg font-light leading-relaxed text-primary-100">
-              &ldquo;Committed to protecting the citizens of Gujarat with integrity, efficiency, and transparency.&rdquo;
-            </p>
-            <footer className="mt-3 text-sm text-primary-300">— Gujarat Police</footer>
-          </blockquote>
+          <div className="relative z-10">
+            <PortalBrand />
+          </div>
+          
+          <div className="max-w-2xl relative z-10 mt-12">
+            <h2 className="text-5xl font-extrabold text-white tracking-tight mb-8 leading-[1.1]">
+              Centralized <span className="text-blue-900/60">Intelligence</span><br /> 
+              & Investigation
+            </h2>
+            <blockquote className="border-l-4 border-blue-900/60 pl-6 py-2">
+              <p className="text-2xl font-light leading-relaxed text-slate-300">
+                &ldquo;Committed to protecting the citizens of Gujarat with integrity, efficiency, and transparency.&rdquo;
+              </p>
+              <footer className="mt-6 text-sm font-bold text-blue-900/60 tracking-widest uppercase">— Gujarat Police</footer>
+            </blockquote>
+          </div>
+
+          <div className="flex items-center gap-6 relative z-10 mt-auto pt-16">
+            <div className="h-16 w-16 rounded-xl bg-surface border border-neutral-800 flex flex-col items-center justify-center">
+              <span className="text-2xl font-bold text-slate-500">100</span>
+            </div>
+            <div>
+              <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1">Emergency</p>
+              <p className="text-sm text-slate-200">Police Helpline Active 24/7</p>
+            </div>
+          </div>
         </div>
 
-        <div className="space-y-1">
-          <p className="text-xs text-primary-400 uppercase tracking-widest">Helpline</p>
-          <p className="text-2xl font-bold text-secondary-400">100</p>
-          <p className="text-sm text-primary-300">Emergency Police Helpline</p>
+        {/* Right Side: Solid Auth Panel */}
+        <div className="flex w-full lg:w-[450px] xl:w-[500px] items-center justify-center px-6 sm:px-12 lg:px-12 bg-[#080d19] border-l border-neutral-800/50 shadow-2xl relative z-20">
+           <div className="w-full max-w-md">
+              <div className="lg:hidden mb-12 flex justify-center">
+                <PortalBrand />
+              </div>
+              {children}
+           </div>
         </div>
-      </div>
-
-      {/* ── Right form panel ────────────────────────────────────────────── */}
-      <div className="flex flex-1 flex-col">
-        {/* Mobile brand */}
-        <div className="flex items-center justify-between border-b border-neutral-200 bg-white px-6 py-4 lg:hidden">
-          <PortalBrand />
-        </div>
-
-        <main className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6">
-          <div className="w-full max-w-md">{children}</div>
-        </main>
-
-        <footer className="border-t border-neutral-200 bg-white px-6 py-4 text-center">
-          <p className="text-xs text-neutral-500">
-            &copy; {new Date().getFullYear()} Gujarat Police. All rights reserved. |{' '}
-            <a href="#" className="hover:underline">
-              Privacy Policy
-            </a>{' '}
-            |{' '}
-            <a href="#" className="hover:underline">
-              Terms of Service
-            </a>
-          </p>
-        </footer>
       </div>
     </div>
   );

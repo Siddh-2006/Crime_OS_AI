@@ -66,7 +66,7 @@ export default function AdminNavbar(): React.ReactElement {
               className={[
                 'flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t-md transition-colors',
                 isActive
-                  ? 'bg-white text-[#1a237e]'
+                  ? 'bg-neutral-900/50 text-[#1a237e]'
                   : 'text-blue-200 hover:text-white hover:bg-[#283593]',
               ].join(' ')}
             >

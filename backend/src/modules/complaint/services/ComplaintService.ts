@@ -30,6 +30,71 @@ import { CaseParticipant } from '../../investigation/models/CaseParticipant.mode
 export class ComplaintService {
   constructor(private readonly complaintRepository: IComplaintRepository) {}
 
+  // ─── Deterministic Credibility Scoring (SHO-Stage) ──────────────────────────
+  public async computeCredibilityMetrics(complaintId: string): Promise<IComplaint> {
+    const complaint = await this.complaintRepository.findById(complaintId);
+    if (!complaint) throw new NotFoundError('Complaint');
+
+    const intelligence = complaint.complaintIntelligence || {};
+    
+    // 1. Specificity Density (Provided by AI)
+    const specificityDensity = intelligence.credibilityMetrics?.specificityDensity || 0;
+    
+    // 2. Consistency Flags (Provided by AI)
+    const consistencyFlags = intelligence.credibilityMetrics?.consistencyFlags || [];
+    
+    // 3. Evidence Coverage Ratio
+    // Basic heuristic: Do they have at least 2 pieces of evidence for the category?
+    // If it's a financial fraud, we expect a bank statement + screenshot.
+    let evidenceCoverageRatio = 0.5; // default moderate
+    if (complaint.evidence && complaint.evidence.length >= 2) {
+      evidenceCoverageRatio = 1.0;
+    } else if (complaint.evidence && complaint.evidence.length === 1) {
+      evidenceCoverageRatio = 0.75;
+    }
+    
+    // 4. Cross-evidence corroboration (Count from AI entities)
+    let crossCorroborationCount = 0;
+    if (intelligence.entities) {
+      // Very basic structural count: if an entity has high corroboration
+      crossCorroborationCount = intelligence.entities.length > 3 ? 2 : 1; 
+    }
+    
+    // 5. Pattern match against known entities
+    // Search across DB for other complaints with same phone numbers/UPIs
+    // (As of now, no global confidence is there, so we default to 0 to avoid false positives)
+    let patternMatches = 0;
+    if (intelligence.entities) {
+      // E.g. query DB for matching entities. For now, mocked.
+      patternMatches = 0;
+    }
+    
+    // 6. Response Resolution Rate
+    // Fraction of 'missing information' requests answered
+    let responseResolutionRate = 1.0; // Default good if no requests made
+    
+    // Calculate Completeness Score
+    // Weight: 30% Specificity, 30% Evidence, 20% Corroboration, 20% Response
+    const completenessScore = Math.min(100, Math.round(
+      (specificityDensity * 10) + // assuming density is 1-10
+      (evidenceCoverageRatio * 30) +
+      (crossCorroborationCount * 10) +
+      (responseResolutionRate * 20)
+    ));
+
+    complaint.credibilityMetrics = {
+      specificityDensity,
+      consistencyFlags,
+      evidenceCoverageRatio,
+      crossCorroborationCount,
+      patternMatches,
+      responseResolutionRate,
+      completenessScore
+    };
+
+    return await this.complaintRepository.save(complaint);
+  }
+
   // Helper to check if a complaint is locked (immutable FIR)
   private checkLock(complaint: IComplaint): void {
     if (complaint.status === ComplaintStatus.FIR_REGISTERED || complaint.status === ComplaintStatus.CLOSED) {

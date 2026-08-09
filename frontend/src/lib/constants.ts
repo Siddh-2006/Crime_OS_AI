@@ -6,6 +6,8 @@ export const API_ROUTES = {
   AUTH: {
     REGISTER: '/auth/register',
     COMPLAINANT_PROFILE: '/auth/complainant-profile',
+    SEND_OTP: '/auth/send-verification-otp',
+    VERIFY_PRE_OTP: '/auth/verify-pre-otp',
     VERIFY_EMAIL: '/auth/verify-email',
     RESEND_OTP: '/auth/resend-otp',
     LOGIN: '/auth/login',

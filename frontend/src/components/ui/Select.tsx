@@ -17,9 +17,9 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
   return (
     <div className="flex flex-col gap-1">
       {label && (
-        <label htmlFor={id} className="text-sm font-medium text-neutral-700">
+        <label htmlFor={id} className="text-sm font-medium text-text-primary">
           {label}
-          {props.required && <span className="ml-1 text-danger-600">*</span>}
+          {props.required && <span className="ml-1 text-semantic-critical">*</span>}
         </label>
       )}
       <select
@@ -27,13 +27,13 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
         ref={ref}
         aria-invalid={!!error}
         className={[
-          'w-full rounded-md border px-3 py-2.5 text-sm text-neutral-900',
-          'transition-colors duration-150 bg-white',
-          'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-          'disabled:cursor-not-allowed disabled:bg-neutral-100',
+          'w-full rounded-md border px-3 py-2.5 text-sm text-text-primary',
+          'transition-colors duration-150 bg-[#0a0f1c]',
+          'focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary',
+          'disabled:cursor-not-allowed disabled:bg-neutral-800 dark:disabled:bg-neutral-800 disabled:text-text-secondary',
           error
-            ? 'border-danger-500 bg-danger-50'
-            : 'border-neutral-300 hover:border-neutral-400',
+            ? 'border-semantic-critical bg-red-500/10'
+            : 'border-neutral-800 hover:border-neutral-600',
           className,
         ].join(' ')}
         {...props}
@@ -50,7 +50,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
         ))}
       </select>
       {error && (
-        <p role="alert" className="text-xs text-danger-600">
+        <p role="alert" className="text-xs text-semantic-critical">
           {error}
         </p>
       )}

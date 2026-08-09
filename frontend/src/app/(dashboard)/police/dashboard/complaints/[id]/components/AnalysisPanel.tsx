@@ -59,6 +59,15 @@ interface Snapshot {
     corroboration: number;
     contradiction_penalty: number;
     final_score: number;
+    accused_identification_confidence?: {
+      identity_corroboration_count: number;
+      legal_element_coverage: number;
+      response_verification_completeness: number;
+      contradiction_alibi_check: boolean;
+      critical_checklist_progress: number;
+      is_fully_confirmed: boolean;
+      score: number;
+    };
   };
   /** Case-level legal sections returned by the AI as objects or strings */
   suggested_legal_sections?: Array<{ code: string; title: string; reason?: string } | string>;
@@ -383,14 +392,31 @@ export function AnalysisPanel({
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-6">
             {snapshot.confidence_breakdown && (
-              <div className="text-right">
-                <div className="text-2xl font-black text-primary-700">
-                  {(snapshot.confidence_breakdown.final_score * 100).toFixed(0)}
-                  <span className="text-sm text-neutral-400">%</span>
+              <div className="flex gap-6 border-r border-neutral-100 pr-6">
+                <div className="text-right">
+                  <div className="text-2xl font-black text-primary-700">
+                    {(snapshot.confidence_breakdown.final_score * 100).toFixed(0)}
+                    <span className="text-sm text-neutral-400">%</span>
+                  </div>
+                  <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">Health Score</p>
                 </div>
-                <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">Confidence</p>
+                {snapshot.confidence_breakdown.accused_identification_confidence && (
+                  <div className="text-right">
+                    {snapshot.confidence_breakdown.accused_identification_confidence.is_fully_confirmed ? (
+                      <div className="text-xl font-black text-green-600 flex items-center justify-end gap-1">
+                        <ShieldAlert className="w-5 h-5" /> Confirmed
+                      </div>
+                    ) : (
+                      <div className="text-2xl font-black text-amber-600">
+                        {(snapshot.confidence_breakdown.accused_identification_confidence.score * 100).toFixed(0)}
+                        <span className="text-sm text-neutral-400">%</span>
+                      </div>
+                    )}
+                    <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">ID Confidence</p>
+                  </div>
+                )}
               </div>
             )}
             <Button size="sm" variant="ghost" onClick={handleTriggerAnalysis} isLoading={actionLoading} leftIcon={<RefreshCw size={12} />}>
@@ -402,29 +428,29 @@ export function AnalysisPanel({
         <div className="space-y-4">
           {/* Narrative */}
           <div>
-            <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">Narrative Summary</p>
-            <div className="text-sm text-neutral-700 leading-relaxed bg-neutral-50 p-4 rounded-lg border border-neutral-200 prose prose-sm max-w-none">
+            <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Narrative Summary</p>
+            <div className="text-sm text-text-primary leading-relaxed bg-neutral-900/50 p-4 rounded-lg border border-neutral-800 prose prose-sm prose-invert max-w-none">
               <ReactMarkdown>{safeMarkdown(snapshot.narrative_summary)}</ReactMarkdown>
             </div>
           </div>
 
           {/* Legal Sections — case-level AI suggestions */}
           {snapshot.suggested_legal_sections && snapshot.suggested_legal_sections.length > 0 && (
-            <div className="border border-indigo-100 rounded-lg overflow-hidden shadow-sm">
-              <div className="bg-indigo-50 px-4 py-2 flex items-center gap-2 border-b border-indigo-100">
-                <Scale className="text-indigo-600 h-4 w-4" />
-                <h4 className="text-xs font-bold text-indigo-900 uppercase tracking-wider">
+            <div className="border border-indigo-800/50 rounded-lg overflow-hidden shadow-sm">
+              <div className="bg-indigo-900/30 px-4 py-2 flex items-center gap-2 border-b border-indigo-800/50">
+                <Scale className="text-indigo-400 h-4 w-4" />
+                <h4 className="text-xs font-bold text-indigo-300 uppercase tracking-wider">
                   Applicable Legal Sections
                 </h4>
               </div>
-              <ul className="p-4 bg-white space-y-2">
+              <ul className="p-4 bg-neutral-900/30 space-y-2">
                 {snapshot.suggested_legal_sections.map((section: any, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-sm text-neutral-700 bg-indigo-50/30 p-2 rounded border border-indigo-50">
+                  <li key={idx} className="flex items-start gap-2 text-sm text-text-secondary bg-indigo-900/20 p-2 rounded border border-indigo-800/30">
                     <span className="text-indigo-400 mt-0.5">•</span>
                     <div className="min-w-0">
-                      <p className="font-semibold text-neutral-900">{formatLegalSectionLabel(section)}</p>
+                      <p className="font-semibold text-text-primary">{formatLegalSectionLabel(section)}</p>
                       {section && typeof section === 'object' && section.reason ? (
-                        <p className="text-xs text-neutral-600 mt-1">{safeText(section.reason)}</p>
+                        <p className="text-xs text-neutral-400 mt-1">{safeText(section.reason)}</p>
                       ) : null}
                     </div>
                   </li>
@@ -434,31 +460,31 @@ export function AnalysisPanel({
           )}
 
           {snapshot.evidence_section_recommendations && snapshot.evidence_section_recommendations.length > 0 && (
-            <div className="mt-4 border border-indigo-100 rounded-lg overflow-hidden shadow-sm">
-              <div className="bg-indigo-50 px-4 py-2 flex items-center gap-2 border-b border-indigo-100">
-                <Scale className="text-indigo-600 h-4 w-4" />
-                <h4 className="text-xs font-bold text-indigo-900 uppercase tracking-wider">Evidence Section Advisor</h4>
+            <div className="mt-4 border border-indigo-900/50 rounded-lg overflow-hidden shadow-sm">
+              <div className="bg-indigo-900/30 px-4 py-2 flex items-center gap-2 border-b border-indigo-900/50">
+                <Scale className="text-indigo-400 h-4 w-4" />
+                <h4 className="text-xs font-bold text-indigo-300 uppercase tracking-wider">Evidence Section Advisor</h4>
               </div>
-              <div className="p-4 bg-white space-y-4">
+              <div className="p-4 bg-neutral-900/30 space-y-4">
                 {snapshot.evidence_section_recommendations.map((recommendation) => {
                   const evidenceMatch = evidence.find((item: any) => safeText(item.evidence_id) === safeText(recommendation.evidence_id) || safeText(item._id) === safeText(recommendation.evidence_id));
                   const attachedSections = Array.isArray((evidenceMatch as any)?.applicableSections) ? (evidenceMatch as any).applicableSections : [];
 
                   return (
-                    <div key={`${safeText(recommendation.evidence_id)}-${safeText(recommendation.evidence_title)}`} className="rounded-lg border border-neutral-200 p-3 bg-neutral-50/40">
+                    <div key={`${safeText(recommendation.evidence_id)}-${safeText(recommendation.evidence_title)}`} className="rounded-lg border border-neutral-800 p-3 bg-neutral-900/50">
                       <div className="flex items-start justify-between gap-3 mb-3">
                         <div>
-                          <p className="text-sm font-bold text-neutral-900">{safeText(recommendation.evidence_title || recommendation.evidence_id)}</p>
+                          <p className="text-sm font-bold text-text-primary">{safeText(recommendation.evidence_title || recommendation.evidence_id)}</p>
                           <p className="text-xs text-neutral-500 mt-0.5">{safeText(recommendation.evidence_id)}</p>
                         </div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-full px-2 py-0.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-300 bg-indigo-900/30 border border-indigo-700 rounded-full px-2 py-0.5">
                           AI Suggestion
                         </span>
                       </div>
 
                       {recommendation.applicable_sections && recommendation.applicable_sections.length > 0 && (
-                        <div className="space-y-2 mt-3 pt-3 border-t border-neutral-200">
-                          <p className="text-xs font-semibold text-neutral-600 mb-2">Suggested BSA Sections</p>
+                        <div className="space-y-2 mt-3 pt-3 border-t border-neutral-800">
+                          <p className="text-xs font-semibold text-neutral-400 mb-2">Suggested BSA Sections</p>
                           {recommendation.applicable_sections.map((section) => {
                             const dismissalKey = `${safeText(recommendation.evidence_id)}:${safeText(section.code)}`;
                             const sectionKey = `evidence-section:${safeText(recommendation.evidence_id)}:${safeText(section.code)}`;
@@ -467,16 +493,16 @@ export function AnalysisPanel({
                             const isAttached = attachedSections.some((item: any) => safeText(item.code) === safeText(section.code));
 
                             return (
-                              <div key={dismissalKey} className="flex items-start justify-between gap-3 rounded-md border border-indigo-100 bg-white p-3">
+                              <div key={dismissalKey} className="flex items-start justify-between gap-3 rounded-md border border-neutral-800 bg-neutral-900/50 p-3">
                                 <div className="min-w-0">
-                                  <p className="text-sm font-semibold text-neutral-800">
+                                  <p className="text-sm font-semibold text-text-primary">
                                     <strong>{safeText(section.code)}</strong>: {safeText(section.title)}
                                   </p>
                                   {safeText(section.reason) && <p className="text-xs text-neutral-500 mt-1">{safeText(section.reason)}</p>}
                                 </div>
                                 <div className="flex items-center gap-2 flex-shrink-0">
                                   {isAttached ? (
-                                    <span className="text-[10px] font-bold text-green-700 bg-green-50 px-2 py-1 rounded border border-green-200">
+                                    <span className="text-[10px] font-bold text-green-400 bg-green-900/30 px-2 py-1 rounded border border-green-700">
                                       Attached ✓
                                     </span>
                                   ) : (
@@ -516,12 +542,12 @@ export function AnalysisPanel({
           )}
 
           {allRecommendations.length > 0 && (
-            <div className="mt-4 border border-emerald-100 rounded-lg overflow-hidden shadow-sm">
-              <div className="bg-emerald-50 px-4 py-2 flex items-center gap-2 border-b border-emerald-100">
-                <Scale className="text-emerald-600 h-4 w-4" />
-                <h4 className="text-xs font-bold text-emerald-900 uppercase tracking-wider">Case Participant Advisor</h4>
+            <div className="mt-4 border border-emerald-800/50 rounded-lg overflow-hidden shadow-sm">
+              <div className="bg-emerald-900/30 px-4 py-2 flex items-center gap-2 border-b border-emerald-800/50">
+                <Scale className="text-emerald-400 h-4 w-4" />
+                <h4 className="text-xs font-bold text-emerald-300 uppercase tracking-wider">Case Participant Advisor</h4>
               </div>
-              <div className="p-4 bg-white space-y-4">
+              <div className="p-4 bg-neutral-900/30 space-y-4">
                 {allRecommendations.map((recommendation) => {
                   const participantKey = `participant:${safeText(recommendation.name)}`;
                   // Check if participant is already approved (in participants list with same name)
@@ -530,23 +556,23 @@ export function AnalysisPanel({
                   );
 
                   return (
-                    <div key={`${safeText(recommendation.name)}-${safeArray(recommendation.roles).join(',')}`} className="rounded-lg border border-neutral-200 p-3 bg-neutral-50/40">
+                    <div key={`${safeText(recommendation.name)}-${safeArray(recommendation.roles).join(',')}`} className="rounded-lg border border-neutral-800 p-3 bg-neutral-900/50">
                       <div className="flex items-start justify-between gap-3 mb-3">
                         <div>
-                          <p className="text-sm font-bold text-neutral-900">{safeText(recommendation.name)}</p>
+                          <p className="text-sm font-bold text-text-primary">{safeText(recommendation.name)}</p>
                           <p className="text-xs text-neutral-500 mt-0.5">
                             {safeArray(recommendation.roles).join(', ')} • {(Number(recommendation.confidence) * 100).toFixed(0)}% confidence
                           </p>
-                          <p className="text-xs text-neutral-600 mt-1">{safeText(recommendation.reason)}</p>
+                          <p className="text-xs text-neutral-400 mt-1">{safeText(recommendation.reason)}</p>
                           {recommendation.suggested_reasoning && (
-                            <div className="mt-2 bg-indigo-50 border border-indigo-100 rounded p-2">
-                              <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-wide mb-0.5">🧠 AI Observation</p>
-                              <p className="text-xs text-indigo-800">{safeText(recommendation.suggested_reasoning)}</p>
+                            <div className="mt-2 bg-indigo-900/30 border border-indigo-800/50 rounded p-2">
+                              <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wide mb-0.5">🧠 AI Observation</p>
+                              <p className="text-xs text-indigo-300">{safeText(recommendation.suggested_reasoning)}</p>
                             </div>
                           )}
                         </div>
                       <div className="flex flex-col gap-2 items-end">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300 bg-emerald-900/30 border border-emerald-700 rounded-full px-2 py-0.5">
                             AI Suggestion
                           </span>
                           {!isApproved && onApproveParticipant && (
@@ -592,8 +618,8 @@ export function AnalysisPanel({
                       </div>
 
                       {recommendation.recommended_sections && recommendation.recommended_sections.length > 0 && (
-                        <div className="space-y-2 mt-3 pt-3 border-t border-neutral-200">
-                          <p className="text-xs font-semibold text-neutral-600 mb-2">Suggested Sections</p>
+                        <div className="space-y-2 mt-3 pt-3 border-t border-neutral-800">
+                          <p className="text-xs font-semibold text-neutral-400 mb-2">Suggested Sections</p>
                           {recommendation.recommended_sections.map((section) => {
                             const dismissalKey = `${safeText(recommendation.name)}:${safeText(section.code)}`;
                             const sectionKey = `section:${safeText(recommendation.name)}:${safeText(section.code)}`;
@@ -609,16 +635,16 @@ export function AnalysisPanel({
                             const isSectionAccepted = appliedSections.some((s: any) => safeText(s.code) === safeText(section.code));
 
                             return (
-                              <div key={dismissalKey} className="flex items-start justify-between gap-3 rounded-md border border-emerald-100 bg-white p-3">
+                              <div key={dismissalKey} className="flex items-start justify-between gap-3 rounded-md border border-neutral-800 bg-neutral-900/50 p-3">
                                 <div className="min-w-0">
-                                  <p className="text-sm font-semibold text-neutral-800">
+                                  <p className="text-sm font-semibold text-text-primary">
                                     <strong>{safeText(section.code)}</strong>: {safeText(section.title)}
                                   </p>
                                   {safeText(section.reason) && <p className="text-xs text-neutral-500 mt-1">{safeText(section.reason)}</p>}
                                 </div>
                                 <div className="flex items-center gap-2 flex-shrink-0">
                                   {isSectionAccepted ? (
-                                    <span className="text-[10px] font-bold text-green-700 bg-green-50 px-2 py-1 rounded border border-green-200">
+                                    <span className="text-[10px] font-bold text-green-400 bg-green-900/30 px-2 py-1 rounded border border-green-700">
                                       Attached ✓
                                     </span>
                                   ) : (
@@ -659,28 +685,28 @@ export function AnalysisPanel({
 
           {/* Confidence Breakdown */}
           {snapshot.confidence_breakdown && (
-            <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100">
-              <p className="text-[10px] font-bold text-blue-800 uppercase tracking-wider mb-2">Investigation Score Breakdown</p>
+            <div className="bg-blue-900/20 p-3 rounded-lg border border-blue-800/50">
+              <p className="text-[10px] font-bold text-blue-400 uppercase tracking-wider mb-2">Investigation Score Breakdown</p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
                 {/* Evidence Coverage: what % of case facts are backed by evidence */}
                 <div className="space-y-1">
-                  <p className="text-neutral-500 font-medium">Evidence Coverage</p>
+                  <p className="text-neutral-400 font-medium">Evidence Coverage</p>
                   <div className="flex items-center gap-1.5">
-                    <div className="flex-1 bg-neutral-200 rounded-full h-1.5 overflow-hidden">
+                    <div className="flex-1 bg-neutral-800 rounded-full h-1.5 overflow-hidden">
                       <div className="h-1.5 rounded-full bg-blue-500" style={{ width: `${(snapshot.confidence_breakdown.evidence_coverage * 100).toFixed(0)}%` }} />
                     </div>
-                    <p className="font-bold text-neutral-800 w-8 text-right">{(snapshot.confidence_breakdown.evidence_coverage * 100).toFixed(0)}%</p>
+                    <p className="font-bold text-text-primary w-8 text-right">{(snapshot.confidence_breakdown.evidence_coverage * 100).toFixed(0)}%</p>
                   </div>
                   <p className="text-[10px] text-neutral-400 leading-tight">Facts documented by collected evidence</p>
                 </div>
                 {/* Investigation Completeness: how many standard IO steps are done */}
                 <div className="space-y-1">
-                  <p className="text-neutral-500 font-medium">Investigation Completeness</p>
+                  <p className="text-neutral-400 font-medium">Investigation Completeness</p>
                   <div className="flex items-center gap-1.5">
-                    <div className="flex-1 bg-neutral-200 rounded-full h-1.5 overflow-hidden">
+                    <div className="flex-1 bg-neutral-800 rounded-full h-1.5 overflow-hidden">
                       <div className="h-1.5 rounded-full bg-indigo-500" style={{ width: `${(snapshot.confidence_breakdown.checklist_progress * 100).toFixed(0)}%` }} />
                     </div>
-                    <p className="font-bold text-neutral-800 w-8 text-right">{(snapshot.confidence_breakdown.checklist_progress * 100).toFixed(0)}%</p>
+                    <p className="font-bold text-text-primary w-8 text-right">{(snapshot.confidence_breakdown.checklist_progress * 100).toFixed(0)}%</p>
                   </div>
                   <p className="text-[10px] text-neutral-400 leading-tight">Required investigation steps completed</p>
                 </div>
@@ -704,74 +730,40 @@ export function AnalysisPanel({
         </div>
       </Card>
 
-      {/* Suspects + Next Steps — 2-col grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Suspect Candidates */}
-        <Card className="flex flex-col">
-          <CardHeader title="Suspect Candidates" />
-          <div className="mt-3 space-y-3 overflow-y-auto max-h-[300px] pr-2">
-            {snapshot.suspect_candidates.length === 0 ? (
-              <p className="text-sm text-neutral-400 italic">No suspects identified yet.</p>
-            ) : (
-              snapshot.suspect_candidates.map((s, idx) => (
-                <div key={idx} className="p-3 border border-neutral-200 rounded-lg bg-white shadow-sm flex items-start gap-3">
-                  <UserCircle className="text-neutral-400 h-8 w-8 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-center mb-1">
-                      <p className="text-sm font-bold text-neutral-900 truncate">{s.entity}</p>
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded ${s.confidence > 0.7 ? 'bg-red-100 text-red-700' : s.confidence > 0.4 ? 'bg-yellow-100 text-yellow-700' : 'bg-neutral-100 text-neutral-600'}`}>
-                        {(s.confidence * 100).toFixed(0)}%
-                      </span>
-                    </div>
-                    {s.contradicting_evidence_ids.length > 0 && (
-                      <p className="text-[10px] text-red-600 font-semibold flex items-center gap-1 mt-1">
-                        <AlertTriangle size={12} /> Contradictory evidence found
-                      </p>
-                    )}
+      {/* Suspect Candidates — full width */}
+      <Card>
+        <CardHeader title="Suspect Candidates" />
+        <div className="mt-3 space-y-3 overflow-y-auto max-h-[300px] pr-2">
+          {snapshot.suspect_candidates.length === 0 ? (
+            <p className="text-sm text-neutral-400 italic">No suspects identified yet.</p>
+          ) : (
+            snapshot.suspect_candidates.map((s, idx) => (
+              <div key={idx} className="p-3 border border-neutral-800 rounded-lg bg-neutral-900/50 flex items-start gap-3">
+                <UserCircle className="text-neutral-500 h-8 w-8 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-center mb-1">
+                    <p className="text-sm font-bold text-text-primary truncate">{s.entity}</p>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded ${s.confidence > 0.7 ? 'bg-red-900/30 text-red-400 border border-red-800' : s.confidence > 0.4 ? 'bg-yellow-900/30 text-yellow-400 border border-yellow-800' : 'bg-neutral-800 text-neutral-400 border border-neutral-700'}`}>
+                      {(s.confidence * 100).toFixed(0)}%
+                    </span>
                   </div>
+                  {s.contradicting_evidence_ids.length > 0 && (
+                    <p className="text-[10px] text-red-400 font-semibold flex items-center gap-1 mt-1">
+                      <AlertTriangle size={12} /> Contradictory evidence found
+                    </p>
+                  )}
                 </div>
-              ))
-            )}
-          </div>
-        </Card>
-
-        {/* Ranked Next Steps */}
-        <Card className="flex flex-col">
-          <CardHeader title="Ranked Next Steps" />
-          <div className="mt-3 space-y-3 overflow-y-auto max-h-[300px] pr-2">
-            {snapshot.ranked_next_steps.length === 0 ? (
-              <p className="text-sm text-neutral-400 italic">No further steps suggested.</p>
-            ) : (
-              snapshot.ranked_next_steps.map((step, idx) => (
-                <div key={idx} className="p-3 border border-primary-100 rounded-lg bg-primary-50/30 flex gap-3 items-start">
-                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold">
-                    {idx + 1}
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-neutral-800">{safeText(step.step_id).replace(/_/g, ' ')}</p>
-                    <p className="text-xs text-neutral-600 mt-1">{safeText(step.reason)}</p>
-                    {step.evidence_needed.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {step.evidence_needed.map((ev: any) => (
-                          <span key={safeText(ev)} className="text-[9px] uppercase tracking-wider bg-white border border-neutral-200 text-neutral-500 px-1.5 py-0.5 rounded">
-                            Requires: {safeText(ev)}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </Card>
-      </div>
+              </div>
+            ))
+          )}
+        </div>
+      </Card>
 
       {/* Officer Correction Box */}
       <Card>
         <div className="flex items-center gap-2 mb-2">
-          <ShieldAlert className="text-orange-500 h-4 w-4" />
-          <h4 className="text-xs font-bold text-neutral-700 uppercase">Officer Override &amp; Correction</h4>
+          <ShieldAlert className="text-orange-400 h-4 w-4" />
+          <h4 className="text-xs font-bold text-neutral-400 uppercase">Officer Override &amp; Correction</h4>
         </div>
         <div className="flex gap-2">
           <input
@@ -779,7 +771,7 @@ export function AnalysisPanel({
             value={correctionMsg}
             onChange={(e) => setCorrectionMsg(e.target.value)}
             placeholder="Tell the AI to correct an assumption, ignore a suspect, or prioritise a step…"
-            className="flex-1 px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="flex-1 px-3 py-2 text-sm bg-neutral-900 border border-neutral-700 text-text-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary placeholder:text-neutral-600"
             onKeyDown={(e) => e.key === 'Enter' && handleCorrect()}
             disabled={actionLoading}
           />

@@ -5,6 +5,19 @@
 @tailwind utilities;
 
 @layer base {
+  :root, .dark {
+    --background: #0b1120;
+    --surface: #111827;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --brand-primary: #38bdf8;
+    --brand-accent: #38bdf8;
+    --semantic-critical: #ef4444;
+    --semantic-pending: #f59e0b;
+    --semantic-success: #22c55e;
+    --semantic-info: #3b82f6;
+  }
+
   *,
   *::before,
   *::after {
@@ -18,16 +31,16 @@
   }
 
   body {
-    @apply font-sans text-neutral-900 bg-neutral-50;
+    @apply font-sans bg-background text-text-primary transition-colors duration-200;
     min-height: 100vh;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-semibold leading-tight;
+    @apply font-semibold leading-tight text-text-primary;
   }
 
   a {
-    @apply text-primary-700 hover:text-primary-900 transition-colors;
+    @apply text-brand-primary hover:opacity-80 transition-opacity;
   }
 
   /* Remove number input arrows */

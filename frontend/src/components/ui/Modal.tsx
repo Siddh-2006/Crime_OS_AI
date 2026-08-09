@@ -64,20 +64,20 @@ export function Modal({
       {/* Panel */}
       <div
         className={[
-          'relative w-full rounded-xl bg-white shadow-elevated flex flex-col',
+          'relative w-full rounded-xl bg-surface shadow-elevated flex flex-col',
           'max-h-[90vh]',
           sizeClasses[size],
         ].join(' ')}
       >
         {/* Header — always visible */}
-        <div className="flex items-center justify-between border-b border-neutral-100 px-6 py-4 flex-shrink-0">
-          <h2 id="modal-title" className="text-lg font-semibold text-neutral-900">
+        <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 px-6 py-4 flex-shrink-0">
+          <h2 id="modal-title" className="text-lg font-semibold text-text-primary">
             {title}
           </h2>
           <button
             onClick={onClose}
             aria-label="Close modal"
-            className="rounded-md p-1 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
+            className="rounded-md p-1 text-text-secondary hover:bg-neutral-800 dark:hover:bg-neutral-800 hover:text-text-primary transition-colors"
           >
             <X size={18} />
           </button>
@@ -88,7 +88,7 @@ export function Modal({
 
         {/* Footer — always visible */}
         {footer && (
-          <div className="flex items-center justify-end gap-3 border-t border-neutral-100 px-6 py-4 flex-shrink-0">
+          <div className="flex items-center justify-end gap-3 border-t border-neutral-100 dark:border-neutral-800 px-6 py-4 flex-shrink-0">
             {footer}
           </div>
         )}

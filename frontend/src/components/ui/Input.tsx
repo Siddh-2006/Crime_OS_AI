@@ -21,9 +21,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   return (
     <div className="flex flex-col gap-1">
       {label && (
-        <label htmlFor={id} className="text-sm font-medium text-neutral-700">
+        <label htmlFor={id} className="text-sm font-medium text-text-primary">
           {label}
-          {props.required && <span className="ml-1 text-danger-600">*</span>}
+          {props.required && <span className="ml-1 text-semantic-critical">*</span>}
         </label>
       )}
       <div className="relative">
@@ -33,14 +33,14 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
           aria-invalid={!!error}
           aria-describedby={error ? `${id}_error` : helpText ? `${id}_help` : undefined}
           className={[
-            'w-full rounded-md border px-3 py-2.5 text-sm text-neutral-900',
-            'placeholder:text-neutral-400',
+            'w-full rounded-md border px-3 py-2.5 text-sm text-text-primary',
+            'placeholder:text-text-secondary',
             'transition-colors duration-150',
-            'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-            'disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-500',
+            'focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary',
+            'disabled:cursor-not-allowed disabled:bg-neutral-800 dark:disabled:bg-neutral-800 disabled:text-text-secondary',
             error
-              ? 'border-danger-500 bg-danger-50 focus:ring-danger-400'
-              : 'border-neutral-300 bg-white hover:border-neutral-400',
+              ? 'border-semantic-critical bg-red-500/10 focus:ring-semantic-critical'
+              : 'border-neutral-800 bg-[#0a0f1c] hover:border-neutral-600',
             rightElement ? 'pr-10' : '',
             className,
           ].join(' ')}
@@ -53,12 +53,12 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         )}
       </div>
       {error && (
-        <p id={`${id}_error`} role="alert" className="text-xs text-danger-600">
+        <p id={`${id}_error`} role="alert" className="text-xs text-semantic-critical">
           {error}
         </p>
       )}
       {!error && helpText && (
-        <p id={`${id}_help`} className="text-xs text-neutral-500">
+        <p id={`${id}_help`} className="text-xs text-text-secondary">
           {helpText}
         </p>
       )}

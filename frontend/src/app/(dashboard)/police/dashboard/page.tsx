@@ -19,13 +19,13 @@ interface StatCardProps {
 
 function StatCard({ label, value, icon, iconBg, iconColor }: StatCardProps): React.ReactElement {
   return (
-    <Card className="flex items-center gap-4">
-      <div className={['flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl', iconBg].join(' ')}>
+    <Card className="flex items-center gap-4 border border-neutral-800">
+      <div className={['flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl border border-neutral-800/50', iconBg].join(' ')}>
         <span className={iconColor}>{icon}</span>
       </div>
       <div>
-        <p className="text-2xl font-bold text-neutral-900">{value}</p>
-        <p className="text-sm text-neutral-500">{label}</p>
+        <p className="text-2xl font-bold text-text-primary">{value}</p>
+        <p className="text-sm text-text-secondary">{label}</p>
       </div>
     </Card>
   );
@@ -75,15 +75,15 @@ export default function PoliceDashboardPage(): React.ReactElement {
   if (loading) return <Loader fullPage />;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 relative z-10">
       {/* Greeting */}
       <div className="flex items-center gap-4">
-        <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary-800 text-white">
+        <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-brand-primary/10 border border-brand-primary/30 text-brand-primary">
           <ShieldCheck size={28} />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">{displayName}</h1>
-          <p className="text-sm text-neutral-500 capitalize">
+          <h1 className="text-2xl font-bold text-text-primary">{displayName}</h1>
+          <p className="text-sm text-text-secondary capitalize">
             {user?.role === 'SHO' ? 'Station House Officer' : 'Investigation Officer'}
           </p>
         </div>
@@ -95,35 +95,35 @@ export default function PoliceDashboardPage(): React.ReactElement {
           label="Total Cases"
           value={stats.total}
           icon={<FileText size={22} />}
-          iconBg="bg-primary-50"
-          iconColor="text-primary-700"
+          iconBg="bg-blue-500/10"
+          iconColor="text-blue-400"
         />
         <StatCard
           label="Active Investigations"
           value={stats.active}
           icon={<Clock size={22} />}
-          iconBg="bg-secondary-50"
-          iconColor="text-secondary-700"
+          iconBg="bg-amber-500/10"
+          iconColor="text-amber-400"
         />
         <StatCard
           label="Closed Cases (FIR)"
           value={stats.closed}
           icon={<ShieldCheck size={22} />}
-          iconBg="bg-success-50"
-          iconColor="text-success-600"
+          iconBg="bg-emerald-500/10"
+          iconColor="text-emerald-400"
         />
         <StatCard
           label="Citizens Assisted"
           value={stats.citizens}
           icon={<Users size={22} />}
-          iconBg="bg-danger-50"
-          iconColor="text-danger-600"
+          iconBg="bg-rose-500/10"
+          iconColor="text-rose-400"
         />
       </div>
 
       {/* Officer Info */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Card>
+        <Card className="border border-neutral-800">
           <CardHeader title="Officer Information" subtitle="Your service profile" />
           <div className="mt-4 space-y-3">
             {[
@@ -131,22 +131,22 @@ export default function PoliceDashboardPage(): React.ReactElement {
               { label: 'Email', value: user?.email ?? '—' },
               { label: 'Role', value: user?.role === 'SHO' ? 'Station House Officer' : 'Investigation Officer' },
             ].map(({ label, value }) => (
-              <div key={label} className="flex items-center justify-between border-b border-neutral-100 pb-3 last:border-0 last:pb-0">
-                <span className="text-sm text-neutral-500">{label}</span>
-                <span className="text-sm font-medium text-neutral-900">{value}</span>
+              <div key={label} className="flex items-center justify-between border-b border-neutral-800/50 pb-3 last:border-0 last:pb-0">
+                <span className="text-sm text-text-secondary">{label}</span>
+                <span className="text-sm font-medium text-text-primary">{value}</span>
               </div>
             ))}
           </div>
         </Card>
 
-        <Card>
+        <Card className="border border-neutral-800">
           <CardHeader title="Quick Actions" subtitle="Case management shortcuts" />
           <div className="mt-4 space-y-2">
             {[
               {
                 label: 'View Station Queue',
                 description: 'Browse all complaints filed to your station',
-                color: 'text-primary-700 bg-primary-50 hover:bg-primary-100',
+                color: 'text-brand-primary bg-brand-primary/10 hover:bg-brand-primary/20 border border-brand-primary/20',
                 action: () => router.push(APP_ROUTES.POLICE_COMPLAINTS),
               },
             ].map(({ label, description, color, action }) => (
@@ -156,7 +156,7 @@ export default function PoliceDashboardPage(): React.ReactElement {
                 className={['w-full text-left rounded-lg px-4 py-3 transition-colors', color].join(' ')}
               >
                 <p className="text-sm font-semibold">{label}</p>
-                <p className="text-xs opacity-75 mt-0.5">{description}</p>
+                <p className="text-xs opacity-75 mt-0.5 text-text-secondary">{description}</p>
               </button>
             ))}
           </div>
@@ -164,9 +164,9 @@ export default function PoliceDashboardPage(): React.ReactElement {
       </div>
 
       {/* Duty reminder */}
-      <div className="rounded-lg border border-primary-200 bg-primary-50 p-4">
-        <p className="text-sm font-semibold text-primary-800">🛡️ Duty Reminder</p>
-        <p className="mt-1 text-xs text-primary-700">
+      <div className="rounded-lg border border-brand-primary/20 bg-brand-primary/5 p-4">
+        <p className="text-sm font-semibold text-brand-primary">🛡️ Duty Reminder</p>
+        <p className="mt-1 text-xs text-text-secondary leading-relaxed">
           All case updates must be logged within 24 hours of any investigation activity.
           Ensure all sensitive case information is handled in accordance with Gujarat Police data policies.
         </p>
