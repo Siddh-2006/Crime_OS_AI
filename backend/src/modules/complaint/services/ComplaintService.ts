@@ -24,7 +24,6 @@ import env from '../../../config/env';
 import { spawn } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
-import { InvestigationOrchestrator } from '../../investigation/services/investigationOrchestrator';
 import { ChargeSheetGenerator } from '../../investigation/services/ChargeSheetGenerator';
 import { CaseParticipant } from '../../investigation/models/CaseParticipant.model';
 
@@ -327,49 +326,6 @@ export class ComplaintService {
         }
       }).catch((httpError) => {
         logger.warn(`[ComplaintIntelligence] Microservice HTTP endpoint at ${microserviceUrl} un-reachable (${httpError?.message}). Falling back to local process spawn.`);
-      // const pyProcess = spawn(pythonExec, [scriptPath, complaintNumber], {
-      //   cwd: scriptDir,
-      //   stdio: ['ignore', 'pipe', 'pipe'],
-      //   env: { ...process.env, PYTHONUTF8: '1', MONGODB_DB: 'crime_os' }
-      // });
-
-        /* ── Previous direct process spawn code (commented out as fallback) ──
-        const scriptPath = path.resolve(__dirname, '../../../../../services/complaint_intelligence/run_pipeline_from_atlas.py');
-        const venvPythonIntell = path.resolve(__dirname, '../../../../../services/complaint_intelligence/.venv/Scripts/python.exe');
-        const venvPythonRoot = path.resolve(__dirname, '../../../../../services/.venv/Scripts/python.exe');
-        const pythonExec = process.platform === 'win32'
-          ? (fs.existsSync(venvPythonIntell) ? venvPythonIntell : (fs.existsSync(venvPythonRoot) ? venvPythonRoot : 'python'))
-          : 'python';
-
-        const scriptDir = path.dirname(scriptPath);
-        const pyProcess = spawn(pythonExec, [scriptPath, complaintNumber], {
-          cwd: scriptDir,
-          stdio: ['ignore', 'pipe', 'pipe'],
-          env: { ...process.env, PYTHONUTF8: '1', MONGODB_DB: 'test' }
-        });
-
-        pyProcess.stdout?.on('data', (data: Buffer) => {
-          const lines = data.toString('utf-8').split(/\r?\n/);
-          for (const line of lines) {
-            if (line.trim()) logger.info(`[ComplaintIntelligence] ${line}`);
-          }
-        });
-
-        pyProcess.stderr?.on('data', (data: Buffer) => {
-          const lines = data.toString('utf-8').split(/\r?\n/);
-          for (const line of lines) {
-            if (line.trim()) logger.error(`[ComplaintIntelligence Error] ${line}`);
-          }
-        });
-
-        pyProcess.on('close', (code: number) => {
-          if (code === 0) {
-            logger.info(`[ComplaintIntelligence] Pipeline completed successfully for ${complaintNumber}`);
-          } else {
-            logger.error(`[ComplaintIntelligence] Pipeline exited with code ${code} for ${complaintNumber}`);
-          }
-        });
-        ─────────────── */
 
         // Fallback execution
         const scriptPath = path.resolve(__dirname, '../../../../../services/complaint_intelligence/run_pipeline_from_atlas.py');
@@ -383,7 +339,7 @@ export class ComplaintService {
         const pyProcess = spawn(pythonExec, [scriptPath, complaintNumber], {
           cwd: scriptDir,
           stdio: ['ignore', 'pipe', 'pipe'],
-          env: { ...process.env, PYTHONUTF8: '1', MONGODB_DB: 'test' }
+          env: { ...process.env, PYTHONUTF8: '1', MONGODB_DB: 'crime_os' }
         });
 
         pyProcess.on('close', (code: number) => {
@@ -394,6 +350,33 @@ export class ComplaintService {
           }
         });
       });
+
+      // Run AI analysis (legal agent + deep LLM) immediately in parallel upon complaint creation
+      (async () => {
+        try {
+          const { Complaint: ComplaintModel } = await import('../../complaint/models/Complaint.model');
+          const complaint = await ComplaintModel.findOne({ complaintNumber }).lean();
+          if (complaint) {
+            const { InvestigationOrchestrator } = await import('../../investigation/services/investigationOrchestrator');
+            await InvestigationOrchestrator.runAnalysis(complaint._id.toString(), 'auto_on_complaint_filed');
+            logger.info(`[ComplaintIntelligence] Parallel AI analysis completed for ${complaintNumber}`);
+          }
+        } catch (analysisErr: any) {
+          logger.error(`[ComplaintIntelligence] Parallel AI analysis failed for ${complaintNumber}`, { error: analysisErr?.message });
+        } finally {
+          // Safety net: if processingStatus is still PENDING (Python CI didn't run/finish),
+          // mark it PROCESSED so the FIR button never stays stuck.
+          try {
+            const { Complaint: ComplaintModel } = await import('../../complaint/models/Complaint.model');
+            await ComplaintModel.updateOne(
+              { complaintNumber, processingStatus: 'PENDING' },
+              { $set: { processingStatus: 'PROCESSED' } }
+            );
+          } catch {
+            // Non-critical — ignore
+          }
+        }
+      })();
     } catch (err: any) {
       logger.error(`[ComplaintIntelligence] Failed to trigger pipeline for ${complaintNumber}`, { error: err?.message });
     }
@@ -458,16 +441,20 @@ export class ComplaintService {
     // 1. Raw uploads without fl_attachment → add it
     // 2. Old uploads stored as /image/upload/ → rewrite to /raw/upload/fl_attachment/
     const complaintObj = complaint.toObject ? complaint.toObject() : complaint;
-    if (complaintObj.firPdfUrl) {
-      let url = complaintObj.firPdfUrl as string;
-      if (url.includes('/image/upload/') && url.endsWith('.pdf')) {
-        // Old upload — switch resource type and add fl_attachment
-        url = url.replace('/image/upload/', '/raw/upload/fl_attachment/');
-      } else if (url.includes('/raw/upload/') && !url.includes('fl_attachment')) {
-        url = url.replace('/raw/upload/', '/raw/upload/fl_attachment/');
+    const fixUrl = (u?: string) => {
+      if (!u) return u;
+      let url = u;
+      if (url.includes('/image/upload/')) {
+        url = url.replace('/image/upload/', '/raw/upload/');
       }
-      (complaintObj as any).firPdfUrl = url;
-    }
+      // Strip fl_attachment so browser iframe modal can preview PDF inline
+      url = url.replace('/raw/upload/fl_attachment/', '/raw/upload/');
+      return url;
+    };
+
+    if (complaintObj.firPdfUrl) (complaintObj as any).firPdfUrl = fixUrl(complaintObj.firPdfUrl);
+    if (complaintObj.firPdfUrlEn) (complaintObj as any).firPdfUrlEn = fixUrl(complaintObj.firPdfUrlEn);
+    if (complaintObj.firPdfUrlGujEn) (complaintObj as any).firPdfUrlGujEn = fixUrl(complaintObj.firPdfUrlGujEn);
 
     if (complaintObj.evidence && Array.isArray(complaintObj.evidence)) {
       // Fix PDF URLs
@@ -597,11 +584,6 @@ export class ComplaintService {
 
     const saved = await this.complaintRepository.save(complaint);
     logger.info('SHO assigned complaint to IO', { complaintId: saved._id, shoId: officerId, ioId: ioId });
-    
-    // Automatically trigger initial AI analysis in the background
-    InvestigationOrchestrator.runAnalysis(saved._id.toString()).catch(err => {
-      logger.error('Failed to trigger initial AI analysis during assignment:', err);
-    });
 
     return saved;
   }
@@ -764,7 +746,7 @@ export class ComplaintService {
   }
 
   // ─── Register FIR (SHO Only) ────────────────────────────────────────────────
-  async registerFir(id: string, officerId: string, ip: string): Promise<IComplaint> {
+  async registerFir(id: string, officerId: string, ip: string, firFormData?: any): Promise<IComplaint> {
     const officer = await Officer.findById(officerId);
     if (!officer || officer.role !== 'SHO') {
       throw new AuthorizationError('Only the Station House Officer (SHO) can register the FIR.');
@@ -880,10 +862,29 @@ export class ComplaintService {
       throw new ConflictError('Failed to register FIR. Please try again.');
     }
 
-    // Enqueue PDF generation job via BullMQ
-    await FirQueue.enqueueGenerateFirPdf(String(saved._id));
+    // Enqueue PDF generation job via BullMQ, passing the SHO-edited form data
+    await FirQueue.enqueueGenerateFirPdf(String(saved._id), firFormData);
+
+    // Cache firFormData on complaint document for future reference
+    if (firFormData) {
+      await Complaint.findByIdAndUpdate(String(saved._id), { firFormData });
+    }
 
     return saved;
+  }
+
+  // ─── Prepare FIR Data (AI-assisted, SHO Flow) ────────────────────────────────
+  async prepareFirData(id: string): Promise<any> {
+    const complaint = await this.complaintRepository.findById(id);
+    if (!complaint) throw new NotFoundError('Complaint');
+
+    const { prepareFirData } = await import('../../investigation/services/firService');
+    const data = await prepareFirData(id);
+
+    // Cache the prepared data on complaint for quick re-use
+    await Complaint.findByIdAndUpdate(id, { firFormData: data });
+
+    return data;
   }
 
   // ─── Get Investigation Officers for Station (SHO Flow) ──────────────────────

@@ -1,7 +1,7 @@
 import { Schema, model, Document, Types } from 'mongoose';
 import { ILegalSectionSuggestion, LegalSectionSuggestionSchema } from './LegalSection.schema';
 
-export type SnapshotTrigger = 'manual' | 'auto_on_response' | 'officer_override';
+export type SnapshotTrigger = 'manual' | 'auto_on_response' | 'officer_override' | 'auto_on_complaint_filed';
 
 export type ParticipantRecommendationRole = 'Victim' | 'Witness' | 'Suspect' | 'Accused' | 'Complainant';
 
@@ -62,11 +62,11 @@ export interface IAnalysisSnapshot extends Document {
 
 const RankedNextStepSchema = new Schema<IRankedNextStep>(
   {
-    step_id:         { type: String, required: true },
-    reason:          { type: String, required: true },
-    confidence:      { type: Number, required: true, min: 0, max: 1 },
+    step_id: { type: String, required: true },
+    reason: { type: String, required: true },
+    confidence: { type: Number, required: true, min: 0, max: 1 },
     evidence_needed: [{ type: String }],
-    target:          { type: String },
+    target: { type: String },
     department_entity_id: { type: String },
   },
   { _id: false },
@@ -74,11 +74,11 @@ const RankedNextStepSchema = new Schema<IRankedNextStep>(
 
 const SuspectCandidateSchema = new Schema<ISuspectCandidate>(
   {
-    entity:                      { type: String, required: true },
-    confidence:                  { type: Number, required: true, min: 0, max: 1 },
-    supporting_evidence_ids:     [{ type: String }],
-    contradicting_evidence_ids:  [{ type: String }],
-    recommended_sections:        { type: [LegalSectionSuggestionSchema], default: [] },
+    entity: { type: String, required: true },
+    confidence: { type: Number, required: true, min: 0, max: 1 },
+    supporting_evidence_ids: [{ type: String }],
+    contradicting_evidence_ids: [{ type: String }],
+    recommended_sections: { type: [LegalSectionSuggestionSchema], default: [] },
   },
   { _id: false },
 );
@@ -117,20 +117,20 @@ const EvidenceSectionRecommendationSchema = new Schema<IEvidenceSectionRecommend
 
 const AnalysisSnapshotSchema = new Schema<IAnalysisSnapshot>(
   {
-    case_id:              { type: Schema.Types.ObjectId, ref: 'Complaint', required: true, index: true },
-    snapshot_id:          { type: String, required: true, unique: true },
-    timestamp:            { type: Date, default: Date.now, required: true },
-    trigger:              { type: String, enum: ['manual', 'auto_on_response', 'officer_override'], required: true },
-    facts_used:           { type: Schema.Types.Mixed, required: true },
-    ranked_next_steps:    [RankedNextStepSchema],
-    suspect_candidates:   [SuspectCandidateSchema],
+    case_id: { type: Schema.Types.ObjectId, ref: 'Complaint', required: true, index: true },
+    snapshot_id: { type: String, required: true, unique: true },
+    timestamp: { type: Date, default: Date.now, required: true },
+    trigger: { type: String, enum: ['manual', 'auto_on_response', 'officer_override','auto_on_complaint_filed'], required: true },
+    facts_used: { type: Schema.Types.Mixed, required: true },
+    ranked_next_steps: [RankedNextStepSchema],
+    suspect_candidates: [SuspectCandidateSchema],
     participant_recommendations: { type: [ParticipantRecommendationSchema], default: [] },
     evidence_section_recommendations: { type: [EvidenceSectionRecommendationSchema], default: [] },
-    narrative_summary:    { type: String, required: true },
+    narrative_summary: { type: String, required: true },
     suggested_legal_sections: { type: [LegalSectionSuggestionSchema], default: [] },
     confidence_breakdown: { type: Schema.Types.Mixed, default: {} },
-    officer_authored:     { type: Boolean, default: false, required: true },
-    parent_snapshot_id:   { type: String },
+    officer_authored: { type: Boolean, default: false, required: true },
+    parent_snapshot_id: { type: String },
   },
   { versionKey: false },
 );

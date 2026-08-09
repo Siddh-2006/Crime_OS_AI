@@ -144,15 +144,17 @@ export class CaseDiaryService {
 
 CRITICAL INSTRUCTIONS FOR RECORD OF INVESTIGATION:
 1. Write a formal, highly detailed first-person police officer narrative of the investigation conducted on this case.
-2. Incorporate ALL case data provided in the context into the narrative — complainant details, verbatim complaint text, all accused/suspect mobile numbers & bank account numbers with exact amounts transferred, website URLs, WhatsApp groups, legal sections, FIR details, notices issued (BNSS-94, BNSS-95, BNSS-35(3), JMIS portal), responses received from banks/Google/telecom, places visited, and evidence analyzed.
-3. Format the narrative in the exact professional Gujarati-English style used by Gujarat Police IOs in official case diaries:
+2. Incorporate ALL case data provided in the context into the narrative — complainant details, verbatim complaint text (detailedDescription), all accused/suspect mobile numbers & bank account numbers with exact amounts transferred, website URLs, WhatsApp groups, legal sections, FIR details, notices issued (BNSS-94, BNSS-95, BNSS-35(3), JMIS portal), responses received from banks/Google/telecom, places visited, and evidence analyzed.
+3. Where tabular data is present (such as bank accounts list, transaction details with layer numbers, account holder names, IFSC codes, amounts transferred, or notices issued), format them as Markdown Tables (using standard '| Col 1 | Col 2 |' syntax) so they can be rendered into formatted tables in the PDF.
+4. Format the narrative in the exact professional Gujarati-English style used by Gujarat Police IOs in official case diaries:
    - Mention dates, times, officer names, station name, CR number, penal sections (IPC/BNS and IT Act).
-   - Include the complainant's detailed statement.
-   - Include numbered list of accused / WhatsApp group admins / bank account holders with bank name, account number, IFSC, and amounts.
+   - Include the complainant's detailed verbatim statement.
+   - Include structured markdown tables for bank accounts, layers, and notices wherever applicable.
    - Detail every investigation action step taken (e.g. notices issued to Nodal Officers, Google, Telecom for CDR/SDR/CAF, JMIS portal notices, MOB reports).
-4. 'record_of_investigation_guj_en' MUST be in Gujarati script mixed with English technical terms (bank names, account numbers, section numbers, URLs, phone numbers), exactly following official Gujarat Police case diary language.
-5. 'record_of_investigation_en' MUST be the exact English version/translation of the Gujarati-English narrative.
-6. Do NOT include any summary field, recommendations, or extra JSON keys. Return ONLY valid JSON with keys 'record_of_investigation_en' and 'record_of_investigation_guj_en'.`;
+   - IMPORTANT: When listing bullet points, investigative actions taken, or numbered next steps (1., 2., 3.), place EACH bullet item on its OWN NEW LINE with proper spacing. NEVER concatenate multiple numbered points (1., 2., 3.) or bullet dashes (-) inline on a single line.
+5. 'record_of_investigation_guj_en' MUST be in Gujarati script mixed with English technical terms (bank names, account numbers, section numbers, URLs, phone numbers), exactly following official Gujarat Police case diary language.
+6. 'record_of_investigation_en' MUST be the exact English version/translation of the Gujarati-English narrative.
+7. Do NOT include any summary field, recommendations, or extra JSON keys. Return ONLY valid JSON with keys 'record_of_investigation_en' and 'record_of_investigation_guj_en'.`;
 
     const userPrompt = `Draft language preference: ${draftLanguage}\nCase context:\n${JSON.stringify(context, null, 2)}`;
 

@@ -116,6 +116,12 @@ router.patch(
   validate(updateComplaintSchema),
   complaintController.updateComplaint,
 );
+router.post(
+  '/:id/fir/prepare',
+  authenticate,
+  authorize(Role.SHO),
+  complaintController.prepareFir,
+);
 router.patch(
   '/:id/register-fir',
   authenticate,

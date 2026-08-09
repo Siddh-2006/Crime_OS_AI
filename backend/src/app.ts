@@ -42,8 +42,8 @@ export function createApp(): Application {
   );
 
   // ─── Body parsing ─────────────────────────────────────────────────────────────
-  app.use(express.json({ limit: '10kb' }));
-  app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
   // ─── Cookie parsing ───────────────────────────────────────────────────────────
   app.use(cookieParser(env.COOKIE_SECRET));

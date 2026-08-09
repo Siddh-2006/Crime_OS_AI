@@ -659,9 +659,6 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
                       {diaryDraftLoading ? 'Saving…' : 'Finalize'}
                     </button>
                   </div>
-                  <p className="mt-3 text-sm text-slate-600">{diaryDraft.record_of_investigation_guj_en || diaryDraft.record_of_investigation_en || diaryDraft.record_of_investigation || diaryDraft.content?.narrative || 'No record available.'}</p>
-                  <p className="mt-3 text-sm text-slate-600 font-mono bg-white p-3 rounded-lg border border-slate-200 max-h-48 overflow-y-auto whitespace-pre-wrap">{diaryForm.recordOfInvestigationGujEn || diaryForm.recordOfInvestigationEn || diaryDraft.record_of_investigation || 'No record available.'}</p>
-
                   <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>

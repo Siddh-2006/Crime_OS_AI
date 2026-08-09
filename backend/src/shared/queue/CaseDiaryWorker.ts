@@ -24,6 +24,22 @@ function getFontPath(): string | null {
   return null;
 }
 
+/**
+ * Sanitizes Gujarati text to avoid fontkit GPOS null-anchor crash.
+ * fontkit's compiled GPOSProcessor crashes on certain Gujarati vowel+Anusvara
+ * sequences (e.g. \u0A85\u0A82 'અં') because the GPOS table has null anchors.
+ */
+function sanitizeGujaratiText(str: string): string {
+  if (!str) return '';
+  return str
+    .replace(/\u0A85\u0A82/g, 'અન\u0ACD')  // અં → અન્
+    .replace(/\u0A86\u0A82/g, 'આન\u0ACD')  // આં → આન્
+    .replace(/\u0A87\u0A82/g, 'ઇન\u0ACD')  // ઇં → ઇન્
+    .replace(/\u0A88\u0A82/g, 'ઈન\u0ACD')  // ઈં → ઈન્
+    .replace(/\u0A89\u0A82/g, 'ઉન\u0ACD')  // ઉં → ઉન્
+    .replace(/\u0A8A\u0A82/g, 'ઊન\u0ACD'); // ઊં → ઊન્
+}
+
 interface CaseDiaryField {
   numEn: string;
   numGuj: string;
@@ -149,6 +165,9 @@ async function generateSinglePdfBuffer(diary: any, complaint: any, participants:
       doc.registerFont('GujaratiFont', gujFontPath);
     }
 
+    // Sanitize all text to prevent fontkit GPOS null-anchor crash on Gujarati
+    const clean = (t: string): string => gujFontPath ? sanitizeGujaratiText(t) : t;
+
     const setFontBold = (size: number) => {
       if (gujFontPath) doc.font('GujaratiFont').fontSize(size);
       else doc.font('Helvetica-Bold').fontSize(size);
@@ -161,10 +180,10 @@ async function generateSinglePdfBuffer(diary: any, complaint: any, participants:
 
     // Header
     setFontBold(16);
-    doc.text('CASE DIARY', { align: 'center' });
+    doc.text(clean('CASE DIARY'), { align: 'center' });
     setFontBold(12);
     const dateStr = diary.diary_date ? new Date(diary.diary_date).toLocaleDateString('en-IN') : '';
-    doc.text(`No: ${diary.diary_number} Date:${dateStr}`, { align: 'center' });
+    doc.text(clean(`No: ${diary.diary_number} Date:${dateStr}`), { align: 'center' });
     doc.moveDown(0.5);
 
     // Build 16 fields table
@@ -181,10 +200,11 @@ async function generateSinglePdfBuffer(diary: any, complaint: any, participants:
 
         // Draw left label
         setFontRegular(8.5);
-        const labelText = `${field.numEn}    ${field.labelEn}\n${field.numGuj}    ${field.labelGuj}`;
+        const labelText = clean(`${field.numEn}    ${field.labelEn}\n${field.numGuj}    ${field.labelGuj}`);
+        const valueText = clean(field.value);
         const labelHeight = doc.heightOfString(labelText, { width: leftColWidth - 10, align: 'left' });
 
-        const valueHeight = doc.heightOfString(field.value, { width: rightColWidth - 10, align: 'left' });
+        const valueHeight = doc.heightOfString(valueText, { width: rightColWidth - 10, align: 'left' });
         const rowHeight = Math.max(labelHeight, valueHeight, 18) + 8;
 
         // Check page boundary
@@ -202,7 +222,7 @@ async function generateSinglePdfBuffer(diary: any, complaint: any, participants:
 
         // Print right column
         setFontRegular(8.5);
-        doc.text(field.value, startX + leftColWidth + 5, cellPaddingTop, { width: rightColWidth - 10, align: 'left' });
+        doc.text(valueText, startX + leftColWidth + 5, cellPaddingTop, { width: rightColWidth - 10, align: 'left' });
 
         // Draw horizontal line
         doc.lineWidth(0.5).moveTo(startX, actualRowTop + rowHeight).lineTo(startX + tableWidth, actualRowTop + rowHeight).stroke();
@@ -218,27 +238,146 @@ async function generateSinglePdfBuffer(diary: any, complaint: any, participants:
 
       doc.y = currentY + 15;
 
-      // Section Title: Record of Investigation
-      if (doc.y > 720) doc.addPage();
-
-      setFontBold(12);
-      doc.text('RECORD OF INVESTIGATION', { align: 'left' });
+      doc.x = 40;
+      setFontBold(13);
+      doc.text(clean('RECORD OF INVESTIGATION'), 40, doc.y, { width: 515, align: 'center' });
       setFontBold(11);
-      doc.text('તપાસનું રેકર્ડ', { align: 'left' });
-      doc.moveDown(0.4);
+      doc.text(clean('તપાસનું રેકર્ડ'), 40, doc.y, { width: 515, align: 'center' });
+      doc.moveDown(0.6);
 
-      // Render Record Narrative
-      setFontRegular(9.5);
-      const paragraphs = narrativeText.split(/\n{2,}/).filter(Boolean);
-      if (paragraphs.length === 0) {
-        doc.text(narrativeText, { align: 'justify', lineGap: 2 });
-      } else {
-        paragraphs.forEach((p) => {
-          if (doc.y > 750) doc.addPage();
-          doc.text(p.trim(), { align: 'justify', lineGap: 2 });
-          doc.moveDown(0.3);
+      // Render Record Narrative (Paragraph 2-finger indent + Markdown table support)
+      const renderNarrativeWithTables = (text: string) => {
+        const lines = text.split('\n');
+        let currentParagraphLines: string[] = [];
+        let currentTableLines: string[] = [];
+        let inTable = false;
+
+        const flushParagraph = () => {
+          if (currentParagraphLines.length === 0) return;
+          const rawText = currentParagraphLines.join(' ').trim();
+          if (rawText) {
+            // Auto-split inline bullet points (e.g. " - On ..." or "Ranked next steps initiated: 1. ... 2. ... 3. ...")
+            const formattedText = rawText
+              .replace(/(?<=[.:;]|\b)\s+-\s+/g, '\n- ')
+              .replace(/(?<=[.:;]|\b)\s+(\d+|\u0AAE-\u0AEF+)\.\s+/g, '\n$1. ');
+
+            const subLines = formattedText.split('\n').map((s) => s.trim()).filter(Boolean);
+
+            subLines.forEach((subLine) => {
+              if (doc.y > 750) doc.addPage();
+              setFontRegular(9.5);
+
+              const isListItem = /^(-|•|\*|\d+\.|\u0AAE-\u0AEF+\.)\s+/.test(subLine);
+
+              if (isListItem) {
+                doc.text(clean(subLine), 40, doc.y, {
+                  width: 515,
+                  align: 'left',
+                  lineGap: 2.5,
+                  indent: 18,
+                });
+                doc.moveDown(0.25);
+              } else {
+                doc.text(clean(subLine), 40, doc.y, {
+                  width: 515,
+                  align: 'justify',
+                  lineGap: 2.5,
+                  indent: 24,
+                });
+                doc.moveDown(0.4);
+              }
+            });
+          }
+          currentParagraphLines = [];
+        };
+
+        const flushTable = () => {
+          if (currentTableLines.length === 0) return;
+          const rawRows = currentTableLines
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .map((line) => line.split('|').map((cell) => cell.trim()).filter((_, idx, arr) => idx > 0 && idx < arr.length - 1));
+
+          // Filter out markdown delimiter rows (e.g. |---|---|)
+          const tableRows = rawRows.filter((row) => !row.every((cell) => /^:?-+:?$/.test(cell)));
+
+          if (tableRows.length > 0) {
+            if (doc.y > 720) doc.addPage();
+            doc.moveDown(0.3);
+            const startX = 40;
+            const tableWidth = 515;
+            const colCount = Math.max(...tableRows.map((r) => r.length));
+            const colWidth = tableWidth / Math.max(colCount, 1);
+
+            let tableY = doc.y;
+
+            tableRows.forEach((row, rowIndex) => {
+              const isHeader = rowIndex === 0;
+
+              // Calculate max cell height
+              let maxHeight = 16;
+              row.forEach((cellText) => {
+                if (isHeader) setFontBold(8.5);
+                else setFontRegular(8.5);
+                const h = doc.heightOfString(cellText, { width: colWidth - 8 }) + 6;
+                if (h > maxHeight) maxHeight = h;
+              });
+
+              if (tableY + maxHeight > 780) {
+                doc.addPage();
+                tableY = 40;
+              }
+
+              // Background header fill
+              if (isHeader) {
+                doc.rect(startX, tableY, tableWidth, maxHeight).fill('#f1f5f9');
+                doc.fillColor('#000000');
+              }
+
+              // Draw cells
+              row.forEach((cellText, colIndex) => {
+                const cellX = startX + colIndex * colWidth;
+                doc.rect(cellX, tableY, colWidth, maxHeight).stroke();
+                if (isHeader) setFontBold(8.5);
+                else setFontRegular(8.5);
+                doc.text(clean(cellText), cellX + 4, tableY + 3, { width: colWidth - 8, align: 'left' });
+              });
+
+              tableY += maxHeight;
+            });
+
+            doc.y = tableY + 8;
+            doc.x = 40;
+          }
+          currentTableLines = [];
+        };
+
+        lines.forEach((line) => {
+          const trimmed = line.trim();
+          const isTableLine = trimmed.startsWith('|') && trimmed.endsWith('|') && trimmed.length > 2;
+
+          if (isTableLine) {
+            flushParagraph();
+            inTable = true;
+            currentTableLines.push(line);
+          } else {
+            if (inTable) {
+              flushTable();
+              inTable = false;
+            }
+            if (trimmed === '') {
+              flushParagraph();
+            } else {
+              currentParagraphLines.push(trimmed);
+            }
+          }
         });
-      }
+
+        flushParagraph();
+        if (inTable) flushTable();
+      };
+
+      renderNarrativeWithTables(narrativeText);
 
       doc.moveDown(1.5);
       if (doc.y > 750) doc.addPage();
@@ -248,8 +387,8 @@ async function generateSinglePdfBuffer(diary: any, complaint: any, participants:
       const officerName = diary.official_officer_id || (complaint?.assignedIO?.officerName || 'એન.આર.પટેલ, પોલીસ ઇન્સ્પેક્ટર');
       const stationName = diary.structured_data?.police_station || (complaint?.policeStation?.name ? `${complaint.policeStation.name} પોલીસ સ્ટેશન` : 'સાયબર ક્રાઇમ પોલીસ સ્ટેશન, સુરત શહેર');
 
-      doc.text(officerName, { align: 'right' });
-      doc.text(stationName, { align: 'right' });
+      doc.text(clean(officerName), 40, doc.y, { width: 515, align: 'right' });
+      doc.text(clean(stationName), 40, doc.y, { width: 515, align: 'right' });
 
       doc.end();
     }).catch(reject);

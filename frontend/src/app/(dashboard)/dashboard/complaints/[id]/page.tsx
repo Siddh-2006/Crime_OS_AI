@@ -64,6 +64,8 @@ interface Complaint {
   firNumber?: string;
   firRegisteredAt?: string;
   firPdfUrl?: string;
+  firPdfUrlEn?: string;
+  firPdfUrlGujEn?: string;
   rejectionReason?: string;
   createdAt: string;
 }
@@ -184,18 +186,32 @@ export default function CitizenComplaintDetailPage(): React.ReactElement {
           </p>
         </div>
 
-        {complaint.status === 'FIR_REGISTERED' && complaint.firPdfUrl && (
-          <div className="flex gap-2">
-            <a href={complaint.firPdfUrl} target="_blank" rel="noopener noreferrer">
-              <Button leftIcon={<ExternalLink size={15} />} variant="ghost" size="sm">
-                View Digital FIR
-              </Button>
-            </a>
-            <a href={complaint.firPdfUrl} download>
-              <Button leftIcon={<Download size={15} />} size="sm">
-                Download PDF
-              </Button>
-            </a>
+        {(complaint.status === 'FIR_REGISTERED' || complaint.status === 'CLOSED') && (complaint.firPdfUrlEn || complaint.firPdfUrlGujEn || complaint.firPdfUrl) && (
+          <div className="flex flex-wrap gap-2">
+            {(complaint.firPdfUrlEn || complaint.firPdfUrl) && (
+              <a
+                href={(complaint.firPdfUrlEn || complaint.firPdfUrl || '').replace('/raw/upload/', '/raw/upload/fl_attachment/')}
+                target="_blank"
+                rel="noopener noreferrer"
+                download
+              >
+                <Button leftIcon={<Download size={15} />} size="sm">
+                  FIR PDF (English)
+                </Button>
+              </a>
+            )}
+            {complaint.firPdfUrlGujEn && (
+              <a
+                href={(complaint.firPdfUrlGujEn || '').replace('/raw/upload/', '/raw/upload/fl_attachment/')}
+                target="_blank"
+                rel="noopener noreferrer"
+                download
+              >
+                <Button leftIcon={<Download size={15} />} variant="secondary" size="sm">
+                  FIR PDF (ગુજરાતી)
+                </Button>
+              </a>
+            )}
           </div>
         )}
       </div>

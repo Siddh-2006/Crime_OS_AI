@@ -38,6 +38,7 @@ import {
   CheckCircle2,
   RefreshCw,
   Bot,
+  Eye,
 } from 'lucide-react';
 
 interface HistoryEntry {
@@ -133,6 +134,9 @@ interface Complaint {
   firNumber?: string;
   firRegisteredAt?: string;
   firPdfUrl?: string;
+  firPdfUrlEn?: string;
+  firPdfUrlGujEn?: string;
+  firFormData?: Record<string, any>;
   rejectionReason?: string;
   createdAt: string;
   currentVersionNumber: number;
@@ -187,8 +191,17 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
   // FIR Registration confirmation modal
   const [firConfirmModalOpen, setFirConfirmModalOpen] = useState(false);
 
-  // FIR Preview modal
+  // FIR Panel state
+  const [firPanelOpen, setFirPanelOpen] = useState(false);
+  const [firFormData, setFirFormData] = useState<Record<string, any> | null>(null);
+  const [firPrepareLoading, setFirPrepareLoading] = useState(false);
+  const [firPreviewLang, setFirPreviewLang] = useState<'en' | 'guj'>('guj');
+  const [firPreviewOpen, setFirPreviewOpen] = useState(false);
+
+  // FIR Preview modal (existing after registration)
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [selectedPdfUrl, setSelectedPdfUrl] = useState<string | null>(null);
+  const [selectedPdfTitle, setSelectedPdfTitle] = useState<string>('FIR PDF Preview');
 
   // IO Edit Fields
   const [editMode, setEditMode] = useState(false);
@@ -421,12 +434,34 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
     }
   };
 
+  const handlePrepareFir = async () => {
+    if (complaint?.processingStatus?.toUpperCase() === 'PENDING') {
+      alert('AI Pipeline is still processing case details in the background. Please wait until processing finishes.');
+      await fetchComplaint();
+      return;
+    }
+    const id = params.id as string;
+    setFirPrepareLoading(true);
+    try {
+      const res = await apiClient.post(`/complaints/${id}/fir/prepare`);
+      const data = res.data?.data ?? {};
+      // Pre-populate from complaint.firFormData if already cached
+      setFirFormData(data);
+      setFirPanelOpen(true);
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Failed to prepare FIR data.');
+    } finally {
+      setFirPrepareLoading(false);
+    }
+  };
+
   const handleRegisterFir = async () => {
     setActionLoading(true);
     try {
       const id = params.id as string;
-      await apiClient.patch(API_ROUTES.COMPLAINTS.REGISTER_FIR(id));
+      await apiClient.patch(API_ROUTES.COMPLAINTS.REGISTER_FIR(id), { firFormData });
       setFirConfirmModalOpen(false);
+      setFirPanelOpen(false);
       await fetchComplaint();
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to register FIR.');
@@ -530,22 +565,26 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
           <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
             {canRegisterFir && (
               <>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  leftIcon={<FileText size={15} />}
-                  onClick={() => setPreviewModalOpen(true)}
-                >
-                  Preview FIR
-                </Button>
-                <Button
-                  size="sm"
-                  leftIcon={<FileSignature size={15} />}
-                  onClick={() => setFirConfirmModalOpen(true)}
-                  disabled={actionLoading}
-                >
-                  Register FIR
-                </Button>
+                {complaint.processingStatus?.toUpperCase() === 'PENDING' ? (
+                  <Button
+                    size="sm"
+                    disabled
+                    leftIcon={<RefreshCw className="animate-spin text-amber-600" size={15} />}
+                    className="bg-amber-50 text-amber-800 border border-amber-200 cursor-not-allowed opacity-90 shadow-none"
+                  >
+                    AI Pipeline Processing...
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    leftIcon={<FileSignature size={15} />}
+                    onClick={handlePrepareFir}
+                    isLoading={firPrepareLoading}
+                    disabled={actionLoading || firPrepareLoading}
+                  >
+                    {firFormData ? 'Edit & Register FIR' : 'Prepare FIR'}
+                  </Button>
+                )}
                 <Button
                   variant="danger"
                   size="sm"
@@ -571,13 +610,37 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
           </div>
         )}
 
-        {/* Download FIR + Close Case button if registered */}
-        {(isLocked || isClosed) && complaint.firPdfUrl && (
-          <a href={complaint.firPdfUrl} target="_blank" rel="noopener noreferrer" className="self-end md:self-center">
-            <Button leftIcon={<FileDown size={16} />}>
-              Download Registered FIR
-            </Button>
-          </a>
+        {/* Action button in header if registered */}
+        {(isLocked || isClosed) && (complaint.firPdfUrlEn || complaint.firPdfUrlGujEn || complaint.firPdfUrl) && (
+          <div className="flex flex-wrap gap-2 self-end md:self-center">
+            {(complaint.firPdfUrlEn || complaint.firPdfUrl) && (
+              <Button
+                leftIcon={<Eye size={15} />}
+                size="sm"
+                onClick={() => {
+                  setSelectedPdfUrl(complaint.firPdfUrlEn || complaint.firPdfUrl || null);
+                  setSelectedPdfTitle(`FIR PDF (English) — ${complaint.firNumber || complaint.complaintNumber}`);
+                  setPreviewModalOpen(true);
+                }}
+              >
+                Preview FIR (English)
+              </Button>
+            )}
+            {complaint.firPdfUrlGujEn && (
+              <Button
+                leftIcon={<Eye size={15} />}
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  setSelectedPdfUrl(complaint.firPdfUrlGujEn || null);
+                  setSelectedPdfTitle(`FIR PDF (ગુજરાતી) — ${complaint.firNumber || complaint.complaintNumber}`);
+                  setPreviewModalOpen(true);
+                }}
+              >
+                Preview FIR (ગુજ.)
+              </Button>
+            )}
+          </div>
         )}
         {complaint.status === 'FIR_REGISTERED' && (isAssignedIO || isSHO) && (
           <Button
@@ -600,6 +663,110 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
           </Button>
         )}
       </div>
+
+      {/* ── REGISTERED FIR PDF DOCUMENTS BANNER (VISIBLE TO BOTH SHO AND IO) ── */}
+      {(isLocked || isClosed || complaint.firPdfUrl || complaint.firPdfUrlEn || complaint.firPdfUrlGujEn) && (
+        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 text-white rounded-2xl p-5 shadow-lg border border-indigo-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/30 shrink-0">
+              <ShieldCheck className="h-7 w-7" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">Official Registered FIR</span>
+                <span className="px-2 py-0.5 text-[10px] font-extrabold rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  {complaint.firNumber || complaint.complaintNumber}
+                </span>
+              </div>
+              <h2 className="text-base font-bold text-white mt-0.5">
+                First Information Report (BNS Section 173)
+              </h2>
+              <p className="text-xs text-slate-300 mt-1">
+                FIR Registered on {complaint.firRegisteredAt ? new Date(complaint.firRegisteredAt).toLocaleString('en-IN') : new Date(complaint.createdAt).toLocaleDateString('en-IN')}. Cloudinary PDFs available in English & Gujarati.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end">
+            {(complaint.firPdfUrlEn || complaint.firPdfUrl) ? (
+              <>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  leftIcon={<Eye size={15} />}
+                  onClick={() => {
+                    setSelectedPdfUrl(complaint.firPdfUrlEn || complaint.firPdfUrl || null);
+                    setSelectedPdfTitle(`FIR PDF (English) — ${complaint.firNumber || complaint.complaintNumber}`);
+                    setPreviewModalOpen(true);
+                  }}
+                  className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs"
+                >
+                  Preview FIR (EN)
+                </Button>
+                <a
+                  href={(complaint.firPdfUrlEn || complaint.firPdfUrl || '').replace('/raw/upload/', '/raw/upload/fl_attachment/')}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download
+                >
+                  <Button
+                    size="sm"
+                    leftIcon={<FileDown size={15} />}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs border-none shadow-md"
+                  >
+                    Download (EN)
+                  </Button>
+                </a>
+              </>
+            ) : null}
+
+            {complaint.firPdfUrlGujEn ? (
+              <>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  leftIcon={<Eye size={15} />}
+                  onClick={() => {
+                    setSelectedPdfUrl(complaint.firPdfUrlGujEn || null);
+                    setSelectedPdfTitle(`FIR PDF (ગુજરાતી-English) — ${complaint.firNumber || complaint.complaintNumber}`);
+                    setPreviewModalOpen(true);
+                  }}
+                  className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border-amber-400/30 text-xs"
+                >
+                  Preview FIR (ગુજ.)
+                </Button>
+                <a
+                  href={(complaint.firPdfUrlGujEn || '').replace('/raw/upload/', '/raw/upload/fl_attachment/')}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download
+                >
+                  <Button
+                    size="sm"
+                    leftIcon={<FileDown size={15} />}
+                    className="bg-amber-600 hover:bg-amber-500 text-white text-xs border-none shadow-md"
+                  >
+                    Download (ગુજ.)
+                  </Button>
+                </a>
+              </>
+            ) : null}
+
+            {!(complaint.firPdfUrlEn || complaint.firPdfUrlGujEn || complaint.firPdfUrl) && (
+              <div className="flex items-center gap-2 text-xs text-amber-300 bg-amber-500/10 px-3 py-2 rounded-lg border border-amber-500/20">
+                <RefreshCw className="animate-spin h-3.5 w-3.5 text-amber-400" />
+                <span>Generating PDF & Uploading...</span>
+                <button
+                  onClick={fetchComplaint}
+                  className="ml-2 underline hover:text-white font-bold"
+                >
+                  Refresh
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {(!isAssignedIO || complaint.status === 'SUBMITTED') ? (
         <div>
@@ -1571,6 +1738,394 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
           onClose={() => setChargeSheetModalOpen(false)}
           caseId={complaint._id}
         />
+      )}
+
+      {/* ── IN-APP FIR PDF PREVIEW MODAL ── */}
+      {previewModalOpen && selectedPdfUrl && (
+        <Modal
+          isOpen={previewModalOpen}
+          onClose={() => {
+            setPreviewModalOpen(false);
+            setSelectedPdfUrl(null);
+          }}
+          title={selectedPdfTitle}
+          size="lg"
+          footer={
+            <div className="flex justify-between items-center w-full">
+              <a href={selectedPdfUrl} target="_blank" rel="noopener noreferrer" download>
+                <Button leftIcon={<FileDown size={16} />} size="sm">
+                  Download PDF File
+                </Button>
+              </a>
+              <Button variant="secondary" size="sm" onClick={() => setPreviewModalOpen(false)}>
+                Close Preview
+              </Button>
+            </div>
+          }
+        >
+          <div className="w-full h-[75vh] rounded-xl overflow-hidden border border-neutral-200 bg-neutral-100 relative">
+            <iframe
+              src={`${selectedPdfUrl}#toolbar=1&navpanes=0`}
+              className="w-full h-full border-none"
+              title="FIR PDF Preview"
+            />
+          </div>
+        </Modal>
+      )}
+
+      {/* OFFICIAL EDITABLE FIR FORM MODAL */}
+      {firPanelOpen && firFormData && (
+        <Modal
+          isOpen={firPanelOpen}
+          onClose={() => setFirPanelOpen(false)}
+          title="Official First Information Report (15 Standard Fields)"
+          size="lg"
+          footer={
+            <div className="flex justify-end gap-3">
+              <Button variant="secondary" onClick={() => setFirPanelOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                leftIcon={<FileSignature size={16} />}
+                onClick={handleRegisterFir}
+                isLoading={actionLoading}
+              >
+                Register FIR
+              </Button>
+            </div>
+          }
+        >
+          <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2 text-xs">
+            <p className="text-neutral-500">
+              Review and edit all fields below. Once registered, the complaint will be officially locked and immutable, and dual-language PDFs (English & Gujarati-English) will be generated.
+            </p>
+
+            {/* Header / Meta */}
+            <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 space-y-3">
+              <h4 className="font-bold text-neutral-800 text-sm">1. Station & Registration Meta</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div>
+                  <label className="font-semibold text-neutral-600 block mb-1">District</label>
+                  <input
+                    type="text"
+                    className="w-full rounded border border-neutral-300 p-2 text-xs"
+                    value={firFormData.district || ''}
+                    onChange={(e) => setFirFormData({ ...firFormData, district: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="font-semibold text-neutral-600 block mb-1">Police Station</label>
+                  <input
+                    type="text"
+                    className="w-full rounded border border-neutral-300 p-2 text-xs"
+                    value={firFormData.policeStation || ''}
+                    onChange={(e) => setFirFormData({ ...firFormData, policeStation: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="font-semibold text-neutral-600 block mb-1">Year</label>
+                  <input
+                    type="number"
+                    className="w-full rounded border border-neutral-300 p-2 text-xs"
+                    value={firFormData.year || new Date().getFullYear()}
+                    onChange={(e) => setFirFormData({ ...firFormData, year: Number(e.target.value) })}
+                  />
+                </div>
+                <div>
+                  <label className="font-semibold text-neutral-600 block mb-1">Date</label>
+                  <input
+                    type="text"
+                    className="w-full rounded border border-neutral-300 p-2 text-xs"
+                    value={firFormData.firDate || ''}
+                    onChange={(e) => setFirFormData({ ...firFormData, firDate: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Section 2: Acts & Sections */}
+            <div className="rounded-lg border border-neutral-200 bg-white p-4 space-y-2">
+              <h4 className="font-bold text-blue-900 text-xs">2. Act, Law, and Sections</h4>
+              <textarea
+                rows={2}
+                className="w-full rounded border border-neutral-300 p-2 text-xs"
+                value={firFormData.actAndSections || ''}
+                onChange={(e) => setFirFormData({ ...firFormData, actAndSections: e.target.value })}
+              />
+            </div>
+
+            {/* Section 3: Period of Crime */}
+            <div className="rounded-lg border border-neutral-200 bg-white p-4 space-y-3">
+              <h4 className="font-bold text-blue-900 text-xs">3. Period of Crime & Station Diary Entry</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div>
+                  <label className="font-semibold text-neutral-600 block mb-1">Crime Start Date</label>
+                  <input
+                    type="text"
+                    className="w-full rounded border border-neutral-300 p-2 text-xs"
+                    value={firFormData.crimeStartDate || ''}
+                    onChange={(e) => setFirFormData({ ...firFormData, crimeStartDate: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="font-semibold text-neutral-600 block mb-1">Start Time (hrs)</label>
+                  <input
+                    type="text"
+                    className="w-full rounded border border-neutral-300 p-2 text-xs"
+                    value={firFormData.crimeStartTime || ''}
+                    onChange={(e) => setFirFormData({ ...firFormData, crimeStartTime: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="font-semibold text-neutral-600 block mb-1">Crime End Date</label>
+                  <input
+                    type="text"
+                    className="w-full rounded border border-neutral-300 p-2 text-xs"
+                    value={firFormData.crimeEndDate || ''}
+                    onChange={(e) => setFirFormData({ ...firFormData, crimeEndDate: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="font-semibold text-neutral-600 block mb-1">End Time (hrs)</label>
+                  <input
+                    type="text"
+                    className="w-full rounded border border-neutral-300 p-2 text-xs"
+                    value={firFormData.crimeEndTime || ''}
+                    onChange={(e) => setFirFormData({ ...firFormData, crimeEndTime: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                <div>
+                  <label className="font-semibold text-neutral-600 block mb-1">Date Info Received at Station</label>
+                  <input
+                    type="text"
+                    className="w-full rounded border border-neutral-300 p-2 text-xs"
+                    value={firFormData.dateInfoReceived || ''}
+                    onChange={(e) => setFirFormData({ ...firFormData, dateInfoReceived: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="font-semibold text-neutral-600 block mb-1">Station Diary Entry Number</label>
+                  <input
+                    type="text"
+                    className="w-full rounded border border-neutral-300 p-2 text-xs"
+                    value={firFormData.stationDiaryEntryNumber || ''}
+                    onChange={(e) => setFirFormData({ ...firFormData, stationDiaryEntryNumber: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Section 4 & 5: Information Type & Place of Incident */}
+            <div className="rounded-lg border border-neutral-200 bg-white p-4 space-y-3">
+              <h4 className="font-bold text-blue-900 text-xs">4–5. Type of Information & Place of Incident</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="font-semibold text-neutral-600 block mb-1">Type of Information</label>
+                  <select
+                    className="w-full rounded border border-neutral-300 p-2 text-xs"
+                    value={firFormData.informationType || 'Oral'}
+                    onChange={(e) => setFirFormData({ ...firFormData, informationType: e.target.value })}
+                  >
+                    <option value="Oral">Oral (મૌખિક)</option>
+                    <option value="Written">Written (લેખિત)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="font-semibold text-neutral-600 block mb-1">Direction & Distance</label>
+                  <input
+                    type="text"
+                    className="w-full rounded border border-neutral-300 p-2 text-xs"
+                    value={firFormData.directionDistanceFromStation || ''}
+                    onChange={(e) => setFirFormData({ ...firFormData, directionDistanceFromStation: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="font-semibold text-neutral-600 block mb-1">Outside Jurisdiction (if any)</label>
+                  <input
+                    type="text"
+                    className="w-full rounded border border-neutral-300 p-2 text-xs"
+                    value={firFormData.outsideJurisdiction || ''}
+                    onChange={(e) => setFirFormData({ ...firFormData, outsideJurisdiction: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="font-semibold text-neutral-600 block mb-1">Incident Address</label>
+                <textarea
+                  rows={2}
+                  className="w-full rounded border border-neutral-300 p-2 text-xs"
+                  value={firFormData.incidentAddress || ''}
+                  onChange={(e) => setFirFormData({ ...firFormData, incidentAddress: e.target.value })}
+                />
+              </div>
+            </div>
+
+            {/* Section 6: Complainant Details */}
+            <div className="rounded-lg border border-neutral-200 bg-white p-4 space-y-3">
+              <h4 className="font-bold text-blue-900 text-xs">6. Complainant / Informant Details</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="font-semibold text-neutral-600 block mb-1">Name</label>
+                  <input
+                    type="text"
+                    className="w-full rounded border border-neutral-300 p-2 text-xs"
+                    value={firFormData.complainantName || ''}
+                    onChange={(e) => setFirFormData({ ...firFormData, complainantName: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="font-semibold text-neutral-600 block mb-1">Father's Name</label>
+                  <input
+                    type="text"
+                    className="w-full rounded border border-neutral-300 p-2 text-xs"
+                    value={firFormData.complainantFatherName || ''}
+                    onChange={(e) => setFirFormData({ ...firFormData, complainantFatherName: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="font-semibold text-neutral-600 block mb-1">Mobile Numbers</label>
+                  <input
+                    type="text"
+                    className="w-full rounded border border-neutral-300 p-2 text-xs"
+                    value={firFormData.complainantMobileNumbers || ''}
+                    onChange={(e) => setFirFormData({ ...firFormData, complainantMobileNumbers: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="font-semibold text-neutral-600 block mb-1">Occupation</label>
+                  <input
+                    type="text"
+                    className="w-full rounded border border-neutral-300 p-2 text-xs"
+                    value={firFormData.complainantOccupation || ''}
+                    onChange={(e) => setFirFormData({ ...firFormData, complainantOccupation: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="font-semibold text-neutral-600 block mb-1">Nationality</label>
+                  <input
+                    type="text"
+                    className="w-full rounded border border-neutral-300 p-2 text-xs"
+                    value={firFormData.complainantNationality || 'Indian'}
+                    onChange={(e) => setFirFormData({ ...firFormData, complainantNationality: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="font-semibold text-neutral-600 block mb-1">DOB / Age</label>
+                  <input
+                    type="text"
+                    className="w-full rounded border border-neutral-300 p-2 text-xs"
+                    value={firFormData.complainantDOB || ''}
+                    onChange={(e) => setFirFormData({ ...firFormData, complainantDOB: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="font-semibold text-neutral-600 block mb-1">Full Residential Address</label>
+                <textarea
+                  rows={2}
+                  className="w-full rounded border border-neutral-300 p-2 text-xs"
+                  value={firFormData.complainantAddress || ''}
+                  onChange={(e) => setFirFormData({ ...firFormData, complainantAddress: e.target.value })}
+                />
+              </div>
+            </div>
+
+            {/* Section 7: Accused Details */}
+            <div className="rounded-lg border border-neutral-200 bg-white p-4 space-y-2">
+              <h4 className="font-bold text-blue-900 text-xs">7. Details of Known / Suspected / Unknown Accused</h4>
+              <textarea
+                rows={4}
+                className="w-full rounded border border-neutral-300 p-2 text-xs font-mono"
+                value={firFormData.accusedDetails || ''}
+                onChange={(e) => setFirFormData({ ...firFormData, accusedDetails: e.target.value })}
+              />
+            </div>
+
+            {/* Section 8-11: Delay & Property */}
+            <div className="rounded-lg border border-neutral-200 bg-white p-4 space-y-3">
+              <h4 className="font-bold text-blue-900 text-xs">8–11. Delay Reason & Involved Assets</h4>
+              <div>
+                <label className="font-semibold text-neutral-600 block mb-1">Reason for Delay in Reporting</label>
+                <textarea
+                  rows={2}
+                  className="w-full rounded border border-neutral-300 p-2 text-xs"
+                  value={firFormData.delayReason || ''}
+                  onChange={(e) => setFirFormData({ ...firFormData, delayReason: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-semibold text-neutral-600 block mb-1">Stolen / Involved Property Details</label>
+                  <input
+                    type="text"
+                    className="w-full rounded border border-neutral-300 p-2 text-xs"
+                    value={firFormData.stolenPropertyDetails || ''}
+                    onChange={(e) => setFirFormData({ ...firFormData, stolenPropertyDetails: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="font-semibold text-neutral-600 block mb-1">Total Value of Involved Assets (₹)</label>
+                  <input
+                    type="text"
+                    className="w-full rounded border border-neutral-300 p-2 text-xs"
+                    value={firFormData.stolenPropertyValue || ''}
+                    onChange={(e) => setFirFormData({ ...firFormData, stolenPropertyValue: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Section 12: Detailed Verbatim Statement */}
+            <div className="rounded-lg border border-neutral-200 bg-white p-4 space-y-3">
+              <h4 className="font-bold text-blue-900 text-xs">12. First Information Report Narrative Statements</h4>
+              <div>
+                <label className="font-semibold text-neutral-700 block mb-1">Statement in Gujarati-English (ગુજરાતી અહેવાલ)</label>
+                <textarea
+                  rows={8}
+                  className="w-full rounded border border-neutral-300 p-2.5 text-xs font-mono leading-relaxed"
+                  value={firFormData.firStatement || ''}
+                  onChange={(e) => setFirFormData({ ...firFormData, firStatement: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="font-semibold text-neutral-700 block mb-1">Statement in English</label>
+                <textarea
+                  rows={8}
+                  className="w-full rounded border border-neutral-300 p-2.5 text-xs font-mono leading-relaxed"
+                  value={firFormData.firStatementEn || ''}
+                  onChange={(e) => setFirFormData({ ...firFormData, firStatementEn: e.target.value })}
+                />
+              </div>
+            </div>
+
+            {/* Brief Summary */}
+            <div className="rounded-lg border border-neutral-200 bg-white p-4 space-y-3">
+              <h4 className="font-bold text-blue-900 text-xs">Brief Summary of Offense</h4>
+              <div>
+                <label className="font-semibold text-neutral-600 block mb-1">Summary in Gujarati-English</label>
+                <textarea
+                  rows={3}
+                  className="w-full rounded border border-neutral-300 p-2 text-xs"
+                  value={firFormData.briefSummaryGujEn || ''}
+                  onChange={(e) => setFirFormData({ ...firFormData, briefSummaryGujEn: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="font-semibold text-neutral-600 block mb-1">Summary in English</label>
+                <textarea
+                  rows={3}
+                  className="w-full rounded border border-neutral-300 p-2 text-xs"
+                  value={firFormData.briefSummary || ''}
+                  onChange={(e) => setFirFormData({ ...firFormData, briefSummary: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );
