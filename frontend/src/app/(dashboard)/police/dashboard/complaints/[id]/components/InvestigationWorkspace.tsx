@@ -2534,6 +2534,7 @@ function EditParticipantModal({
         identifiers: (initialParticipant.identifiers || []).map((id: any) => ({ ...id })),
         victimProfile: initialParticipant.victimProfile || {},
         complainantProfile: initialParticipant.complainantProfile || {},
+        suspectProfile: initialParticipant.suspectProfile || {},
       });
     }
   }, [initialParticipant, isOpen]);
