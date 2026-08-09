@@ -92,3 +92,4 @@ services/io-recommendation/qdrant_local_storage/
 services/legal_agent/embedded/
 *.sqlite
 *.db
+.kiro
