@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
 import apiClient from '@/lib/axios';
@@ -1489,8 +1489,8 @@ function MissingInfoCardIO({ item, caseId }: { item: { title: string; descriptio
 
 // ─── Participants Panel ──────────────────────────────────────────────────────
 
-function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: any[]; caseId: string; onRefresh: () => void }) {  const [roleFilter, setRoleFilter] = React.useState<string>('All');
-  const [selectedParticipant, setSelectedParticipant] = React.useState<any | null>(null);
+function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: any[]; caseId: string; onRefresh: () => void }) {
+  const [roleFilter, setRoleFilter] = React.useState<string>('All');
   const [promotingId, setPromotingId] = React.useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
@@ -1499,7 +1499,6 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
   const [loading, setLoading] = React.useState(false);
 
   const uniqueRoles = Array.from(new Set(participants.flatMap((p) => p.roles || [])));
-
   const filteredParticipants = roleFilter === 'All'
     ? participants
     : participants.filter((p) => (p.roles || []).includes(roleFilter));
@@ -1535,24 +1534,11 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
       <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
         <Users className="h-10 w-10 text-neutral-300" />
         <p className="text-sm font-semibold text-neutral-600">No participants found</p>
-        <p className="text-xs text-neutral-400 max-w-xs">
-          Participants approved via the AI analysis will appear here.
-        </p>
-        <button
-          onClick={() => setIsAddModalOpen(true)}
-          className="mt-4 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
-        >
+        <p className="text-xs text-neutral-400 max-w-xs">Participants approved via the AI analysis will appear here.</p>
+        <button onClick={() => setIsAddModalOpen(true)} className="mt-4 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors">
           + Add Participant
         </button>
-        <AddParticipantModal
-          isOpen={isAddModalOpen}
-          onClose={() => setIsAddModalOpen(false)}
-          caseId={caseId}
-          onSuccess={() => {
-            setIsAddModalOpen(false);
-            onRefresh();
-          }}
-        />
+        <AddParticipantModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} caseId={caseId} onSuccess={() => { setIsAddModalOpen(false); onRefresh(); }} />
       </div>
     );
   }
@@ -1571,18 +1557,11 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
   return (
     <>
       <div className="flex items-center justify-between mb-4">
-        <select
-          value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value)}
-          className="text-sm border border-neutral-300 rounded px-3 py-1.5 bg-white text-neutral-700"
-        >
+        <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="text-sm border border-neutral-300 rounded px-3 py-1.5 bg-white text-neutral-700">
           <option value="All">All Roles</option>
           {uniqueRoles.map(r => <option key={r} value={r}>{r}</option>)}
         </select>
-        <button
-          onClick={() => setIsAddModalOpen(true)}
-          className="px-3 py-1.5 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
-        >
+        <button onClick={() => setIsAddModalOpen(true)} className="px-3 py-1.5 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors">
           + Add Participant
         </button>
       </div>
@@ -1590,29 +1569,18 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {filteredParticipants.map((p: any) => {
           const isSuspect = (p.roles || []).includes('Suspect');
-          const isAccused = (p.roles || []).includes('Accused');
+          const isAccused = p.suspectProfile?.isAccused === true || (p.roles || []).includes('Accused');
           const promoting = promotingId === p.participant_id;
 
           return (
-            <div
-              key={p.participant_id || p._id}
-              className="bg-white border border-neutral-200 rounded-xl p-4 shadow-sm hover:border-blue-300 hover:shadow-md transition-all group relative"
-            >
+            <div key={p.participant_id || p._id} className="bg-white border border-neutral-200 rounded-xl p-4 shadow-sm hover:border-blue-300 hover:shadow-md transition-all relative">
               <div className="flex justify-between items-start gap-2 mb-2">
-                <h4 
-                  className="text-base font-bold text-neutral-900 cursor-pointer group-hover:text-blue-700 transition-colors flex-1"
-                  onClick={() => setSelectedParticipant(p)}
-                >
-                  {p.name}
-                </h4>
+                <h4 className="text-base font-bold text-neutral-900 flex-1">{p.name}</h4>
                 <div className="flex gap-1 flex-shrink-0">
                   <button
-                    onClick={() => {
-                      setEditingParticipant(p);
-                      setIsEditModalOpen(true);
-                    }}
-                    className="p-1 text-neutral-400 hover:text-blue-600 transition-colors" 
-                    title="Edit"
+                    onClick={() => { setEditingParticipant(p); setIsEditModalOpen(true); }}
+                    className="p-1 text-neutral-400 hover:text-blue-600 transition-colors"
+                    title="View / Edit"
                   >
                     ✏️
                   </button>
@@ -1620,38 +1588,19 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
                     <div className="absolute right-2 top-14 bg-white border border-red-200 rounded-lg p-2 shadow-lg z-10 whitespace-nowrap">
                       <p className="text-xs font-semibold text-red-700 mb-2">Delete?</p>
                       <div className="flex gap-2">
-                        <button
-                          onClick={() => handleDelete(p.participant_id)}
-                          disabled={loading}
-                          className="px-2 py-1 text-xs font-semibold bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
-                        >
-                          Yes
-                        </button>
-                        <button
-                          onClick={() => setDeleteConfirming(null)}
-                          className="px-2 py-1 text-xs font-semibold bg-neutral-200 text-neutral-700 rounded hover:bg-neutral-300"
-                        >
-                          No
-                        </button>
+                        <button onClick={() => handleDelete(p.participant_id)} disabled={loading} className="px-2 py-1 text-xs font-semibold bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50">Yes</button>
+                        <button onClick={() => setDeleteConfirming(null)} className="px-2 py-1 text-xs font-semibold bg-neutral-200 text-neutral-700 rounded hover:bg-neutral-300">No</button>
                       </div>
                     </div>
                   ) : (
-                    <button
-                      onClick={() => setDeleteConfirming(p.participant_id)}
-                      className="p-1 text-neutral-400 hover:text-red-600 transition-colors"
-                      title="Delete"
-                    >
-                      🗑️
-                    </button>
+                    <button onClick={() => setDeleteConfirming(p.participant_id)} className="p-1 text-neutral-400 hover:text-red-600 transition-colors" title="Delete">🗑️</button>
                   )}
                 </div>
               </div>
 
               <div className="flex flex-wrap gap-1">
                 {(p.roles || []).map((role: string) => (
-                  <span key={role} className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${roleBadgeColor(role)}`}>
-                    {role}
-                  </span>
+                  <span key={role} className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${roleBadgeColor(role)}`}>{role}</span>
                 ))}
               </div>
 
@@ -1663,76 +1612,38 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
                 </p>
               )}
 
+              {/* Statement count hint */}
+              {Array.isArray(p.statements) && p.statements.length > 0 && (
+                <p className="text-[10px] text-purple-500 mt-1">💬 {p.statements.length} statement{p.statements.length > 1 ? 's' : ''}</p>
+              )}
+
               {isSuspect && !isAccused && (
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handlePromote(e, p);
-                  }}
+                  onClick={(e) => { e.stopPropagation(); handlePromote(e, p); }}
                   disabled={promoting}
-                  className="mt-3 w-full flex-shrink-0 text-xs font-bold px-2 py-1.5 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-60 transition-colors"
+                  className="mt-3 w-full text-xs font-bold px-2 py-1.5 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-60 transition-colors"
                 >
                   {promoting ? '...' : '⚖️ Promote to Accused'}
                 </button>
               )}
-
-              <p 
-                className="text-[10px] text-blue-500 mt-2 cursor-pointer hover:underline"
-                onClick={() => setSelectedParticipant(p)}
-              >
-                Click for full details →
-              </p>
             </div>
           );
         })}
       </div>
 
-      {/* Participant Detail Modal */}
-      {selectedParticipant && (
-        <ParticipantDetailModal
-          participant={selectedParticipant}
-          caseId={caseId}
-          onClose={() => setSelectedParticipant(null)}
-          onRefresh={() => {
-            onRefresh();
-            // keep modal open but data refreshes underneath
-          }}
-          onEdit={(p) => {
-            setEditingParticipant(p);
-            setSelectedParticipant(null);
-            setIsEditModalOpen(true);
-          }}
-          onDelete={(p) => {
-            setSelectedParticipant(null);
-            setDeleteConfirming(p.participant_id);
-          }}
-        />
-      )}
-
       {/* Add Participant Modal */}
-      <AddParticipantModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        caseId={caseId}
-        onSuccess={() => {
-          setIsAddModalOpen(false);
-          onRefresh();
-        }}
-      />
+      <AddParticipantModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} caseId={caseId} onSuccess={() => { setIsAddModalOpen(false); onRefresh(); }} />
 
-      {/* Edit Participant Modal */}
+      {/* Combined View/Edit Modal */}
       {editingParticipant && (
         <EditParticipantModal
           isOpen={isEditModalOpen}
-          onClose={() => {
-            setIsEditModalOpen(false);
-            setEditingParticipant(null);
-          }}
+          onClose={() => { setIsEditModalOpen(false); setEditingParticipant(null); }}
           participant={editingParticipant}
           caseId={caseId}
-          onSuccess={() => {
-            setIsEditModalOpen(false);
-            setEditingParticipant(null);
+          onSuccess={(updated) => {
+            // Update the local editingParticipant so modal shows fresh data immediately
+            if (updated) setEditingParticipant(updated);
             onRefresh();
           }}
         />
@@ -1740,463 +1651,6 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
     </>
   );
 }
-
-// ─── Participant Detail Modal ────────────────────────────────────────────────
-
-function ParticipantDetailModal({ 
-  participant: p, 
-  caseId,
-  onClose, 
-  onEdit,
-  onDelete,
-  onRefresh,
-}: { 
-  participant: any; 
-  caseId: string;
-  onClose: () => void;
-  onEdit?: (p: any) => void;
-  onDelete?: (p: any) => void;
-  onRefresh?: () => void;
-}) {
-  const [stmtContent, setStmtContent] = React.useState('');
-  const [stmtDate, setStmtDate] = React.useState(() => new Date().toISOString().slice(0, 16));
-  const [stmtLoading, setStmtLoading] = React.useState(false);
-
-  // Audio transcription state
-  const [transcribing, setTranscribing] = React.useState(false);
-  const [transcribeError, setTranscribeError] = React.useState<string | null>(null);
-  const audioInputRef = React.useRef<HTMLInputElement>(null);
-
-  const [reasoningContent, setReasoningContent] = React.useState('');
-  const [reasoningLoading, setReasoningLoading] = React.useState(false);
-  const [editingReasoningId, setEditingReasoningId] = React.useState<string | null>(null);
-  const [editingReasoningContent, setEditingReasoningContent] = React.useState('');
-
-  const roleBadgeColor = (role: string) => {
-    switch (role) {
-      case 'Accused': return 'bg-red-50 text-red-700 border-red-200';
-      case 'Suspect': return 'bg-orange-50 text-orange-700 border-orange-200';
-      case 'Victim': return 'bg-green-50 text-green-700 border-green-200';
-      case 'Witness': return 'bg-purple-50 text-purple-700 border-purple-200';
-      case 'Complainant': return 'bg-blue-50 text-blue-700 border-blue-200';
-      default: return 'bg-neutral-50 text-neutral-700 border-neutral-200';
-    }
-  };
-
-  const appliedSections: any[] = [
-    ...(p.accusedProfile?.appliedSections || []),
-    ...(p.suspectProfile?.appliedSections || []),
-  ];
-
-  const handleAddStatement = async () => {
-    if (!stmtContent.trim() || !stmtDate) return;
-    setStmtLoading(true);
-    try {
-      await apiClient.post(`/cases/${caseId}/participants/${p.participant_id}/statements`, {
-        content: stmtContent.trim(),
-        recordedAt: new Date(stmtDate).toISOString(),
-      });
-      setStmtContent('');
-      setStmtDate(new Date().toISOString().slice(0, 16));
-      onRefresh?.();
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to add statement');
-    } finally {
-      setStmtLoading(false);
-    }
-  };
-
-  const handleDeleteStatement = async (statementId: string) => {
-    if (!confirm('Delete this statement?')) return;
-    try {
-      await apiClient.delete(`/cases/${caseId}/participants/${p.participant_id}/statements/${statementId}`);
-      onRefresh?.();
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to delete statement');
-    }
-  };
-
-  const handleAudioFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Reset the input so the same file can be re-selected if needed
-    e.target.value = '';
-
-    setTranscribing(true);
-    setTranscribeError(null);
-
-    try {
-      const form = new FormData();
-      form.append('file', file);
-
-      const res = await apiClient.post(
-        `/cases/${caseId}/participants/${p.participant_id}/statements/transcribe`,
-        form,
-        { headers: { 'Content-Type': 'multipart/form-data' } },
-      );
-
-      const { transcript, detectedLanguage, translatedText } = res.data.data;
-
-      // Auto-fill the statement textarea with the original-language text
-      // Append if there's already some content (officer may have typed some)
-      setStmtContent((prev) => {
-        const base = prev.trim();
-        return base ? `${base}\n\n${transcript}` : transcript;
-      });
-
-      // Show a subtle hint if translation is also available
-      if (translatedText && detectedLanguage && detectedLanguage !== 'en') {
-        setTranscribeError(`Detected language: ${detectedLanguage}. English translation also available — check below.`);
-      }
-    } catch (err: any) {
-      const msg = err.response?.data?.message || 'Transcription failed. Ensure the Python service is running.';
-      setTranscribeError(msg);
-    } finally {
-      setTranscribing(false);
-    }
-  };
-
-  const handleAddReasoning = async () => {
-    if (!reasoningContent.trim()) return;
-    setReasoningLoading(true);
-    try {
-      await apiClient.post(`/cases/${caseId}/participants/${p.participant_id}/reasoning`, {
-        content: reasoningContent.trim(),
-        source: 'officer',
-      });
-      setReasoningContent('');
-      onRefresh?.();
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to add reasoning');
-    } finally {
-      setReasoningLoading(false);
-    }
-  };
-
-  const handleUpdateReasoning = async (reasoningId: string) => {
-    if (!editingReasoningContent.trim()) return;
-    setReasoningLoading(true);
-    try {
-      await apiClient.patch(`/cases/${caseId}/participants/${p.participant_id}/reasoning/${reasoningId}`, {
-        content: editingReasoningContent.trim(),
-      });
-      setEditingReasoningId(null);
-      setEditingReasoningContent('');
-      onRefresh?.();
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to update reasoning');
-    } finally {
-      setReasoningLoading(false);
-    }
-  };
-
-  const handleDeleteReasoning = async (reasoningId: string) => {
-    if (!confirm('Delete this reasoning entry?')) return;
-    try {
-      await apiClient.delete(`/cases/${caseId}/participants/${p.participant_id}/reasoning/${reasoningId}`);
-      onRefresh?.();
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to delete reasoning');
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={onClose}>
-      <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-start justify-between p-6 border-b border-neutral-100">
-          <div>
-            <h2 className="text-xl font-bold text-neutral-900">{p.name}</h2>
-            <div className="flex flex-wrap gap-1.5 mt-2">
-              {(p.roles || []).map((role: string) => (
-                <span key={role} className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${roleBadgeColor(role)}`}>
-                  {role}
-                </span>
-              ))}
-            </div>
-          </div>
-          <div className="flex gap-2">
-            {onEdit && (
-              <button onClick={() => onEdit(p)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">✏️</button>
-            )}
-            {onDelete && (
-              <button onClick={() => onDelete(p)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete">🗑️</button>
-            )}
-            <button onClick={onClose} className="p-1 text-neutral-400 hover:text-neutral-700 transition-colors text-2xl leading-none">×</button>
-          </div>
-        </div>
-
-        <div className="p-6 space-y-5">
-          {/* Contact */}
-          {(p.contact?.phone || p.contact?.email || p.contact?.address) && (
-            <section>
-              <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">Contact Information</h3>
-              <div className="bg-neutral-50 rounded-lg p-3 text-sm text-neutral-700 space-y-1 border border-neutral-100">
-                {p.contact.phone && <p>📞 {p.contact.phone}</p>}
-                {p.contact.email && <p>✉️ {p.contact.email}</p>}
-                {p.contact.address && <p>📍 {p.contact.address}</p>}
-              </div>
-            </section>
-          )}
-
-          {/* Identifiers */}
-          {p.identifiers?.length > 0 && (
-            <section>
-              <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">Identifiers</h3>
-              <div className="flex flex-wrap gap-2">
-                {p.identifiers.map((id: any, i: number) => (
-                  <span key={i} className="text-xs bg-neutral-100 text-neutral-700 px-2 py-1 rounded border border-neutral-200">
-                    <span className="font-semibold">{id.type}:</span> {id.value}
-                  </span>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Victim Profile */}
-          {p.victimProfile && (p.victimProfile.injuryDetails || p.victimProfile.lossDetails) && (
-            <section>
-              <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">Victim Profile</h3>
-              <div className="bg-green-50 border border-green-100 rounded-lg p-3 text-sm text-neutral-700 space-y-1">
-                {p.victimProfile.injuryDetails && <p><span className="font-semibold">Injury:</span> {p.victimProfile.injuryDetails}</p>}
-                {p.victimProfile.lossDetails && <p><span className="font-semibold">Loss:</span> {p.victimProfile.lossDetails}</p>}
-              </div>
-            </section>
-          )}
-
-          {/* Suspect Profile (only show if not also accused) */}
-          {p.suspectProfile && !(p.roles || []).includes('Accused') && (p.suspectProfile.motive || p.suspectProfile.alibi) && (
-            <section>
-              <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">Suspect Profile</h3>
-              <div className="bg-orange-50 border border-orange-100 rounded-lg p-3 text-sm text-neutral-700 space-y-1">
-                {p.suspectProfile.motive && <p><span className="font-semibold">Motive:</span> {p.suspectProfile.motive}</p>}
-                {p.suspectProfile.alibi && <p><span className="font-semibold">Alibi:</span> {p.suspectProfile.alibi}</p>}
-              </div>
-            </section>
-          )}
-
-          {/* Applied Legal Sections */}
-          {appliedSections.length > 0 && (
-            <section>
-              <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">Applied Legal Sections</h3>
-              <div className="space-y-2">
-                {appliedSections.map((sec: any, i: number) => (
-                  <div key={i} className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm">
-                    <p className="font-bold text-blue-800">{sec.code} — {sec.title}</p>
-                    {sec.reason && <p className="text-xs text-neutral-600 mt-1">{sec.reason}</p>}
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Complainant Profile */}
-          {p.complainantProfile?.relationshipToIncident && (
-            <section>
-              <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">Complainant</h3>
-              <p className="text-sm text-neutral-700">Relation to Incident: {p.complainantProfile.relationshipToIncident}</p>
-            </section>
-          )}
-
-          {/* ── Statements ──────────────────────────────────────────────── */}
-          <section>
-            <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-3">Statements</h3>
-
-            {/* Existing statements */}
-            {Array.isArray(p.statements) && p.statements.length > 0 ? (
-              <div className="space-y-2 mb-3">
-                {p.statements.map((stmt: any) => (
-                  <div key={stmt.id} className="bg-purple-50 border border-purple-100 rounded-lg p-3 text-sm">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-neutral-800 flex-1">{stmt.content}</p>
-                      <button
-                        onClick={() => handleDeleteStatement(stmt.id)}
-                        className="text-neutral-300 hover:text-red-500 transition-colors flex-shrink-0 text-xs"
-                        title="Delete statement"
-                      >🗑️</button>
-                    </div>
-                    <p className="text-xs text-neutral-400 mt-1">
-                      🕐 {stmt.recordedAt ? new Date(stmt.recordedAt).toLocaleString('en-IN') : 'No date'}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-neutral-400 mb-3">No statements recorded yet.</p>
-            )}
-
-            {/* Add statement form */}
-            <div className="border border-neutral-200 rounded-lg p-3 bg-neutral-50 space-y-2">
-              <p className="text-xs font-semibold text-neutral-600">Add New Statement</p>
-              <textarea
-                value={stmtContent}
-                onChange={(e) => setStmtContent(e.target.value)}
-                placeholder="Enter statement content..."
-                rows={3}
-                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-200 resize-none"
-              />
-
-              {/* Audio upload row */}
-              <div className="flex items-center gap-2">
-                <input
-                  ref={audioInputRef}
-                  type="file"
-                  accept="audio/*,.mp3,.wav,.ogg,.flac,.m4a,.webm,.opus,.aac"
-                  className="hidden"
-                  onChange={handleAudioFileChange}
-                />
-                <button
-                  type="button"
-                  onClick={() => audioInputRef.current?.click()}
-                  disabled={transcribing}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
-                    transcribing
-                      ? 'bg-neutral-100 text-neutral-400 border-neutral-200 cursor-not-allowed'
-                      : 'bg-white text-purple-700 border-purple-300 hover:bg-purple-50 cursor-pointer'
-                  }`}
-                  title="Upload audio file to auto-fill transcript"
-                >
-                  {transcribing ? (
-                    <>
-                      <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                      </svg>
-                      Transcribing...
-                    </>
-                  ) : (
-                    <>🎙️ Upload Audio</>
-                  )}
-                </button>
-                <span className="text-[10px] text-neutral-400">MP3, WAV, OGG, M4A, FLAC, WEBM • max 50 MB</span>
-              </div>
-
-              {/* Transcription feedback */}
-              {transcribeError && (
-                <p className={`text-xs px-2 py-1 rounded ${
-                  transcribeError.startsWith('Detected language')
-                    ? 'bg-blue-50 text-blue-700 border border-blue-100'
-                    : 'bg-red-50 text-red-600 border border-red-100'
-                }`}>
-                  {transcribeError}
-                </p>
-              )}
-
-              <div className="flex items-center gap-2">
-                <div className="flex-1">
-                  <label className="text-xs text-neutral-500 mb-1 block">Recorded At</label>
-                  <input
-                    type="datetime-local"
-                    value={stmtDate}
-                    onChange={(e) => setStmtDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-200"
-                  />
-                </div>
-                <button
-                  onClick={handleAddStatement}
-                  disabled={stmtLoading || !stmtContent.trim()}
-                  className="self-end px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors"
-                >
-                  {stmtLoading ? '...' : '+ Add'}
-                </button>
-              </div>
-            </div>
-          </section>
-
-          {/* ── Reasoning ───────────────────────────────────────────────── */}
-          <section>
-            <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-3">Reasoning</h3>
-
-            {/* Existing reasoning entries */}
-            {Array.isArray(p.reasoning) && p.reasoning.length > 0 ? (
-              <div className="space-y-2 mb-3">
-                {p.reasoning.map((r: any) => (
-                  <div key={r.id} className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm">
-                    {editingReasoningId === r.id ? (
-                      <div className="space-y-2">
-                        <textarea
-                          value={editingReasoningContent}
-                          onChange={(e) => setEditingReasoningContent(e.target.value)}
-                          rows={3}
-                          className="w-full px-3 py-2 border border-blue-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none"
-                        />
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleUpdateReasoning(r.id)}
-                            disabled={reasoningLoading}
-                            className="px-3 py-1 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                          >
-                            {reasoningLoading ? '...' : 'Save'}
-                          </button>
-                          <button
-                            onClick={() => { setEditingReasoningId(null); setEditingReasoningContent(''); }}
-                            className="px-3 py-1 border border-neutral-300 text-neutral-600 text-xs font-semibold rounded-lg hover:bg-neutral-50"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${r.source === 'ai' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                              {r.source === 'ai' ? '🤖 AI' : '👮 Officer'}
-                            </span>
-                            <span className="text-xs text-neutral-400">{new Date(r.createdAt).toLocaleString('en-IN')}</span>
-                          </div>
-                          <p className="text-neutral-800">{r.content}</p>
-                        </div>
-                        <div className="flex gap-1 flex-shrink-0">
-                          <button
-                            onClick={() => { setEditingReasoningId(r.id); setEditingReasoningContent(r.content); }}
-                            className="text-neutral-300 hover:text-blue-500 transition-colors text-xs"
-                            title="Edit"
-                          >✏️</button>
-                          <button
-                            onClick={() => handleDeleteReasoning(r.id)}
-                            className="text-neutral-300 hover:text-red-500 transition-colors text-xs"
-                            title="Delete"
-                          >🗑️</button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-neutral-400 mb-3">No reasoning entries yet.</p>
-            )}
-
-            {/* Add reasoning form */}
-            <div className="border border-neutral-200 rounded-lg p-3 bg-neutral-50 space-y-2">
-              <p className="text-xs font-semibold text-neutral-600">Add Reasoning Note</p>
-              <textarea
-                value={reasoningContent}
-                onChange={(e) => setReasoningContent(e.target.value)}
-                placeholder="Add investigative reasoning or observation..."
-                rows={3}
-                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none"
-              />
-              <button
-                onClick={handleAddReasoning}
-                disabled={reasoningLoading || !reasoningContent.trim()}
-                className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-              >
-                {reasoningLoading ? '...' : '+ Add Reasoning'}
-              </button>
-            </div>
-          </section>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 
 // ─── Original Complaint Panel ──────────────────────────────────────────────
 
@@ -2437,7 +1891,7 @@ interface ParticipantFormData {
   name: string;
   roles: string[];
   contact: { phone?: string; email?: string; address?: string };
-  identifiers: Array<{ type: string; value: string }>;
+  identifiers: Array<{ type: string; value: string; fileUrl?: string }>;
   victimProfile?: { injuryDetails?: string; lossDetails?: string };
   witnessProfile?: { statement?: string };
   complainantProfile?: { relationshipToIncident?: string };
@@ -2738,9 +2192,8 @@ function AddParticipantModal({
   );
 }
 
-// ─── Edit Participant Modal ────────────────────────────────────────────────
-
-function EditParticipantModal({
+// ─── Edit / View Participant Modal (combined) — defined below ────────────────
+function _OldEditParticipantModalDeleted({
   isOpen,
   onClose,
   participant,
@@ -3046,3 +2499,567 @@ function EditParticipantModal({
   );
 }
 
+
+
+// ─── Edit / View Participant Modal (combined) ─────────────────────────────────
+
+function EditParticipantModal({
+  isOpen,
+  onClose,
+  participant: initialParticipant,
+  caseId,
+  onSuccess,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  participant: any;
+  caseId: string;
+  onSuccess: (updated?: any) => void;
+}) {
+  // ── Local participant state — updated optimistically on every mutation ────
+  const [p, setP] = React.useState<any>(initialParticipant);
+  React.useEffect(() => { setP(initialParticipant); }, [initialParticipant, isOpen]);
+
+  // ── Edit form state ──────────────────────────────────────────────────────
+  const [formData, setFormData] = React.useState<ParticipantFormData>({ name: '', roles: [], contact: {}, identifiers: [] });
+  const [formLoading, setFormLoading] = React.useState(false);
+  const [formErrors, setFormErrors] = React.useState<Record<string, string>>({});
+
+  React.useEffect(() => {
+    if (initialParticipant) {
+      setFormData({
+        name: initialParticipant.name || '',
+        roles: initialParticipant.roles || [],
+        contact: initialParticipant.contact || {},
+        identifiers: (initialParticipant.identifiers || []).map((id: any) => ({ ...id })),
+        victimProfile: initialParticipant.victimProfile || {},
+        complainantProfile: initialParticipant.complainantProfile || {},
+      });
+    }
+  }, [initialParticipant, isOpen]);
+
+  // ── Statement state ──────────────────────────────────────────────────────
+  const [stmtContent, setStmtContent] = React.useState('');
+  const [stmtDate, setStmtDate] = React.useState(() => new Date().toISOString().slice(0, 16));
+  const [stmtLoading, setStmtLoading] = React.useState(false);
+  const [transcribing, setTranscribing] = React.useState(false);
+  const [transcribeError, setTranscribeError] = React.useState<string | null>(null);
+  const audioInputRef = React.useRef<HTMLInputElement>(null);
+
+  // ── Reasoning state ──────────────────────────────────────────────────────
+  const [reasoningContent, setReasoningContent] = React.useState('');
+  const [reasoningLoading, setReasoningLoading] = React.useState(false);
+  const [editingReasoningId, setEditingReasoningId] = React.useState<string | null>(null);
+  const [editingReasoningContent, setEditingReasoningContent] = React.useState('');
+
+  // ── Identifier upload state ───────────────────────────────────────────────
+  const [identifierUploading, setIdentifierUploading] = React.useState<number | null>(null);
+  const [viewingDocUrl, setViewingDocUrl] = React.useState<string | null>(null);
+  const identifierFileRefs = React.useRef<(HTMLInputElement | null)[]>([]);
+
+  const roleOptions = ['Victim', 'Witness', 'Suspect', 'Accused', 'Complainant'];
+
+  const roleBadgeColor = (role: string) => {
+    switch (role) {
+      case 'Accused': return 'bg-red-50 text-red-700 border-red-200';
+      case 'Suspect': return 'bg-orange-50 text-orange-700 border-orange-200';
+      case 'Victim': return 'bg-green-50 text-green-700 border-green-200';
+      case 'Witness': return 'bg-purple-50 text-purple-700 border-purple-200';
+      case 'Complainant': return 'bg-blue-50 text-blue-700 border-blue-200';
+      default: return 'bg-neutral-50 text-neutral-700 border-neutral-200';
+    }
+  };
+
+  // Helper — after any mutation, get fresh participant from API and update local state instantly
+  const refreshParticipant = React.useCallback(async () => {
+    try {
+      const res = await apiClient.get(`/cases/${caseId}/participants`);
+      const list: any[] = res.data.data || [];
+      const fresh = list.find((x) => x.participant_id === p?.participant_id);
+      if (fresh) { setP(fresh); onSuccess(fresh); }
+    } catch { /* silently ignore */ }
+  }, [caseId, p?.participant_id, onSuccess]);
+
+  // ── Form handlers ────────────────────────────────────────────────────────
+  const handleRoleToggle = (role: string) => {
+    setFormData((prev) => ({ ...prev, roles: prev.roles.includes(role) ? prev.roles.filter(r => r !== role) : [...prev.roles, role] }));
+  };
+  const handleContactChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, contact: { ...prev.contact, [field]: value || undefined } }));
+  };
+  const handleProfileChange = (profileType: string, field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [profileType]: { ...(prev[profileType] || {}), [field]: value || undefined } }));
+  };
+  const handleAddIdentifier = () => {
+    setFormData((prev) => ({ ...prev, identifiers: [...prev.identifiers, { type: '', value: '' }] }));
+  };
+  const handleIdentifierChange = (idx: number, field: string, value: string) => {
+    setFormData((prev) => {
+      const ids = [...prev.identifiers];
+      ids[idx] = { ...ids[idx], [field]: value };
+      return { ...prev, identifiers: ids };
+    });
+  };
+  const handleRemoveIdentifier = (idx: number) => {
+    setFormData((prev) => ({ ...prev, identifiers: prev.identifiers.filter((_, i) => i !== idx) }));
+  };
+
+  // ── Identifier file upload ────────────────────────────────────────────────
+  const handleIdentifierFileChange = async (idx: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    setIdentifierUploading(idx);
+    try {
+      // 1. Get signed upload params
+      const sigRes = await apiClient.post(`/cases/${caseId}/participants/${p.participant_id}/identifiers/upload-signature`);
+      const { signature, timestamp, apiKey, cloudName, folder, publicId } = sigRes.data.data;
+      // 2. Upload directly to Cloudinary
+      const form = new FormData();
+      form.append('file', file);
+      form.append('api_key', apiKey);
+      form.append('timestamp', String(timestamp));
+      form.append('signature', signature);
+      form.append('folder', folder);
+      form.append('public_id', publicId);
+      const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, { method: 'POST', body: form });
+      if (!uploadRes.ok) throw new Error('Cloudinary upload failed');
+      const uploadData = await uploadRes.json();
+      const secureUrl: string = uploadData.secure_url;
+      // 3. Save fileUrl into identifier row (optimistic)
+      setFormData((prev) => {
+        const ids = [...prev.identifiers];
+        ids[idx] = { ...ids[idx], fileUrl: secureUrl };
+        return { ...prev, identifiers: ids };
+      });
+    } catch (err: any) {
+      alert(err.message || 'Upload failed');
+    } finally {
+      setIdentifierUploading(null);
+    }
+  };
+
+  // ── Form submit ──────────────────────────────────────────────────────────
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const errs: Record<string, string> = {};
+    if (!formData.name.trim()) errs.name = 'Name is required';
+    if (formData.roles.length === 0) errs.roles = 'Select at least one role';
+    setFormErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+
+    setFormLoading(true);
+    try {
+      const payload: any = {
+        name: formData.name.trim(),
+        roles: formData.roles,
+        contact: formData.contact,
+        identifiers: formData.identifiers.filter(id => id.type && id.value),
+      };
+      if (formData.roles.includes('Victim') && (formData.victimProfile?.injuryDetails || formData.victimProfile?.lossDetails)) {
+        payload.victimProfile = formData.victimProfile;
+      }
+      if (formData.roles.includes('Complainant') && formData.complainantProfile?.relationshipToIncident) {
+        payload.complainantProfile = formData.complainantProfile;
+      }
+      const res = await apiClient.patch(`/cases/${caseId}/participants/${p.participant_id}`, payload);
+      const updated = res.data.data;
+      setP(updated);
+      onSuccess(updated);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to update participant');
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  // ── Statement handlers ─────────────────────────────────────────────────
+  const handleAddStatement = async () => {
+    if (!stmtContent.trim() || !stmtDate) return;
+    setStmtLoading(true);
+    try {
+      const res = await apiClient.post(`/cases/${caseId}/participants/${p.participant_id}/statements`, {
+        content: stmtContent.trim(),
+        recordedAt: new Date(stmtDate).toISOString(),
+      });
+      setStmtContent('');
+      setStmtDate(new Date().toISOString().slice(0, 16));
+      const updated = res.data.data;
+      setP(updated);
+      onSuccess(updated);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to add statement');
+    } finally {
+      setStmtLoading(false);
+    }
+  };
+
+  const handleDeleteStatement = async (statementId: string) => {
+    if (!confirm('Delete this statement?')) return;
+    try {
+      const res = await apiClient.delete(`/cases/${caseId}/participants/${p.participant_id}/statements/${statementId}`);
+      const updated = res.data.data;
+      setP(updated);
+      onSuccess(updated);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to delete statement');
+    }
+  };
+
+  const handleAudioFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    setTranscribing(true);
+    setTranscribeError(null);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await apiClient.post(`/cases/${caseId}/participants/${p.participant_id}/statements/transcribe`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const { transcript } = res.data.data;
+      setStmtContent((prev) => prev.trim() ? `${prev.trim()}\n\n${transcript}` : transcript);
+    } catch (err: any) {
+      setTranscribeError(err.response?.data?.message || 'Transcription failed.');
+    } finally {
+      setTranscribing(false);
+    }
+  };
+
+  // ── Reasoning handlers ─────────────────────────────────────────────────
+  const handleAddReasoning = async () => {
+    if (!reasoningContent.trim()) return;
+    setReasoningLoading(true);
+    try {
+      const res = await apiClient.post(`/cases/${caseId}/participants/${p.participant_id}/reasoning`, {
+        content: reasoningContent.trim(),
+        source: 'officer',
+      });
+      setReasoningContent('');
+      const updated = res.data.data;
+      setP(updated);
+      onSuccess(updated);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to add reasoning');
+    } finally {
+      setReasoningLoading(false);
+    }
+  };
+
+  const handleUpdateReasoning = async (reasoningId: string) => {
+    if (!editingReasoningContent.trim()) return;
+    setReasoningLoading(true);
+    try {
+      const res = await apiClient.patch(`/cases/${caseId}/participants/${p.participant_id}/reasoning/${reasoningId}`, {
+        content: editingReasoningContent.trim(),
+      });
+      setEditingReasoningId(null);
+      setEditingReasoningContent('');
+      const updated = res.data.data;
+      setP(updated);
+      onSuccess(updated);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to update reasoning');
+    } finally {
+      setReasoningLoading(false);
+    }
+  };
+
+  const handleDeleteReasoning = async (reasoningId: string) => {
+    if (!confirm('Delete this reasoning entry?')) return;
+    try {
+      const res = await apiClient.delete(`/cases/${caseId}/participants/${p.participant_id}/reasoning/${reasoningId}`);
+      const updated = res.data.data;
+      setP(updated);
+      onSuccess(updated);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to delete reasoning');
+    }
+  };
+
+  const appliedSections: any[] = p?.suspectProfile?.appliedSections || [];
+
+  if (!isOpen || !p) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+
+        {/* Header */}
+        <div className="sticky top-0 flex items-start justify-between p-6 border-b border-neutral-100 bg-white z-10">
+          <div>
+            <h2 className="text-xl font-bold text-neutral-900">{p.name}</h2>
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {(p.roles || []).map((role: string) => (
+                <span key={role} className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${roleBadgeColor(role)}`}>{role}</span>
+              ))}
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1 text-neutral-400 hover:text-neutral-700 transition-colors text-2xl leading-none">×</button>
+        </div>
+
+        <div className="p-6 space-y-8">
+
+          {/* Edit Form */}
+          <form onSubmit={handleFormSubmit} className="space-y-5">
+            <h3 className="text-base font-bold text-neutral-800 border-b pb-2">Edit Participant Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Name */}
+              <div>
+                <label className="text-sm font-semibold text-neutral-700 mb-2 block">Full Name <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Enter full name"
+                  className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 ${formErrors.name ? 'border-red-300 focus:ring-red-200' : 'border-neutral-300 focus:ring-blue-200'}`}
+                />
+                {formErrors.name && <p className="text-xs text-red-600 mt-1">{formErrors.name}</p>}
+              </div>
+              {/* Contact */}
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-neutral-700">Contact</label>
+                <input type="tel" value={formData.contact.phone || ''} onChange={(e) => handleContactChange('phone', e.target.value)} placeholder="Phone" className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
+                <input type="email" value={formData.contact.email || ''} onChange={(e) => handleContactChange('email', e.target.value)} placeholder="Email" className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
+                <input type="text" value={formData.contact.address || ''} onChange={(e) => handleContactChange('address', e.target.value)} placeholder="Address" className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
+              </div>
+            </div>
+
+            {/* Roles */}
+            <div className="col-span-full">
+              <label className="text-sm font-semibold text-neutral-700 mb-3 block">
+                Roles <span className="text-red-500">*</span>
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                {['Victim', 'Witness', 'Suspect', 'Complainant'].map(role => (
+                  <label key={role} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.roles.includes(role)}
+                      onChange={() => handleRoleToggle(role)}
+                      className="w-4 h-4 accent-blue-600 cursor-pointer"
+                    />
+                    <span className="text-sm text-neutral-700">{role}</span>
+                  </label>
+                ))}
+              </div>
+              {formErrors.roles && <p className="text-xs text-red-600 mt-1">{formErrors.roles}</p>}
+            </div>
+
+            {/* Identifiers */}
+            <div className="col-span-full">
+              <div className="flex items-center justify-between mb-3">
+                <label className="text-sm font-semibold text-neutral-700">Identifiers (Optional)</label>
+                <button type="button" onClick={handleAddIdentifier} className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors">
+                  + Add Identifier
+                </button>
+              </div>
+              <div className="space-y-3">
+                {formData.identifiers.map((id, idx) => (
+                  <div key={idx} className="flex gap-2 items-start">
+                    <input
+                      type="text"
+                      value={id.type}
+                      onChange={(e) => handleIdentifierChange(idx, 'type', e.target.value)}
+                      placeholder="Type (e.g., Aadhar, PAN, License)"
+                      className="flex-1 px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    />
+                    <input
+                      type="text"
+                      value={id.value}
+                      onChange={(e) => handleIdentifierChange(idx, 'value', e.target.value)}
+                      placeholder="Value"
+                      className="flex-1 px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    />
+                    <div className="flex gap-1">
+                      {identifierUploading === idx ? (
+                        <span className="px-2 py-2 text-blue-600"><Loader2 size={16} className="animate-spin" /></span>
+                      ) : (
+                        <label className="px-2 py-2 text-blue-600 hover:bg-blue-50 rounded transition-colors cursor-pointer" title="Attach document">
+                          📎
+                          <input
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png,.mp3,.wav,.mp4,.mov"
+                            onChange={(e) => handleIdentifierFileChange(idx, e)}
+                            className="hidden"
+                          />
+                        </label>
+                      )}
+                      {(id as any).fileUrl && (
+                        <button
+                          type="button"
+                          onClick={() => window.open((id as any).fileUrl, '_blank')}
+                          className="px-2 py-2 text-green-600 hover:bg-green-50 rounded transition-colors"
+                          title="View uploaded document"
+                        >
+                          👁️
+                        </button>
+                      )}
+                      <button type="button" onClick={() => handleRemoveIdentifier(idx)} className="px-2 py-2 text-red-600 hover:bg-red-50 rounded transition-colors">
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Role-specific profiles */}
+            {formData.roles.includes('Victim') && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
+                <label className="text-sm font-semibold text-green-800 block">Victim Profile Details</label>
+                <input type="text" value={formData.victimProfile?.injuryDetails || ''} onChange={(e) => handleProfileChange('victimProfile', 'injuryDetails', e.target.value)} placeholder="Injury details (optional)" className="w-full px-4 py-2.5 border border-green-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-200" />
+                <textarea value={formData.victimProfile?.lossDetails || ''} onChange={(e) => handleProfileChange('victimProfile', 'lossDetails', e.target.value)} placeholder="Loss details (optional)" rows={3} className="w-full px-4 py-2.5 border border-green-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-200" />
+              </div>
+            )}
+            {formData.roles.includes('Complainant') && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                <label className="text-sm font-semibold text-blue-800 block">Complainant Profile Details</label>
+                <input type="text" value={formData.complainantProfile?.relationshipToIncident || ''} onChange={(e) => handleProfileChange('complainantProfile', 'relationshipToIncident', e.target.value)} placeholder="Relationship to incident (optional)" className="w-full px-4 py-2.5 border border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
+              </div>
+            )}
+            {formData.roles.includes('Suspect') && (
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 space-y-3">
+                <label className="text-sm font-semibold text-orange-800 block">Suspect Profile Details</label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={(formData as any).suspectProfile?.isAccused || false}
+                    onChange={(e) => handleProfileChange('suspectProfile', 'isAccused', String(e.target.checked))}
+                    className="w-4 h-4 accent-orange-600 cursor-pointer"
+                  />
+                  <span className="text-sm text-orange-700">Mark as Accused</span>
+                </label>
+              </div>
+            )}
+
+            {/* Form Actions */}
+            <div className="flex gap-3 pt-4 border-t border-neutral-100">
+              <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-neutral-300 text-neutral-700 font-semibold rounded-lg hover:bg-neutral-50 transition-colors">
+                Cancel
+              </button>
+              <button type="submit" disabled={formLoading} className="flex-1 px-4 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-60 transition-colors">
+                {formLoading ? 'Updating...' : 'Update Participant'}
+              </button>
+            </div>
+          </form>
+
+          {/* Statements Section */}
+          <div className="space-y-4">
+            <h3 className="text-base font-bold text-neutral-800 border-b pb-2">Statements</h3>
+            {/* Add Statement Form */}
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-3">
+              <div className="flex items-center gap-3 mb-3">
+                <label className="text-sm font-semibold text-slate-700">Add New Statement</label>
+                <label className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg cursor-pointer hover:bg-blue-700 transition-colors">
+                  🎤 Upload Audio
+                  <input type="file" accept=".mp3,.wav,.m4a,.ogg" onChange={handleAudioFileChange} className="hidden" />
+                </label>
+              </div>
+              {transcribing && (
+                <div className="flex items-center gap-2 text-sm text-blue-600">
+                  <Loader2 size={16} className="animate-spin" /> Transcribing audio...
+                </div>
+              )}
+              {transcribeError && (
+                <div className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-2">{transcribeError}</div>
+              )}
+              <textarea value={stmtContent} onChange={(e) => setStmtContent(e.target.value)} placeholder="Enter statement content..." rows={4} className="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none" />
+              <div className="flex items-center gap-3">
+                <input type="datetime-local" value={stmtDate} onChange={(e) => setStmtDate(e.target.value)} className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
+                <button onClick={handleAddStatement} disabled={!stmtContent.trim() || !stmtDate || stmtLoading} className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                  {stmtLoading ? 'Adding...' : 'Add Statement'}
+                </button>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {(p.statements || []).map((stmt: any) => (
+                <div key={stmt.id} className="bg-white border border-slate-200 rounded-lg p-4">
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <p className="text-xs text-slate-500 font-medium">{new Date(stmt.recordedAt).toLocaleString()}</p>
+                    <button onClick={() => handleDeleteStatement(stmt.id)} className="text-red-500 hover:text-red-700 text-sm">🗑️</button>
+                  </div>
+                  <p className="text-sm text-slate-700 leading-relaxed">{stmt.content}</p>
+                </div>
+              ))}
+              {(!p.statements || p.statements.length === 0) && (
+                <div className="text-center py-8 text-slate-400">
+                  <Users size={32} className="mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No statements recorded yet</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Reasoning Section */}
+          <div className="space-y-4">
+            <h3 className="text-base font-bold text-neutral-800 border-b pb-2">Investigation Reasoning</h3>
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-3">
+              <label className="text-sm font-semibold text-slate-700">Add Investigation Notes</label>
+              <textarea value={reasoningContent} onChange={(e) => setReasoningContent(e.target.value)} placeholder="Enter investigation reasoning or notes..." rows={3} className="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none" />
+              <button onClick={handleAddReasoning} disabled={!reasoningContent.trim() || reasoningLoading} className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                {reasoningLoading ? 'Adding...' : 'Add Reasoning'}
+              </button>
+            </div>
+            <div className="space-y-3">
+              {(p.reasoning || []).map((reason: any) => (
+                <div key={reason.id} className="bg-white border border-slate-200 rounded-lg p-4">
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-semibold px-2 py-1 rounded ${reason.source === 'ai' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                        {reason.source === 'ai' ? '🤖 AI' : '👮 Officer'}
+                      </span>
+                      <p className="text-xs text-slate-500">{new Date(reason.createdAt).toLocaleString()}</p>
+                    </div>
+                    <div className="flex gap-1">
+                      <button onClick={() => { setEditingReasoningId(reason.id); setEditingReasoningContent(reason.content); }} className="text-slate-500 hover:text-slate-700 text-sm">✏️</button>
+                      <button onClick={() => handleDeleteReasoning(reason.id)} className="text-red-500 hover:text-red-700 text-sm">🗑️</button>
+                    </div>
+                  </div>
+                  {editingReasoningId === reason.id ? (
+                    <div className="space-y-2">
+                      <textarea value={editingReasoningContent} onChange={(e) => setEditingReasoningContent(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none" rows={3} />
+                      <div className="flex gap-2">
+                        <button onClick={() => handleUpdateReasoning(reason.id)} disabled={reasoningLoading} className="px-3 py-1.5 bg-blue-600 text-white text-sm font-semibold rounded hover:bg-blue-700 disabled:opacity-50">{reasoningLoading ? 'Saving...' : 'Save'}</button>
+                        <button onClick={() => { setEditingReasoningId(null); setEditingReasoningContent(''); }} className="px-3 py-1.5 border border-slate-300 text-slate-700 text-sm font-semibold rounded hover:bg-slate-50">Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-700 leading-relaxed">{reason.content}</p>
+                  )}
+                </div>
+              ))}
+              {(!p.reasoning || p.reasoning.length === 0) && (
+                <div className="text-center py-8 text-slate-400">
+                  <Brain size={32} className="mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No investigation reasoning recorded yet</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Applied Legal Sections */}
+          {appliedSections.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-base font-bold text-neutral-800 border-b pb-2">Applied Legal Sections</h3>
+              <div className="grid gap-2">
+                {appliedSections.map((section: any, idx: number) => (
+                  <div key={idx} className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-amber-800">{section.code}</span>
+                      <span className="text-xs text-amber-600">•</span>
+                      <span className="text-xs text-amber-700">{section.title}</span>
+                    </div>
+                    {section.description && <p className="text-xs text-amber-600 mt-1 leading-relaxed">{section.description}</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+        </div>
+      </div>
+    </div>
+  );
+}
