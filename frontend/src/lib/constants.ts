@@ -46,6 +46,12 @@ export const API_ROUTES = {
     PARTICIPANTS: (id: string) => `/cases/${id}/participants`,
     APPROVE_PARTICIPANT_RECOMMENDATION: (id: string) => `/cases/${id}/participants/recommendations/approve`,
     ATTACH_PARTICIPANT_SECTIONS: (id: string, participantId: string) => `/cases/${id}/participants/${participantId}/sections/attach`,
+    WARRANTS: (id: string) => `/cases/${id}/warrants`,
+    WARRANT_DETAIL: (id: string, wid: string) => `/cases/${id}/warrants/${wid}`,
+    WARRANT_SEND: (id: string, wid: string) => `/cases/${id}/warrants/${wid}/send`,
+    WARRANT_CUSTODY: (id: string, wid: string) => `/cases/${id}/warrants/${wid}/custody`,
+    WARRANT_PRODUCED: (id: string, wid: string) => `/cases/${id}/warrants/${wid}/produced`,
+    WARRANT_RELEASE: (id: string, wid: string) => `/cases/${id}/warrants/${wid}/release`,
   },
   CASE_UNDERSTANDING: {
     ANALYZE: '/case-understanding/analyze',

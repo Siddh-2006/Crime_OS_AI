@@ -13,7 +13,7 @@ import { Loader } from '@/components/ui/Loader';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/hooks/useToast';
 import { ToastContainer } from '@/components/ui/Toast';
-import { Bot, BookOpen, ClipboardList, Send, FolderOpen, Sparkles, Users, FileText, Brain, Calendar, MapPin, Download, CheckCheck, Loader2, Clock, FileImage, FileVideo, FileAudio, File, ChevronRight, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Bot, BookOpen, ClipboardList, Send, FolderOpen, Sparkles, Users, FileText, Brain, Calendar, MapPin, Download, CheckCheck, Loader2, Clock, FileImage, FileVideo, FileAudio, File, ChevronRight, CheckCircle2, AlertCircle, Shield } from 'lucide-react';
 import { Card, CardHeader } from '@/components/ui/Card';
 import ThreadViewerModal from './ThreadViewerModal';
 import SnapshotDetailModal from './SnapshotDetailModal';
@@ -23,13 +23,14 @@ import ComplaintDetailModal from './ComplaintDetailModal';
 import { DiaryDetailModal } from './DiaryDetailModal';
 import { useTranslation } from '@/context/TranslationContext';
 import { CaseUnderstandingView, CaseUnderstandingData } from '@/components/case-understanding/CaseUnderstandingView';
+import { CustodyPanel } from './CustodyPanel';
 import { API_ROUTES } from '@/lib/constants';
 
 interface InvestigationWorkspaceProps {
   caseId: string;
 }
 
-type WorkspaceTab = 'analysis' | 'diary' | 'checklist' | 'requests' | 'evidence' | 'participants' | 'complaint' | 'case_understanding' | 'timeline' | 'placesVisited';
+type WorkspaceTab = 'analysis' | 'diary' | 'checklist' | 'requests' | 'evidence' | 'participants' | 'complaint' | 'case_understanding' | 'timeline' | 'placesVisited' | 'custody';
 
 export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) {
   const { toasts, showToast, removeToast } = useToast();
@@ -47,6 +48,7 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
   const [threads, setThreads] = useState<any[]>([]);
   const [threadFilter, setThreadFilter] = useState<'all' | 'department' | 'citizen'>('all');
   const [evidence, setEvidence] = useState<any[]>([]);
+  const [warrants, setWarrants] = useState<any[]>([]);
   const [diaryDraft, setDiaryDraft] = useState<any>(null);
   const [diaryDraftLoading, setDiaryDraftLoading] = useState(false);
   const [diaryDraftError, setDiaryDraftError] = useState<string | null>(null);
@@ -102,7 +104,7 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
 
   const fetchWorkspaceData = useCallback(async () => {
     try {
-      const [snapRes, checkRes, diaryRes, diaryHistoryRes, placesRes, reqRes, evRes, participantRes] = await Promise.allSettled([
+      const [snapRes, checkRes, diaryRes, diaryHistoryRes, placesRes, reqRes, evRes, participantRes, warrantRes] = await Promise.allSettled([
         apiClient.get(`/cases/${caseId}/analysis/latest`),
         apiClient.get(`/cases/${caseId}/checklist`),
         apiClient.get(`/cases/${caseId}/diary`),
@@ -111,6 +113,7 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
         apiClient.get(`/cases/${caseId}/requests`),
         apiClient.get(`/cases/${caseId}/evidence`),
         apiClient.get(`/cases/${caseId}/participants`),
+        apiClient.get(`/cases/${caseId}/warrants`),
       ]);
 
       if (snapRes.status === 'fulfilled') setSnapshot(snapRes.value.data.data);
@@ -144,6 +147,10 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
       if (participantRes.status === 'fulfilled') {
         const rawParticipants = participantRes.value.data.data;
         setParticipants(Array.isArray(rawParticipants) ? rawParticipants : []);
+      }
+      if (warrantRes.status === 'fulfilled') {
+        const rawWarrants = warrantRes.value.data.data;
+        setWarrants(Array.isArray(rawWarrants) ? rawWarrants : []);
       }
       
       // Fetch threads specifically
@@ -530,6 +537,7 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
     { id: 'complaint', label: 'Original Complaint', icon: <FileText size={15} /> },
     { id: 'case_understanding', label: 'Case Understanding', icon: <Brain size={15} /> },
     { id: 'timeline', label: 'Timeline', icon: <Clock size={15} />, badge: caseUnderstanding?.timeline?.length || undefined },
+    { id: 'custody', label: 'Custody', icon: <Shield size={15} />, badge: warrants.filter((w: any) => ['draft','sent_to_magistrate','approved','in_custody'].includes(w.status)).length || undefined },
   ];
 
   if (loading && !snapshot && !checklist && diaryEntries.length === 0) {
@@ -1008,6 +1016,16 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
 
         {activeTab === 'timeline' && (
           <TimelinePanel caseUnderstanding={caseUnderstanding} />
+        )}
+
+        {activeTab === 'custody' && (
+          <CustodyPanel
+            caseId={caseId}
+            participants={participants}
+            warrants={warrants}
+            complaintData={complaintData}
+            onRefresh={fetchWorkspaceData}
+          />
         )}
       </div>
 
