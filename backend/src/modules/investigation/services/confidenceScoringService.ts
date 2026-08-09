@@ -95,8 +95,8 @@ export function computeConfidenceScore(facts: FactsObject): ConfidenceBreakdown 
   const criticalChecklistProgress = criticalTotal > 0 ? criticalCompleted / criticalTotal : 0;
 
   // Identity Corroboration: count of verified evidence tied to the accused participant
-  if (facts.participants && facts.participants.by_role && facts.participants.by_role.accused) {
-    facts.participants.by_role.accused.forEach(accused => {
+  if (facts.participants && facts.participants.by_role && facts.participants.by_role.Accused) {
+    facts.participants.by_role.Accused.forEach((accused: any) => {
       if (accused.evidence_ids && accused.evidence_ids.length > identityCorroborationCount) {
         identityCorroborationCount = accused.evidence_ids.length; // Count verified sources
       }
