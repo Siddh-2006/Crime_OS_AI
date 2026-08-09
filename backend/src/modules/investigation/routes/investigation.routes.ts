@@ -3,6 +3,7 @@ import { InvestigationController } from '../controllers/InvestigationController'
 import { CitizenRequestController } from '../controllers/CitizenRequestController';
 import caseParticipantRoutes from './caseParticipant.routes';
 import chargeSheetRoutes from './chargeSheet.routes';
+import warrantRoutes from './warrant.routes';
 import { DepartmentRegistry } from '../../admin/models/DepartmentRegistry.model';
 import { authenticate } from '../../../common/middlewares/authenticate.middleware';
 import { authorize } from '../../../common/middlewares/authorize.middleware';
@@ -14,6 +15,7 @@ router.use(authenticate, authorize(Role.SHO, Role.IO));
 
 router.use(caseParticipantRoutes);
 router.use(chargeSheetRoutes);
+router.use(warrantRoutes);
 
 // ── STATIC routes — MUST be registered before /:id dynamic routes ─────────────
 // Express matches routes top-down; a dynamic /:id would capture 'departments'

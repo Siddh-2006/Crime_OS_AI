@@ -626,6 +626,31 @@ export class GmailService {
       sender: senderType,
     });
 
+    // ── Custody warrant hook ──────────────────────────────────────────────────
+    // If this reply belongs to an arrest warrant sent to the magistrate,
+    // process it through WarrantService (approval / rejection parsing + PDF store).
+    // Runs AFTER the standard ingestResponse so the thread + DepartmentRequest
+    // are already updated before we check warrant state.
+    if (request.recipient_type === 'magistrate' && request.department_entity_id === 'court_magistrate_office') {
+      try {
+        const { WarrantService } = await import('../../../modules/investigation/services/warrantService');
+        // Collect the first PDF attachment buffer (if any) for signed warrant storage
+        const signedPdfAttachment = uploadedAttachments.find(
+          (a) => a.mimeType === 'application/pdf' && a.buffer,
+        );
+        await WarrantService.processMagistrateReply(
+          request.request_id,
+          cleanBody,
+          signedPdfAttachment?.buffer,
+        );
+      } catch (warrantErr: any) {
+        logger.error(
+          `[GmailService] WarrantService.processMagistrateReply failed for request ${request.request_id}`,
+          { error: warrantErr.message },
+        );
+      }
+    }
+
     // Mark email as READ — prevents double-processing
     await GmailService._markAsRead(gmail, messageId);
     logger.info(`[GmailService] Message ${messageId} marked as read.`);

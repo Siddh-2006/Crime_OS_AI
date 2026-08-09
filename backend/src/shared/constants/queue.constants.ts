@@ -3,11 +3,12 @@
  * Centralised to ensure consistency between producers and workers.
  */
 export const QUEUE_NAMES = {
-  EMAIL:      'email',
-  FIR:        'fir',
-  ANALYSIS:   'analysis',
-  GMAIL_POLL: 'gmail-poll',
-  CASE_DIARY: 'case-diary',
+  EMAIL:          'email',
+  FIR:            'fir',
+  ANALYSIS:       'analysis',
+  GMAIL_POLL:     'gmail-poll',
+  CASE_DIARY:     'case-diary',
+  CUSTODY_TIMER:  'custody-timer',
 } as const;
 
 /**

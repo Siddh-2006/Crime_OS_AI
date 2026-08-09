@@ -7,6 +7,7 @@ import { startFirWorker } from './shared/queue/FirWorker';
 import { startAnalysisWorker } from './shared/queue/AnalysisWorker';
 import { startGmailPollWorker } from './shared/queue/GmailPollWorker';
 import { startCaseDiaryWorker } from './shared/queue/CaseDiaryWorker';
+import { startCustodyTimerWorker } from './shared/queue/CustodyTimerWorker';
 import { checkOllamaHealth } from './shared/llm/ollamaHealth';
 import env from './config/env';
 import logger from './config/logger';
@@ -42,6 +43,7 @@ async function bootstrap(): Promise<void> {
       startAnalysisWorker();
       startGmailPollWorker();
       startCaseDiaryWorker();
+      startCustodyTimerWorker();
       logger.info('Redis and BullMQ workers started');
     } catch (redisErr) {
       logger.warn('Redis unavailable — queue workers disabled. API will function without async jobs.');

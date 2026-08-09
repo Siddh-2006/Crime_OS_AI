@@ -31,7 +31,16 @@ export type DiaryEventType =
   | 'case_diary_draft_created'
   | 'case_diary_completed'
   | 'place_visited_added'
-  | 'witness_added';
+  | 'witness_added'
+  // ── Custody & Arrest Warrant lifecycle ─────────────────────────────────────
+  | 'warrant_drafted'
+  | 'warrant_sent_to_magistrate'
+  | 'warrant_approved'
+  | 'warrant_rejected'
+  | 'suspect_taken_into_custody'
+  | 'custody_deadline_reached'
+  | 'accused_produced_before_court'
+  | 'suspect_released';
 
 export interface IDiaryEntry extends Document {
   case_id: Types.ObjectId;
@@ -46,6 +55,7 @@ export interface IDiaryEntry extends Document {
     step_id?: string;
     participant_id?: string;
     snapshot_id?: string;
+    warrant_id?: string;
   };
 }
 
@@ -71,6 +81,10 @@ const DiaryEntrySchema = new Schema<IDiaryEntry>(
         'participant_reasoning_attached', 'evidence_sections_attached',
         'diary_draft_generated', 'diary_finalized', 'case_diary_draft_created',
         'case_diary_completed', 'place_visited_added', 'witness_added',
+        // Custody & Arrest Warrant lifecycle
+        'warrant_drafted', 'warrant_sent_to_magistrate', 'warrant_approved',
+        'warrant_rejected', 'suspect_taken_into_custody', 'custody_deadline_reached',
+        'accused_produced_before_court', 'suspect_released',
       ],
       required: true,
     },
@@ -81,6 +95,7 @@ const DiaryEntrySchema = new Schema<IDiaryEntry>(
       step_id:     { type: String },
       participant_id: { type: String },
       snapshot_id: { type: String },
+      warrant_id:  { type: String },
     },
   },
   {
