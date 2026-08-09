@@ -1,6 +1,6 @@
 import { Types } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
-import { CaseParticipant, ICaseParticipant, ParticipantRole, IVictimProfile, IWitnessProfile, ISuspectProfile, IAccusedProfile, IComplainantProfile, IParticipantStatement, IParticipantReasoning } from '../models/CaseParticipant.model';
+import { CaseParticipant, ICaseParticipant, ParticipantRole, IVictimProfile, IWitnessProfile, ISuspectProfile, IComplainantProfile, IParticipantStatement, IParticipantReasoning } from '../models/CaseParticipant.model';
 import { DiaryEntry } from '../models/DiaryEntry.model';
 import { AnalysisSnapshot, IParticipantRecommendation } from '../models/AnalysisSnapshot.model';
 import { ILegalSectionSuggestion, IAppliedLegalSection } from '../models/LegalSection.schema';
@@ -17,7 +17,6 @@ export interface ApproveParticipantRecommendationInput {
   victimProfile?: Record<string, unknown>;
   witnessProfile?: Record<string, unknown>;
   suspectProfile?: Record<string, unknown>;
-  accusedProfile?: Record<string, unknown>;
   complainantProfile?: Record<string, unknown>;
   snapshot_id?: string;
 }
@@ -39,8 +38,9 @@ function isRelevantParticipantRole(roles: ParticipantRole[]): boolean {
   return roles.includes('Suspect') || roles.includes('Accused');
 }
 
-function pickAppliedSectionsTarget(roles: ParticipantRole[]): 'suspectProfile' | 'accusedProfile' {
-  return roles.includes('Accused') ? 'accusedProfile' : 'suspectProfile';
+// Sections always go to suspectProfile now — accusedProfile is gone
+function pickAppliedSectionsTarget(_roles: ParticipantRole[]): 'suspectProfile' {
+  return 'suspectProfile';
 }
 
 export function resolveAllowedSectionsForParticipant(
@@ -171,7 +171,6 @@ export class CaseParticipantService {
       if (input.victimProfile) existing.victimProfile = { ...(existing.victimProfile || {}), ...input.victimProfile };
       if (input.witnessProfile) existing.witnessProfile = { ...(existing.witnessProfile || {}), ...input.witnessProfile } as any;
       if (input.suspectProfile) existing.suspectProfile = { ...(existing.suspectProfile || {}), ...input.suspectProfile } as any;
-      if (input.accusedProfile) existing.accusedProfile = { ...(existing.accusedProfile || {}), ...input.accusedProfile } as any;
       if (input.complainantProfile) existing.complainantProfile = { ...(existing.complainantProfile || {}), ...input.complainantProfile } as any;
       participant = await existing.save();
     } else {
@@ -185,7 +184,6 @@ export class CaseParticipantService {
         victimProfile: input.victimProfile,
         witnessProfile: input.witnessProfile,
         suspectProfile: input.suspectProfile,
-        accusedProfile: input.accusedProfile,
         complainantProfile: input.complainantProfile,
       });
     }
@@ -257,9 +255,7 @@ export class CaseParticipantService {
     }
 
     const targetField = pickAppliedSectionsTarget(participant.roles);
-    const existingSections = targetField === 'accusedProfile'
-      ? (participant.accusedProfile?.appliedSections ?? [])
-      : (participant.suspectProfile?.appliedSections ?? []);
+    const existingSections = participant.suspectProfile?.appliedSections ?? [];
     const mergedSectionsMap = new Map<string, IAppliedLegalSection>();
 
     for (const section of existingSections) {
@@ -271,17 +267,10 @@ export class CaseParticipantService {
     }
 
     const mergedAppliedSections = Array.from(mergedSectionsMap.values());
-    if (targetField === 'accusedProfile') {
-      participant.accusedProfile = {
-        ...(participant.accusedProfile || {}),
-        appliedSections: mergedAppliedSections,
-      };
-    } else {
-      participant.suspectProfile = {
-        ...(participant.suspectProfile || {}),
-        appliedSections: mergedAppliedSections,
-      };
-    }
+    participant.suspectProfile = {
+      ...(participant.suspectProfile || { isAccused: false }),
+      appliedSections: mergedAppliedSections,
+    };
 
     await participant.save();
 
@@ -308,23 +297,18 @@ export class CaseParticipantService {
     const caseObjectId = new Types.ObjectId(caseId);
     const participant = await CaseParticipant.findOne({ case_id: caseObjectId, participant_id: participantId }).exec();
 
-    if (!participant) {
-      throw new Error('Participant not found');
-    }
+    if (!participant) throw new Error('Participant not found');
+    if (!participant.roles.includes('Suspect')) throw new Error('Only participants with the Suspect role can be promoted to Accused');
 
-    if (!participant.roles.includes('Suspect')) {
-      throw new Error('Only participants with the Suspect role can be promoted to Accused');
-    }
+    // Set isAccused on suspectProfile
+    participant.suspectProfile = {
+      ...(participant.suspectProfile || { appliedSections: [] }),
+      isAccused: true,
+    };
 
+    // Also keep 'Accused' in roles array so existing role-based filters (ChargeSheet, Diary, etc.) keep working
     if (!participant.roles.includes('Accused')) {
       participant.roles.push('Accused');
-    }
-
-    // Carry over applied sections from suspectProfile to accusedProfile
-    if (!participant.accusedProfile) {
-      participant.accusedProfile = {
-        appliedSections: participant.suspectProfile?.appliedSections ?? [],
-      };
     }
 
     await participant.save();
@@ -334,51 +318,33 @@ export class CaseParticipantService {
       entry_id: uuidv4(),
       actor: { type: 'officer', id: 'system' },
       event_type: 'participant_promoted_to_accused',
-      payload: {
-        participant_id: participant.participant_id,
-        participant_name: participant.name,
-      },
+      payload: { participant_id: participant.participant_id, participant_name: participant.name },
       ref_ids: { participant_id: participant.participant_id },
     });
 
     return participant;
   }
 
-  /**
-   * Create a new participant manually (not from AI recommendations)
-   */
   static async createParticipant(
     caseId: string,
     input: {
       name: string;
       roles: ParticipantRole[];
       contact?: { phone?: string; email?: string; address?: string };
-      identifiers?: Array<{ type: string; value: string }>;
+      identifiers?: Array<{ type: string; value: string; fileUrl?: string }>;
       victimProfile?: Partial<IVictimProfile>;
       witnessProfile?: Partial<IWitnessProfile>;
       suspectProfile?: Partial<ISuspectProfile>;
-      accusedProfile?: Partial<IAccusedProfile>;
       complainantProfile?: Partial<IComplainantProfile>;
     },
   ): Promise<ICaseParticipant> {
-    if (!input.name || !input.name.trim()) {
-      throw new Error('Participant name is required');
-    }
-
-    if (!Array.isArray(input.roles) || input.roles.length === 0) {
-      throw new Error('At least one role is required');
-    }
+    if (!input.name || !input.name.trim()) throw new Error('Participant name is required');
+    if (!Array.isArray(input.roles) || input.roles.length === 0) throw new Error('At least one role is required');
 
     const caseObjectId = new Types.ObjectId(caseId);
-
-    // Validate roles
-    const validRoles = input.roles.filter((role): role is ParticipantRole => {
-      return ['Victim', 'Witness', 'Suspect', 'Accused', 'Complainant'].includes(role);
-    });
-
-    if (validRoles.length === 0) {
-      throw new Error('At least one valid role is required');
-    }
+    const validRoles = input.roles.filter((role): role is ParticipantRole =>
+      ['Victim', 'Witness', 'Suspect', 'Accused', 'Complainant'].includes(role));
+    if (validRoles.length === 0) throw new Error('At least one valid role is required');
 
     const participant = await CaseParticipant.create({
       case_id: caseObjectId,
@@ -390,7 +356,6 @@ export class CaseParticipantService {
       victimProfile: input.victimProfile || undefined,
       witnessProfile: input.witnessProfile || undefined,
       suspectProfile: input.suspectProfile || undefined,
-      accusedProfile: input.accusedProfile || undefined,
       complainantProfile: input.complainantProfile || undefined,
     });
 
@@ -420,11 +385,10 @@ export class CaseParticipantService {
       name?: string;
       roles?: ParticipantRole[];
       contact?: { phone?: string; email?: string; address?: string };
-      identifiers?: Array<{ type: string; value: string }>;
+      identifiers?: Array<{ type: string; value: string; fileUrl?: string }>;
       victimProfile?: Partial<IVictimProfile>;
       witnessProfile?: Partial<IWitnessProfile>;
       suspectProfile?: Partial<ISuspectProfile>;
-      accusedProfile?: Partial<IAccusedProfile>;
       complainantProfile?: Partial<IComplainantProfile>;
     },
   ): Promise<ICaseParticipant> {
@@ -481,13 +445,6 @@ export class CaseParticipantService {
       participant.suspectProfile = {
         ...(participant.suspectProfile || {}),
         ...input.suspectProfile,
-      } as any;
-    }
-
-    if (input.accusedProfile) {
-      participant.accusedProfile = {
-        ...(participant.accusedProfile || {}),
-        ...input.accusedProfile,
       } as any;
     }
 

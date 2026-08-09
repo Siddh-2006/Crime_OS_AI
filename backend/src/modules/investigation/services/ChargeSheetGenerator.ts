@@ -40,27 +40,23 @@ export class ChargeSheetGenerator {
     // Extract arrays of ObjectIds for point-in-time preservation
     const victimIds = participants.filter((p: any) => p.roles.includes('Victim')).map((p: any) => p._id);
     const witnessIds = participants.filter((p: any) => p.roles.includes('Witness')).map((p: any) => p._id);
-    // Only participants explicitly marked Accused go into accusedIds (NOT suspects)
-    const accusedIds = participants.filter((p: any) => p.roles.includes('Accused')).map((p: any) => p._id);
-    // Suspects only (those without Accused role)
+    // Participants with isAccused flag on suspectProfile (or legacy Accused role)
+    const accusedIds = participants
+      .filter((p: any) => p.suspectProfile?.isAccused === true || p.roles.includes('Accused'))
+      .map((p: any) => p._id);
+    // Suspects not yet accused
     const suspectIds = participants
-      .filter((p: any) => p.roles.includes('Suspect') && !p.roles.includes('Accused'))
+      .filter((p: any) => p.roles.includes('Suspect') && !(p.suspectProfile?.isAccused === true) && !p.roles.includes('Accused'))
       .map((p: any) => p._id);
     const evidenceIds = evidence.map((e: any) => e._id);
     const departmentRequestIds = departmentRequests.map((d: any) => d._id);
     const diaryEntryIds = diaryEntries.map((d: any) => d._id);
     const applicableLegalSections = latestSnapshot?.suggested_legal_sections ?? [];
     const appliedSectionsByAccused = participants
-      .filter((participant: any) => participant.roles.includes('Accused'))
+      .filter((participant: any) => participant.suspectProfile?.isAccused === true || participant.roles.includes('Accused'))
       .map((participant: any) => {
-        const appliedSections = (participant.accusedProfile?.appliedSections ||
-          participant.suspectProfile?.appliedSections ||
-          []) as IAppliedLegalSection[];
-
-        return {
-          accusedId: participant._id,
-          sections: appliedSections,
-        };
+        const appliedSections = (participant.suspectProfile?.appliedSections || []) as IAppliedLegalSection[];
+        return { accusedId: participant._id, sections: appliedSections };
       })
       .filter((entry) => entry.sections.length > 0);
 

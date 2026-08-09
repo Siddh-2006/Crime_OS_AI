@@ -8,6 +8,8 @@ export type ParticipantRole = (typeof ParticipantRoles)[number];
 export interface IParticipantIdentifier {
   type: string;
   value: string;
+  /** CDN URL for an uploaded supporting document (image/audio). Optional. */
+  fileUrl?: string;
 }
 
 /** A single recorded statement from a participant (any role). */
@@ -37,10 +39,8 @@ export interface IWitnessProfile {
 
 export interface ISuspectProfile {
   appliedSections: IAppliedLegalSection[];
-}
-
-export interface IAccusedProfile {
-  appliedSections: IAppliedLegalSection[];
+  /** True once the suspect has been formally promoted to Accused. Replaces the separate accusedProfile. */
+  isAccused: boolean;
 }
 
 export interface IComplainantProfile {
@@ -63,14 +63,14 @@ export interface ICaseParticipant extends Document {
   victimProfile?: IVictimProfile;
   witnessProfile?: IWitnessProfile;
   suspectProfile?: ISuspectProfile;
-  accusedProfile?: IAccusedProfile;
   complainantProfile?: IComplainantProfile;
 }
 
 const ParticipantIdentifierSchema = new Schema<IParticipantIdentifier>(
   {
-    type: { type: String, required: true, trim: true },
-    value: { type: String, required: true, trim: true },
+    type:    { type: String, required: true, trim: true },
+    value:   { type: String, required: true, trim: true },
+    fileUrl: { type: String, trim: true },
   },
   { _id: false },
 );
@@ -121,13 +121,7 @@ const WitnessProfileSchema = new Schema<IWitnessProfile>(
 const SuspectProfileSchema = new Schema<ISuspectProfile>(
   {
     appliedSections: { type: [AppliedLegalSectionSchema], default: [] },
-  },
-  { _id: false },
-);
-
-const AccusedProfileSchema = new Schema<IAccusedProfile>(
-  {
-    appliedSections: { type: [AppliedLegalSectionSchema], default: [] },
+    isAccused: { type: Boolean, default: false },
   },
   { _id: false },
 );
@@ -152,7 +146,6 @@ const CaseParticipantSchema = new Schema<ICaseParticipant>(
     victimProfile: { type: VictimProfileSchema },
     witnessProfile: { type: WitnessProfileSchema },
     suspectProfile: { type: SuspectProfileSchema },
-    accusedProfile: { type: AccusedProfileSchema },
     complainantProfile: { type: ComplainantProfileSchema },
   },
   { timestamps: true, versionKey: false },

@@ -136,6 +136,7 @@ export interface ParticipantProfileFacts {
   lossDetails?: string;
   evidenceIds?: string[];
   appliedSections?: ILegalSectionSuggestion[];
+  isAccused?: boolean;
   relationshipToIncident?: string;
 }
 
@@ -157,18 +158,13 @@ export interface ParticipantFactsRow {
   database_id: string;
   name: string;
   roles: ParticipantRole[];
-  contact?: {
-    phone?: string;
-    email?: string;
-    address?: string;
-  };
-  identifiers: Array<{ type: string; value: string }>;
+  contact?: { phone?: string; email?: string; address?: string };
+  identifiers: Array<{ type: string; value: string; fileUrl?: string }>;
   statements: IParticipantStatementFacts[];
   reasoning: IParticipantReasoningFacts[];
   victim_profile?: ParticipantProfileFacts;
   witness_profile?: ParticipantProfileFacts;
   suspect_profile?: ParticipantProfileFacts;
-  accused_profile?: ParticipantProfileFacts;
   complainant_profile?: ParticipantProfileFacts;
   evidence_ids: string[];
   evidence: EvidenceRow[];
@@ -345,7 +341,7 @@ export async function buildFactsObject(caseId: string): Promise<FactsObject> {
       name: participant.name,
       roles,
       contact: participant.contact ? { ...participant.contact } : undefined,
-      identifiers: (participant.identifiers ?? []).map((identifier) => ({ type: identifier.type, value: identifier.value })),
+      identifiers: (participant.identifiers ?? []).map((identifier) => ({ type: identifier.type, value: identifier.value, fileUrl: identifier.fileUrl })),
       statements: (participant.statements ?? []).map((s: any) => ({
         id: s.id,
         content: s.content,
@@ -363,9 +359,7 @@ export async function buildFactsObject(caseId: string): Promise<FactsObject> {
       } : undefined,
       suspect_profile: participant.suspectProfile ? {
         appliedSections: participant.suspectProfile.appliedSections ?? [],
-      } : undefined,
-      accused_profile: participant.accusedProfile ? {
-        appliedSections: participant.accusedProfile.appliedSections ?? [],
+        isAccused: participant.suspectProfile.isAccused ?? false,
       } : undefined,
       complainant_profile: participant.complainantProfile ? {
         relationshipToIncident: participant.complainantProfile.relationshipToIncident,

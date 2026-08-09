@@ -33,6 +33,9 @@ router.post(
   CaseParticipantController.transcribeStatementAudio,
 );
 
+// Identifier document upload — returns a Cloudinary signed signature, no file stored here
+router.post('/:id/participants/:participantId/identifiers/upload-signature', CaseParticipantController.getIdentifierUploadSignature);
+
 // Reasoning
 router.post('/:id/participants/:participantId/reasoning', CaseParticipantController.addReasoning);
 router.patch('/:id/participants/:participantId/reasoning/:reasoningId', CaseParticipantController.updateReasoning);
