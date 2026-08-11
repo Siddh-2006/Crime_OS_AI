@@ -86,7 +86,18 @@ Use exactly this structure:
       "related_evidence_ids": [],
       "confidence": 0.9
     }
-  ]
+  ],
+
+  "credibility_metrics": {
+    "specificity_density": 0,
+    "consistency_flags": [
+      {
+        "field": "...",
+        "message": "...",
+        "severity": "low|medium|high"
+      }
+    ]
+  }
 }
 
 --------------------------------------------------------
@@ -200,6 +211,22 @@ Identify contradictions only between:
 • PDF text
 
 If no contradictions exist, return an empty array.
+
+--------------------------------------------------------
+CREDIBILITY METRICS (SHO-STAGE TRIAGE)
+--------------------------------------------------------
+
+Compute the following credibility factors based ONLY on the provided text/evidence:
+
+1. specificity_density: Rate from 1 to 10 how specific the complaint is.
+   - High score (8-10): Contains exact dates, times, amounts, bank account numbers, UPI IDs, phone numbers, named locations, specific entities.
+   - Low score (1-3): Vague, lacking actionable details ("someone scammed me", "lost money").
+
+2. consistency_flags: Identify any specific internal inconsistencies between the citizen's narrative and the provided evidence (e.g., complaint says 50,000 INR was lost, but attached bank statement shows 5,000 INR).
+   - "field": the data point (e.g., "Amount Lost", "Date of Incident")
+   - "message": explanation of the inconsistency
+   - "severity": "low", "medium", or "high" based on impact.
+   - If no inconsistencies exist, return an empty array.
 
 --------------------------------------------------------
 GROUNDING RULES

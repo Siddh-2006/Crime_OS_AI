@@ -6,6 +6,7 @@ export const REDIS_KEYS = {
   REFRESH_TOKEN:        (userId: string) => `refresh_token:${userId}`,
   OTP_EMAIL_VERIFY:     (email: string)  => `otp:email_verify:${email}`,
   OTP_FORGOT_PASSWORD:  (email: string)  => `otp:forgot_password:${email}`,
+  PRE_VERIFIED_EMAIL:   (email: string)  => `pre_verified_email:${email}`,
   POLICE_STATIONS_LIST: 'cache:police_stations',
 } as const;
 

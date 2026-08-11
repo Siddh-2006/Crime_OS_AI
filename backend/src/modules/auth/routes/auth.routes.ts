@@ -53,6 +53,18 @@ router.post('/complainant-profile', authenticate, authorize(Role.SHO, Role.IO), 
 router.post('/verify-email', otpVerifyLimiter, validate(verifyEmailSchema), authController.verifyEmail);
 
 /**
+ * POST /auth/send-verification-otp
+ * Send OTP just to verify an email before profile creation
+ */
+router.post('/send-verification-otp', authenticate, authorize(Role.SHO, Role.IO), resendOtpLimiter, validate(resendOtpSchema), authController.sendPreVerificationOtp);
+
+/**
+ * POST /auth/verify-pre-otp
+ * Verify OTP before profile creation
+ */
+router.post('/verify-pre-otp', authenticate, authorize(Role.SHO, Role.IO), otpVerifyLimiter, validate(verifyEmailSchema), authController.verifyPreRegistrationOtp);
+
+/**
  * POST /auth/resend-otp
  * Resend email verification OTP
  */

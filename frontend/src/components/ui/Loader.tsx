@@ -8,43 +8,48 @@ interface LoaderProps {
 }
 
 const sizeMap = {
-  sm: 'h-5 w-5',
-  md: 'h-8 w-8',
-  lg: 'h-12 w-12',
+  sm: 'h-8 w-8',
+  md: 'h-12 w-12',
+  lg: 'h-16 w-16',
 };
 
 /**
- * Spinner loader with optional label and full-page overlay.
+ * Logo-based loader with pulsing glow, scanning line, and animated label.
  */
 export function Loader({ size = 'md', label = 'Loading...', fullPage = false, color }: LoaderProps): React.ReactElement {
   const resolvedSizeClass = typeof size === 'number' ? '' : sizeMap[size as 'sm' | 'md' | 'lg'];
   const resolvedStyle = typeof size === 'number'
     ? { width: size, height: size, color }
     : { color };
+
   const spinner = (
-    <div className="flex flex-col items-center gap-3" role="status" aria-label={label}>
-      <svg
-        className={['animate-spin', color ? '' : 'text-primary-700', resolvedSizeClass].join(' ')}
-        style={resolvedStyle}
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-        <path
-          className="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+    <div className="flex flex-col items-center gap-4" role="status" aria-label={label}>
+      <div className={['relative', resolvedSizeClass].join(' ')} style={resolvedStyle}>
+        {/* Pulsing glow ring */}
+        <div className="absolute inset-[-4px] rounded-full border border-brand-primary/20 animate-pulse" />
+
+        {/* Scanning line */}
+        <div
+          className="absolute left-0 right-0 h-[1px] z-10 animate-scan-line"
+          style={{ background: 'linear-gradient(90deg, transparent, var(--brand-primary), transparent)' }}
         />
-      </svg>
-      <span className="sr-only">{label}</span>
+
+        {/* Logo */}
+        <img
+          src="/logo.svg"
+          alt="Loading"
+          className="w-full h-full object-contain animate-pulse drop-shadow-[0_0_8px_rgba(var(--brand-primary-rgb),0.3)]"
+        />
+      </div>
+      <span className="text-[10px] font-heading font-bold tracking-[0.2em] uppercase text-brand-primary/70 animate-pulse">
+        {label}
+      </span>
     </div>
   );
 
   if (fullPage) {
     return (
-      <div className="fixed inset-0 z-40 flex items-center justify-center bg-white/70 backdrop-blur-sm">
+      <div className="fixed inset-0 z-40 flex items-center justify-center bg-background/80 backdrop-blur-md">
         {spinner}
       </div>
     );

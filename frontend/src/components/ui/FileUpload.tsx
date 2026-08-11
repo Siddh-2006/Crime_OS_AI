@@ -243,7 +243,7 @@ export function FileUpload({
             'border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all duration-200',
             isDragging
               ? 'border-primary-500 bg-primary-50/50 scale-[0.99]'
-              : 'border-neutral-300 hover:border-primary-400 bg-neutral-50/50 hover:bg-neutral-100/30',
+              : 'border-neutral-700 hover:border-primary-400 bg-neutral-50/50 hover:bg-neutral-800/30',
           ].join(' ')}
         >
           <input
@@ -255,7 +255,7 @@ export function FileUpload({
             onChange={handleFileSelect}
           />
           <Upload className="mx-auto h-10 w-10 text-neutral-400 mb-3" />
-          <p className="text-sm font-semibold text-neutral-700">
+          <p className="text-sm font-semibold text-text-secondary">
             Drag and drop your supporting evidence here, or <span className="text-primary-600 hover:underline">browse</span>
           </p>
           <p className="text-xs text-neutral-500 mt-1">
@@ -269,11 +269,11 @@ export function FileUpload({
         <div className="space-y-2">
           <p className="text-xs font-semibold text-neutral-500">Uploading...</p>
           {Object.entries(uploads).map(([id, item]) => (
-            <div key={id} className="flex items-center gap-3 p-3 bg-white border border-neutral-200 rounded-lg shadow-sm">
+            <div key={id} className="flex items-center gap-3 p-3 bg-neutral-900/50 border border-neutral-700 rounded-lg shadow-sm">
               <RefreshCw className="h-5 w-5 text-primary-500 animate-spin flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-neutral-700 truncate">{item.fileName}</p>
-                <div className="w-full bg-neutral-200 h-1.5 rounded-full overflow-hidden mt-1.5">
+                <p className="text-sm font-medium text-text-secondary truncate">{item.fileName}</p>
+                <div className="w-full bg-neutral-800 h-1.5 rounded-full overflow-hidden mt-1.5">
                   <div
                     className="bg-primary-600 h-full rounded-full transition-all duration-200"
                     style={{ width: `${item.progress}%` }}
@@ -285,7 +285,7 @@ export function FileUpload({
                 {item.status === 'error' ? (
                   <button
                     onClick={() => handleRetry(id)}
-                    className="p-1 hover:bg-neutral-100 rounded text-red-500"
+                    className="p-1 hover:bg-neutral-800 rounded text-red-500"
                     title="Retry"
                   >
                     <RefreshCw className="h-4 w-4" />
@@ -293,7 +293,7 @@ export function FileUpload({
                 ) : null}
                 <button
                   onClick={() => handleCancelProgress(id)}
-                  className="p-1 hover:bg-neutral-100 rounded text-neutral-400 hover:text-neutral-600"
+                  className="p-1 hover:bg-neutral-800 rounded text-neutral-400 hover:text-text-secondary"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -309,12 +309,12 @@ export function FileUpload({
           <p className="text-xs font-semibold text-neutral-500">Uploaded Evidence ({value.length})</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {value.map((file, index) => (
-              <div key={file.publicId} className="flex items-center gap-3 p-3 bg-white border border-neutral-200 rounded-lg shadow-sm relative group">
+              <div key={file.publicId} className="flex items-center gap-3 p-3 bg-neutral-900/50 border border-neutral-700 rounded-lg shadow-sm relative group">
                 <div className="flex-shrink-0">
                   {getFileIcon(file.mimeType)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-neutral-800 truncate" title={file.originalFilename}>
+                  <p className="text-sm font-medium text-text-primary truncate" title={file.originalFilename}>
                     {file.originalFilename}
                   </p>
                   <p className="text-xs text-neutral-400 mt-0.5">
@@ -326,7 +326,7 @@ export function FileUpload({
                   <button
                     type="button"
                     onClick={() => handleRemoveFile(index)}
-                    className="p-1 hover:bg-neutral-100 rounded text-neutral-400 hover:text-red-500 transition-colors"
+                    className="p-1 hover:bg-neutral-800 rounded text-neutral-400 hover:text-red-500 transition-colors"
                     title="Remove file"
                   >
                     <X className="h-4 w-4" />

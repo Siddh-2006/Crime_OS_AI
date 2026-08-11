@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import Cookies from 'js-cookie';
 import { Shield } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 
 export default function DepartmentLogin() {
   const [username, setUsername] = useState('');
@@ -37,54 +38,56 @@ export default function DepartmentLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-      <div className="bg-slate-800 p-8 rounded-xl shadow-2xl w-full max-w-md border border-slate-700">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden animate-fade-in">
+      <div className="bg-surface p-8 rounded-3xl shadow-elevated w-full max-w-md border border-border glass relative z-10">
         <div className="flex flex-col items-center mb-8">
-          <div className="h-16 w-16 bg-blue-600 rounded-full flex items-center justify-center mb-4">
-            <Shield className="h-8 w-8 text-white" />
+          <div className="h-16 w-16 bg-brand-primary/10 border border-brand-primary/20 rounded-2xl flex items-center justify-center mb-4 text-brand-primary shadow-glow-sm">
+            <Shield className="h-8 w-8" />
           </div>
-          <h1 className="text-2xl font-bold text-white">Department Portal</h1>
-          <p className="text-slate-400 mt-2 text-center text-sm">
+          <h1 className="text-2xl font-heading font-extrabold text-text-primary tracking-tight">Department Portal</h1>
+          <p className="text-text-secondary mt-1.5 text-center text-sm font-medium">
             Secure access for authorized external departments and partner stations.
           </p>
         </div>
 
         {error && (
-          <div className="bg-red-500/10 border border-red-500 text-red-500 p-3 rounded-md mb-4 text-sm">
+          <div className="bg-semantic-critical/10 border border-semantic-critical/30 text-semantic-critical p-3.5 rounded-xl mb-4 text-sm font-medium">
             {error}
           </div>
         )}
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Department ID</label>
+            <label className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-1.5">Department ID</label>
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-md px-4 py-2 text-white focus:outline-none focus:border-blue-500"
+              className="w-full bg-input-bg border border-input-border rounded-xl px-4 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-brand-primary transition-all duration-200"
               placeholder="e.g. hdfc, isp, station7"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Password</label>
+            <label className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-1.5">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-md px-4 py-2 text-white focus:outline-none focus:border-blue-500"
+              className="w-full bg-input-bg border border-input-border rounded-xl px-4 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-brand-primary transition-all duration-200"
               placeholder="Enter 'admin' to mock"
               required
             />
           </div>
-          <button
+          <Button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors disabled:opacity-50"
+            isLoading={loading}
+            fullWidth
+            className="mt-2 font-bold py-3"
           >
             {loading ? 'Authenticating...' : 'Sign In'}
-          </button>
+          </Button>
         </form>
       </div>
     </div>

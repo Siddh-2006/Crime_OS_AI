@@ -50,15 +50,15 @@ function ProposalCard({
         </span>
       </div>
 
-      <pre className="p-3 text-[11px] font-mono text-slate-700 bg-amber-50 overflow-x-auto whitespace-pre-wrap break-words">
+      <pre className="p-3 text-[11px] font-mono text-text-secondary bg-amber-50 overflow-x-auto whitespace-pre-wrap break-words">
         {JSON.stringify(proposal.payload, null, 2)}
       </pre>
 
-      <div className="p-2 border-t border-amber-200 bg-white">
+      <div className="p-2 border-t border-amber-200 bg-neutral-900/50">
         <button
           className={`w-full flex items-center justify-center gap-2 text-xs font-semibold py-2 rounded-lg transition-all ${
             applied
-              ? 'bg-green-100 text-green-700 cursor-default'
+              ? 'bg-green-900/30 text-green-400 cursor-default'
               : 'bg-amber-500 hover:bg-amber-600 text-white'
           }`}
           onClick={onApply}
@@ -144,21 +144,19 @@ export function CopilotSidebar({ caseId, onStateChangeApplied, onClose }: Copilo
     setApplyingIdx(idx);
     try {
       if (proposal.type === 'add_step') {
-        // ← Exact same endpoint as the manual "Add Step" flow — single code path
         await apiClient.post(`/cases/${caseId}/checklist/steps`, {
           title: proposal.payload.title,
           description: proposal.payload.description,
           criticality: proposal.payload.criticality,
         });
       } else if (proposal.type === 'draft_request') {
-        // ← Exact same endpoint as RequestComposerModal — single code path
         await apiClient.post(`/cases/${caseId}/requests/draft`, {
           step_id: proposal.payload.step_id ?? 'copilot',
           department_entity_id: proposal.payload.department_entity_id,
-          request_type: 'general',
+          request_type: 'external_department',
+          recipient_type: proposal.payload.department_entity_id,
         });
       } else {
-        // Generic passthrough for any future proposal types
         await apiClient.post(`/cases/${caseId}/analysis/manual`, proposal);
       }
 
@@ -182,16 +180,16 @@ export function CopilotSidebar({ caseId, onStateChangeApplied, onClose }: Copilo
   ];
 
   return (
-    <div className="flex flex-col h-full bg-white border-l border-slate-200 shadow-lg" style={{ minHeight: 0 }}>
+    <div className="flex flex-col h-full bg-surface border-l border-border shadow-lg" style={{ minHeight: 0 }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex-shrink-0">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-brand-primary text-white flex-shrink-0">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center">
             <Bot size={15} />
           </div>
           <div>
             <p className="text-sm font-bold leading-none">Investigation Copilot</p>
-            <p className="text-[10px] text-blue-100 mt-0.5">RAG · Case-aware · Proposal-safe</p>
+            <p className="text-[10px] text-white/80 mt-0.5">RAG &bull; Case-aware &bull; Proposal-safe</p>
           </div>
         </div>
         {onClose && (
@@ -206,39 +204,39 @@ export function CopilotSidebar({ caseId, onStateChangeApplied, onClose }: Copilo
         {messages.map((msg, i) => (
           <div key={i} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
             {msg.role === 'user' ? (
-              <div className="max-w-[90%] bg-blue-600 text-white rounded-2xl rounded-tr-sm px-4 py-2.5 text-sm shadow-sm">
+              <div className="max-w-[90%] bg-brand-primary text-white rounded-2xl rounded-tr-sm px-4 py-2.5 text-sm shadow-sm font-medium">
                 {msg.content}
               </div>
             ) : (
               <div
                 className={`max-w-[92%] rounded-2xl rounded-tl-sm px-4 py-3 text-sm shadow-sm border ${
                   msg.isError
-                    ? 'bg-red-50 border-red-200 text-red-700'
-                    : 'bg-slate-50 border-slate-200 text-slate-800'
+                    ? 'bg-semantic-critical/10 border-semantic-critical/30 text-semantic-critical font-medium'
+                    : 'bg-surface-elevated border-border text-text-primary'
                 }`}
               >
-                <div className="prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0 prose-headings:text-sm">
+                <div className="prose prose-sm dark:prose-invert max-w-none text-xs leading-relaxed">
                   <ReactMarkdown>{msg.content}</ReactMarkdown>
                 </div>
-              </div>
-            )}
 
-            {msg.proposal && (
-              <ProposalCard
-                proposal={msg.proposal}
-                applied={msg.applied}
-                applying={applyingIdx === i}
-                onApply={() => handleApply(i, msg.proposal!)}
-              />
+                {msg.proposal && (
+                  <ProposalCard
+                    proposal={msg.proposal}
+                    applied={msg.applied}
+                    applying={applyingIdx === i}
+                    onApply={() => handleApply(i, msg.proposal!)}
+                  />
+                )}
+              </div>
             )}
           </div>
         ))}
 
         {loading && (
           <div className="flex items-start">
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-2 text-slate-500 text-sm">
-              <Loader2 size={14} className="animate-spin text-blue-500" />
-              <span>Thinking…</span>
+            <div className="bg-surface-elevated border border-border rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-2 text-text-secondary text-xs font-semibold">
+              <Loader2 size={14} className="animate-spin text-brand-primary" />
+              <span>Analyzing case evidence...</span>
             </div>
           </div>
         )}
@@ -249,15 +247,15 @@ export function CopilotSidebar({ caseId, onStateChangeApplied, onClose }: Copilo
       {/* Quick suggestions (only show when no user messages yet) */}
       {messages.length === 1 && (
         <div className="px-4 pb-2 space-y-1.5 flex-shrink-0">
-          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide flex items-center gap-1">
-            <Sparkles size={10} /> Suggested questions
+          <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wide flex items-center gap-1">
+            <Sparkles size={10} className="text-brand-primary" /> Suggested questions
           </p>
           <div className="flex flex-col gap-1.5">
             {suggestionPrompts.map(p => (
               <button
                 key={p}
                 onClick={() => setInput(p)}
-                className="text-left text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg px-3 py-1.5 border border-blue-100 transition-colors"
+                className="text-left text-xs bg-brand-primary/5 hover:bg-brand-primary/10 text-brand-primary rounded-xl px-3 py-2 border border-brand-primary/20 transition-all font-medium"
               >
                 {p}
               </button>
@@ -267,7 +265,7 @@ export function CopilotSidebar({ caseId, onStateChangeApplied, onClose }: Copilo
       )}
 
       {/* Input */}
-      <div className="p-3 border-t border-slate-200 bg-white flex-shrink-0">
+      <div className="p-3 border-t border-border bg-surface-elevated flex-shrink-0">
         <form
           onSubmit={e => {
             e.preventDefault();
@@ -277,7 +275,7 @@ export function CopilotSidebar({ caseId, onStateChangeApplied, onClose }: Copilo
         >
           <input
             type="text"
-            className="flex-1 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-slate-50"
+            className="flex-1 border border-border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-primary bg-surface text-text-primary font-medium"
             placeholder="Ask anything about this case…"
             value={input}
             onChange={e => setInput(e.target.value)}
@@ -286,7 +284,7 @@ export function CopilotSidebar({ caseId, onStateChangeApplied, onClose }: Copilo
           <button
             type="submit"
             disabled={!input.trim() || loading}
-            className="w-9 h-9 flex items-center justify-center rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white transition-colors flex-shrink-0"
+            className="w-9 h-9 flex items-center justify-center rounded-xl bg-brand-primary hover:bg-brand-primary/90 disabled:opacity-40 text-white transition-all flex-shrink-0 shadow-sm"
           >
             <Send size={15} />
           </button>

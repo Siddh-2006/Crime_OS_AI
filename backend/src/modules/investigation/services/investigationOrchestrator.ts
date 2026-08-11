@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
 import { buildFactsObject } from './factsAssemblyService';
 import { callLegalAgent } from '../../../shared/clients/legalAgentClient';
@@ -173,6 +174,35 @@ function legalSectionsToLegacyText(sections: ILegalSectionSuggestion[]): string 
 }
 
 export class InvestigationOrchestrator {
+  private static buildSnapshotPayload(deepResponse: any, fastResponse?: string): any {
+    const normalizeConfidence = (c: number) => c > 1 ? c / 100 : c;
+    const ranked_next_steps = (deepResponse.ranked_next_steps || []).map((step: any) => ({
+      ...step,
+      confidence: normalizeConfidence(step.confidence)
+    }));
+    const legacySuspectCandidates = (deepResponse.suspect_candidates || []).map((cand: any) => ({
+      ...cand,
+      confidence: normalizeConfidence(cand.confidence),
+      recommended_sections: normalizeSuggestedLegalSections(cand.recommended_sections),
+    }));
+    const participant_recommendations = normalizeParticipantRecommendations(deepResponse.participant_recommendations);
+    const normalizedParticipantRecommendations = participant_recommendations.length > 0
+      ? participant_recommendations
+      : suspectCandidatesToParticipantRecommendations(legacySuspectCandidates);
+    const normalizedSuspectCandidates = participantRecommendationsToSuspectCandidates(normalizedParticipantRecommendations);
+    const evidence_section_recommendations = normalizeEvidenceSectionRecommendations(deepResponse.evidence_section_recommendations);
+    const suggested_legal_sections = normalizeSuggestedLegalSections(deepResponse.suggested_legal_sections);
+
+    return {
+      ranked_next_steps,
+      suspect_candidates: normalizedSuspectCandidates,
+      participant_recommendations: normalizedParticipantRecommendations,
+      evidence_section_recommendations,
+      narrative_summary: deepResponse.narrative_summary || fastResponse || '',
+      suggested_legal_sections,
+    };
+  }
+
   /**
    * Executes the full orchestrator loop for a given case.
    */
@@ -242,108 +272,98 @@ export class InvestigationOrchestrator {
     logger.info(`[Orchestrator] [6/7] Persisting AnalysisSnapshot to MongoDB`);
     const previousSnapshot = await AnalysisSnapshot.findOne({ case_id: caseId }).sort({ timestamp: -1 });
 
-    const normalizeConfidence = (c: number) => c > 1 ? c / 100 : c;
-    const ranked_next_steps = deepResponse.ranked_next_steps.map((step: any) => ({
-      ...step,
-      confidence: normalizeConfidence(step.confidence)
-    }));
-    const legacySuspectCandidates = (deepResponse.suspect_candidates || []).map((cand: any) => ({
-      ...cand,
-      confidence: normalizeConfidence(cand.confidence),
-      recommended_sections: normalizeSuggestedLegalSections(cand.recommended_sections),
-    }));
-    const participant_recommendations = normalizeParticipantRecommendations(deepResponse.participant_recommendations);
-    const normalizedParticipantRecommendations = participant_recommendations.length > 0
-      ? participant_recommendations
-      : suspectCandidatesToParticipantRecommendations(legacySuspectCandidates);
-    const normalizedSuspectCandidates = participantRecommendationsToSuspectCandidates(normalizedParticipantRecommendations);
-    const evidence_section_recommendations = normalizeEvidenceSectionRecommendations(deepResponse.evidence_section_recommendations);
-    const suggested_legal_sections = normalizeSuggestedLegalSections(deepResponse.suggested_legal_sections);
+    const payload = this.buildSnapshotPayload(deepResponse, fastResponse);
 
     const newSnapshot = new AnalysisSnapshot({
       case_id: caseId,
       snapshot_id: uuidv4(),
       trigger,
       facts_used: factsObject,
-      ranked_next_steps,
-      suspect_candidates: normalizedSuspectCandidates,
-      participant_recommendations: normalizedParticipantRecommendations,
-      evidence_section_recommendations,
-      narrative_summary: deepResponse.narrative_summary || fastResponse,
-      suggested_legal_sections,
+      ranked_next_steps: payload.ranked_next_steps,
+      suspect_candidates: payload.suspect_candidates,
+      participant_recommendations: payload.participant_recommendations,
+      evidence_section_recommendations: payload.evidence_section_recommendations,
+      narrative_summary: payload.narrative_summary,
+      suggested_legal_sections: payload.suggested_legal_sections,
       confidence_breakdown: confidenceBreakdown,
       officer_authored: false,
       parent_snapshot_id: previousSnapshot?._id || undefined,
     });
-    const savedSnapshot = await newSnapshot.save();
-    logger.info(`[Orchestrator] [6/7] Snapshot saved — id: ${savedSnapshot.snapshot_id}`);
-    await publishProgress(caseId, 'persisted');
 
-    // Append Diary Entry
-    await DiaryEntry.create({
-      case_id: caseId,
-      entry_id: uuidv4(),
-      actor: { type: 'system', id: 'orchestrator' },
-      event_type: 'analysis_run',
-      payload: {
-        snapshot_id: savedSnapshot._id.toString(),
-        narrative_summary: savedSnapshot.narrative_summary,
-        ranked_next_steps: savedSnapshot.ranked_next_steps
-      },
-      ref_ids: { snapshot_id: savedSnapshot._id.toString() }
-    });
+    const session = await mongoose.startSession();
+    let savedSnapshot: any;
 
-    // Update case_checklist statuses if analysis implies changes (noting logic here)
-    // We will sync any new ranked_next_steps generated by AI into the CaseChecklist collection
-    for (const step of ranked_next_steps) {
-      const existingStep = await CaseChecklist.findOne({ case_id: caseId, step_id: step.step_id });
-      if (!existingStep) {
-        await CaseChecklist.create({
+    try {
+      await session.withTransaction(async () => {
+        savedSnapshot = await newSnapshot.save({ session });
+        logger.info(`[Orchestrator] [6/7] Snapshot saved — id: ${savedSnapshot.snapshot_id}`);
+
+        // Append Diary Entry
+        await DiaryEntry.create([{
           case_id: caseId,
-          sop_id: 'AI_GEN', // Auto-generated by AI
-          step_id: step.step_id,
-          title: step.reason || 'AI Suggested Step', // The AI's reason is usually the step title/description
-          status: 'pending',
-          criticality: step.confidence > 0.8 ? 'high' : (step.confidence > 0.5 ? 'medium' : 'low'),
-          required_evidence: step.evidence_needed || [],
-          proof_evidence_ids: [],
-          target: step.target,
-          department_entity_id: step.department_entity_id,
-        });
-      } else if (existingStep.status !== 'completed' && existingStep.status !== 'blocked') {
-        // Dynamically reprioritize and update targets for pending steps based on new AI context
-        existingStep.title = step.reason || existingStep.title;
-        existingStep.criticality = step.confidence > 0.8 ? 'high' : (step.confidence > 0.5 ? 'medium' : 'low');
-        existingStep.target = step.target || existingStep.target;
-        existingStep.department_entity_id = step.department_entity_id || existingStep.department_entity_id;
+          entry_id: uuidv4(),
+          actor: { type: 'system', id: 'orchestrator' },
+          event_type: 'analysis_run',
+          payload: {
+            snapshot_id: savedSnapshot._id.toString(),
+            narrative_summary: savedSnapshot.narrative_summary,
+            ranked_next_steps: savedSnapshot.ranked_next_steps
+          },
+          ref_ids: { snapshot_id: savedSnapshot._id.toString() }
+        }], { session });
 
-        // Merge evidence needed (avoid duplicates)
-        const newEvidence = step.evidence_needed || [];
-        existingStep.required_evidence = Array.from(new Set([...existingStep.required_evidence, ...newEvidence]));
+        // Update case_checklist statuses
+        for (const step of payload.ranked_next_steps) {
+          const existingStep = await CaseChecklist.findOne({ case_id: caseId, step_id: step.step_id }).session(session);
+          if (!existingStep) {
+            await CaseChecklist.create([{
+              case_id: caseId,
+              sop_id: 'AI_GEN',
+              step_id: step.step_id,
+              title: step.reason || 'AI Suggested Step',
+              status: 'pending',
+              criticality: step.confidence > 0.8 ? 'high' : (step.confidence > 0.5 ? 'medium' : 'low'),
+              required_evidence: step.evidence_needed || [],
+              proof_evidence_ids: [],
+              target: step.target,
+              department_entity_id: step.department_entity_id,
+            }], { session });
+          } else if (existingStep.status !== 'completed' && existingStep.status !== 'blocked') {
+            existingStep.title = step.reason || existingStep.title;
+            existingStep.criticality = step.confidence > 0.8 ? 'high' : (step.confidence > 0.5 ? 'medium' : 'low');
+            existingStep.target = step.target || existingStep.target;
+            existingStep.department_entity_id = step.department_entity_id || existingStep.department_entity_id;
 
-        await existingStep.save();
-      }
-    }
+            const newEvidence = step.evidence_needed || [];
+            existingStep.required_evidence = Array.from(new Set([...existingStep.required_evidence, ...newEvidence]));
 
-    if (suggested_legal_sections.length > 0) {
-      const { Complaint } = await import('../../complaint/models/Complaint.model');
-      const complaintDoc = await Complaint.findById(caseId);
-      if (complaintDoc) {
-        const lastVersion = complaintDoc.legalSectionsHistory?.length
-          ? complaintDoc.legalSectionsHistory[complaintDoc.legalSectionsHistory.length - 1].version
-          : 0;
-        await Complaint.findByIdAndUpdate(caseId, {
-          $push: {
-            legalSectionsHistory: {
-              version: lastVersion + 1,
-              editedBy: 'IO', // Needs to match 'Citizen' | 'SHO' | 'IO'
-              editorId: null, // AI system
-              content: legalSectionsToLegacyText(suggested_legal_sections),
-              timestamp: new Date()
-            }
+            await existingStep.save({ session });
           }
-        });
-      }
+        }
+
+        if (payload.suggested_legal_sections.length > 0) {
+          const { Complaint } = await import('../../complaint/models/Complaint.model');
+          const complaintDoc = await Complaint.findById(caseId).session(session);
+          if (complaintDoc) {
+            const lastVersion = complaintDoc.legalSectionsHistory?.length
+              ? complaintDoc.legalSectionsHistory[complaintDoc.legalSectionsHistory.length - 1].version
+              : 0;
+            await Complaint.findByIdAndUpdate(caseId, {
+              $push: {
+                legalSectionsHistory: {
+                  version: lastVersion + 1,
+                  editedBy: 'IO',
+                  editorId: null,
+                  content: legalSectionsToLegacyText(payload.suggested_legal_sections),
+                  timestamp: new Date()
+                }
+              }
+            }, { session });
+          }
+        }
+      });
+    } finally {
+      session.endSession();
     }
 
     // 7. Escalation check
@@ -474,54 +494,97 @@ export class InvestigationOrchestrator {
       throw new Error(`[Orchestrator] Deep model failed to return valid JSON structure for correction.`);
     }
 
-    const normalizeConfidence = (c: number) => c > 1 ? c / 100 : c;
-    const ranked_next_steps = deepResponse.ranked_next_steps.map((step: any) => ({
-      ...step,
-      confidence: normalizeConfidence(step.confidence)
-    }));
-    const legacySuspectCandidates = (deepResponse.suspect_candidates || []).map((cand: any) => ({
-      ...cand,
-      confidence: normalizeConfidence(cand.confidence),
-      recommended_sections: normalizeSuggestedLegalSections(cand.recommended_sections),
-    }));
-    const participant_recommendations = normalizeParticipantRecommendations(deepResponse.participant_recommendations);
-    const normalizedParticipantRecommendations = participant_recommendations.length > 0
-      ? participant_recommendations
-      : suspectCandidatesToParticipantRecommendations(legacySuspectCandidates);
-    const suspect_candidates = participantRecommendationsToSuspectCandidates(normalizedParticipantRecommendations);
-    const evidence_section_recommendations = normalizeEvidenceSectionRecommendations(deepResponse.evidence_section_recommendations);
-    const suggested_legal_sections = normalizeSuggestedLegalSections(deepResponse.suggested_legal_sections);
+    const payload = this.buildSnapshotPayload(deepResponse);
 
     const newSnapshot = new AnalysisSnapshot({
       case_id: caseId,
       snapshot_id: uuidv4(),
       trigger: 'officer_override',
       facts_used: originalSnapshot.facts_used, // keep the same facts as the parent
-      ranked_next_steps,
-      suspect_candidates,
-      participant_recommendations: normalizedParticipantRecommendations,
-      evidence_section_recommendations,
-      narrative_summary: deepResponse.narrative_summary,
-      suggested_legal_sections,
+      ranked_next_steps: payload.ranked_next_steps,
+      suspect_candidates: payload.suspect_candidates,
+      participant_recommendations: payload.participant_recommendations,
+      evidence_section_recommendations: payload.evidence_section_recommendations,
+      narrative_summary: payload.narrative_summary,
+      suggested_legal_sections: payload.suggested_legal_sections,
       confidence_breakdown: originalSnapshot.confidence_breakdown, // Keep same breakdown or recalulate? Keeping same for audit traceability.
       officer_authored: false,
       parent_snapshot_id: snapshotId,
     });
 
-    const savedSnapshot = await newSnapshot.save();
+    const session = await mongoose.startSession();
+    let savedSnapshot: any;
 
-    await DiaryEntry.create({
-      case_id: caseId,
-      entry_id: uuidv4(),
-      actor: { type: 'officer', id: 'officer' },
-      event_type: 'override_correction',
-      payload: {
-        snapshot_id: savedSnapshot._id.toString(),
-        parent_snapshot_id: snapshotId,
-        correction_message: correctionMessage
-      },
-      ref_ids: { snapshot_id: savedSnapshot._id.toString() }
-    });
+    try {
+      await session.withTransaction(async () => {
+        savedSnapshot = await newSnapshot.save({ session });
+
+        await DiaryEntry.create([{
+          case_id: caseId,
+          entry_id: uuidv4(),
+          actor: { type: 'officer', id: 'officer' },
+          event_type: 'override_correction',
+          payload: {
+            snapshot_id: savedSnapshot._id.toString(),
+            parent_snapshot_id: snapshotId,
+            correction_message: correctionMessage
+          },
+          ref_ids: { snapshot_id: savedSnapshot._id.toString() }
+        }], { session });
+
+        // Update case_checklist statuses
+        for (const step of payload.ranked_next_steps) {
+          const existingStep = await CaseChecklist.findOne({ case_id: caseId, step_id: step.step_id }).session(session);
+          if (!existingStep) {
+            await CaseChecklist.create([{
+              case_id: caseId,
+              sop_id: 'AI_GEN',
+              step_id: step.step_id,
+              title: step.reason || 'AI Suggested Step',
+              status: 'pending',
+              criticality: step.confidence > 0.8 ? 'high' : (step.confidence > 0.5 ? 'medium' : 'low'),
+              required_evidence: step.evidence_needed || [],
+              proof_evidence_ids: [],
+              target: step.target,
+              department_entity_id: step.department_entity_id,
+            }], { session });
+          } else if (existingStep.status !== 'completed' && existingStep.status !== 'blocked') {
+            existingStep.title = step.reason || existingStep.title;
+            existingStep.criticality = step.confidence > 0.8 ? 'high' : (step.confidence > 0.5 ? 'medium' : 'low');
+            existingStep.target = step.target || existingStep.target;
+            existingStep.department_entity_id = step.department_entity_id || existingStep.department_entity_id;
+
+            const newEvidence = step.evidence_needed || [];
+            existingStep.required_evidence = Array.from(new Set([...existingStep.required_evidence, ...newEvidence]));
+
+            await existingStep.save({ session });
+          }
+        }
+
+        if (payload.suggested_legal_sections.length > 0) {
+          const { Complaint } = await import('../../complaint/models/Complaint.model');
+          const complaintDoc = await Complaint.findById(caseId).session(session);
+          if (complaintDoc) {
+            const lastVersion = complaintDoc.legalSectionsHistory?.length
+              ? complaintDoc.legalSectionsHistory[complaintDoc.legalSectionsHistory.length - 1].version
+              : 0;
+            await Complaint.findByIdAndUpdate(caseId, {
+              $push: {
+                legalSectionsHistory: {
+                  version: lastVersion + 1,
+                  editedBy: 'IO',
+                  editorId: null,
+                  content: legalSectionsToLegacyText(payload.suggested_legal_sections),
+                  timestamp: new Date()
+                }
+              }
+            }, { session });
+          }
+        }
+      });
+    } finally {
+      session.endSession();
+    }
 
     return savedSnapshot;
   }

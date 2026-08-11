@@ -6,6 +6,7 @@ import { ComplaintRepository } from '../repositories/ComplaintRepository';
 import { validate } from '../../../common/middlewares/validate.middleware';
 import { authenticate } from '../../../common/middlewares/authenticate.middleware';
 import { authorize } from '../../../common/middlewares/authorize.middleware';
+import { createRateLimiter } from '../../../common/middlewares/rateLimiter.middleware';
 import { Role } from '../../../shared/enums/roles.enum';
 import {
   createComplaintSchema,
@@ -22,6 +23,12 @@ const intakeUpload = multer({ storage: multer.memoryStorage() });
 
 const router = Router();
 
+const aiLimiter = createRateLimiter({
+  keyPrefix: 'ai_endpoints',
+  points: 5,
+  duration: 60 // 5 requests per minute
+});
+
 // ─── Shared Authenticated Routes ─────────────────────────────────────────────
 router.get('/police-stations/search', authenticate, complaintController.searchPoliceStations);
 
@@ -30,6 +37,7 @@ router.post(
   '/multimodal-intake',
   authenticate,
   authorize(Role.USER, Role.SHO, Role.IO),
+  aiLimiter,
   intakeUpload.array('files'),
   complaintController.analyzeComplaintIntake,
 );
@@ -138,6 +146,7 @@ router.post(
   '/:id/rerun-pipeline',
   authenticate,
   authorize(Role.SHO, Role.IO),
+  aiLimiter,
   complaintController.rerunPipeline,
 );
 
