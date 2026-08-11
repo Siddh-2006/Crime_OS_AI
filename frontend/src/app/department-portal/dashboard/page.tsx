@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import Cookies from 'js-cookie';
 import { Shield, FileText, CheckCircle2, Clock, LogOut, Send } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { Loader } from '@/components/ui/Loader';
 
 export default function DepartmentDashboard() {
   const [requests, setRequests] = useState<any[]>([]);
@@ -50,7 +52,6 @@ export default function DepartmentDashboard() {
   const openModal = (req: any) => {
     setSelectedReq(req);
     setSelectedFile(null);
-    // Generate a plausible mock response based on the request type
     let mockResponse = `CONFIDENTIAL RESPONSE\nDate: ${new Date().toLocaleDateString()}\nTo: Gujarat Police, Crime OS\n\n`;
     
     if (req.request_type === 'external_department') {
@@ -85,7 +86,6 @@ export default function DepartmentDashboard() {
       }
       await axios.post(`http://localhost:5001/api/v1/department-portal/requests/${selectedReq.request_id}/respond`, payload);
       
-      // Refresh list
       setSelectedReq(null);
       fetchRequests(deptId);
     } catch (err) {
@@ -97,69 +97,71 @@ export default function DepartmentDashboard() {
   };
 
   if (loading) {
-    return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">Loading...</div>;
+    return <Loader fullPage label="Loading Department Dashboard..." />;
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-200 p-8">
-      <div className="max-w-6xl mx-auto">
-        <header className="flex justify-between items-center mb-8 bg-slate-800 p-4 rounded-xl border border-slate-700">
+    <div className="min-h-screen bg-background text-text-primary p-6 lg:p-8 animate-fade-in relative z-10">
+      <div className="max-w-6xl mx-auto space-y-6">
+        <header className="flex justify-between items-center bg-surface p-5 rounded-2xl border border-border shadow-card glass">
           <div className="flex items-center gap-4">
-            <div className="h-12 w-12 bg-blue-600 rounded-full flex items-center justify-center">
-              <Shield className="h-6 w-6 text-white" />
+            <div className="h-12 w-12 bg-brand-primary/10 border border-brand-primary/20 rounded-2xl flex items-center justify-center text-brand-primary shadow-glow-sm">
+              <Shield className="h-6 w-6" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white">Department Portal</h1>
-              <p className="text-sm text-slate-400">{deptId}</p>
+              <h1 className="text-xl font-heading font-extrabold text-text-primary">Department Portal</h1>
+              <p className="text-xs font-mono text-text-secondary mt-0.5">{deptId}</p>
             </div>
           </div>
-          <button 
+          <Button 
+            variant="ghost" 
+            size="sm"
             onClick={handleLogout}
-            className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+            leftIcon={<LogOut className="h-4 w-4" />}
           >
-            <LogOut className="h-4 w-4" />
             Logout
-          </button>
+          </Button>
         </header>
 
-        <div className="mb-6">
-          <h2 className="text-2xl font-semibold text-white mb-2">Pending Requests</h2>
-          <p className="text-slate-400">Official requests requiring your department's action.</p>
+        <div>
+          <h2 className="text-2xl font-heading font-bold text-text-primary">Pending Requests</h2>
+          <p className="text-sm text-text-secondary mt-0.5 font-medium">Official requests requiring your department's action.</p>
         </div>
 
         {requests.length === 0 ? (
-          <div className="bg-slate-800 rounded-xl border border-slate-700 p-12 text-center">
-            <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-4" />
-            <h3 className="text-xl font-medium text-white mb-2">All Caught Up</h3>
-            <p className="text-slate-400">There are no pending requests for your department.</p>
+          <div className="bg-surface rounded-2xl border border-border p-12 text-center shadow-card glass">
+            <CheckCircle2 className="h-12 w-12 text-semantic-success mx-auto mb-4" />
+            <h3 className="text-xl font-heading font-bold text-text-primary mb-1">All Caught Up</h3>
+            <p className="text-sm text-text-secondary">There are no pending requests for your department.</p>
           </div>
         ) : (
           <div className="grid gap-4">
             {requests.map(req => (
-              <div key={req.request_id} className="bg-slate-800 rounded-xl border border-slate-700 p-6 flex flex-col md:flex-row gap-6">
+              <div key={req.request_id} className="bg-surface rounded-2xl border border-border p-6 flex flex-col md:flex-row gap-6 shadow-card glass">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-3">
-                    <span className="bg-blue-500/10 text-blue-400 text-xs px-2 py-1 rounded font-medium border border-blue-500/20">
+                    <span className="bg-brand-primary/10 text-brand-primary text-xs px-2.5 py-0.5 rounded-full font-bold border border-brand-primary/20">
                       {req.request_type === 'external_department' ? 'External Request' : 'Inter-Station'}
                     </span>
-                    <span className="text-slate-400 text-sm flex items-center gap-1">
+                    <span className="text-text-muted text-xs flex items-center gap-1 font-mono">
                       <Clock className="h-3 w-3" />
                       {new Date(req.createdAt).toLocaleDateString()}
                     </span>
                   </div>
-                  <h3 className="text-lg font-medium text-white mb-2">Case ID: {req.case_id}</h3>
-                  <div className="bg-slate-900 rounded p-4 border border-slate-700 font-mono text-sm text-slate-300 whitespace-pre-wrap max-h-48 overflow-y-auto">
+                  <h3 className="text-base font-bold text-text-primary mb-2 font-mono">Case ID: {req.case_id}</h3>
+                  <div className="bg-input-bg rounded-xl p-4 border border-input-border font-mono text-xs text-text-secondary whitespace-pre-wrap max-h-48 overflow-y-auto">
                     {req.draft_content}
                   </div>
                 </div>
-                <div className="flex items-end md:w-48">
-                  <button 
+                <div className="flex items-end md:w-44">
+                  <Button 
+                    fullWidth
                     onClick={() => openModal(req)}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                    leftIcon={<FileText className="h-4 w-4" />}
+                    className="font-bold"
                   >
-                    <FileText className="h-4 w-4" />
                     Reply
-                  </button>
+                  </Button>
                 </div>
               </div>
             ))}
@@ -167,43 +169,48 @@ export default function DepartmentDashboard() {
         )}
       </div>
 
-      {/* Modal */}
+      {/* Response Modal */}
       {selectedReq && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-800 rounded-xl border border-slate-700 w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-            <div className="p-6 border-b border-slate-700">
-              <h2 className="text-xl font-semibold text-white">Generate Response</h2>
-              <p className="text-slate-400 text-sm mt-1">Replying to Request ID: {selectedReq.request_id}</p>
+        <div className="fixed inset-0 bg-overlay-bg backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-surface rounded-2xl border border-border w-full max-w-3xl overflow-hidden shadow-elevated flex flex-col max-h-[90vh] animate-scale-in">
+            <div className="p-6 border-b border-border">
+              <h2 className="text-xl font-heading font-bold text-text-primary">Generate Response</h2>
+              <p className="text-text-secondary text-xs mt-1 font-mono">Replying to Request ID: {selectedReq.request_id}</p>
             </div>
             
-            <div className="p-6 flex-1 overflow-y-auto">
-              <label className="block text-sm font-medium text-slate-300 mb-2">Response Content</label>
-              <textarea
-                value={responseContent}
-                onChange={(e) => setResponseContent(e.target.value)}
-                className="w-full h-48 bg-slate-900 border border-slate-700 rounded-lg p-4 text-white font-mono text-sm focus:outline-none focus:border-blue-500 mb-4"
-              />
+            <div className="p-6 flex-1 overflow-y-auto space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-1.5">Response Content</label>
+                <textarea
+                  value={responseContent}
+                  onChange={(e) => setResponseContent(e.target.value)}
+                  className="w-full h-48 bg-input-bg border border-input-border rounded-xl p-4 text-text-primary font-mono text-xs focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-brand-primary transition-all duration-200"
+                />
+              </div>
               
-              <label className="block text-sm font-medium text-slate-300 mb-2">Attachment (Optional)</label>
-              <input
-                type="file"
-                onChange={(e) => setSelectedFile(e.target.files ? e.target.files[0] : null)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white text-sm"
-              />
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-1.5">Attachment (Optional)</label>
+                <input
+                  type="file"
+                  onChange={(e) => setSelectedFile(e.target.files ? e.target.files[0] : null)}
+                  className="w-full bg-input-bg border border-input-border rounded-xl p-2.5 text-text-primary text-xs"
+                />
+              </div>
 
-              <p className="text-xs text-slate-500 mt-4">
+              <p className="text-xs text-text-muted italic">
                 This response will be ingested into the Crime OS backend as formal evidence, completing the associated Case Checklist step.
               </p>
             </div>
             
-            <div className="p-6 border-t border-slate-700 bg-slate-800/50 flex justify-end gap-3">
-              <button
+            <div className="p-6 border-t border-border bg-surface-elevated/40 flex justify-end gap-3">
+              <Button
+                variant="ghost"
                 onClick={() => setSelectedReq(null)}
-                className="px-4 py-2 text-slate-300 hover:text-white transition-colors"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
                 onClick={async () => {
                   if (!responseContent) return;
                   setSubmitting(true);
@@ -220,22 +227,18 @@ export default function DepartmentDashboard() {
                   }
                 }}
                 disabled={submitting}
-                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors disabled:opacity-50"
               >
-                {submitting ? 'Formatting...' : 'Format this (AI)'}
-              </button>
-              <button
+                {submitting ? 'Formatting...' : 'Format with AI'}
+              </Button>
+              <Button
                 onClick={submitResponse}
                 disabled={submitting}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors disabled:opacity-50"
+                isLoading={submitting}
+                leftIcon={<Send className="h-4 w-4" />}
+                className="font-bold"
               >
-                {submitting ? 'Submitting...' : (
-                  <>
-                    <Send className="h-4 w-4" />
-                    Submit to Crime OS
-                  </>
-                )}
-              </button>
+                Submit to Crime OS
+              </Button>
             </div>
           </div>
         </div>

@@ -82,46 +82,46 @@ export default function PoliceComplaintQueuePage(): React.ReactElement {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'SUBMITTED':
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-900/20 text-blue-400 border border-blue-800">Submitted</span>;
+        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-500/10 text-blue-500 dark:text-blue-400 border border-blue-500/20">Submitted</span>;
       case 'UNDER_REVIEW':
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-orange-900/20 text-orange-400 border border-orange-800">Under Review</span>;
+        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-500/10 text-amber-500 dark:text-amber-400 border border-amber-500/20">Under Review</span>;
       case 'ASSIGNED_TO_IO':
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-yellow-900/20 text-yellow-400 border border-yellow-800">Assigned to IO</span>;
+        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border border-yellow-500/20">Assigned to IO</span>;
       case 'REJECTED':
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-red-900/20 text-red-400 border border-red-800">Rejected</span>;
+        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-red-500/10 text-red-500 dark:text-red-400 border border-red-500/20">Rejected</span>;
       case 'FIR_REGISTERED':
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-green-900/20 text-green-400 border border-green-800">FIR Registered</span>;
+        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border border-emerald-500/20">FIR Registered</span>;
       default:
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-neutral-800 text-text-secondary">{status}</span>;
+        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-badge-bg text-text-secondary border border-border">{status}</span>;
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-text-primary">Station Complaint Queue</h1>
-        <p className="text-sm text-text-secondary mt-1">Review e-applications and process FIR registrations</p>
+        <h1 className="text-3xl font-heading font-extrabold text-text-primary tracking-tight">Station Complaint Queue</h1>
+        <p className="text-sm text-text-secondary mt-1 font-medium">Review e-applications, assign IOs, and process FIR registrations</p>
       </div>
 
       {/* Filter and Search Panel */}
-      <Card className="bg-surface border-neutral-800">
+      <Card glass className="border-border">
         <form onSubmit={handleSearchSubmit} className="flex flex-col md:flex-row gap-4 items-end">
           <div className="flex-1 w-full">
-            <label className="block text-xs font-bold text-text-secondary uppercase mb-1.5">Search</label>
+            <label className="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-1.5">Search</label>
             <div className="relative">
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by Complaint No, short description, FIR..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-neutral-800 bg-[#0a0f1c] text-text-primary focus:ring-2 focus:ring-brand-primary focus:border-transparent outline-none transition-all text-sm placeholder:text-neutral-500"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-input-border bg-input-bg text-text-primary focus:ring-2 focus:ring-ring/40 focus:border-brand-primary outline-none transition-all duration-200 text-sm placeholder:text-text-muted"
               />
-              <Search className="absolute left-3 top-3 h-4 w-4 text-neutral-500" />
+              <Search className="absolute left-3.5 top-3 h-4 w-4 text-text-muted" />
             </div>
           </div>
 
-          <div className="w-full md:w-48">
+          <div className="w-full md:w-56">
             <Select
               label="Status Filter"
               value={status}
@@ -139,14 +139,14 @@ export default function PoliceComplaintQueuePage(): React.ReactElement {
             />
           </div>
 
-          <Button type="submit" className="w-full md:w-auto h-[42px] px-6">
+          <Button type="submit" className="w-full md:w-auto h-[42px] px-6 font-bold shadow-sm">
             Apply Filters
           </Button>
         </form>
       </Card>
 
       {error && (
-        <div className="flex items-center gap-2 p-4 bg-red-900/20 border border-red-800 text-red-400 rounded-lg text-sm">
+        <div className="flex items-center gap-2 p-4 bg-semantic-critical/10 border border-semantic-critical/30 text-semantic-critical rounded-2xl text-sm font-medium animate-slide-up">
           <AlertCircle size={18} />
           <span>{error}</span>
         </div>
@@ -158,22 +158,22 @@ export default function PoliceComplaintQueuePage(): React.ReactElement {
           <Loader />
         </div>
       ) : complaints.length === 0 ? (
-        <Card className="flex flex-col items-center justify-center text-center py-12 bg-surface border-neutral-800">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-neutral-800 text-neutral-400 mb-4">
+        <Card glass className="flex flex-col items-center justify-center text-center py-12 border-border">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-surface-elevated text-text-muted mb-4 border border-border">
             <FileText size={28} />
           </div>
-          <h3 className="text-lg font-semibold text-text-primary">No complaints found</h3>
+          <h3 className="text-lg font-heading font-bold text-text-primary">No complaints found</h3>
           <p className="text-sm text-text-secondary mt-1 max-w-sm">
             There are currently no complaints matching the search criteria or status.
           </p>
         </Card>
       ) : (
         <div className="space-y-4">
-          <div className="bg-surface border border-neutral-800 rounded-xl overflow-hidden shadow-sm">
+          <div className="bg-surface border border-border rounded-2xl overflow-hidden shadow-card glass">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-neutral-800/50 border-b border-neutral-800 text-xs font-bold text-text-secondary uppercase">
+                  <tr className="bg-surface-elevated/60 border-b border-border text-xs font-bold text-text-secondary uppercase tracking-wider">
                     <th className="p-4">Complaint Number</th>
                     <th className="p-4">Complainant</th>
                     <th className="p-4">Incident Date</th>
@@ -183,33 +183,33 @@ export default function PoliceComplaintQueuePage(): React.ReactElement {
                     <th className="p-4 text-right">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-neutral-800 text-sm">
+                <tbody className="divide-y divide-border text-sm">
                   {complaints.map((c) => (
-                    <tr key={c._id} className="hover:bg-neutral-800/30 transition-colors">
-                      <td className="p-4 font-semibold text-text-primary">{c.complaintNumber}</td>
+                    <tr key={c._id} className="hover:bg-surface-elevated/50 transition-colors duration-150">
+                      <td className="p-4 font-bold text-text-primary font-mono">{c.complaintNumber}</td>
                       <td className="p-4">
                         <div className="flex flex-col">
-                          <span className="font-medium text-text-primary">
+                          <span className="font-semibold text-text-primary">
                             {c.citizen.firstName} {c.citizen.lastName}
                           </span>
-                          <span className="text-xs text-text-secondary">{c.citizen.phone}</span>
+                          <span className="text-xs text-text-secondary font-mono">{c.citizen.phone}</span>
                         </div>
                       </td>
-                      <td className="p-4 text-text-secondary">
+                      <td className="p-4 text-text-secondary font-medium">
                         {new Date(c.incidentDate).toLocaleDateString('en-IN')}
                       </td>
-                      <td className="p-4 uppercase text-xs font-semibold text-text-secondary">
+                      <td className="p-4 uppercase text-xs font-bold text-text-secondary tracking-wide">
                         {c.category ? c.category.replace('_', ' ') : 'UNCATEGORIZED'}
                       </td>
                       <td className="p-4">{getStatusBadge(c.status)}</td>
                       <td className="p-4">
                         {c.assignedIO ? (
                           <div className="flex flex-col">
-                            <span className="text-text-primary font-medium">{c.assignedIO.officerName}</span>
-                            <span className="text-xs text-text-secondary">{c.assignedIO.badgeNumber}</span>
+                            <span className="text-text-primary font-semibold">{c.assignedIO.officerName}</span>
+                            <span className="text-xs text-text-secondary font-mono">{c.assignedIO.badgeNumber}</span>
                           </div>
                         ) : (
-                          <span className="text-xs text-text-secondary italic">Unassigned</span>
+                          <span className="text-xs text-text-muted italic">Unassigned</span>
                         )}
                       </td>
                       <td className="p-4 text-right">
@@ -228,8 +228,8 @@ export default function PoliceComplaintQueuePage(): React.ReactElement {
 
           {/* Pagination Controls */}
           {totalPages > 1 && (
-            <div className="flex justify-between items-center bg-surface border border-neutral-800 rounded-xl p-4 shadow-sm">
-              <span className="text-xs text-text-secondary">
+            <div className="flex justify-between items-center bg-surface border border-border rounded-2xl p-4 shadow-card glass">
+              <span className="text-xs font-medium text-text-secondary">
                 Page {page} of {totalPages}
               </span>
               <div className="flex gap-2">

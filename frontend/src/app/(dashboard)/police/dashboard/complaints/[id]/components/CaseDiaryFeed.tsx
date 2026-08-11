@@ -28,19 +28,19 @@ interface CaseDiaryFeedProps {
 export function CaseDiaryFeed({ entries, onEntryClick }: CaseDiaryFeedProps) {
   const getEventIcon = (eventType: string) => {
     switch (eventType) {
-      case 'complaint_filed': return <FileText className="text-blue-500" size={16} />;
-      case 'evidence_added': return <Upload className="text-purple-500" size={16} />;
-      case 'checklist_step_completed': return <ShieldCheck className="text-green-500" size={16} />;
-      case 'request_drafted': return <Edit3 className="text-yellow-600" size={16} />;
-      case 'request_sent': return <Send className="text-indigo-500" size={16} />;
-      case 'response_received': return <MessageSquare className="text-teal-500" size={16} />;
-      case 'analysis_run': return <Activity className="text-blue-600" size={16} />;
-      case 'diary_draft_generated': return <FileText className="text-indigo-500" size={16} />;
-      case 'diary_finalized': return <ShieldCheck className="text-emerald-600" size={16} />;
-      case 'witness_added': return <User className="text-orange-500" size={16} />;
-      case 'escalation_raised': return <AlertTriangle className="text-red-500" size={16} />;
-      case 'override_correction': return <User className="text-orange-500" size={16} />;
-      default: return <Activity className="text-neutral-500" size={16} />;
+      case 'complaint_filed': return <FileText className="text-brand-primary" size={14} />;
+      case 'evidence_added': return <Upload className="text-purple-500" size={14} />;
+      case 'checklist_step_completed': return <ShieldCheck className="text-semantic-success" size={14} />;
+      case 'request_drafted': return <Edit3 className="text-amber-500" size={14} />;
+      case 'request_sent': return <Send className="text-indigo-500" size={14} />;
+      case 'response_received': return <MessageSquare className="text-teal-500" size={14} />;
+      case 'analysis_run': return <Activity className="text-brand-primary" size={14} />;
+      case 'diary_draft_generated': return <FileText className="text-indigo-500" size={14} />;
+      case 'diary_finalized': return <ShieldCheck className="text-semantic-success" size={14} />;
+      case 'witness_added': return <User className="text-amber-500" size={14} />;
+      case 'escalation_raised': return <AlertTriangle className="text-semantic-critical" size={14} />;
+      case 'override_correction': return <User className="text-amber-500" size={14} />;
+      default: return <Activity className="text-text-muted" size={14} />;
     }
   };
 
@@ -85,34 +85,34 @@ export function CaseDiaryFeed({ entries, onEntryClick }: CaseDiaryFeedProps) {
   };
 
   return (
-    <Card className="h-full max-h-[800px] flex flex-col border-neutral-800 bg-surface">
-      <CardHeader title="Case Diary" className="border-b border-neutral-800" />
-      <div className="flex-1 overflow-y-auto p-4 bg-surface">
+    <Card glass className="h-full max-h-[800px] flex flex-col border-border animate-fade-in">
+      <CardHeader title="Case Diary" subtitle="Audit trail of investigation events" />
+      <div className="flex-1 overflow-y-auto p-4">
         {entries.length === 0 ? (
-          <p className="text-sm text-neutral-400 italic text-center py-8">No diary events recorded yet.</p>
+          <p className="text-sm text-text-muted italic text-center py-8">No diary events recorded yet.</p>
         ) : (
-          <div className="relative pl-6 border-l-2 border-neutral-700 space-y-6 pb-4">
+          <div className="relative pl-6 border-l-2 border-border space-y-6 pb-4 ml-2">
             {entries.map((entry) => (
-              <div key={entry.entry_id} className="relative">
-                <span className="absolute -left-[33px] top-1 flex h-6 w-6 items-center justify-center rounded-full bg-neutral-900 border border-neutral-700 shadow-sm">
+              <div key={entry.entry_id} className="relative group">
+                <span className="absolute -left-[31px] top-1 flex h-6 w-6 items-center justify-center rounded-full bg-surface border border-border shadow-sm group-hover:scale-110 transition-transform">
                   {getEventIcon(entry.event_type)}
                 </span>
                 <div 
-                  className={`bg-neutral-900/50 p-3 rounded-lg border border-neutral-700 shadow-sm transition-colors ${onEntryClick ? 'cursor-pointer hover:border-blue-500/50 hover:bg-neutral-800' : ''}`}
+                  className={`bg-surface-elevated/40 p-3.5 rounded-2xl border border-border/60 shadow-sm transition-all duration-200 ${onEntryClick ? 'cursor-pointer hover:border-brand-primary/40 hover:bg-surface-elevated/80' : ''}`}
                   onClick={() => onEntryClick && onEntryClick(entry)}
                 >
                   <div className="flex justify-between items-start mb-1">
                     <p className="text-xs font-bold text-text-primary">{getEventTitle(entry)}</p>
-                    <p className="text-[10px] text-neutral-400 font-medium whitespace-nowrap ml-2">
+                    <p className="text-[10px] text-text-muted font-mono font-medium whitespace-nowrap ml-2">
                       {new Date(entry.timestamp).toLocaleString('en-IN')}
                     </p>
                   </div>
-                  <p className="text-xs text-neutral-500 mb-1 flex items-center gap-1">
+                  <p className="text-xs text-text-muted mb-1 flex items-center gap-1">
                     <span className="font-semibold capitalize text-text-secondary">{entry.actor.type}</span> 
-                    <span className="text-neutral-500">({entry.actor.id})</span>
+                    <span className="text-text-muted font-mono">({entry.actor.id})</span>
                   </p>
                   {getEventDescription(entry) && (
-                    <div className={`mt-2 p-2 bg-neutral-900 border border-neutral-800 rounded text-xs text-text-secondary italic ${onEntryClick ? 'group-hover:bg-neutral-800' : ''}`}>
+                    <div className="mt-2 p-2.5 bg-surface border border-border rounded-xl text-xs text-text-secondary italic">
                       {getEventDescription(entry)}
                     </div>
                   )}

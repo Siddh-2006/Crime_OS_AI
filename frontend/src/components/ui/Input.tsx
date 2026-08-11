@@ -9,8 +9,8 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 }
 
 /**
- * Reusable Input component with label, error, help text, and right element (e.g. show/hide icon).
- * Forwards ref for React Hook Form compatibility.
+ * Reusable Input component with label, error, help text, and right element.
+ * Forwards ref for React Hook Form compatibility. Fully theme-aware.
  */
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   { label, error, helpText, rightElement, inputId, className = '', ...props },
@@ -19,28 +19,28 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   const id = inputId ?? props.name ?? `input_${Math.random().toString(36).slice(2)}`;
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1.5">
       {label && (
-        <label htmlFor={id} className="text-sm font-medium text-text-primary">
+        <label htmlFor={id} className="text-sm font-semibold text-text-primary">
           {label}
           {props.required && <span className="ml-1 text-semantic-critical">*</span>}
         </label>
       )}
-      <div className="relative">
+      <div className="relative group">
         <input
           id={id}
           ref={ref}
           aria-invalid={!!error}
           aria-describedby={error ? `${id}_error` : helpText ? `${id}_help` : undefined}
           className={[
-            'w-full rounded-md border px-3 py-2.5 text-sm text-text-primary',
-            'placeholder:text-text-secondary',
-            'transition-colors duration-150',
-            'focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary',
-            'disabled:cursor-not-allowed disabled:bg-neutral-800 dark:disabled:bg-neutral-800 disabled:text-text-secondary',
+            'w-full rounded-xl border px-3.5 py-2.5 text-sm text-text-primary',
+            'bg-input-bg placeholder:text-text-muted',
+            'transition-all duration-200',
+            'focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-brand-primary',
+            'disabled:cursor-not-allowed disabled:opacity-50',
             error
-              ? 'border-semantic-critical bg-red-500/10 focus:ring-semantic-critical'
-              : 'border-neutral-800 bg-[#0a0f1c] hover:border-neutral-600',
+              ? 'border-semantic-critical bg-red-500/5 focus:ring-semantic-critical/40'
+              : 'border-input-border hover:border-text-secondary',
             rightElement ? 'pr-10' : '',
             className,
           ].join(' ')}
@@ -53,7 +53,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         )}
       </div>
       {error && (
-        <p id={`${id}_error`} role="alert" className="text-xs text-semantic-critical">
+        <p id={`${id}_error`} role="alert" className="text-xs font-medium text-semantic-critical">
           {error}
         </p>
       )}

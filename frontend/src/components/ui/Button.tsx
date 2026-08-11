@@ -14,15 +14,15 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    'bg-brand-primary text-white hover:opacity-90 active:opacity-80 focus-visible:ring-brand-primary disabled:bg-neutral-300 dark:disabled:bg-neutral-700',
+    'bg-brand-primary text-white hover:opacity-90 active:opacity-80 focus-visible:ring-ring shadow-sm hover:shadow-md',
   secondary:
-    'bg-brand-accent text-white hover:opacity-90 active:opacity-80 focus-visible:ring-brand-accent disabled:bg-neutral-800 dark:disabled:bg-neutral-700',
+    'bg-brand-accent text-white hover:opacity-90 active:opacity-80 focus-visible:ring-brand-accent shadow-sm',
   ghost:
-    'bg-transparent text-text-primary hover:bg-neutral-800 dark:hover:bg-neutral-800 active:bg-neutral-800 dark:active:bg-neutral-700 focus-visible:ring-brand-primary',
+    'bg-transparent text-text-primary hover:bg-surface-elevated active:bg-surface focus-visible:ring-ring',
   danger:
-    'bg-semantic-critical text-white hover:opacity-90 active:opacity-80 focus-visible:ring-semantic-critical disabled:opacity-50',
+    'bg-semantic-critical text-white hover:opacity-90 active:opacity-80 focus-visible:ring-semantic-critical shadow-sm',
   outline:
-    'bg-transparent text-text-primary hover:bg-neutral-800 dark:hover:bg-neutral-800 active:bg-neutral-800 dark:active:bg-neutral-700 focus-visible:ring-brand-primary border border-neutral-700 dark:border-neutral-700',
+    'bg-transparent text-text-primary hover:bg-surface-elevated active:bg-surface focus-visible:ring-ring border border-border',
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
@@ -33,6 +33,7 @@ const sizeClasses: Record<ButtonSize, string> = {
 
 /**
  * Reusable Button component with variant, size, loading, and icon support.
+ * Features hover scale transform and active press effect.
  */
 export function Button({
   variant = 'primary',
@@ -50,10 +51,11 @@ export function Button({
     <button
       disabled={disabled || isLoading}
       className={[
-        'inline-flex items-center justify-center gap-2 rounded-md font-medium',
-        'transition-colors duration-150',
-        'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
-        'disabled:cursor-not-allowed disabled:opacity-60',
+        'inline-flex items-center justify-center gap-2 rounded-xl font-semibold',
+        'transition-all duration-200 ease-out',
+        'hover:scale-[1.02] active:scale-[0.98]',
+        'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+        'disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100',
         variantClasses[variant],
         sizeClasses[size],
         fullWidth ? 'w-full' : '',

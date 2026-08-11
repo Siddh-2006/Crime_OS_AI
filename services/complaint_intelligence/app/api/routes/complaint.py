@@ -8,6 +8,7 @@ import asyncio
 import base64
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -292,20 +293,18 @@ async def profile_complaint_multimodal(
         logger.warning("[complaint] LLM complaint intake drafting failed; using fallback draft", extra={"error": str(exc)})
 
     combined_text = complaint_text or " ".join(attachment_notes).strip()
-    if not combined_text:
-        combined_text = "Complaint intake provided via attachments only."
 
     prefill = ComplaintDraftFields(
         shortDescription=_first_non_empty(
             parsed_output.get("shortDescription"),
             parsed_output.get("short_description"),
             parsed_context.get("shortDescription"),
-        ) or (complaint_text[:120] if complaint_text else None),
+        ),
         detailedDescription=_first_non_empty(
             parsed_output.get("detailedDescription"),
             parsed_output.get("detailed_description"),
             parsed_context.get("detailedDescription"),
-        ) or combined_text,
+        ) or (combined_text if combined_text else None),
         incidentDate=_first_non_empty(
             parsed_output.get("incidentDate"),
             parsed_context.get("incidentDate"),

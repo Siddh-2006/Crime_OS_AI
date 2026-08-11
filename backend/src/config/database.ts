@@ -1,14 +1,14 @@
 import mongoose from 'mongoose';
-import env from './env';
 import logger from './logger';
 
 /**
- * Establishes a connection to MongoDB.
- * Uses Mongoose's built-in reconnection logic.
+ * Establishes connection to MongoDB.
+ * Primary: MongoDB Atlas (env.MONGODB_URI / env.MONGODB_ATLAS_URI)
+ * Fallback: Local MongoDB (mongodb://localhost:27017/crime-os) if Atlas fails.
  */
 export async function connectDatabase(): Promise<void> {
   mongoose.connection.on('connected', async () => {
-    logger.info('MongoDB connection established', { uri: env.MONGODB_URI.replace(/\/\/.*@/, '//***@') });
+    logger.info('MongoDB connection established successfully');
     try {
       const usersColl = mongoose.connection.collection('users');
       const indexes = await usersColl.indexes();
@@ -31,15 +31,34 @@ export async function connectDatabase(): Promise<void> {
     logger.warn('MongoDB connection lost');
   });
 
+  const primaryUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/crime-os';
+  const fallbackUri = process.env.MONGODB_LOCAL_URI || 'mongodb://localhost:27017/crime-os';
+
+  // Step 1: Try Primary MONGODB_URI first
   try {
-    await mongoose.connect(env.MONGODB_URI, {
-      serverSelectionTimeoutMS: 10000,
-      connectTimeoutMS: 15000,
+    logger.info('Attempting connection to Primary MongoDB...', { uri: primaryUri.replace(/\/\/.*@/, '//***@') });
+    await mongoose.connect(primaryUri, {
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 8000,
       socketTimeoutMS: 45000,
     });
-  } catch (err) {
-    logger.error('Failed to connect to MongoDB. Is your IP whitelisted in Atlas?', { error: (err as Error).message });
-    throw err;
+    logger.info('Connected to Primary MongoDB successfully.', { uri: primaryUri });
+    return;
+  } catch (primaryErr: any) {
+    logger.warn(`Primary MongoDB connection failed (${primaryErr.message}). Switching to Local MongoDB fallback...`);
+  }
+
+  // Step 2: Fallback to Local MongoDB if primary fails
+  try {
+    logger.info('Connecting to Local MongoDB fallback...', { uri: fallbackUri });
+    await mongoose.connect(fallbackUri, {
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 8000,
+    });
+    logger.info('Connected to Local MongoDB fallback successfully.');
+  } catch (localErr: any) {
+    logger.error('Both Primary and Fallback MongoDB connections failed!', { error: localErr.message });
+    throw localErr;
   }
 }
 

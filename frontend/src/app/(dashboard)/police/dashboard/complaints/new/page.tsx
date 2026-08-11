@@ -1104,47 +1104,47 @@ export default function NewComplaintPage(): React.ReactElement {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="w-full flex-1 flex flex-col space-y-6 animate-fade-in">
       {/* Header Banner */}
-      <div className="flex items-center gap-4 border-b border-neutral-800 pb-4">
+      <div className="flex items-center gap-4 border-b border-border pb-4">
         <button
           onClick={() => router.push(APP_ROUTES.MY_COMPLAINTS)}
-          className="p-2 hover:bg-neutral-800 rounded-full transition-all duration-200"
+          className="p-2 hover:bg-surface-elevated rounded-xl transition-all duration-200"
           title="Back to complaints list"
         >
           <ArrowLeft size={20} className="text-text-secondary" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-text-primary">E-Complaint Intake Portal</h1>
-          <p className="text-sm text-text-secondary">File a secure case description with the Gujarat Police Department</p>
+          <h1 className="text-3xl font-heading font-extrabold tracking-tight text-text-primary">E-Complaint Intake Portal</h1>
+          <p className="text-sm text-text-secondary font-medium">File a secure case description with the Gujarat Police Department</p>
         </div>
       </div>
 
       {/* Modern Stepper Indicator */}
-      <div className="grid grid-cols-4 gap-2 bg-surface border border-neutral-800 rounded-xl p-3 shadow-sm">
+      <div className="grid grid-cols-4 gap-3 bg-surface border border-border rounded-2xl p-4 shadow-card glass">
         {[
           { num: 1, name: 'Complainant' },
           { num: 2, name: 'Complaint' },
           { num: 3, name: 'Evidence' },
           { num: 4, name: 'Review' }
         ].map((s) => (
-          <div key={s.num} className="flex flex-col md:flex-row items-center gap-2 px-1 text-center md:text-left">
+          <div key={s.num} className="flex flex-col md:flex-row items-center gap-2.5 px-2 text-center md:text-left">
             <span
               className={[
-                'flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-all duration-300',
+                'flex h-8 w-8 items-center justify-center rounded-xl text-xs font-bold transition-all duration-300 shadow-sm',
                 step === s.num
-                  ? 'bg-brand-primary text-black ring-4 ring-brand-primary/20 scale-110 shadow hover:shadow-md'
+                  ? 'bg-brand-primary text-white ring-4 ring-brand-primary/20 scale-105 shadow-glow-sm'
                   : step > s.num
-                    ? 'bg-green-600 text-white'
-                    : 'bg-neutral-800 text-text-secondary'
+                    ? 'bg-semantic-success text-white'
+                    : 'bg-surface-elevated text-text-secondary border border-border'
               ].join(' ')}
             >
-              {step > s.num ? <Check size={14} /> : s.num}
+              {step > s.num ? <Check size={15} /> : s.num}
             </span>
             <span
               className={[
-                'text-xs font-semibold select-none hidden md:inline transition-colors duration-200',
-                step === s.num ? 'text-brand-primary font-bold' : step > s.num ? 'text-green-500' : 'text-text-secondary'
+                'text-xs font-heading select-none hidden md:inline transition-colors duration-200',
+                step === s.num ? 'text-brand-primary font-bold' : step > s.num ? 'text-semantic-success font-semibold' : 'text-text-secondary font-medium'
               ].join(' ')}
             >
               {s.name}
@@ -1169,27 +1169,27 @@ export default function NewComplaintPage(): React.ReactElement {
 
       {/* ─── Step 1: Complainant profile & OTP ─── */}
       {step === 1 && (
-        <Card className="space-y-6 p-6 border border-neutral-800">
-          <div className="border-b border-neutral-800 pb-3">
+        <Card className="space-y-6 p-6 border border-border">
+          <div className="border-b border-border pb-3">
             <h2 className="text-xl font-bold text-text-primary">Step 1: Complainant details</h2>
             <p className="text-sm text-text-secondary">Capture the complainant profile and verify their email before filing the case.</p>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="md:col-span-2 rounded-xl border border-brand-primary/30 bg-brand-primary/10 p-4 space-y-4 mb-2">
+            <div className="md:col-span-2 rounded-2xl border border-brand-primary/20 bg-brand-primary/5 p-4 space-y-4 mb-2">
               <div className="flex flex-wrap items-center gap-3">
                 <MailCheck className="h-5 w-5 text-brand-primary" />
                 <div>
-                  <p className="text-sm font-semibold text-brand-primary">Email verification for the complainant</p>
-                  <p className="text-xs text-blue-200">Please provide the complainant's email and verify it with the OTP before continuing.</p>
+                  <p className="text-sm font-bold text-text-primary">Email verification for the complainant</p>
+                  <p className="text-xs text-text-secondary font-medium mt-0.5">Please provide the complainant's email and verify it with the OTP before continuing.</p>
                 </div>
               </div>
               <div className="flex flex-col md:flex-row items-end gap-4">
                 <div className="flex-1 w-full">
-                  <Input label="Email *" type="email" value={complainantEmail} onChange={(e) => setComplainantEmail(e.target.value)} placeholder="complainant@example.com" disabled={complainantVerified} required />
+                  <Input label="Email" type="email" value={complainantEmail} onChange={(e) => setComplainantEmail(e.target.value)} placeholder="complainant@example.com" disabled={complainantVerified} required />
                 </div>
                 {!complainantVerified && (
-                  <Button type="button" variant="secondary" onClick={handleSendOtpOnly} isLoading={otpSubmitting}>
+                  <Button type="button" onClick={handleSendOtpOnly} isLoading={otpSubmitting} className="font-bold">
                     {otpSent ? 'Resend OTP' : 'Send OTP'}
                   </Button>
                 )}
@@ -1200,14 +1200,14 @@ export default function NewComplaintPage(): React.ReactElement {
                   <div className="flex-1 w-full">
                     <Input label="Enter OTP" value={otpCode} onChange={(e) => setOtpCode(e.target.value)} placeholder="6-digit OTP" />
                   </div>
-                  <Button type="button" onClick={handleVerifyOtpOnly} isLoading={otpSubmitting}>
+                  <Button type="button" onClick={handleVerifyOtpOnly} isLoading={otpSubmitting} className="font-bold">
                     Verify OTP
                   </Button>
                 </div>
               )}
               
               {complainantVerified && (
-                <div className="flex items-center gap-2 text-sm font-semibold text-green-500 mt-2">
+                <div className="flex items-center gap-2 text-sm font-bold text-semantic-success mt-2">
                   <BadgeCheck className="h-4 w-4" />
                   Complainant email verified successfully. You can now fill in the rest of the details.
                 </div>
@@ -1216,18 +1216,18 @@ export default function NewComplaintPage(): React.ReactElement {
 
             {complainantVerified && (
               <>
-                <Input label="First Name *" value={complainantFirstName} onChange={(e) => setComplainantFirstName(e.target.value)} placeholder="e.g. Priya" required />
-                <Input label="Last Name *" value={complainantLastName} onChange={(e) => setComplainantLastName(e.target.value)} placeholder="e.g. Sharma" required />
-                <Input label="Phone *" value={complainantPhone} onChange={(e) => setComplainantPhone(e.target.value)} placeholder="10-digit mobile number" required />
-                <Input label="Date of Birth *" type="date" value={complainantDob} onChange={(e) => setComplainantDob(e.target.value)} required />
-                <Select label="Gender *" value={complainantGender} onChange={(e) => setComplainantGender(e.target.value)} options={[{value:'MALE',label:'Male'},{value:'FEMALE',label:'Female'},{value:'OTHER',label:'Other'}]} />
-                <Input label="Address *" value={complainantAddress} onChange={(e) => setComplainantAddress(e.target.value)} placeholder="Flat / House / Street" required />
-                <Input label="City *" value={complainantCity} onChange={(e) => setComplainantCity(e.target.value)} placeholder="Ahmedabad" required />
-                <Input label="District *" value={complainantDistrict} onChange={(e) => setComplainantDistrict(e.target.value)} placeholder="Ahmedabad" required />
-                <Input label="State *" value={complainantState} onChange={(e) => setComplainantState(e.target.value)} placeholder="Gujarat" required />
-                <Input label="Pincode *" value={complainantPincode} onChange={(e) => setComplainantPincode(e.target.value)} placeholder="380001" required />
+                <Input label="First Name" value={complainantFirstName} onChange={(e) => setComplainantFirstName(e.target.value)} placeholder="e.g. Priya" required />
+                <Input label="Last Name" value={complainantLastName} onChange={(e) => setComplainantLastName(e.target.value)} placeholder="e.g. Sharma" required />
+                <Input label="Phone" value={complainantPhone} onChange={(e) => setComplainantPhone(e.target.value)} placeholder="10-digit mobile number" required />
+                <Input label="Date of Birth" type="date" value={complainantDob} onChange={(e) => setComplainantDob(e.target.value)} required />
+                <Select label="Gender" value={complainantGender} onChange={(e) => setComplainantGender(e.target.value)} options={[{value:'MALE',label:'Male'},{value:'FEMALE',label:'Female'},{value:'OTHER',label:'Other'}]} required />
+                <Input label="Address" value={complainantAddress} onChange={(e) => setComplainantAddress(e.target.value)} placeholder="Flat / House / Street" required />
+                <Input label="City" value={complainantCity} onChange={(e) => setComplainantCity(e.target.value)} placeholder="Ahmedabad" required />
+                <Input label="District" value={complainantDistrict} onChange={(e) => setComplainantDistrict(e.target.value)} placeholder="Ahmedabad" required />
+                <Input label="State" value={complainantState} onChange={(e) => setComplainantState(e.target.value)} placeholder="Gujarat" required />
+                <Input label="Pincode" value={complainantPincode} onChange={(e) => setComplainantPincode(e.target.value)} placeholder="380001" required />
                 <Select
-                  label="ID Proof Type *"
+                  label="ID Proof Type"
                   value={complainantIdProofType}
                   onChange={(e) => setComplainantIdProofType(e.target.value)}
                   options={[
@@ -1236,14 +1236,15 @@ export default function NewComplaintPage(): React.ReactElement {
                     { value: 'DRIVING_LICENSE', label: 'Driving License' },
                     { value: 'VOTER_ID', label: 'Voter ID' },
                   ]}
+                  required
                 />
-                <Input label="ID Proof Number *" value={complainantIdProofNumber} onChange={(e) => setComplainantIdProofNumber(e.target.value)} placeholder="1234 5678 9012" required />
+                <Input label="ID Proof Number" value={complainantIdProofNumber} onChange={(e) => setComplainantIdProofNumber(e.target.value)} placeholder="1234 5678 9012" required />
               </>
             )}
           </div>
 
-          <div className="flex justify-end pt-4 border-t border-neutral-800">
-            <Button onClick={handleNext} rightIcon={<ArrowRight size={16} />}>
+          <div className="flex justify-end pt-4 border-t border-border">
+            <Button onClick={handleNext} rightIcon={<ArrowRight size={16} />} className="font-bold">
               Continue to Complaint Details
             </Button>
           </div>
@@ -1252,17 +1253,17 @@ export default function NewComplaintPage(): React.ReactElement {
 
       {/* ─── Step 2: Incident specifics ─── */}
       {step === 2 && (
-        <Card className="space-y-6 p-6 border border-neutral-800">
-          <div className="border-b border-neutral-800 pb-3">
+        <Card className="space-y-6 p-6 border border-border">
+          <div className="border-b border-border pb-3">
             <h2 className="text-xl font-bold text-text-primary">Step 2: Complaint details</h2>
             <p className="text-sm text-text-secondary">Provide dates, general timing, exact coordinates, and jurisdictional area.</p>
           </div>
 
           <div className="space-y-4">
-            <div className="rounded-2xl border border-brand-primary/20 bg-brand-primary/10 p-4 space-y-3">
+            <div className="rounded-2xl border border-brand-primary/20 bg-brand-primary/5 p-4 space-y-3">
               <div>
-                <p className="text-sm font-semibold text-brand-primary">Optional complaint media intake</p>
-                <p className="text-xs text-blue-200/80">
+                <p className="text-sm font-bold text-text-primary">Optional complaint media intake</p>
+                <p className="text-xs text-text-secondary font-medium mt-0.5">
                   Upload images, PDFs, or audio recordings to auto-fill the complaint fields. The uploaded files will also remain part of the complaint evidence.
                 </p>
               </div>
@@ -1279,10 +1280,10 @@ export default function NewComplaintPage(): React.ReactElement {
                 }}
                 onClick={() => document.getElementById('complaint-intake-input')?.click()}
                 className={[
-                  'border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all duration-200 bg-[#0a0f1c]',
+                  'border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all duration-200 bg-input-bg',
                   isDragging
                     ? 'border-brand-primary bg-brand-primary/10 scale-[0.99] shadow-inner'
-                    : 'border-neutral-800 hover:border-brand-primary hover:bg-brand-primary/5',
+                    : 'border-border hover:border-brand-primary hover:bg-brand-primary/5',
                 ].join(' ')}
               >
                 <input
@@ -1302,13 +1303,13 @@ export default function NewComplaintPage(): React.ReactElement {
                 <p className="text-sm font-semibold text-text-primary">
                   Drag &amp; drop complaint media here, or <span className="text-brand-primary font-bold">browse files</span>
                 </p>
-                <p className="text-xs text-text-secondary mt-1.5">
+                <p className="text-xs text-text-secondary mt-1.5 font-medium">
                   These files are processed for OCR, Florence captions, and Whisper transcription before you continue.
                 </p>
               </div>
 
               {isComplaintIntakeProcessing && (
-                <div className="flex items-center gap-2 text-xs font-semibold text-primary-800">
+                <div className="flex items-center gap-2 text-xs font-semibold text-brand-primary">
                   <Loader2 size={14} className="animate-spin" />
                   {intakeStatusMessage || 'Processing complaint media...'}
                 </div>
@@ -1317,7 +1318,7 @@ export default function NewComplaintPage(): React.ReactElement {
 
             {/* Title / Summary */}
             <Input
-              label="Complaint Title *"
+              label="Complaint Title"
               value={shortDescription}
               onChange={(e) => setShortDescription(e.target.value)}
               placeholder="e.g. Someone stole my bike / OTP Fraud transaction / Lost mobile phone"
@@ -1326,10 +1327,10 @@ export default function NewComplaintPage(): React.ReactElement {
             />
 
             {/* Date Specifics */}
-            <div className="bg-surface border border-neutral-800 rounded-lg p-4 space-y-4">
+            <div className="bg-surface border border-border rounded-xl p-4 space-y-4 shadow-sm">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-semibold text-text-primary">Incident Date Selection *</span>
-                <label className="flex items-center gap-2 text-xs font-semibold text-brand-primary cursor-pointer">
+                <label className="flex items-center gap-2 text-xs font-bold text-brand-primary cursor-pointer">
                   <input
                     type="checkbox"
                     checked={isApproximateDate}
@@ -1337,7 +1338,7 @@ export default function NewComplaintPage(): React.ReactElement {
                       setIsApproximateDate(e.target.checked);
                       if (!e.target.checked) setApproximateDateText('');
                     }}
-                    className="rounded border-neutral-700 bg-[#0a0f1c] text-brand-primary focus:ring-brand-primary"
+                    className="rounded border-border bg-input-bg text-brand-primary focus:ring-brand-primary"
                   />
                   I only know the Approximate Date
                 </label>
@@ -1346,7 +1347,7 @@ export default function NewComplaintPage(): React.ReactElement {
               {isApproximateDate ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
-                    label="Describe Approximate Date *"
+                    label="Describe Approximate Date"
                     value={approximateDateText}
                     onChange={(e) => setApproximateDateText(e.target.value)}
                     placeholder="e.g. Around last Monday / About two weeks ago"
@@ -1354,7 +1355,7 @@ export default function NewComplaintPage(): React.ReactElement {
                   />
                   <Input
                     type="date"
-                    label="Estimated Date on Calendar * (AI Indexing)"
+                    label="Estimated Date on Calendar (AI Indexing)"
                     value={incidentDate}
                     max={new Date().toISOString().split('T')[0]}
                     onChange={(e) => setIncidentDate(e.target.value)}
@@ -1365,7 +1366,7 @@ export default function NewComplaintPage(): React.ReactElement {
                 <div>
                   <Input
                     type="date"
-                    label="Exact Incident Date *"
+                    label="Exact Incident Date"
                     value={incidentDate}
                     max={new Date().toISOString().split('T')[0]}
                     onChange={(e) => setIncidentDate(e.target.value)}
@@ -1376,7 +1377,7 @@ export default function NewComplaintPage(): React.ReactElement {
             </div>
 
             {/* Time Specifics */}
-            <div className="bg-surface border border-neutral-800 rounded-lg p-4 space-y-4">
+            <div className="bg-surface border border-border rounded-xl p-4 space-y-4 shadow-sm">
               <label className="block text-sm font-semibold text-text-primary">Approximate Time Period</label>
               <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
                 {[
@@ -1397,8 +1398,8 @@ export default function NewComplaintPage(): React.ReactElement {
                     className={[
                       'px-3 py-2 rounded-lg text-xs font-semibold border transition-all duration-200',
                       timePeriod === t.value
-                        ? 'bg-brand-primary/20 border-brand-primary text-brand-primary shadow-sm'
-                        : 'bg-[#0a0f1c] border-neutral-800 text-text-secondary hover:bg-neutral-800'
+                        ? 'bg-brand-primary/15 border-brand-primary text-brand-primary shadow-sm font-bold'
+                        : 'bg-input-bg border-border text-text-secondary hover:bg-surface-elevated'
                     ].join(' ')}
                   >
                     {t.label}
@@ -1410,7 +1411,7 @@ export default function NewComplaintPage(): React.ReactElement {
                 <div className="mt-2">
                   <Input
                     type="time"
-                    label="Exact Time *"
+                    label="Exact Time"
                     value={incidentTime}
                     onChange={(e) => setIncidentTime(e.target.value)}
                     required
@@ -1431,7 +1432,7 @@ export default function NewComplaintPage(): React.ReactElement {
                     value={searchAddressQuery}
                     onChange={(e) => setSearchAddressQuery(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSearchAddress(); } }}
-                    className="w-full pl-9 pr-4 py-2 text-sm border border-neutral-800 rounded-lg outline-none focus:ring-2 focus:ring-brand-primary bg-[#0a0f1c] text-text-primary"
+                    className="w-full pl-9 pr-4 py-2 text-sm border border-neutral-800 rounded-lg outline-none focus:ring-2 focus:ring-brand-primary bg-input-bg text-text-primary"
                   />
                   <Search className="absolute left-3 top-2.5 h-4 w-4 text-text-secondary" />
                 </div>
@@ -1451,7 +1452,7 @@ export default function NewComplaintPage(): React.ReactElement {
               )}
 
               {/* Map element */}
-              <div className="relative border border-neutral-800 rounded-xl overflow-hidden shadow-sm bg-[#0a0f1c]">
+              <div className="relative border border-neutral-800 rounded-xl overflow-hidden shadow-sm bg-input-bg">
                 <div ref={mapContainerRef} id="leaflet-map-element" className="h-[280px] w-full z-0" />
                 {!mapLoaded && !mapError && (
                   <div className="absolute inset-0 flex items-center justify-center bg-surface/80 z-10">
@@ -1490,7 +1491,7 @@ export default function NewComplaintPage(): React.ReactElement {
                 value={detailedDescription}
                 onChange={(e) => setDetailedDescription(e.target.value)}
                 placeholder="Provide a comprehensive account of the incident. Include relevant dates, times, individuals involved, specific sequences of events, and any descriptive details that will assist in the investigation."
-                className="w-full p-4 rounded-xl border border-neutral-800 min-h-[260px] text-sm focus:ring-2 focus:ring-brand-primary outline-none transition-all resize-none shadow-sm text-text-primary bg-[#0a0f1c]"
+                className="w-full p-4 rounded-xl border border-neutral-800 min-h-[260px] text-sm focus:ring-2 focus:ring-brand-primary outline-none transition-all resize-none shadow-sm text-text-primary bg-input-bg"
               />
 
               <div className="flex flex-col md:flex-row items-center gap-3">
@@ -1578,7 +1579,7 @@ export default function NewComplaintPage(): React.ReactElement {
               'border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200',
               isDragging
                 ? 'border-brand-primary bg-brand-primary/10 scale-[0.99] shadow-inner'
-                : 'border-neutral-800 hover:border-brand-primary bg-[#0a0f1c] hover:bg-surface'
+                : 'border-neutral-800 hover:border-brand-primary bg-input-bg hover:bg-surface'
             ].join(' ')}
           >
             <input
@@ -1623,7 +1624,7 @@ export default function NewComplaintPage(): React.ReactElement {
                   if (item.status === 'success') return null; // Displayed below in completed
                   const ext = item.fileName.split('.').pop()?.toUpperCase() ?? '';
                   return (
-                    <div key={fileId} className="flex items-center gap-3 p-3 bg-[#0a0f1c] border border-neutral-800 rounded-lg shadow-sm relative">
+                    <div key={fileId} className="flex items-center gap-3 p-3 bg-input-bg border border-neutral-800 rounded-lg shadow-sm relative">
                       {item.tempUrl ? (
                         <img src={item.tempUrl} className="h-10 w-10 object-cover rounded flex-shrink-0" alt="" />
                       ) : (
@@ -1673,7 +1674,7 @@ export default function NewComplaintPage(): React.ReactElement {
 
                 {/* Already uploaded evidence list */}
                 {evidenceFiles.map((file, idx) => (
-                  <div key={file.publicId} className="flex items-center gap-3 p-3 bg-[#0a0f1c] border border-neutral-800 rounded-lg shadow-sm relative group">
+                  <div key={file.publicId} className="flex items-center gap-3 p-3 bg-input-bg border border-neutral-800 rounded-lg shadow-sm relative group">
                     <div className="h-10 w-10 bg-surface rounded flex items-center justify-center flex-shrink-0 border border-neutral-700">
                       {file.resourceType === 'image' ? (
                         <img src={file.secureUrl} className="h-10 w-10 object-cover rounded" alt="" />
@@ -1751,7 +1752,7 @@ export default function NewComplaintPage(): React.ReactElement {
           </div>
 
           {/* 1. Incident details Card */}
-          <div className="bg-[#0a0f1c] border border-neutral-800 rounded-2xl shadow-sm overflow-hidden">
+          <div className="bg-input-bg border border-neutral-800 rounded-2xl shadow-sm overflow-hidden">
             <div className="px-6 py-4 bg-surface border-b border-neutral-800 flex justify-between items-center">
               <div className="flex items-center gap-2.5">
                 <div className="p-1.5 bg-brand-primary/10 rounded-lg text-brand-primary border border-brand-primary/20">
@@ -1762,7 +1763,7 @@ export default function NewComplaintPage(): React.ReactElement {
               <button
                 type="button"
                 onClick={() => setStep(1)}
-                className="text-xs font-bold text-brand-primary hover:text-blue-200 flex items-center gap-1 bg-[#0a0f1c] border border-neutral-700 hover:border-neutral-600 px-3 py-1.5 rounded-lg shadow-sm transition-all duration-200 active:scale-[0.98]"
+                className="text-xs font-bold text-brand-primary hover:text-blue-200 flex items-center gap-1 bg-input-bg border border-neutral-700 hover:border-neutral-600 px-3 py-1.5 rounded-lg shadow-sm transition-all duration-200 active:scale-[0.98]"
               >
                 Modify Details
               </button>
@@ -1850,7 +1851,7 @@ export default function NewComplaintPage(): React.ReactElement {
           </div>
 
           {/* 2. Narrative Section */}
-          <div className="bg-[#0a0f1c] border border-neutral-800 rounded-2xl shadow-sm overflow-hidden">
+          <div className="bg-input-bg border border-neutral-800 rounded-2xl shadow-sm overflow-hidden">
             <div className="px-6 py-4 bg-surface/50 border-b border-neutral-800 flex justify-between items-center">
               <div className="flex items-center gap-2.5">
                 <div className="p-1.5 bg-brand-primary/10 rounded-lg text-brand-primary border border-brand-primary/20">
@@ -1861,7 +1862,7 @@ export default function NewComplaintPage(): React.ReactElement {
               <button
                 type="button"
                 onClick={() => setStep(2)}
-                className="text-xs font-bold text-brand-primary hover:text-blue-200 flex items-center gap-1 bg-[#0a0f1c] border border-neutral-700 hover:border-neutral-600 px-3 py-1.5 rounded-lg shadow-sm transition-all duration-200 active:scale-[0.98]"
+                className="text-xs font-bold text-brand-primary hover:text-blue-200 flex items-center gap-1 bg-input-bg border border-neutral-700 hover:border-neutral-600 px-3 py-1.5 rounded-lg shadow-sm transition-all duration-200 active:scale-[0.98]"
               >
                 Modify Story
               </button>
@@ -1877,7 +1878,7 @@ export default function NewComplaintPage(): React.ReactElement {
           </div>
 
           {/* 3. Evidence Section */}
-          <div className="bg-[#0a0f1c] border border-neutral-800 rounded-2xl shadow-sm overflow-hidden">
+          <div className="bg-input-bg border border-neutral-800 rounded-2xl shadow-sm overflow-hidden">
             <div className="px-6 py-4 bg-surface/50 border-b border-neutral-800 flex justify-between items-center">
               <div className="flex items-center gap-2.5">
                 <div className="p-1.5 bg-brand-primary/10 rounded-lg text-brand-primary border border-brand-primary/20">
@@ -1888,7 +1889,7 @@ export default function NewComplaintPage(): React.ReactElement {
               <button
                 type="button"
                 onClick={() => setStep(3)}
-                className="text-xs font-bold text-brand-primary hover:text-blue-200 flex items-center gap-1 bg-[#0a0f1c] border border-neutral-700 hover:border-neutral-600 px-3 py-1.5 rounded-lg shadow-sm transition-all duration-200 active:scale-[0.98]"
+                className="text-xs font-bold text-brand-primary hover:text-blue-200 flex items-center gap-1 bg-input-bg border border-neutral-700 hover:border-neutral-600 px-3 py-1.5 rounded-lg shadow-sm transition-all duration-200 active:scale-[0.98]"
               >
                 Modify Evidence
               </button>
@@ -1902,7 +1903,7 @@ export default function NewComplaintPage(): React.ReactElement {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {evidenceFiles.map((file) => (
                     <div key={file.publicId} className="flex items-center gap-3 p-3 border border-neutral-800 rounded-xl text-xs bg-surface shadow-sm transition-all hover:bg-neutral-800/50">
-                      <div className="h-10 w-10 bg-[#0a0f1c] border border-neutral-700 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden">
+                      <div className="h-10 w-10 bg-input-bg border border-neutral-700 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden">
                         {file.resourceType === 'image' ? (
                           <img src={file.secureUrl} className="h-10 w-10 object-cover" alt="" />
                         ) : (
@@ -1932,7 +1933,7 @@ export default function NewComplaintPage(): React.ReactElement {
               id="declareCheck-input"
               checked={declareCheck}
               onChange={(e) => setDeclareCheck(e.target.checked)}
-              className="mt-1 h-5 w-5 rounded border-neutral-700 bg-[#0a0f1c] text-brand-primary focus:ring-brand-primary cursor-pointer flex-shrink-0"
+              className="mt-1 h-5 w-5 rounded border-neutral-700 bg-input-bg text-brand-primary focus:ring-brand-primary cursor-pointer flex-shrink-0"
             />
             <label htmlFor="declareCheck-input" className="text-xs text-text-primary leading-relaxed cursor-pointer font-semibold select-none">
               I hereby solemnly declare that all statements made in this e-application are true, complete and correct

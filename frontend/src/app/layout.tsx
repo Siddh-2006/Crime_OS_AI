@@ -3,7 +3,6 @@ import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
 import { TranslationProvider } from '@/context/TranslationContext';
 import { ThemeProvider } from '@/components/ThemeProvider';
-
 import { AppLoader } from '@/components/AppLoader';
 
 export const metadata: Metadata = {
@@ -19,19 +18,23 @@ interface RootLayoutProps {
 }
 
 /**
- * Root layout — wraps the entire application with AuthProvider.
+ * Root layout — wraps the entire application with AuthProvider & ThemeProvider.
  */
 export default function RootLayout({ children }: RootLayoutProps): React.ReactElement {
   return (
-    <html lang="en" className="scroll-smooth">
+    <html lang="en" className="scroll-smooth" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800;900&display=swap"
+          rel="stylesheet"
+        />
       </head>
-      <body className="min-h-screen font-sans antialiased">
+      <body className="min-h-screen font-sans antialiased relative">
         <AppLoader />
         <AuthProvider>
-          <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark">
+          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
             <TranslationProvider>{children}</TranslationProvider>
           </ThemeProvider>
         </AuthProvider>

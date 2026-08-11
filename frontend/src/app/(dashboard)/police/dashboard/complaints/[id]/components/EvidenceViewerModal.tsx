@@ -130,36 +130,36 @@ export default function EvidenceViewerModal({ isOpen, onClose, evidence }: Evide
   const uploadedDate = fmtDate(evidence.collected_at || evidence.createdAt || evidence.uploadedAt);
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-neutral-900/50 rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-start justify-center z-[100] pt-20 pb-8 px-4 sm:px-6 overflow-y-auto" onClick={onClose}>
+      <div className="bg-surface border border-border rounded-2xl shadow-2xl w-full max-w-4xl max-h-[80vh] flex flex-col overflow-hidden my-auto" onClick={(e) => e.stopPropagation()}>
 
         {/* Header */}
-        <div className="flex items-start justify-between p-4 border-b border-neutral-100 shrink-0">
+        <div className="flex items-start justify-between p-5 border-b border-border shrink-0 bg-surface">
           <div className="min-w-0 flex-1 mr-4">
-            <h2 className="text-base font-bold text-neutral-900 truncate" title={evidenceTitle(evidence)}>
+            <h2 className="text-base font-bold text-text-primary truncate" title={evidenceTitle(evidence)}>
               {evidenceTitle(evidence)}
             </h2>
             <div className="flex flex-wrap gap-2 items-center mt-1">
-              <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded capitalize">
+              <span className="text-xs font-mono font-bold text-brand-primary bg-brand-primary/10 border border-brand-primary/20 px-2.5 py-0.5 rounded-lg capitalize">
                 {(evidence.type || 'unknown').replace(/_/g, ' ')}
               </span>
-              <span className="text-xs text-neutral-500">Source: {evidence.source || 'Unknown'}</span>
+              <span className="text-xs text-text-secondary">Source: {evidence.source || 'Unknown'}</span>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-neutral-100 rounded-full transition-colors text-neutral-500 shrink-0"
+            className="p-2 hover:bg-surface-elevated rounded-full transition-colors text-text-secondary shrink-0"
           >
             <X size={20} />
           </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 p-4 overflow-y-auto bg-neutral-50">
+        <div className="flex-1 p-5 overflow-y-auto bg-surface-elevated/30">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
             {/* Main Preview */}
-            <div className="md:col-span-2 bg-neutral-900/50 rounded-xl border border-neutral-700 p-2 min-h-[300px] flex items-center justify-center">
+            <div className="md:col-span-2 bg-surface rounded-2xl border border-border p-3 min-h-[300px] flex items-center justify-center shadow-xs">
               {renderContent()}
             </div>
 
@@ -204,15 +204,15 @@ export default function EvidenceViewerModal({ isOpen, onClose, evidence }: Evide
               return (
                 <div className="space-y-4">
                   {/* AI Analysis */}
-                  <div className="bg-neutral-900/50 rounded-xl border border-neutral-700 p-4 shadow-sm">
-                    <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">AI Analysis</h3>
-                    <p className="text-sm text-neutral-800 leading-relaxed">
+                  <div className="bg-surface rounded-2xl border border-border p-4 shadow-xs">
+                    <h3 className="text-xs font-bold text-brand-primary uppercase tracking-wider mb-2">AI Analysis</h3>
+                    <p className="text-sm text-text-primary leading-relaxed">
                       {summaryText}
                     </p>
                     
                     {classification && classification !== 'Unknown' && (
                       <div className="mt-3">
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-lg bg-brand-primary/10 text-brand-primary border border-brand-primary/20">
                           📊 {classification} ({Math.round(confidence * 100)}%)
                         </span>
                       </div>
@@ -220,10 +220,10 @@ export default function EvidenceViewerModal({ isOpen, onClose, evidence }: Evide
 
                     {tagsList.length > 0 && (
                       <div className="mt-3">
-                        <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">Tags</h3>
-                        <div className="flex flex-wrap gap-1">
+                        <h3 className="text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1.5">Tags</h3>
+                        <div className="flex flex-wrap gap-1.5">
                           {tagsList.map((tag: string) => (
-                            <span key={tag} className="text-[10px] bg-neutral-100 text-neutral-600 px-2 py-1 rounded border border-neutral-700 font-medium">
+                            <span key={tag} className="text-[10px] font-mono font-bold bg-surface-elevated text-text-secondary px-2 py-0.5 rounded-md border border-border">
                               #{tag}
                             </span>
                           ))}
@@ -233,8 +233,8 @@ export default function EvidenceViewerModal({ isOpen, onClose, evidence }: Evide
 
                     {ocrText && (
                       <div className="mt-3">
-                        <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">OCR Text</h3>
-                        <div className="text-[10px] bg-neutral-50 p-2 rounded border border-neutral-100 max-h-32 overflow-y-auto whitespace-pre-wrap font-mono text-neutral-600">
+                        <h3 className="text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">OCR Text</h3>
+                        <div className="text-[10px] bg-surface-elevated/70 p-2.5 rounded-xl border border-border max-h-32 overflow-y-auto whitespace-pre-wrap font-mono text-text-secondary leading-relaxed">
                           {ocrText}
                         </div>
                       </div>
@@ -242,100 +242,100 @@ export default function EvidenceViewerModal({ isOpen, onClose, evidence }: Evide
 
                     {speechTranscript && (
                       <div className="mt-3">
-                        <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">Audio Transcript</h3>
-                        <div className="text-[10px] bg-neutral-50 p-2 rounded border border-neutral-100 max-h-32 overflow-y-auto whitespace-pre-wrap font-mono text-neutral-600">
+                        <h3 className="text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">Audio Transcript</h3>
+                        <div className="text-[10px] bg-surface-elevated/70 p-2.5 rounded-xl border border-border max-h-32 overflow-y-auto whitespace-pre-wrap font-mono text-text-secondary leading-relaxed">
                           {speechTranscript}
                         </div>
                       </div>
                     )}
                   </div>
 
-              {/* System Metadata */}
-              <div className="bg-neutral-900/50 rounded-xl border border-neutral-700 p-4 shadow-sm">
-                <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">System Metadata</h3>
-                <div className="space-y-2 text-xs">
-                  <div className="flex justify-between items-center">
-                    <span className="text-neutral-500">Status</span>
-                    <span className={`font-semibold ${evidence.processingStatus?.toUpperCase() === 'PROCESSED' ? 'text-green-600' : evidence.processingStatus?.toUpperCase() === 'FAILED' ? 'text-red-600' : 'text-yellow-600'}`}>
-                      {evidence.processingStatus
-                        ? evidence.processingStatus.charAt(0).toUpperCase() + evidence.processingStatus.slice(1).toLowerCase()
-                        : 'Pending'}
-                    </span>
+                  {/* System Metadata */}
+                  <div className="bg-surface rounded-2xl border border-border p-4 shadow-xs">
+                    <h3 className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-2.5">System Metadata</h3>
+                    <div className="space-y-2 text-xs">
+                      <div className="flex justify-between items-center">
+                        <span className="text-text-secondary">Status</span>
+                        <span className={`font-mono font-bold ${evidence.processingStatus?.toUpperCase() === 'PROCESSED' ? 'text-semantic-success' : evidence.processingStatus?.toUpperCase() === 'FAILED' ? 'text-semantic-critical' : 'text-semantic-warning'}`}>
+                          {evidence.processingStatus
+                            ? evidence.processingStatus.charAt(0).toUpperCase() + evidence.processingStatus.slice(1).toLowerCase()
+                            : 'Pending'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-text-secondary">Uploaded</span>
+                        <span className="text-text-primary font-mono">{uploadedDate}</span>
+                      </div>
+                      {url && !isMockUrl && (
+                        <div className="flex justify-between items-center pt-1 border-t border-border">
+                          <span className="text-text-secondary">File</span>
+                          <a href={url} target="_blank" rel="noopener noreferrer" className="text-brand-primary hover:underline inline-flex items-center gap-1 text-xs font-bold">
+                            Open <ExternalLink size={11} />
+                          </a>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-neutral-500">Uploaded</span>
-                    <span className="text-neutral-900">{uploadedDate}</span>
-                  </div>
-                  {url && !isMockUrl && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-neutral-500">File</span>
-                      <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline inline-flex items-center gap-1 text-[10px]">
-                        Open <ExternalLink size={9} />
-                      </a>
+
+                  {/* Chain of Custody (physical only) */}
+                  {evidence.is_physical && (
+                    <div className="bg-surface rounded-2xl border border-brand-primary/30 p-4 shadow-xs">
+                      <h3 className="text-xs font-bold text-brand-primary uppercase tracking-wider mb-3">Chain of Custody</h3>
+                      <div className="relative border-l-2 border-brand-primary/30 ml-2 space-y-4">
+                        {evidence.custody_chain?.map((transfer: any, idx: number) => (
+                          <div key={idx} className="relative pl-4">
+                            <div className={`absolute -left-[5px] top-1 w-2 h-2 rounded-full ${idx === evidence.custody_chain.length - 1 ? 'bg-brand-primary ring-4 ring-brand-primary/20' : 'bg-text-secondary/40'}`} />
+                            <div className="text-[10px] text-text-secondary font-mono mb-0.5">{fmtDate(transfer.timestamp)}</div>
+                            <div className="text-xs font-bold text-text-primary">{transfer.from_entity} &rarr; {transfer.to_entity}</div>
+                            <div className="text-[10px] text-brand-primary font-bold capitalize mt-0.5">{transfer.status?.replace(/_/g, ' ')}</div>
+                            {transfer.notes && <div className="text-[10px] text-text-secondary mt-1">{transfer.notes}</div>}
+                          </div>
+                        ))}
+                        {(!evidence.custody_chain || evidence.custody_chain.length === 0) && (
+                          <div className="pl-4 text-xs text-text-secondary">No transfer history.</div>
+                        )}
+                      </div>
+
+                      {evidence.current_location && (
+                        <div className="mt-4 pt-3 border-t border-border text-xs flex justify-between items-center">
+                          <span className="text-text-secondary">Current Location: </span>
+                          <span className="font-mono font-bold text-brand-primary uppercase bg-brand-primary/10 border border-brand-primary/20 px-2 py-0.5 rounded-lg">{evidence.current_location}</span>
+                        </div>
+                      )}
+
+                      {evidence.custody_chain?.length > 0 &&
+                        ['in_transit', 'dispatched'].includes(evidence.custody_chain[evidence.custody_chain.length - 1].status) && (
+                          <div className="mt-4">
+                            <button
+                              onClick={async () => {
+                                try {
+                                  const lastTransfer = evidence.custody_chain[evidence.custody_chain.length - 1];
+                                  const caseId = evidence.case_id;
+                                  const evId = evidence.evidence_id || evidence._id;
+                                  if (!caseId) { alert('Missing caseId on evidence'); return; }
+                                  await apiClient.post(`/cases/${caseId}/evidence/${evId}/transfer`, {
+                                    from_entity: lastTransfer.from_entity,
+                                    to_entity: lastTransfer.to_entity,
+                                    status: 'received',
+                                    notes: 'Receipt confirmed by destination',
+                                  });
+                                  alert('Receipt confirmed! Please refresh.');
+                                  onClose();
+                                } catch (e: any) {
+                                  alert(`Failed: ${e.message}`);
+                                }
+                              }}
+                              className="w-full bg-brand-primary hover:bg-brand-primary/90 text-white font-bold py-2 px-4 rounded-xl text-xs transition-all shadow-xs"
+                            >
+                              Confirm Receipt
+                            </button>
+                          </div>
+                        )}
                     </div>
                   )}
                 </div>
-              </div>
-
-              {/* Chain of Custody (physical only) */}
-              {evidence.is_physical && (
-                <div className="bg-neutral-900/50 rounded-xl border border-indigo-200 p-4 shadow-sm">
-                  <h3 className="text-xs font-bold text-indigo-700 uppercase tracking-wider mb-3">Chain of Custody</h3>
-                  <div className="relative border-l-2 border-indigo-100 ml-2 space-y-4">
-                    {evidence.custody_chain?.map((transfer: any, idx: number) => (
-                      <div key={idx} className="relative pl-4">
-                        <div className={`absolute -left-[5px] top-1 w-2 h-2 rounded-full ${idx === evidence.custody_chain.length - 1 ? 'bg-indigo-600 ring-4 ring-indigo-50' : 'bg-neutral-300'}`} />
-                        <div className="text-[10px] text-neutral-400 mb-0.5">{fmtDate(transfer.timestamp)}</div>
-                        <div className="text-xs font-semibold text-neutral-900">{transfer.from_entity} ➔ {transfer.to_entity}</div>
-                        <div className="text-[10px] text-indigo-600 font-medium capitalize mt-0.5">{transfer.status?.replace(/_/g, ' ')}</div>
-                        {transfer.notes && <div className="text-[10px] text-neutral-500 mt-1">{transfer.notes}</div>}
-                      </div>
-                    ))}
-                    {(!evidence.custody_chain || evidence.custody_chain.length === 0) && (
-                      <div className="pl-4 text-xs text-neutral-500">No transfer history.</div>
-                    )}
-                  </div>
-
-                  {evidence.current_location && (
-                    <div className="mt-4 pt-3 border-t border-indigo-50 text-xs">
-                      <span className="text-neutral-500">Current Location: </span>
-                      <span className="font-bold text-indigo-700 uppercase">{evidence.current_location}</span>
-                    </div>
-                  )}
-
-                  {evidence.custody_chain?.length > 0 &&
-                    ['in_transit', 'dispatched'].includes(evidence.custody_chain[evidence.custody_chain.length - 1].status) && (
-                      <div className="mt-4">
-                        <button
-                          onClick={async () => {
-                            try {
-                              const lastTransfer = evidence.custody_chain[evidence.custody_chain.length - 1];
-                              const caseId = evidence.case_id;
-                              const evId = evidence.evidence_id || evidence._id;
-                              if (!caseId) { alert('Missing caseId on evidence'); return; }
-                              await apiClient.post(`/cases/${caseId}/evidence/${evId}/transfer`, {
-                                from_entity: lastTransfer.from_entity,
-                                to_entity: lastTransfer.to_entity,
-                                status: 'received',
-                                notes: 'Receipt confirmed by destination',
-                              });
-                              alert('Receipt confirmed! Please refresh.');
-                              onClose();
-                            } catch (e: any) {
-                              alert(`Failed: ${e.message}`);
-                            }
-                          }}
-                          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded text-sm transition-colors"
-                        >
-                          Confirm Receipt
-                        </button>
-                      </div>
-                    )}
-                </div>
-              )}
-            </div>
-          );
-        })()}
+              );
+            })()}
           </div>
         </div>
       </div>
