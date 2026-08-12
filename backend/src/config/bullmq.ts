@@ -2,10 +2,21 @@ import { Queue, Worker, WorkerOptions, QueueOptions, Job } from 'bullmq';
 import env from './env';
 import logger from './logger';
 
+// Redis Cloud terminates TLS at the load balancer.
+// ioredis must NOT wrap the connection in a second TLS layer.
+// The correct approach for managed Redis (Redis Cloud, Upstash, etc.) is
+// to connect with tls: {} only when the host is NOT localhost — but some
+// providers use a TCP+TLS passthrough where tls:{} causes double-TLS.
+// Use BULL_REDIS_TLS=false to opt out of TLS even for remote hosts.
+const isBullTls = env.BULL_REDIS_HOST !== 'localhost' &&
+  env.BULL_REDIS_HOST !== '127.0.0.1' &&
+  env.BULL_REDIS_TLS !== false;
+
 const redisConnection = {
   host: env.BULL_REDIS_HOST,
   port: env.BULL_REDIS_PORT,
   password: env.BULL_REDIS_PASSWORD || undefined,
+  ...(isBullTls ? { tls: { rejectUnauthorized: false } } : {}),
   maxRetriesPerRequest: null,
   enableReadyCheck: false,
 };

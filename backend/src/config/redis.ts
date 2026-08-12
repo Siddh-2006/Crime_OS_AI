@@ -10,18 +10,23 @@ let redisClient: Redis | null = null;
  */
 export function getRedisClient(): Redis {
   if (!redisClient) {
+    const isTls = env.REDIS_HOST !== 'localhost' &&
+      env.REDIS_HOST !== '127.0.0.1' &&
+      env.REDIS_TLS !== false;
+
     redisClient = new Redis({
       host: env.REDIS_HOST,
       port: env.REDIS_PORT,
       password: env.REDIS_PASSWORD || undefined,
-      lazyConnect: true, // Don't throw immediately if Redis is unreachable
+      ...(isTls ? { tls: { rejectUnauthorized: false } } : {}),
+      lazyConnect: true,
       retryStrategy: (times: number) => {
-        if (times > 5) return null; // Stop retrying after 5 attempts
+        if (times > 5) return null;
         const delay = Math.min(times * 100, 3000);
         logger.warn(`Redis reconnecting... attempt ${times}`, { delay });
         return delay;
       },
-      maxRetriesPerRequest: null, // Required for BullMQ compatibility
+      maxRetriesPerRequest: null,
       enableReadyCheck: false,
     });
 

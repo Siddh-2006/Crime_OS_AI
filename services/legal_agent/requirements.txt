@@ -1,8 +1,43 @@
+# ── Web framework ────────────────────────────────────────────────────────────
+# FastAPI is used in app/main.py — was missing from requirements.txt
+fastapi>=0.111.0
+uvicorn[standard]>=0.30.0  # needed to serve the FastAPI app
+
+# ── Validation ────────────────────────────────────────────────────────────────
 pydantic>=2.0
+
+# ── PDF extraction (fitz / pymupdf) ──────────────────────────────────────────
+# Used in ingestion/extract_text.py and extractors/paddle_ocr_extractor.py
 PyMuPDF>=1.23
+
+# ── Vector database (Qdrant) ──────────────────────────────────────────────────
+# LegalQdrantStore uses synchronous QdrantClient (local path or URL)
 qdrant-client>=1.10
+
+# ── Embeddings: sentence-transformers (primary) ───────────────────────────────
+# BGEEmbedder + LegalReranker (CrossEncoder) in legal_rag/embedding.py
+# and legal_rag/retrieval.py — optional but strongly preferred over llama.cpp fallback.
 sentence-transformers>=3.0
+
+# ── LLM inference backend (Qwen) ─────────────────────────────────────────────
+# llm/qwen_client.py: TransformersTextBackend loads AutoModelForCausalLM
 transformers==4.41.2
-optimum[onnxruntime]>=1.20
-onnxruntime>=1.18
 torch>=2.0
+
+# ── HTTP client (NomicEmbedder / llama.cpp fallback) ─────────────────────────
+# legal_rag/embedding.py NomicEmbedder uses httpx.Client (synchronous)
+httpx>=0.27.0
+
+# ── Numerical arrays ──────────────────────────────────────────────────────────
+# extractors/paddle_ocr_extractor.py: numpy used for image array conversion
+numpy>=1.24.0
+
+# ── OCR (PaddleOCR — used in extractors/paddle_ocr_extractor.py) ─────────────
+# Only required when re-parsing raw legal PDFs; not needed for retrieval-only deployments.
+paddlepaddle>=2.6.1        # CPU-only inference backend
+paddleocr>=2.7.3           # PaddleOCR engine (predict / ocr API)
+
+# ── REMOVED (not imported anywhere in the codebase) ──────────────────────────
+# optimum[onnxruntime] — was listed but never imported; cross-encoder reranking
+#                        uses sentence_transformers.CrossEncoder, not ONNX runtime.
+# onnxruntime            — same reason.

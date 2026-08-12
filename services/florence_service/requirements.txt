@@ -1,9 +1,23 @@
-torch==2.13.0
-torchvision==0.28.0
+# ── PyTorch (CPU-compatible; Florence-2 runs on CPU on Windows) ──────────────
+# torch 2.13.0 and torchvision 0.28.0 do not exist — latest stable is 2.5.x/2.6.x.
+# Pinned to 2.5.1 which is widely available on PyPI for Python 3.10-3.12.
+torch==2.5.1
+torchvision==0.20.1
+
+# ── HuggingFace model stack ───────────────────────────────────────────────────
+# transformers 4.41.2 is used here (trust_remote_code=True for Florence-2).
 transformers==4.41.2
-einops==0.8.2
-timm==1.0.28
+
+# Florence-2 modeling_florence2.py requires these at runtime via trust_remote_code:
+einops==0.8.1              # tensor manipulation used by Florence-2 model code
+timm==1.0.9                # vision backbone used by Florence-2 model code
+
+# ── Web framework ─────────────────────────────────────────────────────────────
 fastapi==0.115.6
-uvicorn==0.32.1
+uvicorn[standard]==0.32.1  # [standard] adds uvloop + httptools for better perf
+
+# ── Image handling ────────────────────────────────────────────────────────────
 Pillow==10.4.0
+
+# ── Validation ───────────────────────────────────────────────────────────────
 pydantic==2.10.6

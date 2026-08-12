@@ -13,6 +13,11 @@ redis==5.2.1
 # ── HTTP client ───────────────────────────────────────────────────────────────
 httpx==0.28.1
 
+# ── MongoDB (async Motor driver + BSON + SSL cert store) ────────────────────
+motor>=3.3.2               # AsyncIOMotorClient — used in core/mongo.py and pipeline scripts
+pymongo>=4.6.0             # provides bson.ObjectId — used in run_pipeline_from_atlas.py
+certifi>=2024.2.2          # TLS CA bundle for Atlas TLS connections (tlsCAFile)
+
 # ── Language detection ────────────────────────────────────────────────────────
 langdetect==1.0.9
 
@@ -23,31 +28,40 @@ spacy==3.8.14
 # ── Image processing ──────────────────────────────────────────────────────────
 Pillow==10.4.0
 python-multipart==0.0.18
+numpy>=1.24.0              # Used in ocr_worker/engine.py (PIL→ndarray for PaddleOCR)
 
-# ── Audio processing ────────────────────────────────────────────────────
-faster-whisper==1.1.1   # CTranslate2-backed Whisper (CPU-friendly)
-mutagen==1.47.0         # Audio header parsing (no ffmpeg required)
-pydub==0.25.1           # Audio segment manipulation (fallback metadata)
+# ── OCR (PaddleOCR + PaddlePaddle CPU) ───────────────────────────────────────
+paddlepaddle>=2.6.1        # CPU-only inference backend for PaddleOCR
+paddleocr>=2.7.3           # PaddleOCR 2.x API (use_angle_cls, lang, show_log, use_gpu)
 
-# ── Video processing ────────────────────────────────────────────────────
-scenedetect[opencv]==0.6.4   # Scene boundary detection (frame-difference, no ML)
-moviepy==1.0.3               # Audio track extraction from video (wraps ffmpeg)
+# ── Translation ───────────────────────────────────────────────────────────────
+deep-translator>=1.11.4    # GoogleTranslator backend — used in ocr_worker/translator.py
+
+# ── Audio processing ─────────────────────────────────────────────────────────
+faster-whisper==1.1.1      # CTranslate2-backed Whisper (CPU-friendly)
+mutagen==1.47.0            # Audio header parsing (no ffmpeg required)
+pydub==0.25.1              # Audio segment manipulation (fallback metadata)
+
+# ── Video processing ─────────────────────────────────────────────────────────
+scenedetect[opencv]==0.6.4      # Scene boundary detection (frame-difference, no ML)
+moviepy==1.0.3                  # Audio track extraction from video (wraps ffmpeg)
 opencv-python-headless==4.10.0.84  # Keyframe extraction + video metadata (no GUI)
 
-# ── PDF processing ──────────────────────────────────────────────────────
-pymupdf>=1.24.14             # PDF text extraction & page rendering (fitz)
+# ── PDF processing ────────────────────────────────────────────────────────────
+pymupdf>=1.24.14           # PDF text extraction & page rendering (fitz)
 
 # ── Testing ───────────────────────────────────────────────────────────────────
 pytest==8.3.4
 pytest-asyncio==0.25.0
 pytest-cov==6.0.0
-httpx==0.28.1      # also used by TestClient
-python-dateutil
+httpx==0.28.1              # also used by TestClient
+python-dateutil>=2.8.2
+
 # ── Dev / linting (not installed in production image) ─────────────────────────
 # ruff==0.8.6
 # mypy==1.13.0
 
 # ── Secure Evidence Upload ────────────────────────────────────────────────────
-qrcode[pil]>=7.4            # QR code PNG generation (pure Python, wraps Pillow)
-python-magic-bin>=0.4.14    # Magic-byte MIME detection (libmagic binaries bundled for Windows)
-cloudinary>=2.0.0           # Cloudinary cloud storage SDK
+qrcode[pil]>=7.4           # QR code PNG generation (pure Python, wraps Pillow)
+python-magic-bin>=0.4.14   # Magic-byte MIME detection (libmagic binaries bundled for Windows)
+cloudinary>=2.0.0          # Cloudinary cloud storage SDK

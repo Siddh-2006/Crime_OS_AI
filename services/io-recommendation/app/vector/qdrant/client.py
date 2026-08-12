@@ -19,10 +19,13 @@ def get_qdrant_client() -> AsyncQdrantClient:
     """Return the module-level Qdrant client (lazy init)."""
     global _qdrant_client
     if _qdrant_client is None:
-        _qdrant_client = AsyncQdrantClient(url=settings.QDRANT_URL)
+        kwargs: dict = {"url": settings.QDRANT_URL}
+        if settings.QDRANT_API_KEY:
+            kwargs["api_key"] = settings.QDRANT_API_KEY
+        _qdrant_client = AsyncQdrantClient(**kwargs)
         logger.info(
             "Qdrant client initialised",
-            extra={"url": settings.QDRANT_URL},
+            extra={"url": settings.QDRANT_URL, "cloud": bool(settings.QDRANT_API_KEY)},
         )
     return _qdrant_client
 

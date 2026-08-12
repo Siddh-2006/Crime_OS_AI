@@ -1,7 +1,19 @@
+# ── Web framework ─────────────────────────────────────────────────────────────
 fastapi>=0.111.0
 uvicorn[standard]>=0.30.0
+
+# ── Validation & config ───────────────────────────────────────────────────────
 pydantic>=2.7.0
 pydantic-settings>=2.2.0
+
+# ── Vector database ───────────────────────────────────────────────────────────
+# qdrant-client 1.9.x uses client.search() which is the correct API for
+# Qdrant server <=1.9.x.  query_points() requires server >=1.10 — see qdrant_repository.py.
 qdrant-client>=1.9.1,<1.10.0
+
+# ── HTTP client (embedder + internal calls) ───────────────────────────────────
 httpx>=0.27.0
-python-dotenv>=1.0.0
+
+# NOTE: python-dotenv is NOT imported directly anywhere in the codebase.
+#       pydantic-settings handles .env loading internally.
+#       Removed to keep dependencies minimal and avoid confusion.

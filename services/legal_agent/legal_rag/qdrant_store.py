@@ -49,11 +49,10 @@ def _extract_scroll_result(result: Any) -> tuple[list[Any], Any | None]:
 
 @dataclass(slots=True)
 class LegalQdrantConfig:
-    # Read defaults from environment so nothing needs to be hardcoded.
-    # Set QDRANT_URL and QDRANT_COLLECTION in services/legal_agent/.env
     url: str | None = None
     path: str | None = "./qdrant_local_storage"
     collection_name: str = "light"
+    api_key: str | None = None          # Set for Qdrant Cloud; leave empty for local
     prefer_grpc: bool = False
     timeout: float | None = 70.0
 
@@ -62,8 +61,9 @@ def _default_config() -> LegalQdrantConfig:
     """Build a LegalQdrantConfig from environment variables, with sensible defaults."""
     import os
     url = os.environ.get("QDRANT_URL") or None
+    api_key = os.environ.get("QDRANT_API_KEY") or None
     collection = os.environ.get("QDRANT_COLLECTION") or "crime_os"
-    return LegalQdrantConfig(url=url, collection_name=collection)
+    return LegalQdrantConfig(url=url, api_key=api_key, collection_name=collection)
 
 
 class LegalQdrantStore:
@@ -71,11 +71,14 @@ class LegalQdrantStore:
         self.config = config if config is not None else _default_config()
         QdrantClient, models = _load_qdrant()
         if self.config.url:
-            self._client = QdrantClient(
-                url=self.config.url,
-                prefer_grpc=self.config.prefer_grpc,
-                timeout=self.config.timeout,
-            )
+            kwargs: dict = {
+                "url": self.config.url,
+                "prefer_grpc": self.config.prefer_grpc,
+                "timeout": self.config.timeout,
+            }
+            if self.config.api_key:
+                kwargs["api_key"] = self.config.api_key
+            self._client = QdrantClient(**kwargs)
         else:
             self._client = QdrantClient(
                 path=self.config.path,

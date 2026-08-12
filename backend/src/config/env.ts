@@ -15,6 +15,8 @@ const env = cleanEnv(process.env, {
   REDIS_HOST: str({ default: 'localhost' }),
   REDIS_PORT: num({ default: 6379 }),
   REDIS_PASSWORD: str({ default: '' }),
+  // Set to false to disable TLS even when host is remote (e.g. Redis Cloud with TCP-only port)
+  REDIS_TLS: bool({ default: true }),
 
   JWT_ACCESS_SECRET: str(),
   JWT_REFRESH_SECRET: str(),
@@ -36,6 +38,8 @@ const env = cleanEnv(process.env, {
   BULL_REDIS_HOST: str({ default: 'localhost' }),
   BULL_REDIS_PORT: num({ default: 6379 }),
   BULL_REDIS_PASSWORD: str({ default: '' }),
+  // Set to false to disable TLS even when host is remote (e.g. Redis Cloud with TCP-only port)
+  BULL_REDIS_TLS: bool({ default: true }),
 
   CLOUDINARY_CLOUD_NAME: str(),
   CLOUDINARY_API_KEY: str(),
