@@ -854,10 +854,10 @@ export class InvestigationController {
       if (!evidenceDoc) {
         const complaintDoc = await Complaint.findById(id);
         if (complaintDoc) {
-          const matchedIndex = complaintDoc.evidence.findIndex((item: any, index: number) => {
+          const matchedIndex = complaintDoc.evidence.findIndex((item: any) => {
             const publicId = item?.publicId?.toString();
             const objectId = item?._id?.toString();
-            const legacyId = `COMP-EV-${index}`;
+            const legacyId = uuidv4();
             return Boolean(
               publicId && [publicId, objectId, legacyId].includes(normalizedEvidenceId)
             );
@@ -964,12 +964,12 @@ export class InvestigationController {
 
       // 2. Original complainant uploads stored in Complaint.evidence[]
       const complaint = await Complaint.findById(id, { evidence: 1 }).lean() as any;
-      const complainantFiles = (complaint?.evidence || []).map((ev: any, idx: number) => {
+      const complainantFiles = (complaint?.evidence || []).map((ev: any) => {
         const summary = ev.aiMetadata?.aiSummary || ev.florence_description || ev.ai_description || ev.originalFilename || 'Complainant uploaded file';
         const tags = ev.aiMetadata?.imageTags || ev.ai_tags || ev.tags || [];
         const ocr = ev.aiMetadata?.ocrText || ev.ocrText || ev.ocr_text || '';
         return {
-          evidence_id: ev.publicId || `COMP-EV-${idx}`,
+          evidence_id: ev.publicId || uuidv4(),
           type: ev.resourceType || 'document',
           storage_ref: ev.secureUrl || ev.publicId,
           secureUrl: ev.secureUrl,
@@ -1051,9 +1051,9 @@ export class InvestigationController {
       
       const evidence = await Evidence.create({
         case_id: id,
-        evidence_id: `EV-IO-${Date.now()}`,
+        evidence_id: uuidv4(),
         type: type || 'document',
-        storage_ref: `mock-upload-${Date.now()}`,
+        storage_ref: `mock-upload-${uuidv4()}`,
         ai_description: description,
         ai_tags: tags || [],
         uploader_id: ioId,
@@ -1065,7 +1065,7 @@ export class InvestigationController {
       // Also log it in diary
       await DiaryEntry.create({
         case_id: id,
-        entry_id: `DIARY-${Date.now()}`,
+        entry_id: uuidv4(),
         event_type: 'evidence_added',
         actor: { type: 'officer', id: ioId },
         timestamp: new Date(),
@@ -1192,7 +1192,7 @@ export class InvestigationController {
       const ioId = (req as any).user?.sub ?? 'anonymous';
       await DiaryEntry.create({
         case_id: id,
-        entry_id: `DIARY-${Date.now()}`,
+        entry_id: uuidv4(),
         event_type: 'checklist_step_completed',
         actor: { type: 'officer', id: ioId },
         timestamp: new Date(),
@@ -1357,7 +1357,7 @@ export class InvestigationController {
 
       await DiaryEntry.create({
         case_id: thread.case_id,
-        entry_id: `DIARY-${Date.now()}`,
+        entry_id: uuidv4(),
         event_type: eventType,
         actor: { type: actorType, id: actorId },
         timestamp: new Date(),

@@ -19,7 +19,7 @@ const sizeClasses = {
 };
 
 /**
- * Accessible modal with focus trap and Escape key support.
+ * Accessible modal with glassmorphism, scale-in animation, focus trap, and Escape key support.
  */
 export function Modal({
   isOpen,
@@ -49,14 +49,14 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
     >
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-neutral-900/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-overlay-bg backdrop-blur-sm"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -64,20 +64,20 @@ export function Modal({
       {/* Panel */}
       <div
         className={[
-          'relative w-full rounded-xl bg-white shadow-elevated flex flex-col',
-          'max-h-[90vh]',
+          'relative w-full rounded-2xl bg-surface border border-border shadow-elevated flex flex-col',
+          'max-h-[90vh] animate-scale-in',
           sizeClasses[size],
         ].join(' ')}
       >
-        {/* Header — always visible */}
-        <div className="flex items-center justify-between border-b border-neutral-100 px-6 py-4 flex-shrink-0">
-          <h2 id="modal-title" className="text-lg font-semibold text-neutral-900">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-border px-6 py-4 flex-shrink-0">
+          <h2 id="modal-title" className="text-lg font-heading font-bold text-text-primary">
             {title}
           </h2>
           <button
             onClick={onClose}
             aria-label="Close modal"
-            className="rounded-md p-1 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
+            className="rounded-xl p-1.5 text-text-secondary hover:bg-surface-elevated hover:text-text-primary transition-all duration-200"
           >
             <X size={18} />
           </button>
@@ -86,9 +86,9 @@ export function Modal({
         {/* Body — scrollable */}
         <div className="px-6 py-4 overflow-y-auto flex-1">{children}</div>
 
-        {/* Footer — always visible */}
+        {/* Footer */}
         {footer && (
-          <div className="flex items-center justify-end gap-3 border-t border-neutral-100 px-6 py-4 flex-shrink-0">
+          <div className="flex items-center justify-end gap-3 border-t border-border px-6 py-4 flex-shrink-0">
             {footer}
           </div>
         )}

@@ -25,6 +25,7 @@ export type DiaryEventType =
   | 'participant_promoted_to_accused'
   | 'participant_statement_added'
   | 'participant_reasoning_attached'
+  | 'participant_identifier_uploaded'
   | 'evidence_sections_attached'
   | 'diary_draft_generated'
   | 'diary_finalized'
@@ -78,7 +79,7 @@ const DiaryEntrySchema = new Schema<IDiaryEntry>(
         'participant_recommendation_approved', 'participant_added_manually',
         'participant_updated', 'participant_deleted', 'participant_sections_attached',
         'participant_promoted_to_accused', 'participant_statement_added',
-        'participant_reasoning_attached', 'evidence_sections_attached',
+        'participant_reasoning_attached', 'participant_identifier_uploaded', 'evidence_sections_attached',
         'diary_draft_generated', 'diary_finalized', 'case_diary_draft_created',
         'case_diary_completed', 'place_visited_added', 'witness_added',
         // Custody & Arrest Warrant lifecycle

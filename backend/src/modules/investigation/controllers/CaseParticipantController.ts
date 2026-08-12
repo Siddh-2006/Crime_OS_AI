@@ -20,27 +20,15 @@ export class CaseParticipantController {
   static async approveRecommendation(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { recommendation, participant_id, contact, identifiers, victimProfile, witnessProfile, suspectProfile, accusedProfile, complainantProfile, snapshot_id } = req.body;
+      const { recommendation, participant_id, contact, identifiers, victimProfile, witnessProfile, suspectProfile, complainantProfile, snapshot_id } = req.body;
 
       if (!recommendation) {
-        sendError(res, HttpStatusCode.BAD_REQUEST, {
-          code: 'INVALID_INPUT',
-          message: 'recommendation is required',
-        });
+        sendError(res, HttpStatusCode.BAD_REQUEST, { code: 'INVALID_INPUT', message: 'recommendation is required' });
         return;
       }
 
       const participant = await CaseParticipantService.approveRecommendation(id, {
-        recommendation,
-        participant_id,
-        contact,
-        identifiers,
-        victimProfile,
-        witnessProfile,
-        suspectProfile,
-        accusedProfile,
-        complainantProfile,
-        snapshot_id,
+        recommendation, participant_id, contact, identifiers, victimProfile, witnessProfile, suspectProfile, complainantProfile, snapshot_id,
       });
 
       sendSuccess(res, HttpStatusCode.CREATED, 'Participant recommendation approved', participant);
@@ -104,26 +92,15 @@ export class CaseParticipantController {
   static async createParticipant(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { name, roles, contact, identifiers, victimProfile, witnessProfile, suspectProfile, accusedProfile, complainantProfile } = req.body;
+      const { name, roles, contact, identifiers, victimProfile, witnessProfile, suspectProfile, complainantProfile } = req.body;
 
       if (!name || !Array.isArray(roles) || roles.length === 0) {
-        sendError(res, HttpStatusCode.BAD_REQUEST, {
-          code: 'INVALID_INPUT',
-          message: 'name and roles are required',
-        });
+        sendError(res, HttpStatusCode.BAD_REQUEST, { code: 'INVALID_INPUT', message: 'name and roles are required' });
         return;
       }
 
       const participant = await CaseParticipantService.createParticipant(id, {
-        name,
-        roles,
-        contact,
-        identifiers,
-        victimProfile,
-        witnessProfile,
-        suspectProfile,
-        accusedProfile,
-        complainantProfile,
+        name, roles, contact, identifiers, victimProfile, witnessProfile, suspectProfile, complainantProfile,
       });
 
       sendSuccess(res, HttpStatusCode.CREATED, 'Participant created successfully', participant);
@@ -138,18 +115,10 @@ export class CaseParticipantController {
   static async updateParticipant(req: Request, res: Response): Promise<void> {
     try {
       const { id, participantId } = req.params;
-      const { name, roles, contact, identifiers, victimProfile, witnessProfile, suspectProfile, accusedProfile, complainantProfile } = req.body;
+      const { name, roles, contact, identifiers, victimProfile, witnessProfile, suspectProfile, complainantProfile } = req.body;
 
       const participant = await CaseParticipantService.updateParticipant(id, participantId, {
-        name,
-        roles,
-        contact,
-        identifiers,
-        victimProfile,
-        witnessProfile,
-        suspectProfile,
-        accusedProfile,
-        complainantProfile,
+        name, roles, contact, identifiers, victimProfile, witnessProfile, suspectProfile, complainantProfile,
       });
 
       sendSuccess(res, HttpStatusCode.OK, 'Participant updated successfully', participant);
@@ -276,6 +245,43 @@ export class CaseParticipantController {
       sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, {
         code: 'REASONING_DELETE_FAILED',
         message: error instanceof Error ? error.message : 'Failed to delete reasoning',
+      });
+    }
+  }
+
+  /**
+   * POST /cases/:id/participants/:participantId/identifiers/upload-signature
+   * Returns a Cloudinary signed upload signature so the frontend can upload
+   * an identifier document (image/audio) directly to CDN.
+   * No file bytes ever reach this server.
+   */
+  static async getIdentifierUploadSignature(req: Request, res: Response): Promise<void> {
+    try {
+      const { id, participantId } = req.params;
+      const cloudinary = (await import('../../../config/cloudinary')).default;
+      const { v4: uuidv4 } = await import('uuid');
+
+      const timestamp = Math.round(Date.now() / 1000);
+      const publicId = `identifier_${uuidv4()}`;
+      const folder = `crime-os/participants/${id}/${participantId}/identifiers`;
+
+      const signature = cloudinary.utils.api_sign_request(
+        { timestamp, folder, public_id: publicId },
+        cloudinary.config().api_secret!,
+      );
+
+      sendSuccess(res, HttpStatusCode.OK, 'Upload signature generated', {
+        signature,
+        timestamp,
+        apiKey: cloudinary.config().api_key,
+        cloudName: cloudinary.config().cloud_name,
+        folder,
+        publicId,
+      });
+    } catch (error) {
+      sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, {
+        code: 'SIGNATURE_FAILED',
+        message: error instanceof Error ? error.message : 'Failed to generate upload signature',
       });
     }
   }

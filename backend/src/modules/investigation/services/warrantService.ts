@@ -175,10 +175,12 @@ export class WarrantService {
     const district      = station.district || station.city || 'Unknown District';
 
     // Applied sections: accused takes precedence over suspect
-    const appliedSections =
-      (participant.accusedProfile?.appliedSections?.length
-        ? participant.accusedProfile.appliedSections
-        : participant.suspectProfile?.appliedSections) ?? [];
+    // Cast to any because .lean() returns FlattenMaps which strips sub-document types.
+    const p = participant as any;
+    const appliedSections: Array<{ code: string; title: string; reason?: string }> =
+      (p.accusedProfile?.appliedSections?.length
+        ? p.accusedProfile.appliedSections
+        : p.suspectProfile?.appliedSections) ?? [];
 
     const identifiers = (participant.identifiers ?? []).map((id) => ({
       type:  id.type,
@@ -788,7 +790,7 @@ export class WarrantService {
     };
     if (participantId) filter.participant_id = participantId;
 
-    return ArrestWarrant.find(filter).sort({ createdAt: -1 }).lean() as Promise<IArrestWarrant[]>;
+    return ArrestWarrant.find(filter).sort({ createdAt: -1 }).lean() as unknown as Promise<IArrestWarrant[]>;
   }
 
   /**
@@ -803,6 +805,6 @@ export class WarrantService {
       err.statusCode = 404;
       throw err;
     }
-    return warrant as IArrestWarrant;
+    return warrant as unknown as IArrestWarrant;
   }
 }

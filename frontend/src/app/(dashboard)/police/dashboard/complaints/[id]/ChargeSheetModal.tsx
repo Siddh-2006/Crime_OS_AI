@@ -109,7 +109,7 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="bg-surface rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
         <div className="p-4 border-b flex justify-between items-center bg-neutral-50">
           <div className="flex items-center gap-2 text-neutral-800">
             <FileText className="w-5 h-5 text-indigo-600" />
@@ -136,7 +136,7 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
               {error}
             </div>
           ) : data ? (
-            <div className="space-y-6 max-w-3xl mx-auto bg-white p-8 rounded-lg shadow-sm border border-neutral-200 text-neutral-800">
+            <div className="space-y-6 max-w-3xl mx-auto bg-surface p-8 rounded-lg shadow-sm border border-neutral-200 text-neutral-800">
               
               <div className="text-center mb-8 border-b pb-4">
                 <h1 className="text-2xl font-black uppercase text-neutral-900 tracking-wider">FINAL REPORT</h1>
@@ -195,7 +195,7 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
                           <div className="mt-2 space-y-1">
                             <p className="font-semibold text-neutral-500 text-xs uppercase tracking-wide">Statements</p>
                             {victim.statements.map((stmt: any, sIdx: number) => (
-                              <div key={sIdx} className="bg-white border border-neutral-200 rounded p-2">
+                              <div key={sIdx} className="bg-surface border border-neutral-200 rounded p-2">
                                 <p className="text-xs text-neutral-400 mb-0.5">{stmt.recordedAt ? new Date(stmt.recordedAt).toLocaleString('en-IN') : ''}</p>
                                 <p className="italic text-neutral-700">{stmt.content}</p>
                               </div>
@@ -231,7 +231,7 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
                           <div className="mt-2 space-y-1">
                             <p className="font-semibold text-neutral-500 text-xs uppercase tracking-wide">Statements</p>
                             {accused.statements.map((stmt: any, sIdx: number) => (
-                              <div key={sIdx} className="bg-white border border-neutral-200 rounded p-2">
+                              <div key={sIdx} className="bg-surface border border-neutral-200 rounded p-2">
                                 <p className="text-xs text-neutral-400 mb-0.5">{stmt.recordedAt ? new Date(stmt.recordedAt).toLocaleString('en-IN') : ''}</p>
                                 <p className="italic text-neutral-700">{stmt.content}</p>
                               </div>
@@ -311,7 +311,7 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
                           <div className="mt-2 space-y-1">
                             <p className="font-semibold text-neutral-500 text-xs uppercase tracking-wide">Statements</p>
                             {witness.statements.map((stmt: any, sIdx: number) => (
-                              <div key={sIdx} className="bg-white border border-neutral-200 rounded p-2">
+                              <div key={sIdx} className="bg-surface border border-neutral-200 rounded p-2">
                                 <p className="text-xs text-neutral-400 mb-0.5">{stmt.recordedAt ? new Date(stmt.recordedAt).toLocaleString('en-IN') : ''}</p>
                                 <p className="italic text-neutral-700">{stmt.content}</p>
                               </div>
@@ -425,7 +425,7 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
           ) : null}
         </div>
 
-        <div className="p-4 border-t bg-white flex justify-end gap-3">
+        <div className="p-4 border-t bg-surface flex justify-end gap-3">
           <Button variant="ghost" onClick={onClose} disabled={loading || regenLoading}>Close</Button>
           <Button
             variant="secondary"

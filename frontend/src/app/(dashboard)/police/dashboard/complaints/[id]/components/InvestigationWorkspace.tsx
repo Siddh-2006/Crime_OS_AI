@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
 import apiClient from '@/lib/axios';
@@ -28,16 +28,17 @@ import { API_ROUTES } from '@/lib/constants';
 
 interface InvestigationWorkspaceProps {
   caseId: string;
+  activeTab: WorkspaceTab;
+  setActiveTab: (tab: WorkspaceTab) => void;
 }
 
-type WorkspaceTab = 'analysis' | 'diary' | 'checklist' | 'requests' | 'evidence' | 'participants' | 'complaint' | 'case_understanding' | 'timeline' | 'placesVisited' | 'custody';
+export type WorkspaceTab = 'analysis' | 'diary' | 'checklist' | 'requests' | 'evidence' | 'participants' | 'complaint' | 'case_understanding' | 'timeline' | 'placesVisited' | 'custody';
 
-export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) {
+export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: InvestigationWorkspaceProps) {
   const { toasts, showToast, removeToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<WorkspaceTab>('analysis');
-  const [copilotOpen, setCopilotOpen] = useState(true);
+  const [copilotOpen, setCopilotOpen] = useState(false);
   const { language } = useTranslation();
 
   const [snapshot, setSnapshot] = useState<any>(null);
@@ -514,7 +515,7 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
 
   const getDiaryPreviewUrl = (url: string) => {
     if (!url) return url;
-    return url.replace(/\/upload\/fl_attachment\//, '/upload/');
+    return url.replace('/upload/fl_attachment/', '/upload/');
   };
 
   const openComposer = (stepId: string, deptId: string) => {
@@ -526,7 +527,7 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
   const departmentThreadCount = threads.filter((t: any) => t.request_type !== 'citizen_request').length;
   const citizenThreadCount = threads.filter((t: any) => t.request_type === 'citizen_request').length;
 
-  const tabs: { id: WorkspaceTab; label: string; icon: React.ReactNode; badge?: number }[] = [
+  const tabs = [
     { id: 'analysis', label: 'AI Analysis', icon: <Bot size={15} /> },
     { id: 'checklist', label: 'Investigation Checklist', icon: <ClipboardList size={15} />, badge: checklist?.steps?.filter((s: any) => s.status !== 'completed').length },
     { id: 'diary', label: 'Case Diary', icon: <BookOpen size={15} />, badge: diaryEntries.length },
@@ -541,50 +542,17 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
   ];
 
   if (loading && !snapshot && !checklist && diaryEntries.length === 0) {
-    return <div className="py-20 flex justify-center"><Loader /></div>;
+    return (
+      <div className="py-20 flex justify-center">
+        <Loader />
+      </div>
+    );
   }
 
   return (
     <div className="flex gap-4 items-start overflow-hidden" style={{ minHeight: '600px' }}>
       {/* Main workspace — takes all available width, never overflows */}
       <div className="flex-1 min-w-0 overflow-hidden space-y-4">
-      {/* Tab Bar */}
-      <div className="flex gap-1 border-b border-neutral-200 overflow-x-auto items-center">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors relative ${
-              activeTab === tab.id
-                ? 'text-blue-700 border-b-2 border-blue-600'
-                : 'text-neutral-500 hover:text-neutral-800'
-            }`}
-          >
-            {tab.icon}
-            {tab.label}
-            {tab.badge !== undefined && tab.badge > 0 && (
-              <span className={`ml-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                activeTab === tab.id ? 'bg-blue-100 text-blue-700' : 'bg-neutral-200 text-neutral-600'
-              }`}>
-                {tab.badge}
-              </span>
-            )}
-          </button>
-        ))}
-        {/* Copilot toggle */}
-        <button
-          onClick={() => setCopilotOpen(o => !o)}
-          className={`ml-auto flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex-shrink-0 mr-1 ${
-            copilotOpen
-              ? 'bg-blue-600 text-white shadow-sm'
-              : 'bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200'
-          }`}
-        >
-          <Sparkles size={13} />
-          Copilot
-        </button>
-      </div>
-
       {/* Tab Content */}
       <div className="min-h-[500px]">
         {activeTab === 'analysis' && (
@@ -618,23 +586,23 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
 
         {activeTab === 'diary' && (
           <div className="space-y-4">
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-gradient-to-r from-slate-900 to-slate-700 p-4 text-white md:flex-row md:items-end md:justify-between">
+            <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm space-y-4">
+              <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface-elevated/80 p-5 text-text-primary md:flex-row md:items-end md:justify-between shadow-xs">
                 <div>
-                  <h3 className="text-lg font-semibold">Official Daily Diary</h3>
-                  <p className="mt-1 text-sm text-slate-200">Generate a formal draft from the latest case context and finalize it for the record.</p>
+                  <h3 className="text-lg font-bold text-text-primary">Official Daily Diary</h3>
+                  <p className="mt-1 text-sm text-text-secondary">Generate a formal draft from the latest case context and finalize it for the record.</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <input
                     type="date"
                     value={diaryDate}
                     onChange={(e) => setDiaryDate(e.target.value)}
-                    className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"
+                    className="rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:ring-2 focus:ring-brand-primary font-mono"
                   />
                   <button
                     onClick={handleGenerateDiaryDraft}
                     disabled={diaryDraftLoading}
-                    className="rounded-lg bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-100 disabled:cursor-not-allowed disabled:bg-slate-200"
+                    className="rounded-xl bg-brand-primary px-4 py-2 text-sm font-bold text-white shadow-xs hover:bg-brand-primary/90 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
                   >
                     {diaryDraftLoading ? 'Working…' : 'Generate Draft'}
                   </button>
@@ -642,7 +610,7 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
                     <button
                       onClick={handleSaveDiaryDraft}
                       disabled={diaryDraftLoading}
-                      className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed"
+                      className="rounded-xl border border-border bg-surface px-3 py-2 text-sm font-bold text-text-primary hover:bg-surface-elevated disabled:cursor-not-allowed transition-all"
                     >
                       {diaryDraftLoading ? 'Saving…' : 'Save Draft'}
                     </button>
@@ -650,124 +618,124 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
                 </div>
               </div>
 
-              {diaryDraftError && <p className="mt-3 text-sm text-red-600">{diaryDraftError}</p>}
+              {diaryDraftError && <p className="mt-3 text-sm font-bold text-semantic-critical">{diaryDraftError}</p>}
 
               {diaryDraft && (
-                <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="mt-4 rounded-xl border border-border bg-surface-elevated/50 p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-semibold text-slate-800">{diaryDraft.title}</p>
-                      <p className="text-xs uppercase tracking-wide text-slate-500">Status: {diaryDraft.status || 'draft'}</p>
+                      <p className="text-sm font-bold text-text-primary">{diaryDraft.title}</p>
+                      <p className="text-xs font-mono font-bold uppercase tracking-wide text-text-secondary">Status: {diaryDraft.status || 'draft'}</p>
                     </div>
                     <button
                       onClick={handleFinalizeDiaryDraft}
                       disabled={diaryDraftLoading}
-                      className="rounded-lg border border-emerald-600 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed"
+                      className="rounded-xl border border-semantic-success/30 bg-semantic-success/10 px-3.5 py-2 text-sm font-bold text-semantic-success hover:bg-semantic-success/20 disabled:cursor-not-allowed transition-all"
                     >
                       {diaryDraftLoading ? 'Saving…' : 'Finalize'}
                     </button>
                   </div>
-                  <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+                  <div className="mt-4 rounded-xl border border-neutral-700 bg-neutral-900/50 p-4">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
-                        <p className="text-sm font-semibold text-slate-800">Official Case Diary Form (16 Standard Fields)</p>
-                        <p className="text-xs text-slate-500">Edit any values before finalization. The generated PDFs will format these fields into the official two-column Police Roznamcha table layout.</p>
+                        <p className="text-sm font-semibold text-text-primary">Official Case Diary Form (16 Standard Fields)</p>
+                        <p className="text-xs text-neutral-500">Edit any values before finalization. The generated PDFs will format these fields into the official two-column Police Roznamcha table layout.</p>
                       </div>
                     </div>
                     <div className="mt-4 grid gap-4 lg:grid-cols-2">
                       <div>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Title</label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Title</label>
                         <input
                           value={diaryForm.title}
                           onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, title: e.target.value }))}
-                          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                          className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary"
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Investigation Officer</label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Investigation Officer</label>
                         <input
                           value={diaryForm.officialOfficerId}
                           onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, officialOfficerId: e.target.value }))}
-                          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                          className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary"
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Crime Register No. and Section</label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Crime Register No. and Section</label>
                         <input
                           value={diaryForm.crimeRegisterNumber}
                           onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, crimeRegisterNumber: e.target.value }))}
-                          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                          className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary"
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Investigation Start & End Time (Field 14)</label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Investigation Start & End Time (Field 14)</label>
                         <div className="flex items-center gap-2 mt-1">
                           <input
                             placeholder="Start (e.g. 19/40)"
                             value={diaryForm.investigationStartTime}
                             onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, investigationStartTime: e.target.value }))}
-                            className="w-1/2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                            className="w-1/2 rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary"
                           />
-                          <span className="text-xs text-slate-400">to</span>
+                          <span className="text-xs text-neutral-500">to</span>
                           <input
                             placeholder="End (e.g. 23/00)"
                             value={diaryForm.investigationEndTime}
                             onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, investigationEndTime: e.target.value }))}
-                            className="w-1/2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                            className="w-1/2 rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary"
                           />
                         </div>
                       </div>
                       <div>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Custody Status (Field 7a)</label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Custody Status (Field 7a)</label>
                         <input
                           placeholder="e.g. ----- or In Police Custody"
                           value={diaryForm.custodyStatus}
                           onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, custodyStatus: e.target.value }))}
-                          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                          className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary"
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Magisterial Custody Date (Field 7b)</label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Magisterial Custody Date (Field 7b)</label>
                         <input
                           placeholder="e.g. -----"
                           value={diaryForm.magisterialCustodyDate}
                           onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, magisterialCustodyDate: e.target.value }))}
-                          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                          className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary"
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Property Stolen</label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Property Stolen</label>
                         <input
                           value={diaryForm.propertyStolen}
                           onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, propertyStolen: e.target.value }))}
-                          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                          className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary"
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Property Recovered</label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Property Recovered</label>
                         <input
                           value={diaryForm.propertyRecovered}
                           onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, propertyRecovered: e.target.value }))}
-                          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                          className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary"
                         />
                       </div>
-                      <div className="lg:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Record of Investigation (Gujarati-English Transliterated)</label>
+                      <div className="lg:col-span-2 rounded-xl border border-neutral-700 bg-neutral-800 p-3">
+                        <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Record of Investigation (Gujarati-English Transliterated)</label>
                         <textarea
                           value={diaryForm.recordOfInvestigationGujEn}
                           onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, recordOfInvestigationGujEn: e.target.value }))}
                           rows={6}
-                          className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 font-mono"
+                          className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary font-mono"
                           placeholder="Enter the Gujarati-English narrative for the official diary."
                         />
                       </div>
-                      <div className="lg:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Record of Investigation (English Version)</label>
+                      <div className="lg:col-span-2 rounded-xl border border-neutral-700 bg-neutral-800 p-3">
+                        <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Record of Investigation (English Version)</label>
                         <textarea
                           value={diaryForm.recordOfInvestigationEn}
                           onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, recordOfInvestigationEn: e.target.value }))}
                           rows={6}
-                          className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 font-mono"
+                          className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary font-mono"
                           placeholder="Enter the English version for the final official record."
                         />
                       </div>
@@ -776,17 +744,17 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
                 </div>
               )}
 
-              <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                <div className="flex items-center justify-between gap-3 mb-3">
+              <div className="mt-4 rounded-2xl border border-border bg-surface p-5 shadow-sm space-y-4">
+                <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">Finalized Case Diary Records</p>
-                    <p className="text-xs text-slate-500">Preview or download official bilingual (Gujarati-English & English) PDF copies.</p>
+                    <p className="text-sm font-bold text-text-primary">Finalized Case Diary Records</p>
+                    <p className="text-xs text-text-secondary">Preview or download official bilingual (Gujarati-English & English) PDF copies.</p>
                   </div>
-                  <span className="text-xs font-medium text-slate-500">{diaryHistory.length} items</span>
+                  <span className="text-xs font-mono font-bold text-brand-primary bg-brand-primary/10 px-2.5 py-1 rounded-lg border border-brand-primary/20">{diaryHistory.length} items</span>
                 </div>
 
                 {diaryHistory.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+                  <div className="rounded-xl border border-dashed border-border bg-surface-elevated/40 px-4 py-6 text-center text-sm text-text-muted">
                     No finalized case diary PDFs generated yet. Finalize a draft above to render official PDFs.
                   </div>
                 ) : (
@@ -796,27 +764,27 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
                       const enUrl = record.pdf_url_en;
 
                       return (
-                        <div key={record.diary_id} className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:flex-row md:items-center md:justify-between">
+                        <div key={record.diary_id} className="flex flex-col gap-3 rounded-xl border border-border bg-surface-elevated/70 p-4 md:flex-row md:items-center md:justify-between shadow-xs">
                           <div>
-                            <p className="font-semibold text-slate-900">{record.title || `Case Diary No. ${record.diary_number}`}</p>
-                            <p className="text-xs text-slate-500">
-                              Date: {new Date(record.diary_date).toLocaleDateString('en-IN')} • Status: <span className="font-semibold uppercase text-emerald-700">{record.status || 'completed'}</span>
+                            <p className="font-bold text-text-primary">{record.title || `Case Diary No. ${record.diary_number}`}</p>
+                            <p className="text-xs text-text-secondary">
+                              Date: <span className="font-mono">{new Date(record.diary_date).toLocaleDateString('en-IN')}</span> &bull; Status: <span className="font-extrabold uppercase text-semantic-success">{record.status || 'completed'}</span>
                             </p>
                             {record.crime_register_number && (
-                              <p className="text-xs text-slate-500">CR No.: {record.crime_register_number}</p>
+                              <p className="text-xs text-text-secondary font-mono">CR No.: {record.crime_register_number}</p>
                             )}
                           </div>
                           <div className="flex flex-wrap gap-2">
                             {gujEnUrl ? (
-                              <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200">
-                                <span className="text-[10px] font-bold text-slate-500 px-1">Guj-Eng:</span>
+                              <div className="flex items-center gap-1.5 bg-surface p-1.5 rounded-xl border border-border">
+                                <span className="text-[10px] font-extrabold text-text-secondary px-1 uppercase">Guj-Eng:</span>
                                 <button
                                   type="button"
                                   onClick={() => {
                                     setPreviewPdfUrl(gujEnUrl);
                                     setIsDiaryPreviewOpen(true);
                                   }}
-                                  className="rounded px-2 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-50"
+                                  className="rounded-lg px-2.5 py-1 text-xs font-bold text-brand-primary bg-brand-primary/10 hover:bg-brand-primary/20 border border-brand-primary/20"
                                 >
                                   Preview
                                 </button>
@@ -825,25 +793,24 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   download
-                                  className="rounded px-2 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
-                                >
+                                  className="rounded-lg px-2.5 py-1 text-xs font-bold text-semantic-success bg-semantic-success/10 hover:bg-semantic-success/20 border border-semantic-success/20">
                                   Download
                                 </a>
                               </div>
                             ) : (
-                              <span className="rounded bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700">Guj-Eng PDF Pending</span>
+                              <span className="rounded-xl bg-semantic-warning/10 border border-semantic-warning/30 px-3 py-1.5 text-xs font-bold text-semantic-warning">Guj-Eng PDF Pending</span>
                             )}
 
                             {enUrl ? (
-                              <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200">
-                                <span className="text-[10px] font-bold text-slate-500 px-1">English:</span>
+                              <div className="flex items-center gap-1.5 bg-surface p-1.5 rounded-xl border border-border">
+                                <span className="text-[10px] font-extrabold text-text-secondary px-1 uppercase">English:</span>
                                 <button
                                   type="button"
                                   onClick={() => {
                                     setPreviewPdfUrl(enUrl);
                                     setIsDiaryPreviewOpen(true);
                                   }}
-                                  className="rounded px-2 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-50"
+                                  className="rounded-lg px-2.5 py-1 text-xs font-bold text-brand-primary bg-brand-primary/10 hover:bg-brand-primary/20 border border-brand-primary/20"
                                 >
                                   Preview
                                 </button>
@@ -852,13 +819,12 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   download
-                                  className="rounded px-2 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
-                                >
+                                  className="rounded-lg px-2.5 py-1 text-xs font-bold text-semantic-success bg-semantic-success/10 hover:bg-semantic-success/20 border border-semantic-success/20">
                                   Download
                                 </a>
                               </div>
                             ) : (
-                              <span className="rounded bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700">English PDF Pending</span>
+                              <span className="rounded-xl bg-semantic-warning/10 border border-semantic-warning/30 px-3 py-1.5 text-xs font-bold text-semantic-warning">English PDF Pending</span>
                             )}
                           </div>
                         </div>
@@ -874,110 +840,110 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
 
         {activeTab === 'placesVisited' && (
           <div className="space-y-4">
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm space-y-4">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold text-slate-900">Places Visited</h3>
-                  <p className="text-sm text-slate-500">Manually recorded locations visited by the investigation officer. These entries are tied to the case diary timeline.</p>
+                  <h3 className="text-lg font-bold text-text-primary">Places Visited</h3>
+                  <p className="text-sm text-text-secondary">Manually recorded locations visited by the investigation officer. These entries are tied to the case diary timeline.</p>
                 </div>
-                <div className="rounded-full bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700">
+                <div className="rounded-xl bg-brand-primary/10 border border-brand-primary/20 px-3 py-1.5 text-xs font-mono font-bold text-brand-primary">
                   {placesVisited.length} recorded place{placesVisited.length === 1 ? '' : 's'}
                 </div>
               </div>
 
               <div className="mt-6 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Add New Place</div>
+                <div className="rounded-2xl border border-border bg-surface-elevated/70 p-5 shadow-xs">
+                  <div className="mb-4 text-xs font-bold uppercase tracking-wider text-text-secondary">Add New Place</div>
                   <div className="space-y-4">
                     <div>
-                      <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Location</label>
+                      <label className="text-xs font-bold uppercase tracking-wide text-text-secondary">Location</label>
                       <input
                         value={placeForm.address}
                         onChange={(e) => setPlaceForm((prev: any) => ({ ...prev, address: e.target.value }))}
                         placeholder="123 Main Street, Surat, Gujarat"
-                        className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                        className="mt-1.5 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:ring-2 focus:ring-brand-primary"
                       />
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Visit date</label>
+                        <label className="text-xs font-bold uppercase tracking-wide text-text-secondary">Visit Date</label>
                         <input
                           type="date"
                           value={placeForm.visitDate}
                           onChange={(e) => setPlaceForm((prev: any) => ({ ...prev, visitDate: e.target.value }))}
-                          className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                          className="mt-1.5 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text-primary font-mono focus:ring-2 focus:ring-brand-primary"
                         />
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Start time</label>
+                          <label className="text-xs font-bold uppercase tracking-wide text-text-secondary">Start Time</label>
                           <input
                             type="time"
                             value={placeForm.startTime}
                             onChange={(e) => setPlaceForm((prev: any) => ({ ...prev, startTime: e.target.value }))}
-                            className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                            className="mt-1.5 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text-primary font-mono focus:ring-2 focus:ring-brand-primary"
                           />
                         </div>
                         <div>
-                          <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">End time</label>
+                          <label className="text-xs font-bold uppercase tracking-wide text-text-secondary">End Time</label>
                           <input
                             type="time"
                             value={placeForm.endTime}
                             onChange={(e) => setPlaceForm((prev: any) => ({ ...prev, endTime: e.target.value }))}
-                            className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                            className="mt-1.5 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text-primary font-mono focus:ring-2 focus:ring-brand-primary"
                           />
                         </div>
                       </div>
                     </div>
                     <div>
-                      <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">What was done</label>
+                      <label className="text-xs font-bold uppercase tracking-wide text-text-secondary">What Was Done</label>
                       <textarea
                         value={placeForm.whatWasDone}
                         onChange={(e) => setPlaceForm((prev: any) => ({ ...prev, whatWasDone: e.target.value }))}
                         rows={4}
                         placeholder="Search, meet witness, collect evidence, record statement..."
-                        className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                        className="mt-1.5 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:ring-2 focus:ring-brand-primary"
                       />
                     </div>
-                    {placeFormError && <p className="text-sm text-red-600">{placeFormError}</p>}
+                    {placeFormError && <p className="text-sm font-bold text-semantic-critical">{placeFormError}</p>}
                     <button
                       type="button"
                       onClick={handleAddPlaceVisited}
                       disabled={placesVisitedLoading}
-                      className="inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                      className="inline-flex items-center justify-center rounded-xl bg-brand-primary px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-brand-primary/90 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
                     >
-                      {placesVisitedLoading ? 'Saving…' : '+ Add place visited'}
+                      {placesVisitedLoading ? 'Saving…' : '+ Add Place Visited'}
                     </button>
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="rounded-2xl border border-border bg-surface-elevated/70 p-5 shadow-xs">
                   <div className="flex items-center justify-between gap-3 mb-4">
                     <div>
-                      <p className="text-sm font-semibold text-slate-900">Recent Visited Places</p>
-                      <p className="text-xs text-slate-500">These entries are visible in the case diary timeline once recorded.</p>
+                      <p className="text-sm font-bold text-text-primary">Recent Visited Places</p>
+                      <p className="text-xs text-text-secondary">These entries are visible in the case diary timeline once recorded.</p>
                     </div>
-                    <span className="text-xs font-semibold text-slate-500">{placesVisited.length} entries</span>
+                    <span className="text-xs font-mono font-bold text-text-secondary">{placesVisited.length} entries</span>
                   </div>
 
                   {placesVisited.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500">
+                    <div className="rounded-2xl border border-dashed border-border bg-surface-elevated/40 p-6 text-center text-sm text-text-secondary">
                       No visited places have been recorded yet.
                     </div>
                   ) : (
                     <div className="space-y-3">
                       {placesVisited.map((place) => (
-                        <div key={place.place_id || place._id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <div key={place.place_id || place._id} className="rounded-2xl border border-border bg-surface-elevated/70 p-4 shadow-xs">
                           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                             <div>
-                              <p className="font-semibold text-slate-900">{place.address}</p>
-                              <p className="text-xs text-slate-500 mt-1">
-                                {new Date(place.visit_date).toLocaleDateString('en-IN')} · {place.start_time || 'N/A'} - {place.end_time || 'N/A'}
+                              <p className="font-bold text-text-primary">{place.address}</p>
+                              <p className="text-xs text-text-secondary font-mono mt-1">
+                                {new Date(place.visit_date).toLocaleDateString('en-IN')} &bull; {place.start_time || 'N/A'} - {place.end_time || 'N/A'}
                               </p>
                             </div>
-                            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-700">Recorded</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-brand-primary bg-brand-primary/10 border border-brand-primary/20 rounded-full px-2.5 py-0.5">Recorded</span>
                           </div>
-                          <p className="mt-3 text-sm leading-6 text-slate-600">{place.what_was_done || 'No description provided.'}</p>
+                          <p className="mt-3 text-sm leading-6 text-text-secondary">{place.what_was_done || 'No description provided.'}</p>
                         </div>
                       ))}
                     </div>
@@ -1091,7 +1057,7 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
       >
         <div className="space-y-4">
           {previewPdfUrl ? (
-            <div className="h-[70vh] rounded-lg overflow-hidden border border-slate-200">
+            <div className="h-[70vh] rounded-lg overflow-hidden border border-neutral-700">
               <iframe
                 src={getDiaryPreviewUrl(previewPdfUrl)}
                 title="Diary PDF Preview"
@@ -1099,14 +1065,14 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
               />
             </div>
           ) : (
-            <p className="text-sm text-slate-600">No preview URL is available.</p>
+            <p className="text-sm text-text-secondary">No preview URL is available.</p>
           )}
           {previewPdfUrl && (
             <a
               href={getDiaryPreviewUrl(previewPdfUrl)}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+              className="inline-flex items-center rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm font-semibold text-text-secondary hover:bg-neutral-800"
             >
               Open in browser
             </a>
@@ -1114,16 +1080,44 @@ export function InvestigationWorkspace({ caseId }: InvestigationWorkspaceProps) 
         </div>
       </Modal>
       </div>
-      {/* Copilot Sidebar — hidden on small screens */}
-      {copilotOpen && (
-        <div className="hidden xl:block w-80 flex-shrink-0 rounded-xl overflow-hidden border border-slate-200 shadow-md" style={{ height: '700px', position: 'sticky', top: '80px' }}>
+      {/* Floating Copilot AI Widget with Smooth Expand/Collapse Animation */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+        {/* Animated Copilot Drawer Window */}
+        <div
+          className={`transition-all duration-300 transform-gpu origin-bottom-right shadow-2xl rounded-2xl overflow-hidden border border-border w-96 max-w-[92vw] h-[600px] max-h-[82vh] bg-surface ${
+            copilotOpen
+              ? 'scale-100 opacity-100 translate-y-0 shadow-glow'
+              : 'scale-0 opacity-0 pointer-events-none translate-y-8'
+          }`}
+        >
           <CopilotSidebar
             caseId={caseId}
             onStateChangeApplied={fetchWorkspaceData}
             onClose={() => setCopilotOpen(false)}
           />
         </div>
-      )}
+
+        {/* Floating Round Launcher Button */}
+        <button
+          onClick={() => setCopilotOpen((prev) => !prev)}
+          className={`h-14 w-14 rounded-full bg-brand-primary text-white shadow-xl hover:shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 flex items-center justify-center border-2 border-white/20 relative group ${
+            copilotOpen ? 'rotate-90 bg-surface-elevated text-text-primary border-border' : 'animate-pulse'
+          }`}
+          title={copilotOpen ? 'Close Copilot' : 'Open Copilot'}
+        >
+          {copilotOpen ? (
+            <span className="text-2xl font-bold">&times;</span>
+          ) : (
+            <>
+              <Bot className="h-6 w-6 text-white group-hover:rotate-12 transition-transform duration-300" />
+              <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-accent opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-4 w-4 bg-brand-accent border border-white text-[8px] font-extrabold text-white items-center justify-center">AI</span>
+              </span>
+            </>
+          )}
+        </button>
+      </div>
       
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
@@ -1153,7 +1147,7 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
         <FolderOpen className="h-10 w-10 text-neutral-300" />
-        <p className="text-sm font-semibold text-neutral-600">No evidence attached yet</p>
+        <p className="text-sm font-semibold text-text-secondary">No evidence attached yet</p>
         <p className="text-xs text-neutral-400 max-w-xs">
           Evidence items added via the investigation workflow appear here.
         </p>
@@ -1171,10 +1165,10 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
   return (
     <>
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-bold text-neutral-800">Case Evidence File</h3>
+        <h3 className="text-lg font-bold text-text-primary">Case Evidence File</h3>
         <button 
           onClick={() => setAddModalOpen(true)}
-          className="px-3 py-1.5 bg-blue-50 text-blue-700 text-sm font-bold border border-blue-200 rounded hover:bg-blue-100 transition-colors"
+          className="px-3.5 py-1.5 bg-brand-primary text-white text-xs font-bold rounded-xl hover:bg-brand-primary/90 transition-all shadow-xs"
         >
           + Add Evidence
         </button>
@@ -1184,13 +1178,13 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
       {requestedEvidence.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           {requestedEvidence.map((req: string, idx: number) => (
-            <div key={`req-${idx}`} className="bg-neutral-50 border border-dashed border-neutral-300 rounded-xl p-4 shadow-sm flex gap-3 opacity-50">
+            <div key={`req-${idx}`} className="bg-surface-elevated/50 border border-dashed border-border rounded-2xl p-4 shadow-xs flex gap-3 opacity-60">
               <div className="text-2xl">⏳</div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-neutral-700 truncate">{req}</p>
-                <p className="text-xs text-neutral-500 capitalize">Requested / Yet to upload</p>
+                <p className="text-sm font-bold text-text-primary truncate">{req}</p>
+                <p className="text-xs text-text-secondary capitalize">Requested / Yet to upload</p>
                 <div className="mt-2">
-                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border bg-neutral-100 text-neutral-500 border-neutral-300">
+                  <span className="text-[9px] font-mono font-bold px-2.5 py-0.5 rounded-full border bg-surface text-text-secondary border-border">
                     PENDING FROM COMPLAINANT
                   </span>
                 </div>
@@ -1214,10 +1208,10 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
 
         const importanceBadgeClass = (imp: string) => {
           switch (imp?.toLowerCase()) {
-            case 'critical': return 'bg-red-100 text-red-800';
-            case 'high':     return 'bg-orange-100 text-orange-800';
-            case 'medium':   return 'bg-amber-100 text-amber-800';
-            default:         return 'bg-slate-100 text-slate-600';
+            case 'critical': return 'bg-semantic-critical/10 text-semantic-critical border-semantic-critical/30';
+            case 'high':     return 'bg-semantic-warning/10 text-semantic-warning border-semantic-warning/30';
+            case 'medium':   return 'bg-brand-primary/10 text-brand-primary border-brand-primary/20';
+            default:         return 'bg-surface text-text-secondary border-border';
           }
         };
 
@@ -1234,19 +1228,19 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
 
           const importanceBorder = (imp: string) => {
             switch (imp?.toLowerCase()) {
-              case 'critical': return 'border-l-red-500';
-              case 'high':     return 'border-l-orange-400';
-              case 'medium':   return 'border-l-amber-400';
-              default:         return 'border-l-blue-400';
+              case 'critical': return 'border-l-semantic-critical';
+              case 'high':     return 'border-l-semantic-warning';
+              case 'medium':   return 'border-l-brand-primary';
+              default:         return 'border-l-brand-primary/40';
             }
           };
 
           const importanceBadge = (imp: string) => {
             switch (imp?.toLowerCase()) {
-              case 'critical': return 'bg-red-100 text-red-800 border-red-200';
-              case 'high':     return 'bg-orange-100 text-orange-800 border-orange-200';
-              case 'medium':   return 'bg-amber-100 text-amber-800 border-amber-200';
-              default:         return 'bg-slate-100 text-slate-600 border-slate-200';
+              case 'critical': return 'bg-semantic-critical/10 text-semantic-critical border-semantic-critical/30';
+              case 'high':     return 'bg-semantic-warning/10 text-semantic-warning border-semantic-warning/30';
+              case 'medium':   return 'bg-brand-primary/10 text-brand-primary border-brand-primary/20';
+              default:         return 'bg-surface text-text-secondary border-border';
             }
           };
 
@@ -1254,16 +1248,16 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
           const FileIcon = (filename: string) => {
             const ext = (filename || '').split('.').pop()?.toLowerCase() || '';
             if (['jpg','jpeg','png','gif','webp','bmp'].includes(ext))
-              return <FileImage size={18} className="text-slate-600" />;
+              return <FileImage size={18} className="text-brand-primary" />;
             if (['mp4','mov','avi','webm'].includes(ext))
-              return <FileVideo size={18} className="text-slate-600" />;
+              return <FileVideo size={18} className="text-brand-primary" />;
             if (['mp3','wav','ogg','aac'].includes(ext))
-              return <FileAudio size={18} className="text-slate-600" />;
-            return <File size={18} className="text-slate-600" />;
+              return <FileAudio size={18} className="text-brand-primary" />;
+            return <File size={18} className="text-brand-primary" />;
           };
 
           return (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
               {unique.map((ci: any, idx: number) => {
                 const caption = ci.caption || ci.filename || `Evidence ${idx + 1}`;
                 const summary = (ci.summary || '').trim();
@@ -1274,42 +1268,42 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
                   <div
                     key={ci.evidence_id || idx}
                     onClick={() => setSelectedEvidence(rawEv || ci)}
-                    className={`bg-white border border-neutral-200 border-l-4 ${importanceBorder(ci.importance)} rounded-xl p-4 cursor-pointer hover:shadow-md transition-all group flex flex-col gap-2.5`}
+                    className={`bg-surface border border-border border-l-4 ${importanceBorder(ci.importance)} rounded-2xl p-4 cursor-pointer hover:border-brand-primary/50 hover:shadow-md transition-all group flex flex-col gap-2.5 shadow-xs`}
                   >
                     {/* Header */}
                     <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center">
+                      <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center">
                         {FileIcon(ci.filename || '')}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
-                          <p className="text-sm font-semibold text-neutral-900 leading-snug line-clamp-2 group-hover:text-blue-700 transition-colors">
+                          <p className="text-sm font-bold text-text-primary leading-snug line-clamp-2 group-hover:text-brand-primary transition-colors">
                             {caption}
                           </p>
-                          <span className={`flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded border uppercase tracking-wide ${importanceBadge(ci.importance)}`}>
+                          <span className={`flex-shrink-0 text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg border uppercase tracking-wide ${importanceBadge(ci.importance)}`}>
                             {ci.importance || 'medium'}
                           </span>
                         </div>
                         {ci.filename && ci.filename !== caption && (
-                          <p className="text-[10px] text-neutral-400 mt-0.5 truncate font-mono">{ci.filename}</p>
+                          <p className="text-[10px] text-text-secondary mt-0.5 truncate font-mono">{ci.filename}</p>
                         )}
                       </div>
                     </div>
 
                     {/* Summary */}
                     {summary && (
-                      <p className="text-xs text-neutral-600 leading-relaxed line-clamp-3">
+                      <p className="text-xs text-text-secondary leading-relaxed line-clamp-3">
                         {summary}
                       </p>
                     )}
 
                     {/* Supports allegations */}
                     {supports.length > 0 && (
-                      <div className="pt-2 border-t border-neutral-100">
-                        <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider mb-1.5">Supports Allegations</p>
+                      <div className="pt-2 border-t border-border">
+                        <p className="text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1.5">Supports Allegations</p>
                         <div className="flex flex-wrap gap-1.5">
                           {supports.map((alg: string, aIdx: number) => (
-                            <span key={aIdx} className="px-2 py-0.5 text-[11px] bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full font-medium">
+                            <span key={aIdx} className="px-2.5 py-0.5 text-[10px] bg-brand-primary/10 text-brand-primary border border-brand-primary/20 rounded-full font-bold">
                               {alg}
                             </span>
                           ))}
@@ -1318,19 +1312,19 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
                     )}
 
                     {/* Footer */}
-                    <div className="flex items-center justify-between pt-2 border-t border-neutral-100 mt-auto">
+                    <div className="flex items-center justify-between pt-2 border-t border-border mt-auto">
                       {rawEv ? (
-                        <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                          <CheckCircle2 size={11} className="text-emerald-600" />
+                        <span className="flex items-center gap-1 text-[10px] font-bold text-semantic-success bg-semantic-success/10 px-2.5 py-0.5 rounded-full border border-semantic-success/30">
+                          <CheckCircle2 size={11} className="text-semantic-success" />
                           Full details available
                         </span>
                       ) : (
-                        <span className="flex items-center gap-1 text-[10px] text-neutral-400">
+                        <span className="flex items-center gap-1 text-[10px] text-text-secondary">
                           <AlertCircle size={11} />
                           AI summary only
                         </span>
                       )}
-                      <span className="flex items-center gap-0.5 text-[11px] font-semibold text-blue-600 group-hover:text-blue-800 transition-colors">
+                      <span className="flex items-center gap-0.5 text-[11px] font-bold text-brand-primary group-hover:underline transition-colors">
                         View Details <ChevronRight size={12} />
                       </span>
                     </div>
@@ -1348,21 +1342,21 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
               <div
                 key={ev.evidence_id || ev._id}
                 onClick={() => setSelectedEvidence(ev)}
-                className="bg-white border border-neutral-200 rounded-xl p-4 shadow-sm flex gap-3 cursor-pointer hover:border-blue-300 hover:shadow-md transition-all group"
+                className="bg-surface border border-border rounded-2xl p-4 shadow-xs flex gap-3.5 cursor-pointer hover:border-brand-primary/50 hover:shadow-md transition-all group"
               >
                 <div className="text-2xl group-hover:scale-110 transition-transform">{evidenceTypeIcon[ev.type] ?? '📄'}</div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-neutral-900 truncate group-hover:text-blue-700 transition-colors">{ev.title || ev.evidence_id}</p>
-                  <p className="text-xs text-neutral-500 capitalize">{ev.type?.replace(/_/g, ' ')}</p>
+                  <p className="text-sm font-bold text-text-primary truncate group-hover:text-brand-primary transition-colors">{ev.title || ev.evidence_id}</p>
+                  <p className="text-xs text-text-secondary capitalize">{ev.type?.replace(/_/g, ' ')}</p>
                   <div className="mt-1">
-                    <span className="text-[9px] font-medium text-neutral-500 bg-neutral-100 px-1.5 py-0.5 rounded border border-neutral-200">
+                    <span className="text-[10px] font-mono font-medium text-text-secondary bg-surface-elevated px-2 py-0.5 rounded-md border border-border">
                       Added by {ev.source?.replace(/_/g, ' ') || 'complainant'} on {new Date(ev.collected_at || ev.createdAt).toLocaleDateString('en-IN')}
                     </span>
                   </div>
-                  {ev.ai_description && <p className="text-xs text-neutral-600 mt-2 line-clamp-2">{ev.ai_description}</p>}
+                  {ev.ai_description && <p className="text-xs text-text-secondary mt-2 line-clamp-2">{ev.ai_description}</p>}
                   <div className="flex items-center gap-2 mt-2">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                      ev.status === 'verified' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                    <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
+                      ev.status === 'verified' ? 'bg-semantic-success/10 text-semantic-success border-semantic-success/30' : 'bg-semantic-warning/10 text-semantic-warning border-semantic-warning/30'
                     }`}>
                       {ev.status === 'verified' ? '✓ Verified' : 'Unverified'}
                     </span>
@@ -1420,7 +1414,8 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
             <Card className="p-6">
               <CardHeader title="Contradictions & Discrepancies" />
               <div className="mt-4">
-                <p className="text-sm text-emerald-700 bg-emerald-50 p-3 rounded-lg border border-emerald-200 font-medium">
+                <p className="text-xs font-bold text-semantic-success bg-semantic-success/10 p-3.5 rounded-xl border border-semantic-success/30 flex items-center gap-2">
+                  <CheckCircle2 size={16} className="text-semantic-success flex-shrink-0" />
                   No contradictions or conflicts detected across complaint and evidence.
                 </p>
               </div>
@@ -1435,10 +1430,10 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
                 {contradictions.map((c: any, i: number) => {
                   const evIds = c.related_evidence_ids || c.involved_evidence_ids || [];
                   return (
-                    <div key={i} className="p-3 border border-red-200 bg-red-50 rounded-lg text-xs text-red-900 font-medium space-y-1">
+                    <div key={i} className="p-3.5 border border-semantic-critical/30 bg-semantic-critical/10 rounded-xl text-xs text-semantic-critical font-bold space-y-1">
                       <p>• {c.description}</p>
                       {evIds.length > 0 && (
-                        <p className="text-[11px] text-red-700">Involved Evidence IDs: {evIds.join(', ')}</p>
+                        <p className="text-[11px] font-mono text-semantic-critical/80">Involved Evidence IDs: {evIds.join(', ')}</p>
                       )}
                     </div>
                   );
@@ -1474,22 +1469,22 @@ function MissingInfoCardIO({ item, caseId }: { item: { title: string; descriptio
   };
 
   return (
-    <div className="p-3.5 border border-amber-200 bg-amber-50/70 rounded-lg text-xs space-y-2">
+    <div className="p-3.5 border border-amber-800/50 bg-amber-900/20 rounded-lg text-xs space-y-2">
       <div className="flex justify-between items-start gap-2">
-        <span className="font-bold text-amber-950 text-sm">{item.title}</span>
-        <span className="uppercase text-[10px] font-bold bg-amber-200 text-amber-900 px-2 py-0.5 rounded shrink-0">{item.importance}</span>
+        <span className="font-bold text-white text-sm">{item.title}</span>
+        <span className="uppercase text-[10px] font-bold bg-amber-900/50 text-amber-400 px-2 py-0.5 rounded shrink-0">{item.importance}</span>
       </div>
-      <p className="text-amber-900 leading-relaxed">{item.description}</p>
+      <p className="text-amber-100 leading-relaxed">{item.description}</p>
       <div className="pt-1">
         <button
           onClick={handleRequest}
           disabled={status !== 'idle'}
           className={`flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-md transition-all ${
             status === 'sent'
-              ? 'bg-green-100 text-green-700 border border-green-200 cursor-default'
+              ? 'bg-green-900/30 text-green-400 border border-green-800/50 cursor-default'
               : status === 'loading'
-              ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
-              : 'bg-white text-slate-800 border border-slate-300 hover:bg-slate-100 cursor-pointer shadow-xs'
+              ? 'bg-neutral-800 text-neutral-500 border border-neutral-700 cursor-not-allowed'
+              : 'bg-neutral-900/50 text-text-primary border border-neutral-700 hover:bg-neutral-800 cursor-pointer shadow-xs'
           }`}
         >
           {status === 'sent' ? (
@@ -1552,7 +1547,7 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
         <Users className="h-10 w-10 text-neutral-300" />
-        <p className="text-sm font-semibold text-neutral-600">No participants found</p>
+        <p className="text-sm font-semibold text-text-secondary">No participants found</p>
         <p className="text-xs text-neutral-400 max-w-xs">
           Participants approved via the AI analysis will appear here.
         </p>
@@ -1577,12 +1572,12 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
 
   const roleBadgeColor = (role: string) => {
     switch (role) {
-      case 'Accused': return 'bg-red-50 text-red-700 border-red-200';
-      case 'Suspect': return 'bg-orange-50 text-orange-700 border-orange-200';
-      case 'Victim': return 'bg-green-50 text-green-700 border-green-200';
-      case 'Witness': return 'bg-purple-50 text-purple-700 border-purple-200';
-      case 'Complainant': return 'bg-blue-50 text-blue-700 border-blue-200';
-      default: return 'bg-neutral-50 text-neutral-700 border-neutral-200';
+      case 'Accused': return 'bg-red-900/20 text-red-400 border-red-800/50';
+      case 'Suspect': return 'bg-neutral-900/50 text-orange-400 border-neutral-700';
+      case 'Victim': return 'bg-green-900/20 text-green-400 border-green-800/50';
+      case 'Witness': return 'bg-neutral-900/50 text-purple-700 border-neutral-700';
+      case 'Complainant': return 'bg-blue-900/20 text-blue-400 border-blue-800/50';
+      default: return 'bg-neutral-900/50 text-text-secondary border-neutral-700';
     }
   };
 
@@ -1592,7 +1587,7 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
         <select
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value)}
-          className="text-sm border border-neutral-300 rounded px-3 py-1.5 bg-white text-neutral-700"
+          className="text-sm border border-neutral-700 rounded px-3 py-1.5 bg-neutral-900/50 text-text-secondary"
         >
           <option value="All">All Roles</option>
           {uniqueRoles.map(r => <option key={r} value={r}>{r}</option>)}
@@ -1614,11 +1609,11 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
           return (
             <div
               key={p.participant_id || p._id}
-              className="bg-white border border-neutral-200 rounded-xl p-4 shadow-sm hover:border-blue-300 hover:shadow-md transition-all group relative"
+              className="bg-neutral-900/50 border border-neutral-700 rounded-xl p-4 shadow-sm hover:border-blue-300 hover:shadow-md transition-all group relative"
             >
               <div className="flex justify-between items-start gap-2 mb-2">
                 <h4 
-                  className="text-base font-bold text-neutral-900 cursor-pointer group-hover:text-blue-700 transition-colors flex-1"
+                  className="text-base font-bold text-white cursor-pointer group-hover:text-blue-400 transition-colors flex-1"
                   onClick={() => setSelectedParticipant(p)}
                 >
                   {p.name}
@@ -1629,14 +1624,14 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
                       setEditingParticipant(p);
                       setIsEditModalOpen(true);
                     }}
-                    className="p-1 text-neutral-400 hover:text-blue-600 transition-colors" 
+                    className="p-1 text-neutral-400 hover:text-blue-500 transition-colors" 
                     title="Edit"
                   >
                     ✏️
                   </button>
                   {deleteConfirming === p.participant_id ? (
-                    <div className="absolute right-2 top-14 bg-white border border-red-200 rounded-lg p-2 shadow-lg z-10 whitespace-nowrap">
-                      <p className="text-xs font-semibold text-red-700 mb-2">Delete?</p>
+                    <div className="absolute right-2 top-14 bg-neutral-900/50 border border-red-800/50 rounded-lg p-2 shadow-lg z-10 whitespace-nowrap">
+                      <p className="text-xs font-semibold text-red-400 mb-2">Delete?</p>
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleDelete(p.participant_id)}
@@ -1647,7 +1642,7 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
                         </button>
                         <button
                           onClick={() => setDeleteConfirming(null)}
-                          className="px-2 py-1 text-xs font-semibold bg-neutral-200 text-neutral-700 rounded hover:bg-neutral-300"
+                          className="px-2 py-1 text-xs font-semibold bg-neutral-800 text-text-secondary rounded hover:bg-neutral-300"
                         >
                           No
                         </button>
@@ -1656,7 +1651,7 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
                   ) : (
                     <button
                       onClick={() => setDeleteConfirming(p.participant_id)}
-                      className="p-1 text-neutral-400 hover:text-red-600 transition-colors"
+                      className="p-1 text-neutral-400 hover:text-red-500 transition-colors"
                       title="Delete"
                     >
                       🗑️
@@ -1792,12 +1787,12 @@ function ParticipantDetailModal({
 
   const roleBadgeColor = (role: string) => {
     switch (role) {
-      case 'Accused': return 'bg-red-50 text-red-700 border-red-200';
-      case 'Suspect': return 'bg-orange-50 text-orange-700 border-orange-200';
-      case 'Victim': return 'bg-green-50 text-green-700 border-green-200';
-      case 'Witness': return 'bg-purple-50 text-purple-700 border-purple-200';
-      case 'Complainant': return 'bg-blue-50 text-blue-700 border-blue-200';
-      default: return 'bg-neutral-50 text-neutral-700 border-neutral-200';
+      case 'Accused': return 'bg-red-900/20 text-red-400 border-red-800/50';
+      case 'Suspect': return 'bg-neutral-900/50 text-orange-400 border-neutral-700';
+      case 'Victim': return 'bg-green-900/20 text-green-400 border-green-800/50';
+      case 'Witness': return 'bg-neutral-900/50 text-purple-700 border-neutral-700';
+      case 'Complainant': return 'bg-blue-900/20 text-blue-400 border-blue-800/50';
+      default: return 'bg-neutral-900/50 text-text-secondary border-neutral-700';
     }
   };
 
@@ -1922,13 +1917,13 @@ function ParticipantDetailModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto"
+        className="bg-neutral-900/50 rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-start justify-between p-6 border-b border-neutral-100">
           <div>
-            <h2 className="text-xl font-bold text-neutral-900">{p.name}</h2>
+            <h2 className="text-xl font-bold text-white">{p.name}</h2>
             <div className="flex flex-wrap gap-1.5 mt-2">
               {(p.roles || []).map((role: string) => (
                 <span key={role} className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${roleBadgeColor(role)}`}>
@@ -1939,12 +1934,12 @@ function ParticipantDetailModal({
           </div>
           <div className="flex gap-2">
             {onEdit && (
-              <button onClick={() => onEdit(p)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">✏️</button>
+              <button onClick={() => onEdit(p)} className="p-2 text-blue-500 hover:bg-blue-900/20 rounded-lg transition-colors" title="Edit">✏️</button>
             )}
             {onDelete && (
-              <button onClick={() => onDelete(p)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete">🗑️</button>
+              <button onClick={() => onDelete(p)} className="p-2 text-red-500 hover:bg-red-900/20 rounded-lg transition-colors" title="Delete">🗑️</button>
             )}
-            <button onClick={onClose} className="p-1 text-neutral-400 hover:text-neutral-700 transition-colors text-2xl leading-none">×</button>
+            <button onClick={onClose} className="p-1 text-neutral-400 hover:text-text-secondary transition-colors text-2xl leading-none">×</button>
           </div>
         </div>
 
@@ -1953,7 +1948,7 @@ function ParticipantDetailModal({
           {(p.contact?.phone || p.contact?.email || p.contact?.address) && (
             <section>
               <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">Contact Information</h3>
-              <div className="bg-neutral-50 rounded-lg p-3 text-sm text-neutral-700 space-y-1 border border-neutral-100">
+              <div className="bg-neutral-900/50 rounded-lg p-3 text-sm text-text-secondary space-y-1 border border-neutral-100">
                 {p.contact.phone && <p>📞 {p.contact.phone}</p>}
                 {p.contact.email && <p>✉️ {p.contact.email}</p>}
                 {p.contact.address && <p>📍 {p.contact.address}</p>}
@@ -1967,7 +1962,7 @@ function ParticipantDetailModal({
               <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">Identifiers</h3>
               <div className="flex flex-wrap gap-2">
                 {p.identifiers.map((id: any, i: number) => (
-                  <span key={i} className="text-xs bg-neutral-100 text-neutral-700 px-2 py-1 rounded border border-neutral-200">
+                  <span key={i} className="text-xs bg-neutral-800 text-text-secondary px-2 py-1 rounded border border-neutral-700">
                     <span className="font-semibold">{id.type}:</span> {id.value}
                   </span>
                 ))}
@@ -1979,7 +1974,7 @@ function ParticipantDetailModal({
           {p.victimProfile && (p.victimProfile.injuryDetails || p.victimProfile.lossDetails) && (
             <section>
               <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">Victim Profile</h3>
-              <div className="bg-green-50 border border-green-100 rounded-lg p-3 text-sm text-neutral-700 space-y-1">
+              <div className="bg-green-900/20 border border-green-100 rounded-lg p-3 text-sm text-text-secondary space-y-1">
                 {p.victimProfile.injuryDetails && <p><span className="font-semibold">Injury:</span> {p.victimProfile.injuryDetails}</p>}
                 {p.victimProfile.lossDetails && <p><span className="font-semibold">Loss:</span> {p.victimProfile.lossDetails}</p>}
               </div>
@@ -1990,7 +1985,7 @@ function ParticipantDetailModal({
           {p.suspectProfile && !(p.roles || []).includes('Accused') && (p.suspectProfile.motive || p.suspectProfile.alibi) && (
             <section>
               <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">Suspect Profile</h3>
-              <div className="bg-orange-50 border border-orange-100 rounded-lg p-3 text-sm text-neutral-700 space-y-1">
+              <div className="bg-neutral-900/50 border border-orange-100 rounded-lg p-3 text-sm text-text-secondary space-y-1">
                 {p.suspectProfile.motive && <p><span className="font-semibold">Motive:</span> {p.suspectProfile.motive}</p>}
                 {p.suspectProfile.alibi && <p><span className="font-semibold">Alibi:</span> {p.suspectProfile.alibi}</p>}
               </div>
@@ -2003,9 +1998,9 @@ function ParticipantDetailModal({
               <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">Applied Legal Sections</h3>
               <div className="space-y-2">
                 {appliedSections.map((sec: any, i: number) => (
-                  <div key={i} className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm">
+                  <div key={i} className="bg-blue-900/20 border border-blue-100 rounded-lg p-3 text-sm">
                     <p className="font-bold text-blue-800">{sec.code} — {sec.title}</p>
-                    {sec.reason && <p className="text-xs text-neutral-600 mt-1">{sec.reason}</p>}
+                    {sec.reason && <p className="text-xs text-text-secondary mt-1">{sec.reason}</p>}
                   </div>
                 ))}
               </div>
@@ -2016,7 +2011,7 @@ function ParticipantDetailModal({
           {p.complainantProfile?.relationshipToIncident && (
             <section>
               <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">Complainant</h3>
-              <p className="text-sm text-neutral-700">Relation to Incident: {p.complainantProfile.relationshipToIncident}</p>
+              <p className="text-sm text-text-secondary">Relation to Incident: {p.complainantProfile.relationshipToIncident}</p>
             </section>
           )}
 
@@ -2028,9 +2023,9 @@ function ParticipantDetailModal({
             {Array.isArray(p.statements) && p.statements.length > 0 ? (
               <div className="space-y-2 mb-3">
                 {p.statements.map((stmt: any) => (
-                  <div key={stmt.id} className="bg-purple-50 border border-purple-100 rounded-lg p-3 text-sm">
+                  <div key={stmt.id} className="bg-neutral-900/50 border border-purple-100 rounded-lg p-3 text-sm">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-neutral-800 flex-1">{stmt.content}</p>
+                      <p className="text-text-primary flex-1">{stmt.content}</p>
                       <button
                         onClick={() => handleDeleteStatement(stmt.id)}
                         className="text-neutral-300 hover:text-red-500 transition-colors flex-shrink-0 text-xs"
@@ -2048,14 +2043,14 @@ function ParticipantDetailModal({
             )}
 
             {/* Add statement form */}
-            <div className="border border-neutral-200 rounded-lg p-3 bg-neutral-50 space-y-2">
-              <p className="text-xs font-semibold text-neutral-600">Add New Statement</p>
+            <div className="border border-neutral-700 rounded-lg p-3 bg-neutral-900/50 space-y-2">
+              <p className="text-xs font-semibold text-text-secondary">Add New Statement</p>
               <textarea
                 value={stmtContent}
                 onChange={(e) => setStmtContent(e.target.value)}
                 placeholder="Enter statement content..."
                 rows={3}
-                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-200 resize-none"
+                className="w-full px-3 py-2 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-200 resize-none"
               />
 
               {/* Audio upload row */}
@@ -2073,8 +2068,8 @@ function ParticipantDetailModal({
                   disabled={transcribing}
                   className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
                     transcribing
-                      ? 'bg-neutral-100 text-neutral-400 border-neutral-200 cursor-not-allowed'
-                      : 'bg-white text-purple-700 border-purple-300 hover:bg-purple-50 cursor-pointer'
+                      ? 'bg-neutral-800 text-neutral-400 border-neutral-700 cursor-not-allowed'
+                      : 'bg-neutral-900/50 text-purple-700 border-purple-300 hover:bg-neutral-900/50 cursor-pointer'
                   }`}
                   title="Upload audio file to auto-fill transcript"
                 >
@@ -2097,8 +2092,8 @@ function ParticipantDetailModal({
               {transcribeError && (
                 <p className={`text-xs px-2 py-1 rounded ${
                   transcribeError.startsWith('Detected language')
-                    ? 'bg-blue-50 text-blue-700 border border-blue-100'
-                    : 'bg-red-50 text-red-600 border border-red-100'
+                    ? 'bg-blue-900/20 text-blue-400 border border-blue-100'
+                    : 'bg-red-900/20 text-red-500 border border-red-100'
                 }`}>
                   {transcribeError}
                 </p>
@@ -2111,7 +2106,7 @@ function ParticipantDetailModal({
                     type="datetime-local"
                     value={stmtDate}
                     onChange={(e) => setStmtDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-200"
+                    className="w-full px-3 py-2 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-200"
                   />
                 </div>
                 <button
@@ -2133,7 +2128,7 @@ function ParticipantDetailModal({
             {Array.isArray(p.reasoning) && p.reasoning.length > 0 ? (
               <div className="space-y-2 mb-3">
                 {p.reasoning.map((r: any) => (
-                  <div key={r.id} className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm">
+                  <div key={r.id} className="bg-blue-900/20 border border-blue-100 rounded-lg p-3 text-sm">
                     {editingReasoningId === r.id ? (
                       <div className="space-y-2">
                         <textarea
@@ -2152,8 +2147,7 @@ function ParticipantDetailModal({
                           </button>
                           <button
                             onClick={() => { setEditingReasoningId(null); setEditingReasoningContent(''); }}
-                            className="px-3 py-1 border border-neutral-300 text-neutral-600 text-xs font-semibold rounded-lg hover:bg-neutral-50"
-                          >
+                            className="px-3 py-1 border border-neutral-700 text-text-secondary text-xs font-semibold rounded-lg hover:bg-neutral-900/50">
                             Cancel
                           </button>
                         </div>
@@ -2162,12 +2156,12 @@ function ParticipantDetailModal({
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${r.source === 'ai' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${r.source === 'ai' ? 'bg-neutral-800 text-indigo-400' : 'bg-neutral-800 text-emerald-400'}`}>
                               {r.source === 'ai' ? '🤖 AI' : '👮 Officer'}
                             </span>
                             <span className="text-xs text-neutral-400">{new Date(r.createdAt).toLocaleString('en-IN')}</span>
                           </div>
-                          <p className="text-neutral-800">{r.content}</p>
+                          <p className="text-text-primary">{r.content}</p>
                         </div>
                         <div className="flex gap-1 flex-shrink-0">
                           <button
@@ -2191,14 +2185,14 @@ function ParticipantDetailModal({
             )}
 
             {/* Add reasoning form */}
-            <div className="border border-neutral-200 rounded-lg p-3 bg-neutral-50 space-y-2">
-              <p className="text-xs font-semibold text-neutral-600">Add Reasoning Note</p>
+            <div className="border border-neutral-700 rounded-lg p-3 bg-neutral-900/50 space-y-2">
+              <p className="text-xs font-semibold text-text-secondary">Add Reasoning Note</p>
               <textarea
                 value={reasoningContent}
                 onChange={(e) => setReasoningContent(e.target.value)}
                 placeholder="Add investigative reasoning or observation..."
                 rows={3}
-                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none"
+                className="w-full px-3 py-2 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none"
               />
               <button
                 onClick={handleAddReasoning}
@@ -2223,95 +2217,78 @@ function OriginalComplaintPanel({ complaint }: { complaint: any | null }) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center space-y-3">
         <FileText className="h-10 w-10 text-neutral-300" />
-        <p className="text-sm font-semibold text-neutral-600">Loading complaint details...</p>
+        <p className="text-sm font-semibold text-text-secondary">Loading complaint details...</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6 py-2">
-      {/* Header */}
-      <div className="flex items-center gap-3 pb-3 border-b border-neutral-200">
-        <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
-          <FileText size={18} />
-        </div>
-        <div>
-          <h2 className="text-base font-bold text-neutral-900">{complaint.complaintNumber}</h2>
-          <p className="text-xs text-neutral-500">
-            Filed on {new Date(complaint.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-surface-elevated/70 rounded-xl border border-border p-4 shadow-xs">
+          <p className="text-[10px] font-bold text-text-secondary uppercase tracking-wider flex items-center gap-1 mb-1.5">
+            <Calendar size={12} className="text-brand-primary" /> Date &amp; Time
           </p>
-        </div>
-        <span className="ml-auto px-2.5 py-1 text-xs font-bold rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-          {complaint.status?.replace(/_/g, ' ')}
-        </span>
-      </div>
-
-      {/* Incident meta */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-neutral-50 rounded-xl border border-neutral-200 p-3">
-          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-1 mb-1">
-            <Calendar size={10} /> Date &amp; Time
-          </p>
-          <p className="text-sm font-semibold text-neutral-800">
+          <p className="text-sm font-bold text-text-primary">
             {new Date(complaint.incidentDate).toLocaleDateString('en-IN')} {complaint.incidentTime || ''}
           </p>
         </div>
-        <div className="bg-neutral-50 rounded-xl border border-neutral-200 p-3">
-          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-1 mb-1">
-            <MapPin size={10} /> Place of Occurrence
+        <div className="bg-surface-elevated/70 rounded-xl border border-border p-4 shadow-xs">
+          <p className="text-[10px] font-bold text-text-secondary uppercase tracking-wider flex items-center gap-1 mb-1.5">
+            <MapPin size={12} className="text-brand-primary" /> Place of Occurrence
           </p>
-          <p className="text-sm font-semibold text-neutral-800">{complaint.incidentPlace}</p>
+          <p className="text-sm font-bold text-text-primary">{complaint.incidentPlace}</p>
         </div>
-        <div className="bg-neutral-50 rounded-xl border border-neutral-200 p-3">
-          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">Category</p>
-          <p className="text-sm font-semibold text-neutral-800 uppercase">
+        <div className="bg-surface-elevated/70 rounded-xl border border-border p-4 shadow-xs">
+          <p className="text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1.5">Category</p>
+          <p className="text-sm font-bold text-brand-primary uppercase">
             {complaint.category?.replace('_', ' ') || 'Uncategorized'}
           </p>
         </div>
       </div>
 
       {/* Complainant */}
-      <div className="bg-white rounded-xl border border-neutral-200 p-4">
-        <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">Complainant</p>
-        <p className="text-sm font-bold text-neutral-800">
+      <div className="bg-surface-elevated/70 rounded-xl border border-border p-5 shadow-xs space-y-1">
+        <p className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Complainant</p>
+        <p className="text-sm font-bold text-text-primary">
           {complaint.citizen?.firstName} {complaint.citizen?.lastName}
         </p>
-        <p className="text-xs text-neutral-500">{complaint.citizen?.phone}</p>
-        <p className="text-xs text-neutral-500">{complaint.citizen?.email}</p>
+        <p className="text-xs text-text-secondary">{complaint.citizen?.phone}</p>
+        <p className="text-xs text-text-secondary">{complaint.citizen?.email}</p>
       </div>
 
       {/* Brief Summary */}
-      <div className="bg-white rounded-xl border border-neutral-200 p-4">
-        <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">Brief Summary</p>
-        <p className="text-sm font-semibold text-neutral-800">{complaint.shortDescription}</p>
+      <div className="bg-surface-elevated/70 rounded-xl border border-border p-5 shadow-xs">
+        <p className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Brief Summary</p>
+        <p className="text-sm font-bold text-text-primary">{complaint.shortDescription}</p>
       </div>
 
       {/* Detailed Description */}
-      <div className="bg-white rounded-xl border border-neutral-200 p-4">
-        <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">Detailed Description</p>
-        <p className="text-sm text-neutral-700 whitespace-pre-line leading-relaxed">
-          {complaint.detailedDescription || <span className="text-neutral-400 italic">No detailed description provided.</span>}
+      <div className="bg-surface-elevated/70 rounded-xl border border-border p-5 shadow-xs">
+        <p className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Detailed Description</p>
+        <p className="text-sm text-text-primary whitespace-pre-line leading-relaxed">
+          {complaint.detailedDescription || <span className="text-text-muted italic">No detailed description provided.</span>}
         </p>
       </div>
 
       {/* Evidence attachments */}
       {complaint.evidence?.length > 0 && (
-        <div className="bg-white rounded-xl border border-neutral-200 p-4">
-          <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-3">
+        <div className="bg-surface-elevated/70 rounded-xl border border-border p-5 shadow-xs">
+          <p className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-3">
             Attached Evidence ({complaint.evidence.length})
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {complaint.evidence.map((file: any) => (
-              <div key={file.publicId} className="flex items-center justify-between gap-3 p-3 rounded-lg border border-neutral-100 bg-neutral-50 hover:bg-neutral-100 transition-colors">
-                <div className="flex items-center gap-2 min-w-0">
-                  <FileText size={16} className="text-blue-500 flex-shrink-0" />
+              <div key={file.publicId} className="flex items-center justify-between gap-3 p-3.5 rounded-xl border border-border bg-surface hover:bg-surface-elevated transition-colors shadow-xs">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <FileText size={18} className="text-brand-primary flex-shrink-0" />
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold text-neutral-800 truncate">{file.originalFilename}</p>
-                    <p className="text-[10px] text-neutral-400">{(file.size / 1024 / 1024).toFixed(2)} MB • {file.extension?.toUpperCase()}</p>
+                    <p className="text-xs font-bold text-text-primary truncate">{file.originalFilename}</p>
+                    <p className="text-[10px] text-text-secondary font-mono">{(file.size / 1024 / 1024).toFixed(2)} MB &bull; {file.extension?.toUpperCase()}</p>
                   </div>
                 </div>
-                <a href={file.secureUrl} target="_blank" rel="noopener noreferrer" className="flex-shrink-0 p-1.5 rounded hover:bg-neutral-200 text-neutral-500 transition-colors" title="Download">
-                  <Download size={14} />
+                <a href={file.secureUrl} target="_blank" rel="noopener noreferrer" className="flex-shrink-0 p-2 rounded-lg bg-surface-elevated hover:bg-brand-primary/10 text-brand-primary transition-colors" title="Download">
+                  <Download size={15} />
                 </a>
               </div>
             ))}
@@ -2325,16 +2302,16 @@ function OriginalComplaintPanel({ complaint }: { complaint: any | null }) {
 
 // ─── Case Understanding Panel ──────────────────────────────────────────────
 
-function CaseUnderstandingPanel({ caseUnderstanding }: { caseUnderstanding: CaseUnderstandingData | null }) {
+function CaseUnderstandingPanel({ caseUnderstanding, caseId }: { caseUnderstanding: CaseUnderstandingData | null; caseId?: string }) {
   if (!caseUnderstanding) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center space-y-4">
-        <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-500">
+        <div className="p-4 rounded-2xl bg-brand-primary/10 border border-brand-primary/20 text-brand-primary">
           <Brain className="h-10 w-10 animate-pulse" />
         </div>
         <div className="space-y-1">
-          <p className="text-sm font-bold text-neutral-700">Case Understanding Not Ready</p>
-          <p className="text-xs text-neutral-400 max-w-xs leading-relaxed">
+          <p className="text-sm font-bold text-text-primary">Case Understanding Not Ready</p>
+          <p className="text-xs text-text-secondary max-w-xs leading-relaxed">
             The AI Case Understanding pipeline hasn't processed this complaint yet.
           </p>
         </div>
@@ -2342,59 +2319,9 @@ function CaseUnderstandingPanel({ caseUnderstanding }: { caseUnderstanding: Case
     );
   }
 
-  const rawOverview: any = caseUnderstanding.case_understanding || caseUnderstanding.overview || {};
-  const overviewData = {
-    executive_summary: rawOverview.executive_summary || rawOverview.complaint_summary || 'No summary available.',
-    incident_brief: rawOverview.incident_brief || rawOverview.incident_overview || 'No incident brief available.',
-    crime_category: rawOverview.crime_category || 'Uncategorized',
-    crime_subtype: rawOverview.crime_subtype || 'General',
-    priority: rawOverview.priority || 'medium',
-    confidence: rawOverview.confidence ?? 0.9,
-  };
-
-  const getPriorityBadge = (priority: string) => {
-    switch (priority?.toLowerCase()) {
-      case 'critical': return <span className="px-3 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800 border border-red-300 uppercase">Critical Priority</span>;
-      case 'high': return <span className="px-3 py-1 text-xs font-bold rounded-full bg-orange-100 text-orange-800 border border-orange-300 uppercase">High Priority</span>;
-      case 'medium': return <span className="px-3 py-1 text-xs font-bold rounded-full bg-yellow-100 text-yellow-800 border border-yellow-300 uppercase">Medium Priority</span>;
-      default: return <span className="px-3 py-1 text-xs font-bold rounded-full bg-blue-100 text-blue-800 border border-blue-300 uppercase">Low Priority</span>;
-    }
-  };
-
   return (
-    <div className="space-y-6 py-2">
-      {/* Top Banner */}
-      <div className="bg-slate-900 text-white rounded-xl p-6 shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <h2 className="text-xl font-bold tracking-tight">Case Understanding Intelligence</h2>
-            {getPriorityBadge(overviewData.priority)}
-          </div>
-          <p className="text-slate-400 text-sm mt-1">
-            Category: <strong className="text-white">{overviewData.crime_category}</strong> ({overviewData.crime_subtype})
-            • Confidence: <strong className="text-emerald-400">{(overviewData.confidence * 100).toFixed(0)}%</strong>
-          </p>
-        </div>
-        {caseUnderstanding.processing_duration_ms && (
-          <div className="text-xs bg-slate-800 px-3 py-1.5 rounded-lg text-slate-300 border border-slate-700">
-            Single-Pass LLM Latency: <strong>{(caseUnderstanding.processing_duration_ms / 1000).toFixed(2)}s</strong>
-          </div>
-        )}
-      </div>
-
-      <Card className="space-y-4 p-6">
-        <CardHeader title="Case Understanding Overview" />
-        <div className="space-y-4">
-          <div>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400">Executive Summary</h4>
-            <p className="text-sm font-semibold text-neutral-900 mt-1">{overviewData.executive_summary}</p>
-          </div>
-          <div className="border-t border-neutral-100 pt-4">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400">Incident Brief</h4>
-            <p className="text-sm text-neutral-700 mt-1 leading-relaxed whitespace-pre-line">{overviewData.incident_brief}</p>
-          </div>
-        </div>
-      </Card>
+    <div className="py-2">
+      <CaseUnderstandingView data={caseUnderstanding} caseId={caseId} />
     </div>
   );
 }
@@ -2406,12 +2333,12 @@ function TimelinePanel({ caseUnderstanding }: { caseUnderstanding: CaseUnderstan
   if (!caseUnderstanding) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center space-y-4">
-        <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-500">
+        <div className="p-4 rounded-2xl bg-brand-primary/10 border border-brand-primary/20 text-brand-primary">
           <Clock className="h-10 w-10 animate-pulse" />
         </div>
         <div className="space-y-1">
-          <p className="text-sm font-bold text-neutral-700">Timeline Not Ready</p>
-          <p className="text-xs text-neutral-400 max-w-xs leading-relaxed">
+          <p className="text-sm font-bold text-text-primary">Timeline Not Ready</p>
+          <p className="text-xs text-text-secondary max-w-xs leading-relaxed">
             The AI Case Understanding pipeline hasn't processed this complaint yet.
           </p>
         </div>
@@ -2423,20 +2350,20 @@ function TimelinePanel({ caseUnderstanding }: { caseUnderstanding: CaseUnderstan
     <div className="py-2">
       <Card className="p-6">
         <CardHeader title="Chronological Case Timeline" />
-        <div className="mt-4 space-y-4">
+        <div className="mt-5 space-y-5">
           {(!caseUnderstanding.timeline || caseUnderstanding.timeline.length === 0) ? (
-            <p className="text-sm text-neutral-500 italic">No timeline events extracted.</p>
+            <p className="text-sm text-text-muted italic">No timeline events extracted.</p>
           ) : (
             caseUnderstanding.timeline.map((event, idx) => (
-              <div key={idx} className="flex gap-4 items-start border-l-2 border-slate-900 pl-4 py-1">
-                <div className="space-y-1">
-                  <span className="text-xs font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-800">
+              <div key={idx} className="flex gap-4 items-start border-l-2 border-brand-primary pl-4 py-2 bg-surface-elevated/40 rounded-r-xl p-3 border border-border/50">
+                <div className="space-y-1.5">
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-brand-primary/10 text-brand-primary border border-brand-primary/20 font-mono">
                     {event.timestamp}
                   </span>
-                  <p className="text-sm text-neutral-800 font-medium mt-1">{event.description}</p>
+                  <p className="text-sm text-text-primary font-bold mt-1.5">{event.description}</p>
                   {event.supporting_evidence_ids && event.supporting_evidence_ids.length > 0 && (
-                    <p className="text-xs text-neutral-400">
-                      Evidence Ref: {event.supporting_evidence_ids.join(', ')}
+                    <p className="text-xs text-text-secondary">
+                      Evidence Ref: <span className="font-mono">{event.supporting_evidence_ids.join(', ')}</span>
                     </p>
                   )}
                 </div>
@@ -2577,92 +2504,92 @@ function AddParticipantModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-start justify-center bg-black/70 backdrop-blur-md pt-20 pb-8 px-4 sm:px-6 overflow-y-auto" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+        className="bg-surface border border-border rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-y-auto my-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 flex items-center justify-between p-6 border-b border-neutral-100 bg-white">
-          <h2 className="text-xl font-bold text-neutral-900">Add New Participant</h2>
-          <button onClick={onClose} className="p-1 text-neutral-400 hover:text-neutral-700 transition-colors text-2xl leading-none">×</button>
+        <div className="sticky top-0 flex items-center justify-between p-5 border-b border-border bg-surface shrink-0">
+          <h2 className="text-lg font-bold text-text-primary">Add New Participant</h2>
+          <button onClick={onClose} className="p-1 text-text-secondary hover:text-text-primary transition-colors text-2xl leading-none">&times;</button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="p-6 space-y-5 bg-surface-elevated/20">
           {/* Name */}
           <div>
-            <label className="text-sm font-semibold text-neutral-700 mb-2 block">
-              Full Name <span className="text-red-500">*</span>
+            <label className="text-xs font-bold uppercase tracking-wider text-text-secondary mb-1.5 block">
+              Full Name <span className="text-semantic-critical">*</span>
             </label>
             <input
               type="text"
               value={formData.name}
               onChange={handleNameChange}
               placeholder="Enter full name"
-              className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 ${
+              className={`w-full px-4 py-2.5 bg-surface border rounded-xl text-sm text-text-primary focus:outline-none focus:ring-2 ${
                 errors.name
-                  ? 'border-red-300 focus:ring-red-200'
-                  : 'border-neutral-300 focus:ring-blue-200'
+                  ? 'border-semantic-critical focus:ring-semantic-critical/20'
+                  : 'border-border focus:ring-brand-primary'
               }`}
             />
-            {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
+            {errors.name && <p className="text-xs font-bold text-semantic-critical mt-1">{errors.name}</p>}
           </div>
 
           {/* Roles */}
           <div>
-            <label className="text-sm font-semibold text-neutral-700 mb-3 block">
-              Roles <span className="text-red-500">*</span>
+            <label className="text-xs font-bold uppercase tracking-wider text-text-secondary mb-2.5 block">
+              Roles <span className="text-semantic-critical">*</span>
             </label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {roleOptions.map(role => (
-                <label key={role} className="flex items-center gap-2 cursor-pointer">
+                <label key={role} className="flex items-center gap-2 cursor-pointer p-2.5 rounded-xl border border-border bg-surface hover:bg-surface-elevated transition-colors">
                   <input
                     type="checkbox"
                     checked={formData.roles.includes(role)}
                     onChange={() => handleRoleToggle(role)}
-                    className="w-4 h-4 accent-blue-600 cursor-pointer"
+                    className="w-4 h-4 accent-brand-primary cursor-pointer"
                   />
-                  <span className="text-sm text-neutral-700">{role}</span>
+                  <span className="text-sm font-bold text-text-primary">{role}</span>
                 </label>
               ))}
             </div>
-            {errors.roles && <p className="text-xs text-red-600 mt-1">{errors.roles}</p>}
+            {errors.roles && <p className="text-xs font-bold text-semantic-critical mt-1">{errors.roles}</p>}
           </div>
 
           {/* Contact Information */}
           <div className="space-y-3">
-            <label className="text-sm font-semibold text-neutral-700">Contact Information</label>
+            <label className="text-xs font-bold uppercase tracking-wider text-text-secondary">Contact Information</label>
             <input
               type="tel"
               value={formData.contact.phone || ''}
               onChange={(e) => handleContactChange('phone', e.target.value)}
               placeholder="Phone number"
-              className="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+              className="w-full px-4 py-2.5 bg-surface border border-border rounded-xl text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary"
             />
             <input
               type="email"
               value={formData.contact.email || ''}
               onChange={(e) => handleContactChange('email', e.target.value)}
               placeholder="Email address"
-              className="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+              className="w-full px-4 py-2.5 bg-surface border border-border rounded-xl text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary"
             />
             <input
               type="text"
               value={formData.contact.address || ''}
               onChange={(e) => handleContactChange('address', e.target.value)}
               placeholder="Address"
-              className="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+              className="w-full px-4 py-2.5 bg-surface border border-border rounded-xl text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary"
             />
           </div>
 
           {/* Identifiers */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <label className="text-sm font-semibold text-neutral-700">Identifiers (Optional)</label>
+              <label className="text-xs font-bold uppercase tracking-wider text-text-secondary">Identifiers (Optional)</label>
               <button
                 type="button"
                 onClick={handleAddIdentifier}
-                className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+                className="text-xs font-bold text-brand-primary hover:underline transition-colors"
               >
                 + Add Identifier
               </button>
@@ -2675,21 +2602,21 @@ function AddParticipantModal({
                     value={id.type}
                     onChange={(e) => handleIdentifierChange(idx, 'type', e.target.value)}
                     placeholder="Type (e.g., Aadhar, PAN, License)"
-                    className="flex-1 px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    className="flex-1 px-3 py-2 bg-surface border border-border rounded-xl text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary"
                   />
                   <input
                     type="text"
                     value={id.value}
                     onChange={(e) => handleIdentifierChange(idx, 'value', e.target.value)}
                     placeholder="Value"
-                    className="flex-1 px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    className="flex-1 px-3 py-2 bg-surface border border-border rounded-xl text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary"
                   />
                   <button
                     type="button"
                     onClick={() => handleRemoveIdentifier(idx)}
-                    className="px-2 py-2 text-red-600 hover:bg-red-50 rounded transition-colors"
+                    className="px-3 py-2 text-semantic-critical hover:bg-semantic-critical/10 rounded-xl transition-colors font-bold"
                   >
-                    🗑️
+                    ✕
                   </button>
                 </div>
               ))}
@@ -2698,54 +2625,54 @@ function AddParticipantModal({
 
           {/* Victim Profile */}
           {formData.roles.includes('Victim') && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
-              <label className="text-sm font-semibold text-green-800 block">Victim Profile Details</label>
+            <div className="bg-brand-primary/5 border border-brand-primary/20 rounded-2xl p-4 space-y-3">
+              <label className="text-xs font-bold uppercase tracking-wider text-brand-primary block">Victim Profile Details</label>
               <input
                 type="text"
                 value={formData.victimProfile?.injuryDetails || ''}
                 onChange={(e) => handleProfileChange('victimProfile', 'injuryDetails', e.target.value)}
                 placeholder="Injury details (optional)"
-                className="w-full px-4 py-2.5 border border-green-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
+                className="w-full px-4 py-2.5 bg-surface border border-border rounded-xl text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary"
               />
               <textarea
                 value={formData.victimProfile?.lossDetails || ''}
                 onChange={(e) => handleProfileChange('victimProfile', 'lossDetails', e.target.value)}
                 placeholder="Loss details (optional)"
                 rows={3}
-                className="w-full px-4 py-2.5 border border-green-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
+                className="w-full px-4 py-2.5 bg-surface border border-border rounded-xl text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary"
               />
             </div>
           )}
 
           {/* Complainant Profile */}
           {formData.roles.includes('Complainant') && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
-              <label className="text-sm font-semibold text-blue-800 block">Complainant Profile Details</label>
+            <div className="bg-brand-primary/5 border border-brand-primary/20 rounded-2xl p-4 space-y-3">
+              <label className="text-xs font-bold uppercase tracking-wider text-brand-primary block">Complainant Profile Details</label>
               <input
                 type="text"
                 value={formData.complainantProfile?.relationshipToIncident || ''}
                 onChange={(e) => handleProfileChange('complainantProfile', 'relationshipToIncident', e.target.value)}
                 placeholder="Relationship to incident (optional)"
-                className="w-full px-4 py-2.5 border border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                className="w-full px-4 py-2.5 bg-surface border border-border rounded-xl text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary"
               />
             </div>
           )}
 
-          <p className="text-xs text-neutral-400 italic">Statements and reasoning can be added from the participant detail view after creation.</p>
+          <p className="text-xs text-text-secondary italic">Statements and reasoning can be added from the participant detail view after creation.</p>
 
           {/* Actions */}
-          <div className="flex gap-3 pt-4 border-t border-neutral-100">
+          <div className="flex gap-3 pt-4 border-t border-border">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 border border-neutral-300 text-neutral-700 font-semibold rounded-lg hover:bg-neutral-50 transition-colors"
+              className="flex-1 px-4 py-2.5 border border-border text-text-primary font-bold rounded-xl hover:bg-surface-elevated transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-60 transition-colors"
+              className="flex-1 px-4 py-2.5 bg-brand-primary text-white font-bold rounded-xl hover:bg-brand-primary/90 disabled:opacity-50 transition-all shadow-xs"
             >
               {loading ? 'Adding...' : 'Add Participant'}
             </button>
@@ -2756,12 +2683,322 @@ function AddParticipantModal({
   );
 }
 
-// ─── Edit Participant Modal ────────────────────────────────────────────────
+// // ─── Edit Participant Modal ────────────────────────────────────────────────
+
+// function EditParticipantModal({
+//   isOpen,
+//   onClose,
+//   participant,
+//   caseId,
+//   onSuccess,
+// }: {
+//   isOpen: boolean;
+//   onClose: () => void;
+//   participant: any;
+//   caseId: string;
+//   onSuccess: () => void;
+// }) {
+//   const [formData, setFormData] = React.useState<ParticipantFormData>({
+//     name: '',
+//     roles: [],
+//     contact: {},
+//     identifiers: [],
+//   });
+//   const [loading, setLoading] = React.useState(false);
+//   const [errors, setErrors] = React.useState<Record<string, string>>({});
+
+//   const roleOptions = ['Victim', 'Witness', 'Suspect', 'Accused', 'Complainant'];
+
+//   React.useEffect(() => {
+//     if (participant) {
+//       setFormData({
+//         name: participant.name || '',
+//         roles: participant.roles || [],
+//         contact: participant.contact || {},
+//         identifiers: participant.identifiers || [],
+//         victimProfile: participant.victimProfile || {},
+//         witnessProfile: participant.witnessProfile || {},
+//         complainantProfile: participant.complainantProfile || {},
+//       });
+//     }
+//   }, [participant, isOpen]);
+
+//   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+//     setFormData({ ...formData, name: e.target.value });
+//     if (errors.name) setErrors({ ...errors, name: '' });
+//   };
+
+//   const handleRoleToggle = (role: string) => {
+//     setFormData({
+//       ...formData,
+//       roles: formData.roles.includes(role)
+//         ? formData.roles.filter(r => r !== role)
+//         : [...formData.roles, role],
+//     });
+//   };
+
+//   const handleContactChange = (field: string, value: string) => {
+//     setFormData({
+//       ...formData,
+//       contact: { ...formData.contact, [field]: value || undefined },
+//     });
+//   };
+
+//   const handleProfileChange = (profileType: string, field: string, value: string) => {
+//     setFormData({
+//       ...formData,
+//       [profileType]: { ...(formData[profileType] || {}), [field]: value || undefined },
+//     });
+//   };
+
+//   const handleAddIdentifier = () => {
+//     setFormData({
+//       ...formData,
+//       identifiers: [...formData.identifiers, { type: '', value: '' }],
+//     });
+//   };
+
+//   const handleIdentifierChange = (index: number, field: string, value: string) => {
+//     const newIdentifiers = [...formData.identifiers];
+//     newIdentifiers[index] = { ...newIdentifiers[index], [field]: value };
+//     setFormData({ ...formData, identifiers: newIdentifiers });
+//   };
+
+//   const handleRemoveIdentifier = (index: number) => {
+//     setFormData({
+//       ...formData,
+//       identifiers: formData.identifiers.filter((_, i) => i !== index),
+//     });
+//   };
+
+//   const validateForm = () => {
+//     const newErrors: Record<string, string> = {};
+//     if (!formData.name.trim()) newErrors.name = 'Name is required';
+//     if (formData.roles.length === 0) newErrors.roles = 'Select at least one role';
+//     setErrors(newErrors);
+//     return Object.keys(newErrors).length === 0;
+//   };
+
+//   const handleSubmit = async (e: React.FormEvent) => {
+//     e.preventDefault();
+//     if (!validateForm()) return;
+
+//     setLoading(true);
+//     try {
+//       const payload: any = {
+//         name: formData.name.trim(),
+//         roles: formData.roles,
+//         contact: formData.contact,
+//         identifiers: formData.identifiers.filter(id => id.type && id.value),
+//       };
+
+//       // Add role-specific profile data
+//       if (formData.roles.includes('Victim') && (formData.victimProfile?.injuryDetails || formData.victimProfile?.lossDetails)) {
+//         payload.victimProfile = formData.victimProfile;
+//       }
+//       if (formData.roles.includes('Complainant') && formData.complainantProfile?.relationshipToIncident) {
+//         payload.complainantProfile = formData.complainantProfile;
+//       }
+
+//       await apiClient.patch(`/cases/${caseId}/participants/${participant.participant_id}`, payload);
+//       onSuccess();
+//     } catch (err: any) {
+//       alert(err.response?.data?.message || 'Failed to update participant');
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   if (!isOpen) return null;
+
+//   return (
+//     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={onClose}>
+//       <div
+//         className="bg-neutral-900/50 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+//         onClick={(e) => e.stopPropagation()}
+//       >
+//         {/* Header */}
+//         <div className="sticky top-0 flex items-center justify-between p-6 border-b border-neutral-100 bg-neutral-900/50">
+//           <h2 className="text-xl font-bold text-white">Edit Participant</h2>
+//           <button onClick={onClose} className="p-1 text-neutral-400 hover:text-text-secondary transition-colors text-2xl leading-none">×</button>
+//         </div>
+
+//         <form onSubmit={handleSubmit} className="p-6 space-y-5">
+//           {/* Name */}
+//           <div>
+//             <label className="text-sm font-semibold text-text-secondary mb-2 block">
+//               Full Name <span className="text-red-500">*</span>
+//             </label>
+//             <input
+//               type="text"
+//               value={formData.name}
+//               onChange={handleNameChange}
+//               placeholder="Enter full name"
+//               className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 ${
+//                 errors.name
+//                   ? 'border-red-300 focus:ring-red-200'
+//                   : 'border-neutral-700 focus:ring-blue-200'
+//               }`}
+//             />
+//             {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
+//           </div>
+
+//           {/* Roles */}
+//           <div>
+//             <label className="text-sm font-semibold text-text-secondary mb-3 block">
+//               Roles <span className="text-red-500">*</span>
+//             </label>
+//             <div className="grid grid-cols-2 gap-3">
+//               {roleOptions.map(role => (
+//                 <label key={role} className="flex items-center gap-2 cursor-pointer">
+//                   <input
+//                     type="checkbox"
+//                     checked={formData.roles.includes(role)}
+//                     onChange={() => handleRoleToggle(role)}
+//                     className="w-4 h-4 accent-blue-600 cursor-pointer"
+//                   />
+//                   <span className="text-sm text-text-secondary">{role}</span>
+//                 </label>
+//               ))}
+//             </div>
+//             {errors.roles && <p className="text-xs text-red-500 mt-1">{errors.roles}</p>}
+//           </div>
+
+//           {/* Contact Information */}
+//           <div className="space-y-3">
+//             <label className="text-sm font-semibold text-text-secondary">Contact Information</label>
+//             <input
+//               type="tel"
+//               value={formData.contact.phone || ''}
+//               onChange={(e) => handleContactChange('phone', e.target.value)}
+//               placeholder="Phone number"
+//               className="w-full px-4 py-2.5 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+//             />
+//             <input
+//               type="email"
+//               value={formData.contact.email || ''}
+//               onChange={(e) => handleContactChange('email', e.target.value)}
+//               placeholder="Email address"
+//               className="w-full px-4 py-2.5 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+//             />
+//             <input
+//               type="text"
+//               value={formData.contact.address || ''}
+//               onChange={(e) => handleContactChange('address', e.target.value)}
+//               placeholder="Address"
+//               className="w-full px-4 py-2.5 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+//             />
+//           </div>
+
+//           {/* Identifiers */}
+//           <div>
+//             <div className="flex items-center justify-between mb-3">
+//               <label className="text-sm font-semibold text-text-secondary">Identifiers (Optional)</label>
+//               <button
+//                 type="button"
+//                 onClick={handleAddIdentifier}
+//                 className="text-xs font-semibold text-blue-500 hover:text-blue-400 transition-colors"
+//               >
+//                 + Add Identifier
+//               </button>
+//             </div>
+//             <div className="space-y-2">
+//               {formData.identifiers.map((id, idx) => (
+//                 <div key={idx} className="flex gap-2">
+//                   <input
+//                     type="text"
+//                     value={id.type}
+//                     onChange={(e) => handleIdentifierChange(idx, 'type', e.target.value)}
+//                     placeholder="Type (e.g., Aadhar, PAN, License)"
+//                     className="flex-1 px-3 py-2 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+//                   />
+//                   <input
+//                     type="text"
+//                     value={id.value}
+//                     onChange={(e) => handleIdentifierChange(idx, 'value', e.target.value)}
+//                     placeholder="Value"
+//                     className="flex-1 px-3 py-2 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+//                   />
+//                   <button
+//                     type="button"
+//                     onClick={() => handleRemoveIdentifier(idx)}
+//                     className="px-2 py-2 text-red-500 hover:bg-red-900/20 rounded transition-colors"
+//                   >
+//                     🗑️
+//                   </button>
+//                 </div>
+//               ))}
+//             </div>
+//           </div>
+
+//           {/* Victim Profile */}
+//           {formData.roles.includes('Victim') && (
+//             <div className="bg-green-900/20 border border-green-800/50 rounded-lg p-4 space-y-3">
+//               <label className="text-sm font-semibold text-green-800 block">Victim Profile Details</label>
+//               <input
+//                 type="text"
+//                 value={formData.victimProfile?.injuryDetails || ''}
+//                 onChange={(e) => handleProfileChange('victimProfile', 'injuryDetails', e.target.value)}
+//                 placeholder="Injury details (optional)"
+//                 className="w-full px-4 py-2.5 border border-green-800/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
+//               />
+//               <textarea
+//                 value={formData.victimProfile?.lossDetails || ''}
+//                 onChange={(e) => handleProfileChange('victimProfile', 'lossDetails', e.target.value)}
+//                 placeholder="Loss details (optional)"
+//                 rows={3}
+//                 className="w-full px-4 py-2.5 border border-green-800/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
+//               />
+//             </div>
+//           )}
+
+//           {/* Complainant Profile */}
+//           {formData.roles.includes('Complainant') && (
+//             <div className="bg-blue-900/20 border border-blue-800/50 rounded-lg p-4 space-y-3">
+//               <label className="text-sm font-semibold text-blue-800 block">Complainant Profile Details</label>
+//               <input
+//                 type="text"
+//                 value={formData.complainantProfile?.relationshipToIncident || ''}
+//                 onChange={(e) => handleProfileChange('complainantProfile', 'relationshipToIncident', e.target.value)}
+//                 placeholder="Relationship to incident (optional)"
+//                 className="w-full px-4 py-2.5 border border-blue-800/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+//               />
+//             </div>
+//           )}
+
+//           <p className="text-xs text-neutral-400 italic">Statements and reasoning are managed from the participant detail view.</p>
+
+//           {/* Actions */}
+//           <div className="flex gap-3 pt-4 border-t border-neutral-100">
+//             <button
+//               type="button"
+//               onClick={onClose}
+//               className="flex-1 px-4 py-2.5 border border-neutral-700 text-text-secondary font-semibold rounded-lg hover:bg-neutral-900/50 transition-colors"
+//             >
+//               Cancel
+//             </button>
+//             <button
+//               type="submit"
+//               disabled={loading}
+//               className="flex-1 px-4 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-60 transition-colors"
+//             >
+//               {loading ? 'Updating...' : 'Update Participant'}
+//             </button>
+//           </div>
+//         </form>
+//       </div>
+//     </div>
+//   );
+// }
+
+
+
+// ─── Edit / View Participant Modal (combined) ─────────────────────────────────
 
 function EditParticipantModal({
   isOpen,
   onClose,
-  participant,
+  participant: initialParticipant,
   caseId,
   onSuccess,
 }: {
@@ -2769,94 +3006,142 @@ function EditParticipantModal({
   onClose: () => void;
   participant: any;
   caseId: string;
-  onSuccess: () => void;
+  onSuccess: (updated?: any) => void;
 }) {
-  const [formData, setFormData] = React.useState<ParticipantFormData>({
-    name: '',
-    roles: [],
-    contact: {},
-    identifiers: [],
-  });
-  const [loading, setLoading] = React.useState(false);
-  const [errors, setErrors] = React.useState<Record<string, string>>({});
+  // ── Local participant state — updated optimistically on every mutation ────
+  const [p, setP] = React.useState<any>(initialParticipant);
+  React.useEffect(() => { setP(initialParticipant); }, [initialParticipant, isOpen]);
+
+  // ── Edit form state ──────────────────────────────────────────────────────
+  const [formData, setFormData] = React.useState<ParticipantFormData>({ name: '', roles: [], contact: {}, identifiers: [] });
+  const [formLoading, setFormLoading] = React.useState(false);
+  const [formErrors, setFormErrors] = React.useState<Record<string, string>>({});
+
+  React.useEffect(() => {
+    if (initialParticipant) {
+      setFormData({
+        name: initialParticipant.name || '',
+        roles: initialParticipant.roles || [],
+        contact: initialParticipant.contact || {},
+        identifiers: (initialParticipant.identifiers || []).map((id: any) => ({ ...id })),
+        victimProfile: initialParticipant.victimProfile || {},
+        complainantProfile: initialParticipant.complainantProfile || {},
+        suspectProfile: initialParticipant.suspectProfile || {},
+      });
+    }
+  }, [initialParticipant, isOpen]);
+
+  // ── Statement state ──────────────────────────────────────────────────────
+  const [stmtContent, setStmtContent] = React.useState('');
+  const [stmtDate, setStmtDate] = React.useState(() => new Date().toISOString().slice(0, 16));
+  const [stmtLoading, setStmtLoading] = React.useState(false);
+  const [transcribing, setTranscribing] = React.useState(false);
+  const [transcribeError, setTranscribeError] = React.useState<string | null>(null);
+  const audioInputRef = React.useRef<HTMLInputElement>(null);
+
+  // ── Reasoning state ──────────────────────────────────────────────────────
+  const [reasoningContent, setReasoningContent] = React.useState('');
+  const [reasoningLoading, setReasoningLoading] = React.useState(false);
+  const [editingReasoningId, setEditingReasoningId] = React.useState<string | null>(null);
+  const [editingReasoningContent, setEditingReasoningContent] = React.useState('');
+
+  // ── Identifier upload state ───────────────────────────────────────────────
+  const [identifierUploading, setIdentifierUploading] = React.useState<number | null>(null);
+  const [viewingDocUrl, setViewingDocUrl] = React.useState<string | null>(null);
+  const identifierFileRefs = React.useRef<(HTMLInputElement | null)[]>([]);
 
   const roleOptions = ['Victim', 'Witness', 'Suspect', 'Accused', 'Complainant'];
 
-  React.useEffect(() => {
-    if (participant) {
-      setFormData({
-        name: participant.name || '',
-        roles: participant.roles || [],
-        contact: participant.contact || {},
-        identifiers: participant.identifiers || [],
-        victimProfile: participant.victimProfile || {},
-        witnessProfile: participant.witnessProfile || {},
-        complainantProfile: participant.complainantProfile || {},
-      });
+  const roleBadgeColor = (role: string) => {
+    switch (role) {
+      case 'Accused': return 'bg-red-50 text-red-700 border-red-200';
+      case 'Suspect': return 'bg-orange-50 text-orange-700 border-orange-200';
+      case 'Victim': return 'bg-green-50 text-green-700 border-green-200';
+      case 'Witness': return 'bg-purple-50 text-purple-700 border-purple-200';
+      case 'Complainant': return 'bg-blue-50 text-blue-700 border-blue-200';
+      default: return 'bg-neutral-50 text-neutral-700 border-neutral-200';
     }
-  }, [participant, isOpen]);
-
-  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, name: e.target.value });
-    if (errors.name) setErrors({ ...errors, name: '' });
   };
 
+  // Helper — after any mutation, get fresh participant from API and update local state instantly
+  const refreshParticipant = React.useCallback(async () => {
+    try {
+      const res = await apiClient.get(`/cases/${caseId}/participants`);
+      const list: any[] = res.data.data || [];
+      const fresh = list.find((x) => x.participant_id === p?.participant_id);
+      if (fresh) { setP(fresh); onSuccess(fresh); }
+    } catch { /* silently ignore */ }
+  }, [caseId, p?.participant_id, onSuccess]);
+
+  // ── Form handlers ────────────────────────────────────────────────────────
   const handleRoleToggle = (role: string) => {
-    setFormData({
-      ...formData,
-      roles: formData.roles.includes(role)
-        ? formData.roles.filter(r => r !== role)
-        : [...formData.roles, role],
-    });
+    setFormData((prev) => ({ ...prev, roles: prev.roles.includes(role) ? prev.roles.filter(r => r !== role) : [...prev.roles, role] }));
   };
-
   const handleContactChange = (field: string, value: string) => {
-    setFormData({
-      ...formData,
-      contact: { ...formData.contact, [field]: value || undefined },
-    });
+    setFormData((prev) => ({ ...prev, contact: { ...prev.contact, [field]: value || undefined } }));
   };
-
   const handleProfileChange = (profileType: string, field: string, value: string) => {
-    setFormData({
-      ...formData,
-      [profileType]: { ...(formData[profileType] || {}), [field]: value || undefined },
-    });
+    setFormData((prev) => ({ ...prev, [profileType]: { ...(prev[profileType] || {}), [field]: value || undefined } }));
   };
-
   const handleAddIdentifier = () => {
-    setFormData({
-      ...formData,
-      identifiers: [...formData.identifiers, { type: '', value: '' }],
+    setFormData((prev) => ({ ...prev, identifiers: [...prev.identifiers, { type: '', value: '' }] }));
+  };
+  const handleIdentifierChange = (idx: number, field: string, value: string) => {
+    setFormData((prev) => {
+      const ids = [...prev.identifiers];
+      ids[idx] = { ...ids[idx], [field]: value };
+      return { ...prev, identifiers: ids };
     });
   };
-
-  const handleIdentifierChange = (index: number, field: string, value: string) => {
-    const newIdentifiers = [...formData.identifiers];
-    newIdentifiers[index] = { ...newIdentifiers[index], [field]: value };
-    setFormData({ ...formData, identifiers: newIdentifiers });
+  const handleRemoveIdentifier = (idx: number) => {
+    setFormData((prev) => ({ ...prev, identifiers: prev.identifiers.filter((_, i) => i !== idx) }));
   };
 
-  const handleRemoveIdentifier = (index: number) => {
-    setFormData({
-      ...formData,
-      identifiers: formData.identifiers.filter((_, i) => i !== index),
-    });
+  // ── Identifier file upload ────────────────────────────────────────────────
+  const handleIdentifierFileChange = async (idx: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    setIdentifierUploading(idx);
+    try {
+      // 1. Get signed upload params
+      const sigRes = await apiClient.post(`/cases/${caseId}/participants/${p.participant_id}/identifiers/upload-signature`);
+      const { signature, timestamp, apiKey, cloudName, folder, publicId } = sigRes.data.data;
+      // 2. Upload directly to Cloudinary
+      const form = new FormData();
+      form.append('file', file);
+      form.append('api_key', apiKey);
+      form.append('timestamp', String(timestamp));
+      form.append('signature', signature);
+      form.append('folder', folder);
+      form.append('public_id', publicId);
+      const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, { method: 'POST', body: form });
+      if (!uploadRes.ok) throw new Error('Cloudinary upload failed');
+      const uploadData = await uploadRes.json();
+      const secureUrl: string = uploadData.secure_url;
+      // 3. Save fileUrl into identifier row (optimistic)
+      setFormData((prev) => {
+        const ids = [...prev.identifiers];
+        ids[idx] = { ...ids[idx], fileUrl: secureUrl } as any;
+        return { ...prev, identifiers: ids };
+      });
+    } catch (err: any) {
+      alert(err.message || 'Upload failed');
+    } finally {
+      setIdentifierUploading(null);
+    }
   };
 
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-    if (!formData.name.trim()) newErrors.name = 'Name is required';
-    if (formData.roles.length === 0) newErrors.roles = 'Select at least one role';
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  // ── Form submit ──────────────────────────────────────────────────────────
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    const errs: Record<string, string> = {};
+    if (!formData.name.trim()) errs.name = 'Name is required';
+    if (formData.roles.length === 0) errs.roles = 'Select at least one role';
+    setFormErrors(errs);
+    if (Object.keys(errs).length > 0) return;
 
-    setLoading(true);
+    setFormLoading(true);
     try {
       const payload: any = {
         name: formData.name.trim(),
@@ -2864,203 +3149,410 @@ function EditParticipantModal({
         contact: formData.contact,
         identifiers: formData.identifiers.filter(id => id.type && id.value),
       };
-
-      // Add role-specific profile data
       if (formData.roles.includes('Victim') && (formData.victimProfile?.injuryDetails || formData.victimProfile?.lossDetails)) {
         payload.victimProfile = formData.victimProfile;
       }
       if (formData.roles.includes('Complainant') && formData.complainantProfile?.relationshipToIncident) {
         payload.complainantProfile = formData.complainantProfile;
       }
-
-      await apiClient.patch(`/cases/${caseId}/participants/${participant.participant_id}`, payload);
-      onSuccess();
+      const res = await apiClient.patch(`/cases/${caseId}/participants/${p.participant_id}`, payload);
+      const updated = res.data.data;
+      setP(updated);
+      onSuccess(updated);
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to update participant');
     } finally {
-      setLoading(false);
+      setFormLoading(false);
     }
   };
 
-  if (!isOpen) return null;
+  // ── Statement handlers ─────────────────────────────────────────────────
+  const handleAddStatement = async () => {
+    if (!stmtContent.trim() || !stmtDate) return;
+    setStmtLoading(true);
+    try {
+      const res = await apiClient.post(`/cases/${caseId}/participants/${p.participant_id}/statements`, {
+        content: stmtContent.trim(),
+        recordedAt: new Date(stmtDate).toISOString(),
+      });
+      setStmtContent('');
+      setStmtDate(new Date().toISOString().slice(0, 16));
+      const updated = res.data.data;
+      setP(updated);
+      onSuccess(updated);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to add statement');
+    } finally {
+      setStmtLoading(false);
+    }
+  };
+
+  const handleDeleteStatement = async (statementId: string) => {
+    if (!confirm('Delete this statement?')) return;
+    try {
+      const res = await apiClient.delete(`/cases/${caseId}/participants/${p.participant_id}/statements/${statementId}`);
+      const updated = res.data.data;
+      setP(updated);
+      onSuccess(updated);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to delete statement');
+    }
+  };
+
+  const handleAudioFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    setTranscribing(true);
+    setTranscribeError(null);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await apiClient.post(`/cases/${caseId}/participants/${p.participant_id}/statements/transcribe`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const { transcript } = res.data.data;
+      setStmtContent((prev) => prev.trim() ? `${prev.trim()}\n\n${transcript}` : transcript);
+    } catch (err: any) {
+      setTranscribeError(err.response?.data?.message || 'Transcription failed.');
+    } finally {
+      setTranscribing(false);
+    }
+  };
+
+  // ── Reasoning handlers ─────────────────────────────────────────────────
+  const handleAddReasoning = async () => {
+    if (!reasoningContent.trim()) return;
+    setReasoningLoading(true);
+    try {
+      const res = await apiClient.post(`/cases/${caseId}/participants/${p.participant_id}/reasoning`, {
+        content: reasoningContent.trim(),
+        source: 'officer',
+      });
+      setReasoningContent('');
+      const updated = res.data.data;
+      setP(updated);
+      onSuccess(updated);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to add reasoning');
+    } finally {
+      setReasoningLoading(false);
+    }
+  };
+
+  const handleUpdateReasoning = async (reasoningId: string) => {
+    if (!editingReasoningContent.trim()) return;
+    setReasoningLoading(true);
+    try {
+      const res = await apiClient.patch(`/cases/${caseId}/participants/${p.participant_id}/reasoning/${reasoningId}`, {
+        content: editingReasoningContent.trim(),
+      });
+      setEditingReasoningId(null);
+      setEditingReasoningContent('');
+      const updated = res.data.data;
+      setP(updated);
+      onSuccess(updated);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to update reasoning');
+    } finally {
+      setReasoningLoading(false);
+    }
+  };
+
+  const handleDeleteReasoning = async (reasoningId: string) => {
+    if (!confirm('Delete this reasoning entry?')) return;
+    try {
+      const res = await apiClient.delete(`/cases/${caseId}/participants/${p.participant_id}/reasoning/${reasoningId}`);
+      const updated = res.data.data;
+      setP(updated);
+      onSuccess(updated);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to delete reasoning');
+    }
+  };
+
+  const appliedSections: any[] = p?.suspectProfile?.appliedSections || [];
+
+  if (!isOpen || !p) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={onClose}>
-      <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="bg-neutral-900/50 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+
         {/* Header */}
-        <div className="sticky top-0 flex items-center justify-between p-6 border-b border-neutral-100 bg-white">
-          <h2 className="text-xl font-bold text-neutral-900">Edit Participant</h2>
-          <button onClick={onClose} className="p-1 text-neutral-400 hover:text-neutral-700 transition-colors text-2xl leading-none">×</button>
+        <div className="sticky top-0 flex items-start justify-between p-6 border-b border-neutral-700 bg-neutral-900/50 z-10">
+          <div>
+            <h2 className="text-xl font-bold text-white">{p.name}</h2>
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {(p.roles || []).map((role: string) => (
+                <span key={role} className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${roleBadgeColor(role)}`}>{role}</span>
+              ))}
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1 text-neutral-400 hover:text-text-secondary transition-colors text-2xl leading-none">×</button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {/* Name */}
-          <div>
-            <label className="text-sm font-semibold text-neutral-700 mb-2 block">
-              Full Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={handleNameChange}
-              placeholder="Enter full name"
-              className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 ${
-                errors.name
-                  ? 'border-red-300 focus:ring-red-200'
-                  : 'border-neutral-300 focus:ring-blue-200'
-              }`}
-            />
-            {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
-          </div>
+        <div className="p-6 space-y-8">
 
-          {/* Roles */}
-          <div>
-            <label className="text-sm font-semibold text-neutral-700 mb-3 block">
-              Roles <span className="text-red-500">*</span>
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              {roleOptions.map(role => (
-                <label key={role} className="flex items-center gap-2 cursor-pointer">
+          {/* Edit Form */}
+          <form onSubmit={handleFormSubmit} className="space-y-5">
+            <h3 className="text-base font-bold text-text-secondary border-b border-neutral-700 pb-2">Edit Participant Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Name */}
+              <div>
+                <label className="text-sm font-semibold text-text-secondary mb-2 block">Full Name <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Enter full name"
+                  className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 ${formErrors.name ? 'border-red-300 focus:ring-red-200' : 'border-neutral-700 focus:ring-blue-200'}`}
+                />
+                {formErrors.name && <p className="text-xs text-red-500 mt-1">{formErrors.name}</p>}
+              </div>
+              {/* Contact */}
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-text-secondary">Contact</label>
+                <input type="tel" value={formData.contact.phone || ''} onChange={(e) => handleContactChange('phone', e.target.value)} placeholder="Phone" className="w-full px-3 py-2 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
+                <input type="email" value={formData.contact.email || ''} onChange={(e) => handleContactChange('email', e.target.value)} placeholder="Email" className="w-full px-3 py-2 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
+                <input type="text" value={formData.contact.address || ''} onChange={(e) => handleContactChange('address', e.target.value)} placeholder="Address" className="w-full px-3 py-2 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
+              </div>
+            </div>
+
+            {/* Roles */}
+            <div className="col-span-full">
+              <label className="text-sm font-semibold text-text-secondary mb-3 block">
+                Roles <span className="text-red-500">*</span>
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                {['Victim', 'Witness', 'Suspect', 'Complainant'].map(role => (
+                  <label key={role} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.roles.includes(role)}
+                      onChange={() => handleRoleToggle(role)}
+                      className="w-4 h-4 accent-blue-600 cursor-pointer"
+                    />
+                    <span className="text-sm text-text-secondary">{role}</span>
+                  </label>
+                ))}
+              </div>
+              {formErrors.roles && <p className="text-xs text-red-500 mt-1">{formErrors.roles}</p>}
+            </div>
+
+            {/* Identifiers */}
+            <div className="col-span-full">
+              <div className="flex items-center justify-between mb-3">
+                <label className="text-sm font-semibold text-text-secondary">Identifiers (Optional)</label>
+                <button type="button" onClick={handleAddIdentifier} className="text-xs font-semibold text-blue-500 hover:text-blue-400 transition-colors">
+                  + Add Identifier
+                </button>
+              </div>
+              <div className="space-y-3">
+                {formData.identifiers.map((id, idx) => (
+                  <div key={idx} className="flex gap-2 items-start">
+                    <input
+                      type="text"
+                      value={id.type}
+                      onChange={(e) => handleIdentifierChange(idx, 'type', e.target.value)}
+                      placeholder="Type (e.g., Aadhar, PAN, License)"
+                      className="flex-1 px-3 py-2 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    />
+                    <input
+                      type="text"
+                      value={id.value}
+                      onChange={(e) => handleIdentifierChange(idx, 'value', e.target.value)}
+                      placeholder="Value"
+                      className="flex-1 px-3 py-2 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    />
+                    <div className="flex gap-1">
+                      {identifierUploading === idx ? (
+                        <span className="px-2 py-2 text-blue-400"><Loader2 size={16} className="animate-spin" /></span>
+                      ) : (
+                        <label className="px-2 py-2 text-blue-400 hover:bg-blue-900/20 rounded transition-colors cursor-pointer" title="Attach document">
+                          📎
+                          <input
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png,.mp3,.wav,.mp4,.mov"
+                            onChange={(e) => handleIdentifierFileChange(idx, e)}
+                            className="hidden"
+                          />
+                        </label>
+                      )}
+                      {(id as any).fileUrl && (
+                        <button
+                          type="button"
+                          onClick={() => window.open((id as any).fileUrl, '_blank')}
+                          className="px-2 py-2 text-green-400 hover:bg-green-900/20 rounded transition-colors"
+                          title="View uploaded document"
+                        >
+                          👁️
+                        </button>
+                      )}
+                      <button type="button" onClick={() => handleRemoveIdentifier(idx)} className="px-2 py-2 text-red-500 hover:bg-red-900/20 rounded transition-colors">
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Role-specific profiles */}
+            {formData.roles.includes('Victim') && (
+              <div className="bg-green-900/20 border border-green-800/50 rounded-lg p-4 space-y-3">
+                <label className="text-sm font-semibold text-green-800 block">Victim Profile Details</label>
+                <input type="text" value={formData.victimProfile?.injuryDetails || ''} onChange={(e) => handleProfileChange('victimProfile', 'injuryDetails', e.target.value)} placeholder="Injury details (optional)" className="w-full px-4 py-2.5 border border-green-800/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-200" />
+                <textarea value={formData.victimProfile?.lossDetails || ''} onChange={(e) => handleProfileChange('victimProfile', 'lossDetails', e.target.value)} placeholder="Loss details (optional)" rows={3} className="w-full px-4 py-2.5 border border-green-800/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-200" />
+              </div>
+            )}
+            {formData.roles.includes('Complainant') && (
+              <div className="bg-blue-900/20 border border-blue-800/50 rounded-lg p-4 space-y-3">
+                <label className="text-sm font-semibold text-blue-800 block">Complainant Profile Details</label>
+                <input type="text" value={formData.complainantProfile?.relationshipToIncident || ''} onChange={(e) => handleProfileChange('complainantProfile', 'relationshipToIncident', e.target.value)} placeholder="Relationship to incident (optional)" className="w-full px-4 py-2.5 border border-blue-800/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
+              </div>
+            )}
+            {formData.roles.includes('Suspect') && (
+              <div className="bg-orange-900/20 border border-orange-800/50 rounded-lg p-4 space-y-3">
+                <label className="text-sm font-semibold text-orange-800 block">Suspect Profile Details</label>
+                <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={formData.roles.includes(role)}
-                    onChange={() => handleRoleToggle(role)}
-                    className="w-4 h-4 accent-blue-600 cursor-pointer"
+                    checked={(formData as any).suspectProfile?.isAccused || false}
+                    onChange={(e) => handleProfileChange('suspectProfile', 'isAccused', String(e.target.checked))}
+                    className="w-4 h-4 accent-orange-600 cursor-pointer"
                   />
-                  <span className="text-sm text-neutral-700">{role}</span>
+                  <span className="text-sm text-orange-700">Mark as Accused</span>
                 </label>
-              ))}
-            </div>
-            {errors.roles && <p className="text-xs text-red-600 mt-1">{errors.roles}</p>}
-          </div>
+              </div>
+            )}
 
-          {/* Contact Information */}
-          <div className="space-y-3">
-            <label className="text-sm font-semibold text-neutral-700">Contact Information</label>
-            <input
-              type="tel"
-              value={formData.contact.phone || ''}
-              onChange={(e) => handleContactChange('phone', e.target.value)}
-              placeholder="Phone number"
-              className="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
-            />
-            <input
-              type="email"
-              value={formData.contact.email || ''}
-              onChange={(e) => handleContactChange('email', e.target.value)}
-              placeholder="Email address"
-              className="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
-            />
-            <input
-              type="text"
-              value={formData.contact.address || ''}
-              onChange={(e) => handleContactChange('address', e.target.value)}
-              placeholder="Address"
-              className="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
-            />
-          </div>
-
-          {/* Identifiers */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <label className="text-sm font-semibold text-neutral-700">Identifiers (Optional)</label>
-              <button
-                type="button"
-                onClick={handleAddIdentifier}
-                className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
-              >
-                + Add Identifier
+            {/* Form Actions */}
+            <div className="flex gap-3 pt-4 border-t border-neutral-700">
+              <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-neutral-700 text-text-secondary font-semibold rounded-lg hover:bg-neutral-900/50 transition-colors">
+                Cancel
+              </button>
+              <button type="submit" disabled={formLoading} className="flex-1 px-4 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-60 transition-colors">
+                {formLoading ? 'Updating...' : 'Update Participant'}
               </button>
             </div>
-            <div className="space-y-2">
-              {formData.identifiers.map((id, idx) => (
-                <div key={idx} className="flex gap-2">
-                  <input
-                    type="text"
-                    value={id.type}
-                    onChange={(e) => handleIdentifierChange(idx, 'type', e.target.value)}
-                    placeholder="Type (e.g., Aadhar, PAN, License)"
-                    className="flex-1 px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
-                  />
-                  <input
-                    type="text"
-                    value={id.value}
-                    onChange={(e) => handleIdentifierChange(idx, 'value', e.target.value)}
-                    placeholder="Value"
-                    className="flex-1 px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveIdentifier(idx)}
-                    className="px-2 py-2 text-red-600 hover:bg-red-50 rounded transition-colors"
-                  >
-                    🗑️
-                  </button>
+          </form>
+
+          {/* Statements Section */}
+          <div className="space-y-4">
+            <h3 className="text-base font-bold text-text-secondary border-b border-neutral-700 pb-2">Statements</h3>
+            {/* Add Statement Form */}
+            <div className="bg-neutral-900/30 border border-neutral-700 rounded-lg p-4 space-y-3">
+              <div className="flex items-center gap-3 mb-3">
+                <label className="text-sm font-semibold text-text-secondary">Add New Statement</label>
+                <label className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg cursor-pointer hover:bg-blue-700 transition-colors">
+                  🎤 Upload Audio
+                  <input type="file" accept=".mp3,.wav,.m4a,.ogg" onChange={handleAudioFileChange} className="hidden" />
+                </label>
+              </div>
+              {transcribing && (
+                <div className="flex items-center gap-2 text-sm text-blue-400">
+                  <Loader2 size={16} className="animate-spin" /> Transcribing audio...
+                </div>
+              )}
+              {transcribeError && (
+                <div className="text-sm text-amber-400 bg-amber-900/20 border border-amber-700/50 rounded-lg p-2">{transcribeError}</div>
+              )}
+              <textarea value={stmtContent} onChange={(e) => setStmtContent(e.target.value)} placeholder="Enter statement content..." rows={4} className="w-full px-4 py-2.5 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none" />
+              <div className="flex items-center gap-3">
+                <input type="datetime-local" value={stmtDate} onChange={(e) => setStmtDate(e.target.value)} className="px-3 py-2 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
+                <button onClick={handleAddStatement} disabled={!stmtContent.trim() || !stmtDate || stmtLoading} className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                  {stmtLoading ? 'Adding...' : 'Add Statement'}
+                </button>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {(p.statements || []).map((stmt: any) => (
+                <div key={stmt.id} className="bg-neutral-900/30 border border-neutral-700 rounded-lg p-4">
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <p className="text-xs text-neutral-400 font-medium">{new Date(stmt.recordedAt).toLocaleString()}</p>
+                    <button onClick={() => handleDeleteStatement(stmt.id)} className="text-red-500 hover:text-red-400 text-sm">🗑️</button>
+                  </div>
+                  <p className="text-sm text-text-secondary leading-relaxed">{stmt.content}</p>
                 </div>
               ))}
+              {(!p.statements || p.statements.length === 0) && (
+                <div className="text-center py-8 text-neutral-500">
+                  <Users size={32} className="mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No statements recorded yet</p>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Victim Profile */}
-          {formData.roles.includes('Victim') && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
-              <label className="text-sm font-semibold text-green-800 block">Victim Profile Details</label>
-              <input
-                type="text"
-                value={formData.victimProfile?.injuryDetails || ''}
-                onChange={(e) => handleProfileChange('victimProfile', 'injuryDetails', e.target.value)}
-                placeholder="Injury details (optional)"
-                className="w-full px-4 py-2.5 border border-green-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
-              />
-              <textarea
-                value={formData.victimProfile?.lossDetails || ''}
-                onChange={(e) => handleProfileChange('victimProfile', 'lossDetails', e.target.value)}
-                placeholder="Loss details (optional)"
-                rows={3}
-                className="w-full px-4 py-2.5 border border-green-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
-              />
+          {/* Reasoning Section */}
+          <div className="space-y-4">
+            <h3 className="text-base font-bold text-text-secondary border-b border-neutral-700 pb-2">Investigation Reasoning</h3>
+            <div className="bg-neutral-900/30 border border-neutral-700 rounded-lg p-4 space-y-3">
+              <label className="text-sm font-semibold text-text-secondary">Add Investigation Notes</label>
+              <textarea value={reasoningContent} onChange={(e) => setReasoningContent(e.target.value)} placeholder="Enter investigation reasoning or notes..." rows={3} className="w-full px-4 py-2.5 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none" />
+              <button onClick={handleAddReasoning} disabled={!reasoningContent.trim() || reasoningLoading} className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                {reasoningLoading ? 'Adding...' : 'Add Reasoning'}
+              </button>
             </div>
-          )}
-
-          {/* Complainant Profile */}
-          {formData.roles.includes('Complainant') && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
-              <label className="text-sm font-semibold text-blue-800 block">Complainant Profile Details</label>
-              <input
-                type="text"
-                value={formData.complainantProfile?.relationshipToIncident || ''}
-                onChange={(e) => handleProfileChange('complainantProfile', 'relationshipToIncident', e.target.value)}
-                placeholder="Relationship to incident (optional)"
-                className="w-full px-4 py-2.5 border border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
-              />
+            <div className="space-y-3">
+              {(p.reasoning || []).map((reason: any) => (
+                <div key={reason.id} className="bg-neutral-900/30 border border-neutral-700 rounded-lg p-4">
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-semibold px-2 py-1 rounded ${reason.source === 'ai' ? 'bg-purple-900/40 text-purple-300' : 'bg-blue-900/40 text-blue-300'}`}>
+                        {reason.source === 'ai' ? '🤖 AI' : '👮 Officer'}
+                      </span>
+                      <p className="text-xs text-neutral-400">{new Date(reason.createdAt).toLocaleString()}</p>
+                    </div>
+                    <div className="flex gap-1">
+                      <button onClick={() => { setEditingReasoningId(reason.id); setEditingReasoningContent(reason.content); }} className="text-neutral-400 hover:text-text-secondary text-sm">✏️</button>
+                      <button onClick={() => handleDeleteReasoning(reason.id)} className="text-red-500 hover:text-red-400 text-sm">🗑️</button>
+                    </div>
+                  </div>
+                  {editingReasoningId === reason.id ? (
+                    <div className="space-y-2">
+                      <textarea value={editingReasoningContent} onChange={(e) => setEditingReasoningContent(e.target.value)} className="w-full px-3 py-2 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none" rows={3} />
+                      <div className="flex gap-2">
+                        <button onClick={() => handleUpdateReasoning(reason.id)} disabled={reasoningLoading} className="px-3 py-1.5 bg-blue-600 text-white text-sm font-semibold rounded hover:bg-blue-700 disabled:opacity-50">{reasoningLoading ? 'Saving...' : 'Save'}</button>
+                        <button onClick={() => { setEditingReasoningId(null); setEditingReasoningContent(''); }} className="px-3 py-1.5 border border-neutral-700 text-text-secondary text-sm font-semibold rounded hover:bg-neutral-900/50">Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-text-secondary leading-relaxed">{reason.content}</p>
+                  )}
+                </div>
+              ))}
+              {(!p.reasoning || p.reasoning.length === 0) && (
+                <div className="text-center py-8 text-neutral-500">
+                  <Brain size={32} className="mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No investigation reasoning recorded yet</p>
+                </div>
+              )}
             </div>
-          )}
-
-          <p className="text-xs text-neutral-400 italic">Statements and reasoning are managed from the participant detail view.</p>
-
-          {/* Actions */}
-          <div className="flex gap-3 pt-4 border-t border-neutral-100">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2.5 border border-neutral-300 text-neutral-700 font-semibold rounded-lg hover:bg-neutral-50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 px-4 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-60 transition-colors"
-            >
-              {loading ? 'Updating...' : 'Update Participant'}
-            </button>
           </div>
-        </form>
+
+          {/* Applied Legal Sections */}
+          {appliedSections.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-base font-bold text-text-secondary border-b border-neutral-700 pb-2">Applied Legal Sections</h3>
+              <div className="grid gap-2">
+                {appliedSections.map((section: any, idx: number) => (
+                  <div key={idx} className="bg-amber-900/20 border border-amber-700/50 rounded-lg p-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-amber-400">{section.code}</span>
+                      <span className="text-xs text-amber-600">•</span>
+                      <span className="text-xs text-amber-500">{section.title}</span>
+                    </div>
+                    {section.description && <p className="text-xs text-amber-600 mt-1 leading-relaxed">{section.description}</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+        </div>
       </div>
     </div>
   );
 }
-

@@ -59,6 +59,26 @@ export class AuthController {
     }
   };
 
+  sendPreVerificationOtp = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { email } = req.body as ResendOtpDto;
+      await this.authService.sendPreVerificationOtp(email);
+      sendSuccess(res, HttpStatusCode.OK, 'OTP sent to your email address.');
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  verifyPreRegistrationOtp = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { email, otp } = req.body as VerifyEmailDto;
+      await this.authService.verifyPreRegistrationOtp(email, otp);
+      sendSuccess(res, HttpStatusCode.OK, 'Email verified successfully. You can now complete the complainant profile.');
+    } catch (err) {
+      next(err);
+    }
+  };
+
   resendOtp = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { email } = req.body as ResendOtpDto;

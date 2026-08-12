@@ -51,30 +51,30 @@ interface ChecklistPanelProps {
 const STATUS_CONFIG = {
   completed: {
     icon: <CheckCircle2 size={16} />,
-    pill: 'bg-green-100 text-green-700 border-green-200',
-    bar:  'bg-green-500',
-    row:  'border-l-4 border-green-400 bg-green-50/20',
+    pill: 'bg-semantic-success/10 text-semantic-success border border-semantic-success/30 font-bold',
+    bar:  'bg-semantic-success',
+    row:  'border-l-4 border-semantic-success bg-surface border-y border-r border-border shadow-xs',
     label: 'Completed',
   },
   in_progress: {
     icon: <Clock size={16} className="animate-pulse" />,
-    pill: 'bg-blue-100 text-blue-700 border-blue-200',
-    bar:  'bg-blue-500',
-    row:  'border-l-4 border-blue-400 bg-blue-50/20',
+    pill: 'bg-brand-primary/10 text-brand-primary border border-brand-primary/30 font-bold',
+    bar:  'bg-brand-primary',
+    row:  'border-l-4 border-brand-primary bg-surface border-y border-r border-border shadow-xs',
     label: 'In Progress',
   },
   blocked: {
     icon: <Lock size={16} />,
-    pill: 'bg-red-100 text-red-700 border-red-200',
-    bar:  'bg-red-400',
-    row:  'border-l-4 border-red-400 bg-red-50/20',
+    pill: 'bg-semantic-critical/10 text-semantic-critical border border-semantic-critical/30 font-bold',
+    bar:  'bg-semantic-critical',
+    row:  'border-l-4 border-semantic-critical bg-surface border-y border-r border-border shadow-xs',
     label: 'Blocked',
   },
   pending: {
     icon: <Circle size={16} />,
-    pill: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-    bar:  'bg-yellow-400',
-    row:  'border-l-4 border-yellow-400 bg-white',
+    pill: 'bg-semantic-warning/10 text-semantic-warning border border-semantic-warning/30 font-bold',
+    bar:  'bg-semantic-warning',
+    row:  'border-l-4 border-semantic-warning bg-surface border-y border-r border-border shadow-xs',
     label: 'Pending',
   },
 } as const;
@@ -135,7 +135,7 @@ function StepRow({
         {/* Main row */}
         <div className="flex items-start gap-3 p-3">
           {/* Step number */}
-          <div className="flex-shrink-0 w-6 h-6 rounded-full bg-neutral-100 border border-neutral-200 flex items-center justify-center text-[11px] font-bold text-neutral-500 mt-0.5">
+          <div className="flex-shrink-0 w-6 h-6 rounded-full bg-surface-elevated border border-border flex items-center justify-center text-[11px] font-mono font-bold text-text-secondary mt-0.5 shadow-xs">
             {index + 1}
           </div>
 
@@ -151,19 +151,19 @@ function StepRow({
               )}
 
               {/* Title */}
-              <span className="text-sm font-semibold text-neutral-900 capitalize leading-snug">
+              <span className="text-sm font-bold text-text-primary capitalize leading-snug">
                 {title}
               </span>
 
               {/* Status pill */}
-              <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${cfg.pill}`}>
+              <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${cfg.pill}`}>
                 {cfg.icon}
                 {cfg.label}
               </span>
 
               {/* Locked badge */}
               {isLocked && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-500 border border-neutral-200">
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-surface-elevated text-text-secondary border border-border">
                   <Lock size={10} /> Awaiting response
                 </span>
               )}
@@ -172,26 +172,26 @@ function StepRow({
             {/* Target badge */}
             <div className="mt-1.5 flex items-center gap-2 flex-wrap">
               {isDept && step.department_entity_id && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-lg bg-brand-primary/10 text-brand-primary border border-brand-primary/20">
                   <Building2 size={10} /> {step.department_entity_id}
                 </span>
               )}
               {isCitizen && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-yellow-50 text-yellow-700 border border-yellow-200">
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-lg bg-semantic-warning/10 text-semantic-warning border border-semantic-warning/30">
                   <UserCheck size={10} /> Complainant
                 </span>
               )}
 
               {/* Evidence progress */}
               {evNeeded.length > 0 && (
-                <span className="text-[10px] text-neutral-400 font-medium">
+                <span className="text-[10px] text-text-secondary font-mono font-medium">
                   Evidence: {evCollected.length}/{evNeeded.length}
                 </span>
               )}
 
               {/* Completed timestamp */}
               {step.status === 'completed' && step.completed_at && (
-                <span className="text-[10px] text-neutral-400">
+                <span className="text-[10px] text-text-secondary font-mono">
                   {new Date(step.completed_at).toLocaleDateString('en-IN')}
                 </span>
               )}
@@ -199,9 +199,9 @@ function StepRow({
 
             {/* Evidence progress bar */}
             {evNeeded.length > 0 && (
-              <div className="mt-2 w-full bg-neutral-200 rounded-full h-1">
+              <div className="mt-2 w-full bg-surface-elevated rounded-full h-1.5 border border-border overflow-hidden">
                 <div
-                  className={`h-1 rounded-full transition-all ${evPct === 100 ? 'bg-green-500' : 'bg-blue-400'}`}
+                  className="h-1.5 rounded-full bg-brand-primary transition-all"
                   style={{ width: `${evPct}%` }}
                 />
               </div>
@@ -216,7 +216,7 @@ function StepRow({
                 {isDept && !isLocked && (
                   <button
                     onClick={() => onOpenComposer(step.step_id, step.department_entity_id || 'UNKNOWN_DEPARTMENT')}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-brand-primary hover:bg-brand-primary/90 text-white shadow-xs transition-all"
                   >
                     <Send size={12} /> Request
                   </button>
@@ -224,7 +224,7 @@ function StepRow({
                 {isInternal && (
                   <button
                     onClick={() => setProofOpen(true)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-brand-primary hover:bg-brand-primary/90 text-white shadow-xs transition-all"
                   >
                     <CheckCircle2 size={12} /> Complete
                   </button>
@@ -233,7 +233,7 @@ function StepRow({
                   <button
                     onClick={handleCitizenRequest}
                     disabled={citizenLoading}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-yellow-500 hover:bg-yellow-600 text-white transition-colors disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-semantic-warning text-white hover:bg-semantic-warning/90 shadow-xs transition-all disabled:opacity-50"
                   >
                     <UserCheck size={12} /> {citizenLoading ? '…' : 'Ask Citizen'}
                   </button>
@@ -245,7 +245,7 @@ function StepRow({
             {(evNeeded.length > 0 || step.description || step.title) && (
               <button
                 onClick={() => setExpanded(v => !v)}
-                className="text-neutral-400 hover:text-neutral-600 transition-colors p-0.5"
+                className="text-text-secondary hover:text-text-primary transition-colors p-1"
                 title={expanded ? 'Collapse' : 'Expand details'}
               >
                 {expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
@@ -256,15 +256,15 @@ function StepRow({
 
         {/* Expanded detail */}
         {expanded && (
-          <div className="px-4 pb-3 border-t border-neutral-100 bg-neutral-50/50">
+          <div className="px-4 pb-3 border-t border-border bg-surface-elevated/40">
             {(step.description || step.title) && (
-              <p className="text-xs text-neutral-600 mt-2 leading-relaxed">
+              <p className="text-xs text-text-secondary mt-2 leading-relaxed">
                 {step.description && step.title ? step.description : (step.description || step.title)}
               </p>
             )}
             {evNeeded.length > 0 && (
               <div className="mt-2">
-                <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5">
+                <p className="text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1.5">
                   Required Evidence
                 </p>
                 <div className="flex flex-wrap gap-1.5">
@@ -273,10 +273,10 @@ function StepRow({
                     return (
                       <span
                         key={ev}
-                        className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded border ${
+                        className={`inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg border ${
                           collected
-                            ? 'bg-green-100 text-green-700 border-green-200'
-                            : 'bg-white text-neutral-500 border-neutral-200'
+                            ? 'bg-brand-primary/10 text-brand-primary border-brand-primary/20'
+                            : 'bg-surface text-text-secondary border-border'
                         }`}
                       >
                         {collected ? <CheckCircle2 size={9} /> : <Circle size={9} />}
@@ -324,47 +324,47 @@ export function ChecklistPanel({ checklist, onOpenComposer, evidenceList, caseId
   return (
     <div className="space-y-4">
       {/* Header + summary */}
-      <div className="bg-white rounded-xl border border-neutral-200 shadow-sm p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold text-neutral-900">Investigation Checklist</h3>
-          <span className="text-xs font-semibold text-neutral-500">
-            {completed}/{steps.length} complete
+      <div className="bg-surface rounded-2xl border border-border shadow-sm p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-bold text-text-primary">Investigation Checklist</h3>
+          <span className="text-xs font-mono font-bold text-brand-primary bg-brand-primary/10 px-2.5 py-1 rounded-lg border border-brand-primary/20">
+            {completed}/{steps.length} Complete ({pct}%)
           </span>
         </div>
 
         {/* Overall progress bar */}
-        <div className="w-full bg-neutral-200 rounded-full h-2 mb-3">
+        <div className="w-full bg-surface-elevated rounded-full h-2 overflow-hidden border border-border/50">
           <div
-            className="h-2 rounded-full bg-green-500 transition-all duration-500"
+            className="h-2 rounded-full bg-brand-primary transition-all duration-500"
             style={{ width: `${pct}%` }}
           />
         </div>
 
         {/* Status counts */}
-        <div className="grid grid-cols-4 gap-2 text-center text-[10px] font-semibold">
-          <div className="bg-green-50 border border-green-200 rounded-lg py-1.5">
-            <div className="text-lg font-black text-green-600">{completed}</div>
-            <div className="text-green-600 uppercase tracking-wider">Done</div>
+        <div className="grid grid-cols-4 gap-3 text-center text-xs font-bold">
+          <div className="bg-semantic-success/10 border border-semantic-success/30 rounded-xl py-2 shadow-xs">
+            <div className="text-lg font-black text-semantic-success">{completed}</div>
+            <div className="text-[10px] text-semantic-success uppercase tracking-wider font-extrabold">Done</div>
           </div>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg py-1.5">
-            <div className="text-lg font-black text-blue-600">{inProgress}</div>
-            <div className="text-blue-600 uppercase tracking-wider">Active</div>
+          <div className="bg-brand-primary/10 border border-brand-primary/30 rounded-xl py-2 shadow-xs">
+            <div className="text-lg font-black text-brand-primary">{inProgress}</div>
+            <div className="text-[10px] text-brand-primary uppercase tracking-wider font-extrabold">Active</div>
           </div>
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg py-1.5">
-            <div className="text-lg font-black text-yellow-600">{pending}</div>
-            <div className="text-yellow-600 uppercase tracking-wider">Pending</div>
+          <div className="bg-semantic-warning/10 border border-semantic-warning/30 rounded-xl py-2 shadow-xs">
+            <div className="text-lg font-black text-semantic-warning">{pending}</div>
+            <div className="text-[10px] text-semantic-warning uppercase tracking-wider font-extrabold">Pending</div>
           </div>
-          <div className="bg-red-50 border border-red-200 rounded-lg py-1.5">
-            <div className="text-lg font-black text-red-600">{blocked}</div>
-            <div className="text-red-600 uppercase tracking-wider">Blocked</div>
+          <div className="bg-semantic-critical/10 border border-semantic-critical/30 rounded-xl py-2 shadow-xs">
+            <div className="text-lg font-black text-semantic-critical">{blocked}</div>
+            <div className="text-[10px] text-semantic-critical uppercase tracking-wider font-extrabold">Blocked</div>
           </div>
         </div>
 
         {/* Criticality legend */}
-        <div className="mt-3 flex items-center gap-3 text-[10px] text-neutral-500">
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block"/> High</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-yellow-400 inline-block"/> Medium</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400 inline-block"/> Low</span>
+        <div className="pt-2 border-t border-border flex items-center gap-4 text-xs font-semibold text-text-secondary">
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-semantic-critical inline-block shadow-xs"/> High</span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-semantic-warning inline-block shadow-xs"/> Medium</span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-brand-primary inline-block shadow-xs"/> Low</span>
         </div>
       </div>
 

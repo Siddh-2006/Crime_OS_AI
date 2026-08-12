@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
 
     # ── Qdrant Vector Database ──────────────────────────────────────────────────
-    QDRANT_URL: str = "http://qdrant:6333"
+    QDRANT_URL: str = "http://localhost:6333"
     QDRANT_COLLECTION: str = "crime_fir_embeddings"
     EMBEDDING_DIM: int = 768          # nomic-embed-text-v2-moe output dimension
 
