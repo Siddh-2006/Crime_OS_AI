@@ -14,7 +14,7 @@ import { Loader } from '@/components/ui/Loader';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/hooks/useToast';
 import { ToastContainer } from '@/components/ui/Toast';
-import { Bot, BookOpen, ClipboardList, Send, FolderOpen, Sparkles, Users, FileText, Brain, Calendar, MapPin, Download, CheckCheck, Loader2, Clock, FileImage, FileVideo, FileAudio, File, ChevronRight, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Bot, BookOpen, ClipboardList, Send, FolderOpen, Sparkles, Users, FileText, Brain, Calendar, MapPin, Download, CheckCheck, Loader2, Clock, FileImage, FileVideo, FileAudio, File, ChevronRight, CheckCircle2, AlertCircle, Pencil, Trash2, Scale, X} from 'lucide-react';
 import { Card, CardHeader } from '@/components/ui/Card';
 import ThreadViewerModal from './ThreadViewerModal';
 import SnapshotDetailModal from './SnapshotDetailModal';
@@ -3066,6 +3066,14 @@ function EditParticipantModal({
     }
   };
 
+  const handleProfileChange = (profileType: string, field: string, value: string | boolean) => {
+    const normalizedValue = field === 'isAccused' ? Boolean(value) : value || undefined;
+    setFormData((prev) => ({
+      ...prev,
+      [profileType]: { ...(prev[profileType] || {}), [field]: normalizedValue },
+    }));
+  };
+
   // Helper — after any mutation, get fresh participant from API and update local state instantly
   const refreshParticipant = React.useCallback(async () => {
     try {
@@ -3082,9 +3090,6 @@ function EditParticipantModal({
   };
   const handleContactChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, contact: { ...prev.contact, [field]: value || undefined } }));
-  };
-  const handleProfileChange = (profileType: string, field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [profileType]: { ...(prev[profileType] || {}), [field]: value || undefined } }));
   };
   const handleAddIdentifier = () => {
     setFormData((prev) => ({ ...prev, identifiers: [...prev.identifiers, { type: '', value: '' }] }));
@@ -3421,8 +3426,8 @@ function EditParticipantModal({
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={(formData as any).suspectProfile?.isAccused || false}
-                    onChange={(e) => handleProfileChange('suspectProfile', 'isAccused', String(e.target.checked))}
+                    checked={Boolean(formData.suspectProfile?.isAccused)}
+                    onChange={(e) => handleProfileChange('suspectProfile', 'isAccused', e.target.checked)}
                     className="w-4 h-4 accent-orange-600 cursor-pointer"
                   />
                   <span className="text-sm text-orange-700">Mark as Accused</span>

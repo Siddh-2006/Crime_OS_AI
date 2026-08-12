@@ -467,7 +467,18 @@ export function AnalysisPanel({
               </div>
               <div className="p-4 space-y-4 bg-surface-elevated/40">
                 {snapshot.evidence_section_recommendations.map((recommendation) => {
-                  const evidenceMatch = evidence.find((item: any) => safeText(item.evidence_id) === safeText(recommendation.evidence_id) || safeText(item._id) === safeText(recommendation.evidence_id));
+                  // Improved evidence matching to handle publicId, _id, and evidence_id
+                  const evidenceMatch = evidence.find((item: any) => {
+                    const recId = safeText(recommendation.evidence_id);
+                    return (
+                      safeText(item.evidence_id) === recId ||
+                      safeText(item._id) === recId ||
+                      safeText(item.publicId) === recId ||
+                      // Also try matching the base part of publicId (without cloudinary path prefix)
+                      (item.publicId && recId.includes(item.publicId)) ||
+                      (item.evidence_id && recId.includes(item.evidence_id))
+                    );
+                  });
                   const attachedSections = Array.isArray((evidenceMatch as any)?.applicableSections) ? (evidenceMatch as any).applicableSections : [];
 
                   return (

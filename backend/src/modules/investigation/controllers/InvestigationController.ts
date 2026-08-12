@@ -857,9 +857,9 @@ export class InvestigationController {
           const matchedIndex = complaintDoc.evidence.findIndex((item: any) => {
             const publicId = item?.publicId?.toString();
             const objectId = item?._id?.toString();
-            const legacyId = uuidv4();
             return Boolean(
-              publicId && [publicId, objectId, legacyId].includes(normalizedEvidenceId)
+              (publicId && publicId === normalizedEvidenceId) ||
+              (objectId && objectId === normalizedEvidenceId)
             );
           });
 
@@ -877,7 +877,16 @@ export class InvestigationController {
             });
 
             complaintDoc.evidence[matchedIndex].applicableSections = Array.from(mergedSections.values());
+            
+            // Mark the field as modified to ensure Mongoose saves it
+            complaintDoc.markModified(`evidence.${matchedIndex}.applicableSections`);
             await complaintDoc.save();
+            
+            // Refetch the saved evidence to return updated data
+            const savedComplaint = await Complaint.findById(id);
+            if (savedComplaint) {
+              targetEvidence = savedComplaint.evidence[matchedIndex];
+            }
           } else {
             sendError(res, HttpStatusCode.NOT_FOUND, {
               code: 'EVIDENCE_NOT_FOUND',
