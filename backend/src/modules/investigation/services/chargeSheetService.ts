@@ -51,10 +51,28 @@ export class ChargeSheetService {
 
     const annexures: Array<{ title: string; type: string; url?: string; referenceId?: string; source?: string }> = [];
     const pushAnnexure = (entry: { title: string; type: string; url?: string; referenceId?: string; source?: string }) => {
-      // Use referenceId as primary deduplication key to avoid duplicate links
-      // Only add if this referenceId+type combo hasn't been added yet
-      const key = `${entry.type}:${entry.referenceId || entry.title}`.toLowerCase();
-      if (!annexures.some((item) => `${item.type}:${item.referenceId || item.title}`.toLowerCase() === key)) {
+      // Use referenceId OR url as primary deduplication key to avoid duplicate links
+      // Check if this exact referenceId or URL has already been added
+      const isDuplicate = annexures.some((item) => {
+        // If both have referenceId, compare them (case-insensitive, trimmed)
+        if (entry.referenceId && item.referenceId) {
+          return entry.referenceId.trim().toLowerCase() === item.referenceId.trim().toLowerCase();
+        }
+        // If both have URLs, compare them
+        if (entry.url && item.url) {
+          return entry.url.trim().toLowerCase() === item.url.trim().toLowerCase();
+        }
+        // If one has referenceId and other has URL, check if they match
+        if (entry.referenceId && item.url) {
+          return item.url.includes(entry.referenceId);
+        }
+        if (entry.url && item.referenceId) {
+          return entry.url.includes(item.referenceId);
+        }
+        return false;
+      });
+      
+      if (!isDuplicate) {
         annexures.push(entry);
       }
     };

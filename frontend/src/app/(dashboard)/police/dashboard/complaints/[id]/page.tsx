@@ -13,6 +13,7 @@ import apiClient from '@/lib/axios';
 import { API_ROUTES, APP_ROUTES } from '@/lib/constants';
 import { InvestigationWorkspace, WorkspaceTab } from './components/InvestigationWorkspace';
 import ChargeSheetModal from './ChargeSheetModal';
+import { CaseUnderstandingView, CaseUnderstandingData } from '@/components/case-understanding/CaseUnderstandingView';
 import {
   ArrowLeft,
   Calendar,
@@ -175,7 +176,7 @@ interface IOOfficer {
   } | null;
 }
 
-import { CaseUnderstandingView, CaseUnderstandingData } from '@/components/case-understanding/CaseUnderstandingView';
+// import { CaseUnderstandingView, CaseUnderstandingData } from '@/components/case-understanding/CaseUnderstandingView';
 
 export default function PoliceComplaintDetailPage(): React.ReactElement {
   const params = useParams();
@@ -358,8 +359,8 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
   };
 
   const handleCloseCase = async () => {
-    if (!confirm('Are you sure you want to close this case? It will be permanently marked as CLOSED and indexed in the AI vector store. A Charge Sheet will also be automatically generated (this may take some time).')) return;
     setActionLoading(true);
+    setCloseInvestigationModalOpen(false);
     try {
       const id = params.id as string;
       await apiClient.patch(`/complaints/${id}/close`);
@@ -414,6 +415,9 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
     }
   }, [isAIReady, params.id]);
 
+
+  // Close Investigation confirmation modal
+  const [closeInvestigationModalOpen, setCloseInvestigationModalOpen] = useState(false);
 
   const handleReject = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -660,7 +664,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
           <Button
             variant="danger"
             size="sm"
-            onClick={handleCloseCase}
+            onClick={() => setCloseInvestigationModalOpen(true)}
             isLoading={actionLoading}
           >
             Close Investigation
@@ -1079,6 +1083,11 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                     </div>
                   </Card>
                 );
+              }
+
+              // If we have structured Case Understanding data, use the dedicated component
+              if (cuData && (cuData.case_understanding || cuData.overview || cuData.timeline)) {
+                return <CaseUnderstandingView data={cuData as CaseUnderstandingData} caseId={params.id as string} />;
               }
 
               // Calculations for fallback view
@@ -2172,6 +2181,52 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
           </div>
         </Modal>
       )}
+
+      {/* Close Investigation Confirmation Modal */}
+      <Modal
+        isOpen={closeInvestigationModalOpen}
+        onClose={() => setCloseInvestigationModalOpen(false)}
+        title="Close Investigation"
+        size="md"
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 p-4 bg-semantic-warning/10 border border-semantic-warning/30 rounded-lg">
+            <AlertTriangle className="h-5 w-5 text-semantic-warning flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-text-secondary">
+              <p className="font-semibold text-semantic-warning mb-2">Are you sure you want to close this investigation?</p>
+              <ul className="list-disc list-inside space-y-1 text-xs">
+                <li>The case will be permanently marked as <strong>CLOSED</strong></li>
+                <li>The investigation will be indexed in the AI vector store</li>
+                <li>A Charge Sheet will be automatically generated (this may take some time)</li>
+                <li>This action cannot be undone</li>
+              </ul>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 pt-4 border-t border-border">
+            <Button
+              variant="ghost"
+              onClick={() => setCloseInvestigationModalOpen(false)}
+              disabled={actionLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleCloseCase}
+              isLoading={actionLoading}
+            >
+              Yes, Close Investigation
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Chargesheet Modal */}
+      <ChargeSheetModal
+        isOpen={chargeSheetModalOpen}
+        onClose={() => setChargeSheetModalOpen(false)}
+        caseId={params.id as string}
+      />
     </div>
   );
 }
