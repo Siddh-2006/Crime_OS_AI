@@ -124,24 +124,24 @@ export async function generateChargeSheetPdfStream(chargeSheetData: any, res: Re
 
     // 1. Filing Information
     renderSectionHeading('filingInformation', 'Filing Information');
-    const fInfo = chargeSheetData.section1_filingInformation;
-    addTextRow('Charge Sheet No', fInfo.chargeSheetNumber);
-    addTextRow('FIR No', fInfo.firNumber);
-    addTextRow('Police Station', fInfo.policeStation);
-    addTextRow('District', fInfo.district);
-    addTextRow('Court', fInfo.court);
+    const fInfo = chargeSheetData.section1_filingInformation || {};
+    addTextRow('Charge Sheet No', fInfo.chargeSheetNumber || 'N/A');
+    addTextRow('FIR No', fInfo.firNumber || 'N/A');
+    addTextRow('Police Station', fInfo.policeStation || 'N/A');
+    addTextRow('District', fInfo.district || 'N/A');
+    addTextRow('Court', fInfo.court || 'N/A');
     addTextRow('Magistrate', fInfo.magistrate || 'N/A');
     addTextRow('Filing Date', fInfo.filingDate ? new Date(fInfo.filingDate).toLocaleDateString() : 'N/A');
-    addTextRow('Investigating Officer', fInfo.investigatingOfficer);
-    addTextRow('Status', fInfo.chargeSheetStatus);
+    addTextRow('Investigating Officer', fInfo.investigatingOfficer || 'N/A');
+    addTextRow('Status', fInfo.chargeSheetStatus || 'N/A');
 
     // 2. Case Particulars
     renderSectionHeading('caseParticulars', 'Case Particulars');
-    const cPart = chargeSheetData.section2_caseParticulars;
-    addTextRow('Brief Description', cPart.briefCaseDescription);
+    const cPart = chargeSheetData.section2_caseParticulars || {};
+    addTextRow('Brief Description', cPart.briefCaseDescription || 'N/A');
     addTextRow('Date of Occurrence', cPart.dateOfOccurrence ? new Date(cPart.dateOfOccurrence).toLocaleDateString() : 'N/A');
-    addTextRow('Place of Occurrence', cPart.placeOfOccurrence);
-    addTextRow('Nature of Offence', cPart.natureOfOffence);
+    addTextRow('Place of Occurrence', cPart.placeOfOccurrence || 'N/A');
+    addTextRow('Nature of Offence', cPart.natureOfOffence || 'N/A');
 
     // 3. Complainant / Informant Details
 if (chargeSheetData.section3_complainantDetails) {
