@@ -22,21 +22,28 @@ _PADDLE_LANG = "en"   # Best for Indian+English mixed documents
 def _get_ocr():
     """Lazy-load PaddleOCR once, cached for the process lifetime."""
     logger.info("[paddle_ocr] Loading PaddleOCR model...")
-    from paddleocr import PaddleOCR
-    # PaddleOCR 2.x API — use_angle_cls, use_gpu, show_log all supported
-    ocr = PaddleOCR(
-        use_angle_cls=True,
-        lang=_PADDLE_LANG,
-        show_log=False,
-        use_gpu=False,
-    )
-    logger.info("[paddle_ocr] PaddleOCR model loaded")
-    return ocr
+    try:
+        from paddleocr import PaddleOCR
+        try:
+            ocr = PaddleOCR(
+                use_angle_cls=True,
+                lang=_PADDLE_LANG,
+                use_gpu=False,
+            )
+        except Exception:
+            ocr = PaddleOCR(lang=_PADDLE_LANG)
+        logger.info("[paddle_ocr] PaddleOCR model loaded")
+        return ocr
+    except Exception as exc:
+        logger.warning("[paddle_ocr] PaddleOCR import/initialization failed; falling back to vision captions", extra={"error": str(exc)})
+        return None
 
 
 def _run_paddle(image_bytes: bytes) -> list:
     """Run PaddleOCR and return raw result list."""
     ocr = _get_ocr()
+    if ocr is None:
+        return []
     import numpy as np
     from PIL import Image
     img = Image.open(io.BytesIO(image_bytes)).convert("RGB")

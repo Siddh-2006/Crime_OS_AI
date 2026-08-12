@@ -40,7 +40,7 @@ const env = cleanEnv(process.env, {
   CLOUDINARY_CLOUD_NAME: str(),
   CLOUDINARY_API_KEY: str(),
   CLOUDINARY_API_SECRET: str(),
-  COMPLAINT_INTELLIGENCE_URL: str({ default: 'http://localhost:8000' }),
+  COMPLAINT_INTELLIGENCE_URL: str({ default: 'http://localhost:8001' }),
   // AI_SERVICE_URL: str({ default: 'http://localhost:8000' }),
   LEGAL_AGENT_URL: str({ default: 'http://localhost:8004' }),
   IO_RECOMMENDATION_URL: str({ default: 'http://localhost:8003' }),

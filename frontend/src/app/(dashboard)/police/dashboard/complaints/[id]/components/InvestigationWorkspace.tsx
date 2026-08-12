@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import apiClient from '@/lib/axios';
 import { AnalysisPanel } from './AnalysisPanel';
 import { ChecklistPanel } from './ChecklistPanel';
@@ -39,6 +40,17 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
   const [actionLoading, setActionLoading] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
   const { language } = useTranslation();
+
+  // Request Composer Modal State
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [composerStepId, setComposerStepId] = useState('');
+  const [composerDeptId, setComposerDeptId] = useState('');
+
+  const openComposer = (stepId: string, deptId: string) => {
+    setComposerStepId(stepId);
+    setComposerDeptId(deptId);
+    setComposerOpen(true);
+  };
 
   const [snapshot, setSnapshot] = useState<any>(null);
   const [participants, setParticipants] = useState<any[]>([]);
@@ -87,11 +99,6 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
   // Complaint preview & Case Understanding
   const [complaintData, setComplaintData] = useState<any | null>(null);
   const [caseUnderstanding, setCaseUnderstanding] = useState<CaseUnderstandingData | null>(null);
-
-  // Composer State
-  const [composerOpen, setComposerOpen] = useState(false);
-  const [composerStepId, setComposerStepId] = useState('');
-  const [composerDeptId, setComposerDeptId] = useState('');
 
   // Diary Modals State
   const [viewingEvidence, setViewingEvidence] = useState<any | null>(null);
@@ -511,12 +518,6 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
     return url.replace('/upload/fl_attachment/', '/upload/');
   };
 
-  const openComposer = (stepId: string, deptId: string) => {
-    setComposerStepId(stepId);
-    setComposerDeptId(deptId);
-    setComposerOpen(true);
-  };
-
   const departmentThreadCount = threads.filter((t: any) => t.request_type !== 'citizen_request').length;
   const citizenThreadCount = threads.filter((t: any) => t.request_type === 'citizen_request').length;
 
@@ -542,9 +543,9 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
   }
 
   return (
-    <div className="flex gap-4 items-start overflow-hidden" style={{ minHeight: '600px' }}>
-      {/* Main workspace — takes all available width, never overflows */}
-      <div className="flex-1 min-w-0 overflow-hidden space-y-4">
+    <div className="w-full min-w-0" style={{ minHeight: '600px' }}>
+      {/* Main workspace — takes all available width */}
+      <div className="w-full min-w-0 space-y-4">
       {/* Tab Content */}
       <div className="min-h-[500px]">
         {activeTab === 'analysis' && (
@@ -627,107 +628,107 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
                       {diaryDraftLoading ? 'Saving…' : 'Finalize'}
                     </button>
                   </div>
-                  <div className="mt-4 rounded-xl border border-neutral-700 bg-neutral-900/50 p-4">
+                  <div className="mt-4 rounded-xl border border-border bg-surface p-4 shadow-xs">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
-                        <p className="text-sm font-semibold text-text-primary">Official Case Diary Form (16 Standard Fields)</p>
-                        <p className="text-xs text-neutral-500">Edit any values before finalization. The generated PDFs will format these fields into the official two-column Police Roznamcha table layout.</p>
+                        <p className="text-xs font-bold uppercase tracking-wider text-brand-primary">Official Case Diary Form (16 Standard Fields)</p>
+                        <p className="text-xs text-text-secondary mt-0.5">Edit any values before finalization. Generated PDFs format these fields into official Police Roznamcha tables.</p>
                       </div>
                     </div>
                     <div className="mt-4 grid gap-4 lg:grid-cols-2">
                       <div>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Title</label>
+                        <label className="text-[11px] font-bold uppercase tracking-wide text-text-secondary">Title</label>
                         <input
                           value={diaryForm.title}
                           onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, title: e.target.value }))}
-                          className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary"
+                          className="mt-1 w-full rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Investigation Officer</label>
+                        <label className="text-[11px] font-bold uppercase tracking-wide text-text-secondary">Investigation Officer</label>
                         <input
                           value={diaryForm.officialOfficerId}
                           onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, officialOfficerId: e.target.value }))}
-                          className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary"
+                          className="mt-1 w-full rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Crime Register No. and Section</label>
+                        <label className="text-[11px] font-bold uppercase tracking-wide text-text-secondary">Crime Register No. and Section</label>
                         <input
                           value={diaryForm.crimeRegisterNumber}
                           onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, crimeRegisterNumber: e.target.value }))}
-                          className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary"
+                          className="mt-1 w-full rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Investigation Start & End Time (Field 14)</label>
+                        <label className="text-[11px] font-bold uppercase tracking-wide text-text-secondary">Investigation Start & End Time (Field 14)</label>
                         <div className="flex items-center gap-2 mt-1">
                           <input
                             placeholder="Start (e.g. 19/40)"
                             value={diaryForm.investigationStartTime}
                             onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, investigationStartTime: e.target.value }))}
-                            className="w-1/2 rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary"
+                            className="w-1/2 rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
                           />
-                          <span className="text-xs text-neutral-500">to</span>
+                          <span className="text-xs text-text-secondary font-medium">to</span>
                           <input
                             placeholder="End (e.g. 23/00)"
                             value={diaryForm.investigationEndTime}
                             onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, investigationEndTime: e.target.value }))}
-                            className="w-1/2 rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary"
+                            className="w-1/2 rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
                           />
                         </div>
                       </div>
                       <div>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Custody Status (Field 7a)</label>
+                        <label className="text-[11px] font-bold uppercase tracking-wide text-text-secondary">Custody Status (Field 7a)</label>
                         <input
                           placeholder="e.g. ----- or In Police Custody"
                           value={diaryForm.custodyStatus}
                           onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, custodyStatus: e.target.value }))}
-                          className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary"
+                          className="mt-1 w-full rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Magisterial Custody Date (Field 7b)</label>
+                        <label className="text-[11px] font-bold uppercase tracking-wide text-text-secondary">Magisterial Custody Date (Field 7b)</label>
                         <input
                           placeholder="e.g. -----"
                           value={diaryForm.magisterialCustodyDate}
                           onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, magisterialCustodyDate: e.target.value }))}
-                          className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary"
+                          className="mt-1 w-full rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Property Stolen</label>
+                        <label className="text-[11px] font-bold uppercase tracking-wide text-text-secondary">Property Stolen</label>
                         <input
                           value={diaryForm.propertyStolen}
                           onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, propertyStolen: e.target.value }))}
-                          className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary"
+                          className="mt-1 w-full rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Property Recovered</label>
+                        <label className="text-[11px] font-bold uppercase tracking-wide text-text-secondary">Property Recovered</label>
                         <input
                           value={diaryForm.propertyRecovered}
                           onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, propertyRecovered: e.target.value }))}
-                          className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary"
+                          className="mt-1 w-full rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
                         />
                       </div>
-                      <div className="lg:col-span-2 rounded-xl border border-neutral-700 bg-neutral-800 p-3">
-                        <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Record of Investigation (Gujarati-English Transliterated)</label>
+                      <div className="lg:col-span-2 rounded-xl border border-border bg-surface-elevated/40 p-4 shadow-xs">
+                        <label className="text-[11px] font-bold uppercase tracking-wide text-brand-primary">Record of Investigation (Gujarati-English Transliterated)</label>
                         <textarea
                           value={diaryForm.recordOfInvestigationGujEn}
                           onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, recordOfInvestigationGujEn: e.target.value }))}
                           rows={6}
-                          className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary font-mono"
+                          className="mt-2 w-full rounded-xl border border-border bg-input-bg p-3 text-xs text-text-primary font-mono leading-relaxed focus:border-brand-primary shadow-inner"
                           placeholder="Enter the Gujarati-English narrative for the official diary."
                         />
                       </div>
-                      <div className="lg:col-span-2 rounded-xl border border-neutral-700 bg-neutral-800 p-3">
-                        <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Record of Investigation (English Version)</label>
+                      <div className="lg:col-span-2 rounded-xl border border-border bg-surface-elevated/40 p-4 shadow-xs">
+                        <label className="text-[11px] font-bold uppercase tracking-wide text-brand-primary">Record of Investigation (English Version)</label>
                         <textarea
                           value={diaryForm.recordOfInvestigationEn}
                           onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, recordOfInvestigationEn: e.target.value }))}
                           rows={6}
-                          className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-900/50 px-3 py-2 text-sm text-text-secondary font-mono"
+                          className="mt-2 w-full rounded-xl border border-border bg-input-bg p-3 text-xs text-text-primary font-mono leading-relaxed focus:border-brand-primary shadow-inner"
                           placeholder="Enter the English version for the final official record."
                         />
                       </div>
@@ -1063,43 +1064,46 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
       </Modal>
       </div>
       {/* Floating Copilot AI Widget with Smooth Expand/Collapse Animation */}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
-        {/* Animated Copilot Drawer Window */}
-        <div
-          className={`transition-all duration-300 transform-gpu origin-bottom-right shadow-2xl rounded-2xl overflow-hidden border border-border w-96 max-w-[92vw] h-[600px] max-h-[82vh] bg-surface ${
-            copilotOpen
-              ? 'scale-100 opacity-100 translate-y-0 shadow-glow'
-              : 'scale-0 opacity-0 pointer-events-none translate-y-8'
-          }`}
-        >
-          <CopilotSidebar
-            caseId={caseId}
-            onStateChangeApplied={fetchWorkspaceData}
-            onClose={() => setCopilotOpen(false)}
-          />
-        </div>
+      {typeof window !== 'undefined' && createPortal(
+        <div className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end gap-3 pointer-events-none">
+          {/* Animated Copilot Drawer Window */}
+          <div
+            className={`transition-all duration-300 transform-gpu origin-bottom-right shadow-2xl rounded-2xl overflow-hidden border border-border w-96 max-w-[92vw] h-[560px] max-h-[calc(100vh-6.5rem)] bg-surface ${
+              copilotOpen
+                ? 'scale-100 opacity-100 translate-y-0 shadow-glow pointer-events-auto'
+                : 'scale-0 opacity-0 pointer-events-none translate-y-8'
+            }`}
+          >
+            <CopilotSidebar
+              caseId={caseId}
+              onStateChangeApplied={fetchWorkspaceData}
+              onClose={() => setCopilotOpen(false)}
+            />
+          </div>
 
-        {/* Floating Round Launcher Button */}
-        <button
-          onClick={() => setCopilotOpen((prev) => !prev)}
-          className={`h-14 w-14 rounded-full bg-brand-primary text-white shadow-xl hover:shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 flex items-center justify-center border-2 border-white/20 relative group ${
-            copilotOpen ? 'rotate-90 bg-surface-elevated text-text-primary border-border' : 'animate-pulse'
-          }`}
-          title={copilotOpen ? 'Close Copilot' : 'Open Copilot'}
-        >
-          {copilotOpen ? (
-            <span className="text-2xl font-bold">&times;</span>
-          ) : (
-            <>
-              <Bot className="h-6 w-6 text-white group-hover:rotate-12 transition-transform duration-300" />
-              <span className="absolute -top-1 -right-1 flex h-4 w-4">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-accent opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-4 w-4 bg-brand-accent border border-white text-[8px] font-extrabold text-white items-center justify-center">AI</span>
-              </span>
-            </>
-          )}
-        </button>
-      </div>
+          {/* Floating Round Launcher Button */}
+          <button
+            onClick={() => setCopilotOpen((prev) => !prev)}
+            className={`h-14 w-14 rounded-full bg-brand-primary text-white shadow-xl hover:shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 flex items-center justify-center border-2 border-white/20 relative group pointer-events-auto ${
+              copilotOpen ? 'rotate-90 bg-surface-elevated text-text-primary border-border' : 'animate-pulse'
+            }`}
+            title={copilotOpen ? 'Close Copilot' : 'Open Copilot'}
+          >
+            {copilotOpen ? (
+              <span className="text-2xl font-bold">&times;</span>
+            ) : (
+              <>
+                <Bot className="h-6 w-6 text-white group-hover:rotate-12 transition-transform duration-300" />
+                <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-accent opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-4 w-4 bg-brand-accent border border-white text-[8px] font-extrabold text-white items-center justify-center">AI</span>
+                </span>
+              </>
+            )}
+          </button>
+        </div>,
+        document.body
+      )}
       
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
@@ -1433,6 +1437,18 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
 function MissingInfoCardIO({ item, caseId }: { item: { title: string; description: string; importance: string }; caseId: string }) {
   const [status, setStatus] = React.useState<'idle' | 'loading' | 'sent'>('idle');
 
+  React.useEffect(() => {
+    if (!caseId) return;
+    apiClient.get(`/cases/${caseId}/requests`).then((res) => {
+      const requests = res.data?.data ?? [];
+      const isSent = requests.some((req: any) =>
+        req.request_type === 'citizen_request' &&
+        (req.draft_content?.includes(item.title) || req.step_title?.includes(item.title))
+      );
+      if (isSent) setStatus('sent');
+    }).catch(() => {});
+  }, [caseId, item.title]);
+
   const handleRequest = async () => {
     if (status !== 'idle') return;
     setStatus('loading');
@@ -1451,30 +1467,32 @@ function MissingInfoCardIO({ item, caseId }: { item: { title: string; descriptio
   };
 
   return (
-    <div className="p-3.5 border border-amber-800/50 bg-amber-900/20 rounded-lg text-xs space-y-2">
+    <div className="p-4 border border-semantic-warning/30 bg-semantic-warning/10 rounded-xl text-xs space-y-2.5">
       <div className="flex justify-between items-start gap-2">
-        <span className="font-bold text-white text-sm">{item.title}</span>
-        <span className="uppercase text-[10px] font-bold bg-amber-900/50 text-amber-400 px-2 py-0.5 rounded shrink-0">{item.importance}</span>
+        <span className="font-bold text-text-primary text-sm">{item.title}</span>
+        <span className="uppercase text-[10px] font-extrabold bg-semantic-warning/20 text-semantic-warning border border-semantic-warning/30 px-2.5 py-0.5 rounded-md shrink-0">
+          {item.importance}
+        </span>
       </div>
-      <p className="text-amber-100 leading-relaxed">{item.description}</p>
+      <p className="text-text-secondary leading-relaxed font-medium">{item.description}</p>
       <div className="pt-1">
         <button
           onClick={handleRequest}
           disabled={status !== 'idle'}
-          className={`flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-md transition-all ${
+          className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl transition-all ${
             status === 'sent'
-              ? 'bg-green-900/30 text-green-400 border border-green-800/50 cursor-default'
+              ? 'bg-semantic-success/20 text-semantic-success border border-semantic-success/30 cursor-default'
               : status === 'loading'
-              ? 'bg-neutral-800 text-neutral-500 border border-neutral-700 cursor-not-allowed'
-              : 'bg-neutral-900/50 text-text-primary border border-neutral-700 hover:bg-neutral-800 cursor-pointer shadow-xs'
+              ? 'bg-surface-elevated text-text-muted border border-border cursor-not-allowed'
+              : 'bg-brand-primary text-white hover:bg-brand-primary/90 shadow-xs cursor-pointer'
           }`}
         >
           {status === 'sent' ? (
-            <><CheckCheck size={12} /> Requested from Complainant</>
+            <><CheckCheck size={13} /> Requested from Complainant</>
           ) : status === 'loading' ? (
-            <><Loader2 size={12} className="animate-spin" /> Sending...</>
+            <><Loader2 size={13} className="animate-spin" /> Sending...</>
           ) : (
-            <><Send size={12} /> Request from Complainant</>
+            <><Send size={13} /> Request from Complainant</>
           )}
         </button>
       </div>
@@ -1554,12 +1572,12 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
 
   const roleBadgeColor = (role: string) => {
     switch (role) {
-      case 'Accused': return 'bg-red-900/20 text-red-400 border-red-800/50';
-      case 'Suspect': return 'bg-neutral-900/50 text-orange-400 border-neutral-700';
-      case 'Victim': return 'bg-green-900/20 text-green-400 border-green-800/50';
-      case 'Witness': return 'bg-neutral-900/50 text-purple-700 border-neutral-700';
-      case 'Complainant': return 'bg-blue-900/20 text-blue-400 border-blue-800/50';
-      default: return 'bg-neutral-900/50 text-text-secondary border-neutral-700';
+      case 'Accused': return 'bg-semantic-critical/10 text-semantic-critical border-semantic-critical/30';
+      case 'Suspect': return 'bg-semantic-warning/10 text-semantic-warning border-semantic-warning/30';
+      case 'Victim': return 'bg-semantic-success/10 text-semantic-success border-semantic-success/30';
+      case 'Witness': return 'bg-brand-primary/10 text-brand-primary border-brand-primary/20';
+      case 'Complainant': return 'bg-brand-primary/10 text-brand-primary border-brand-primary/20';
+      default: return 'bg-surface-elevated text-text-secondary border-border';
     }
   };
 
@@ -1569,16 +1587,16 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
         <select
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value)}
-          className="text-sm border border-neutral-700 rounded px-3 py-1.5 bg-neutral-900/50 text-text-secondary"
+          className="text-xs font-bold border border-border rounded-xl px-3 py-2 bg-input-bg text-text-primary focus:border-brand-primary shadow-xs"
         >
           <option value="All">All Roles</option>
           {uniqueRoles.map(r => <option key={r} value={r}>{r}</option>)}
         </select>
         <button
           onClick={() => setIsAddModalOpen(true)}
-          className="px-3 py-1.5 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+          className="px-3.5 py-2 bg-brand-primary hover:bg-brand-primary/90 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
         >
-          + Add Participant
+          <Users size={14} /> + Add Participant
         </button>
       </div>
 
@@ -1591,11 +1609,11 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
           return (
             <div
               key={p.participant_id || p._id}
-              className="bg-neutral-900/50 border border-neutral-700 rounded-xl p-4 shadow-sm hover:border-blue-300 hover:shadow-md transition-all group relative"
+              className="bg-surface border border-border rounded-2xl p-4 shadow-xs hover:border-brand-primary/40 transition-all group relative space-y-3"
             >
-              <div className="flex justify-between items-start gap-2 mb-2">
+              <div className="flex justify-between items-start gap-2">
                 <h4 
-                  className="text-base font-bold text-white cursor-pointer group-hover:text-blue-400 transition-colors flex-1"
+                  className="text-sm font-bold text-text-primary cursor-pointer group-hover:text-brand-primary transition-colors flex-1"
                   onClick={() => setSelectedParticipant(p)}
                 >
                   {p.name}
@@ -1606,25 +1624,25 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
                       setEditingParticipant(p);
                       setIsEditModalOpen(true);
                     }}
-                    className="p-1 text-neutral-400 hover:text-blue-500 transition-colors" 
+                    className="p-1.5 text-text-secondary hover:text-brand-primary hover:bg-surface-elevated rounded-lg transition-colors cursor-pointer" 
                     title="Edit"
                   >
-                    ✏️
+                    <Pencil size={13} />
                   </button>
                   {deleteConfirming === p.participant_id ? (
-                    <div className="absolute right-2 top-14 bg-neutral-900/50 border border-red-800/50 rounded-lg p-2 shadow-lg z-10 whitespace-nowrap">
-                      <p className="text-xs font-semibold text-red-400 mb-2">Delete?</p>
+                    <div className="absolute right-3 top-12 bg-surface border border-semantic-critical/30 rounded-xl p-3 shadow-xl z-20 whitespace-nowrap">
+                      <p className="text-xs font-bold text-semantic-critical mb-2">Delete Participant?</p>
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleDelete(p.participant_id)}
                           disabled={loading}
-                          className="px-2 py-1 text-xs font-semibold bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+                          className="px-2.5 py-1 text-xs font-bold bg-semantic-critical text-white rounded-lg hover:bg-semantic-critical/90 disabled:opacity-50"
                         >
                           Yes
                         </button>
                         <button
                           onClick={() => setDeleteConfirming(null)}
-                          className="px-2 py-1 text-xs font-semibold bg-neutral-800 text-text-secondary rounded hover:bg-neutral-300"
+                          className="px-2.5 py-1 text-xs font-bold bg-surface-elevated text-text-primary rounded-lg border border-border"
                         >
                           No
                         </button>
@@ -1633,28 +1651,28 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
                   ) : (
                     <button
                       onClick={() => setDeleteConfirming(p.participant_id)}
-                      className="p-1 text-neutral-400 hover:text-red-500 transition-colors"
+                      className="p-1.5 text-text-secondary hover:text-semantic-critical hover:bg-surface-elevated rounded-lg transition-colors cursor-pointer"
                       title="Delete"
                     >
-                      🗑️
+                      <Trash2 size={13} />
                     </button>
                   )}
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1.5">
                 {(p.roles || []).map((role: string) => (
-                  <span key={role} className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${roleBadgeColor(role)}`}>
+                  <span key={role} className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-lg border ${roleBadgeColor(role)}`}>
                     {role}
                   </span>
                 ))}
               </div>
 
               {(p.contact?.phone || p.contact?.email) && (
-                <p className="text-[11px] text-neutral-500 mt-2">
-                  {p.contact.phone && `📞 ${p.contact.phone}`}
+                <p className="text-[11px] text-text-secondary font-medium">
+                  {p.contact.phone && `Phone: ${p.contact.phone}`}
                   {p.contact.phone && p.contact.email && ' · '}
-                  {p.contact.email && `✉️ ${p.contact.email}`}
+                  {p.contact.email && `Email: ${p.contact.email}`}
                 </p>
               )}
 
@@ -1665,18 +1683,18 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
                     handlePromote(e, p);
                   }}
                   disabled={promoting}
-                  className="mt-3 w-full flex-shrink-0 text-xs font-bold px-2 py-1.5 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-60 transition-colors"
+                  className="w-full text-xs font-bold px-3 py-2 rounded-xl bg-semantic-critical hover:bg-semantic-critical/90 text-white disabled:opacity-60 transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  {promoting ? '...' : '⚖️ Promote to Accused'}
+                  <Scale size={13} /> {promoting ? '...' : 'Promote to Accused'}
                 </button>
               )}
 
-              <p 
-                className="text-[10px] text-blue-500 mt-2 cursor-pointer hover:underline"
+              <button 
+                className="text-xs font-bold text-brand-primary hover:underline cursor-pointer inline-flex items-center gap-1 pt-1"
                 onClick={() => setSelectedParticipant(p)}
               >
-                Click for full details →
-              </p>
+                Click for full details &rarr;
+              </button>
             </div>
           );
         })}
@@ -1769,12 +1787,12 @@ function ParticipantDetailModal({
 
   const roleBadgeColor = (role: string) => {
     switch (role) {
-      case 'Accused': return 'bg-red-900/20 text-red-400 border-red-800/50';
-      case 'Suspect': return 'bg-neutral-900/50 text-orange-400 border-neutral-700';
-      case 'Victim': return 'bg-green-900/20 text-green-400 border-green-800/50';
-      case 'Witness': return 'bg-neutral-900/50 text-purple-700 border-neutral-700';
-      case 'Complainant': return 'bg-blue-900/20 text-blue-400 border-blue-800/50';
-      default: return 'bg-neutral-900/50 text-text-secondary border-neutral-700';
+      case 'Accused': return 'bg-semantic-critical/10 text-semantic-critical border-semantic-critical/30';
+      case 'Suspect': return 'bg-semantic-warning/10 text-semantic-warning border-semantic-warning/30';
+      case 'Victim': return 'bg-semantic-success/10 text-semantic-success border-semantic-success/30';
+      case 'Witness': return 'bg-brand-primary/10 text-brand-primary border-brand-primary/20';
+      case 'Complainant': return 'bg-brand-primary/10 text-brand-primary border-brand-primary/20';
+      default: return 'bg-surface-elevated text-text-secondary border-border';
     }
   };
 
@@ -1815,9 +1833,7 @@ function ParticipantDetailModal({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Reset the input so the same file can be re-selected if needed
     e.target.value = '';
-
     setTranscribing(true);
     setTranscribeError(null);
 
@@ -1832,20 +1848,16 @@ function ParticipantDetailModal({
       );
 
       const { transcript, detectedLanguage, translatedText } = res.data.data;
-
-      // Auto-fill the statement textarea with the original-language text
-      // Append if there's already some content (officer may have typed some)
       setStmtContent((prev) => {
         const base = prev.trim();
         return base ? `${base}\n\n${transcript}` : transcript;
       });
 
-      // Show a subtle hint if translation is also available
       if (translatedText && detectedLanguage && detectedLanguage !== 'en') {
-        setTranscribeError(`Detected language: ${detectedLanguage}. English translation also available — check below.`);
+        setTranscribeError(`Detected language: ${detectedLanguage}. English translation also available.`);
       }
     } catch (err: any) {
-      const msg = err.response?.data?.message || 'Transcription failed. Ensure the Python service is running.';
+      const msg = err.response?.data?.message || 'Transcription failed.';
       setTranscribeError(msg);
     } finally {
       setTranscribing(false);
@@ -1896,56 +1908,62 @@ function ParticipantDetailModal({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={onClose}>
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-md p-4" onClick={onClose}>
       <div
-        className="bg-neutral-900/50 rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto"
+        className="bg-surface border border-border rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden my-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-start justify-between p-6 border-b border-neutral-100">
+        <div className="flex items-start justify-between p-5 border-b border-border shrink-0 bg-surface">
           <div>
-            <h2 className="text-xl font-bold text-white">{p.name}</h2>
-            <div className="flex flex-wrap gap-1.5 mt-2">
+            <h2 className="text-base font-bold text-text-primary">{p.name}</h2>
+            <div className="flex flex-wrap gap-1.5 mt-1.5">
               {(p.roles || []).map((role: string) => (
-                <span key={role} className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${roleBadgeColor(role)}`}>
+                <span key={role} className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-lg border ${roleBadgeColor(role)}`}>
                   {role}
                 </span>
               ))}
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-1">
             {onEdit && (
-              <button onClick={() => onEdit(p)} className="p-2 text-blue-500 hover:bg-blue-900/20 rounded-lg transition-colors" title="Edit">✏️</button>
+              <button onClick={() => onEdit(p)} className="p-2 text-text-secondary hover:text-brand-primary hover:bg-surface-elevated rounded-full transition-colors cursor-pointer" title="Edit">
+                <Pencil size={15} />
+              </button>
             )}
             {onDelete && (
-              <button onClick={() => onDelete(p)} className="p-2 text-red-500 hover:bg-red-900/20 rounded-lg transition-colors" title="Delete">🗑️</button>
+              <button onClick={() => onDelete(p)} className="p-2 text-text-secondary hover:text-semantic-critical hover:bg-surface-elevated rounded-full transition-colors cursor-pointer" title="Delete">
+                <Trash2 size={15} />
+              </button>
             )}
-            <button onClick={onClose} className="p-1 text-neutral-400 hover:text-text-secondary transition-colors text-2xl leading-none">×</button>
+            <button onClick={onClose} className="p-2 text-text-secondary hover:bg-surface-elevated rounded-full transition-colors cursor-pointer">
+              <X size={18} />
+            </button>
           </div>
         </div>
 
-        <div className="p-6 space-y-5">
+        <div className="p-5 space-y-4 overflow-y-auto flex-1 bg-surface-elevated/30">
           {/* Contact */}
           {(p.contact?.phone || p.contact?.email || p.contact?.address) && (
-            <section>
-              <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">Contact Information</h3>
-              <div className="bg-neutral-900/50 rounded-lg p-3 text-sm text-text-secondary space-y-1 border border-neutral-100">
-                {p.contact.phone && <p>📞 {p.contact.phone}</p>}
-                {p.contact.email && <p>✉️ {p.contact.email}</p>}
-                {p.contact.address && <p>📍 {p.contact.address}</p>}
+            <section className="bg-surface border border-border rounded-xl p-3.5 space-y-1.5 shadow-xs">
+              <h3 className="text-[11px] font-bold uppercase text-brand-primary tracking-wider">Contact Information</h3>
+              <div className="text-xs text-text-primary space-y-1 font-medium">
+                {p.contact.phone && <p>Phone: {p.contact.phone}</p>}
+                {p.contact.email && <p>Email: {p.contact.email}</p>}
+                {p.contact.address && <p>Address: {p.contact.address}</p>}
               </div>
             </section>
           )}
 
           {/* Identifiers */}
           {p.identifiers?.length > 0 && (
-            <section>
-              <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">Identifiers</h3>
-              <div className="flex flex-wrap gap-2">
+            <section className="space-y-1.5">
+              <h3 className="text-[11px] font-bold uppercase text-text-secondary tracking-wider">Identifiers</h3>
+              <div className="flex flex-wrap gap-1.5">
                 {p.identifiers.map((id: any, i: number) => (
-                  <span key={i} className="text-xs bg-neutral-800 text-text-secondary px-2 py-1 rounded border border-neutral-700">
-                    <span className="font-semibold">{id.type}:</span> {id.value}
+                  <span key={i} className="text-xs bg-surface text-text-primary px-2.5 py-1 rounded-lg border border-border font-mono font-medium">
+                    <span className="font-bold text-brand-primary">{id.type}:</span> {id.value}
                   </span>
                 ))}
               </div>
@@ -1954,35 +1972,31 @@ function ParticipantDetailModal({
 
           {/* Victim Profile */}
           {p.victimProfile && (p.victimProfile.injuryDetails || p.victimProfile.lossDetails) && (
-            <section>
-              <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">Victim Profile</h3>
-              <div className="bg-green-900/20 border border-green-100 rounded-lg p-3 text-sm text-text-secondary space-y-1">
-                {p.victimProfile.injuryDetails && <p><span className="font-semibold">Injury:</span> {p.victimProfile.injuryDetails}</p>}
-                {p.victimProfile.lossDetails && <p><span className="font-semibold">Loss:</span> {p.victimProfile.lossDetails}</p>}
-              </div>
+            <section className="bg-semantic-success/10 border border-semantic-success/30 rounded-xl p-3.5 space-y-1 text-xs text-text-primary">
+              <h3 className="text-[11px] font-bold uppercase text-semantic-success tracking-wider mb-1">Victim Profile</h3>
+              {p.victimProfile.injuryDetails && <p><span className="font-bold">Injury:</span> {p.victimProfile.injuryDetails}</p>}
+              {p.victimProfile.lossDetails && <p><span className="font-bold">Loss:</span> {p.victimProfile.lossDetails}</p>}
             </section>
           )}
 
-          {/* Suspect Profile (only show if not also accused) */}
+          {/* Suspect Profile */}
           {p.suspectProfile && !(p.roles || []).includes('Accused') && (p.suspectProfile.motive || p.suspectProfile.alibi) && (
-            <section>
-              <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">Suspect Profile</h3>
-              <div className="bg-neutral-900/50 border border-orange-100 rounded-lg p-3 text-sm text-text-secondary space-y-1">
-                {p.suspectProfile.motive && <p><span className="font-semibold">Motive:</span> {p.suspectProfile.motive}</p>}
-                {p.suspectProfile.alibi && <p><span className="font-semibold">Alibi:</span> {p.suspectProfile.alibi}</p>}
-              </div>
+            <section className="bg-semantic-warning/10 border border-semantic-warning/30 rounded-xl p-3.5 space-y-1 text-xs text-text-primary">
+              <h3 className="text-[11px] font-bold uppercase text-semantic-warning tracking-wider mb-1">Suspect Profile</h3>
+              {p.suspectProfile.motive && <p><span className="font-bold">Motive:</span> {p.suspectProfile.motive}</p>}
+              {p.suspectProfile.alibi && <p><span className="font-bold">Alibi:</span> {p.suspectProfile.alibi}</p>}
             </section>
           )}
 
           {/* Applied Legal Sections */}
           {appliedSections.length > 0 && (
-            <section>
-              <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">Applied Legal Sections</h3>
+            <section className="space-y-2">
+              <h3 className="text-[11px] font-bold uppercase text-brand-primary tracking-wider">Applied Legal Sections</h3>
               <div className="space-y-2">
                 {appliedSections.map((sec: any, i: number) => (
-                  <div key={i} className="bg-blue-900/20 border border-blue-100 rounded-lg p-3 text-sm">
-                    <p className="font-bold text-blue-800">{sec.code} — {sec.title}</p>
-                    {sec.reason && <p className="text-xs text-text-secondary mt-1">{sec.reason}</p>}
+                  <div key={i} className="bg-brand-primary/10 border border-brand-primary/30 rounded-xl p-3.5 text-xs">
+                    <p className="font-bold text-brand-primary">{sec.code} — {sec.title}</p>
+                    {sec.reason && <p className="text-text-primary mt-1 leading-relaxed">{sec.reason}</p>}
                   </div>
                 ))}
               </div>
@@ -1991,48 +2005,50 @@ function ParticipantDetailModal({
 
           {/* Complainant Profile */}
           {p.complainantProfile?.relationshipToIncident && (
-            <section>
-              <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-2">Complainant</h3>
-              <p className="text-sm text-text-secondary">Relation to Incident: {p.complainantProfile.relationshipToIncident}</p>
+            <section className="bg-surface border border-border rounded-xl p-3.5 text-xs text-text-primary">
+              <h3 className="text-[11px] font-bold uppercase text-text-secondary tracking-wider mb-1">Complainant</h3>
+              <p className="font-medium">Relation to Incident: {p.complainantProfile.relationshipToIncident}</p>
             </section>
           )}
 
           {/* ── Statements ──────────────────────────────────────────────── */}
-          <section>
-            <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-3">Statements</h3>
+          <section className="space-y-2">
+            <h3 className="text-[11px] font-bold uppercase text-brand-primary tracking-wider">Statements</h3>
 
             {/* Existing statements */}
             {Array.isArray(p.statements) && p.statements.length > 0 ? (
-              <div className="space-y-2 mb-3">
+              <div className="space-y-2">
                 {p.statements.map((stmt: any) => (
-                  <div key={stmt.id} className="bg-neutral-900/50 border border-purple-100 rounded-lg p-3 text-sm">
+                  <div key={stmt.id} className="bg-surface border border-border rounded-xl p-3 text-xs shadow-xs">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-text-primary flex-1">{stmt.content}</p>
+                      <p className="text-text-primary font-medium flex-1 leading-relaxed">{stmt.content}</p>
                       <button
                         onClick={() => handleDeleteStatement(stmt.id)}
-                        className="text-neutral-300 hover:text-red-500 transition-colors flex-shrink-0 text-xs"
+                        className="text-text-secondary hover:text-semantic-critical transition-colors flex-shrink-0 p-1 cursor-pointer"
                         title="Delete statement"
-                      >🗑️</button>
+                      >
+                        <Trash2 size={13} />
+                      </button>
                     </div>
-                    <p className="text-xs text-neutral-400 mt-1">
-                      🕐 {stmt.recordedAt ? new Date(stmt.recordedAt).toLocaleString('en-IN') : 'No date'}
+                    <p className="text-[10px] text-text-secondary font-mono mt-1">
+                      {stmt.recordedAt ? new Date(stmt.recordedAt).toLocaleString('en-IN') : 'No date'}
                     </p>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-neutral-400 mb-3">No statements recorded yet.</p>
+              <p className="text-xs text-text-secondary italic">No statements recorded yet.</p>
             )}
 
             {/* Add statement form */}
-            <div className="border border-neutral-700 rounded-lg p-3 bg-neutral-900/50 space-y-2">
-              <p className="text-xs font-semibold text-text-secondary">Add New Statement</p>
+            <div className="border border-border rounded-xl p-3.5 bg-surface space-y-2 shadow-xs">
+              <p className="text-xs font-bold text-text-primary">Add New Statement</p>
               <textarea
                 value={stmtContent}
                 onChange={(e) => setStmtContent(e.target.value)}
                 placeholder="Enter statement content..."
                 rows={3}
-                className="w-full px-3 py-2 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-200 resize-none"
+                className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-3 text-xs font-medium placeholder:text-text-muted resize-none"
               />
 
               {/* Audio upload row */}
@@ -2081,55 +2097,55 @@ function ParticipantDetailModal({
                 </p>
               )}
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 pt-1">
                 <div className="flex-1">
-                  <label className="text-xs text-neutral-500 mb-1 block">Recorded At</label>
+                  <label className="text-[10px] text-text-secondary font-bold uppercase tracking-wider mb-1 block">Recorded At</label>
                   <input
                     type="datetime-local"
                     value={stmtDate}
                     onChange={(e) => setStmtDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-200"
+                    className="w-full px-3 py-1.5 border border-border rounded-xl bg-input-bg text-text-primary text-xs font-medium focus:border-brand-primary"
                   />
                 </div>
                 <button
                   onClick={handleAddStatement}
                   disabled={stmtLoading || !stmtContent.trim()}
-                  className="self-end px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors"
+                  className="self-end px-3.5 py-2 bg-brand-primary text-white text-xs font-bold rounded-xl hover:bg-brand-primary/90 disabled:opacity-50 transition-all shadow-xs cursor-pointer"
                 >
-                  {stmtLoading ? '...' : '+ Add'}
+                  {stmtLoading ? '...' : '+ Add Statement'}
                 </button>
               </div>
             </div>
           </section>
 
           {/* ── Reasoning ───────────────────────────────────────────────── */}
-          <section>
-            <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-wider mb-3">Reasoning</h3>
+          <section className="space-y-2">
+            <h3 className="text-[11px] font-bold uppercase text-brand-primary tracking-wider">Reasoning</h3>
 
             {/* Existing reasoning entries */}
             {Array.isArray(p.reasoning) && p.reasoning.length > 0 ? (
-              <div className="space-y-2 mb-3">
+              <div className="space-y-2">
                 {p.reasoning.map((r: any) => (
-                  <div key={r.id} className="bg-blue-900/20 border border-blue-100 rounded-lg p-3 text-sm">
+                  <div key={r.id} className="bg-surface border border-border rounded-xl p-3 text-xs shadow-xs">
                     {editingReasoningId === r.id ? (
                       <div className="space-y-2">
                         <textarea
                           value={editingReasoningContent}
                           onChange={(e) => setEditingReasoningContent(e.target.value)}
                           rows={3}
-                          className="w-full px-3 py-2 border border-blue-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none"
+                          className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary p-3 text-xs font-medium"
                         />
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleUpdateReasoning(r.id)}
                             disabled={reasoningLoading}
-                            className="px-3 py-1 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                            className="px-3 py-1.5 bg-brand-primary text-white text-xs font-bold rounded-lg hover:bg-brand-primary/90 disabled:opacity-50 cursor-pointer"
                           >
                             {reasoningLoading ? '...' : 'Save'}
                           </button>
                           <button
                             onClick={() => { setEditingReasoningId(null); setEditingReasoningContent(''); }}
-                            className="px-3 py-1 border border-neutral-700 text-text-secondary text-xs font-semibold rounded-lg hover:bg-neutral-900/50">
+                            className="px-3 py-1.5 border border-border text-text-primary text-xs font-bold rounded-lg hover:bg-surface-elevated cursor-pointer">
                             Cancel
                           </button>
                         </div>
@@ -2138,24 +2154,28 @@ function ParticipantDetailModal({
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${r.source === 'ai' ? 'bg-neutral-800 text-indigo-400' : 'bg-neutral-800 text-emerald-400'}`}>
-                              {r.source === 'ai' ? '🤖 AI' : '👮 Officer'}
+                            <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg border ${r.source === 'ai' ? 'bg-brand-primary/10 text-brand-primary border-brand-primary/20' : 'bg-semantic-success/10 text-semantic-success border-semantic-success/30'}`}>
+                              {r.source === 'ai' ? 'AI Suggestion' : 'Officer Note'}
                             </span>
-                            <span className="text-xs text-neutral-400">{new Date(r.createdAt).toLocaleString('en-IN')}</span>
+                            <span className="text-[10px] text-text-secondary font-mono">{new Date(r.createdAt).toLocaleString('en-IN')}</span>
                           </div>
-                          <p className="text-text-primary">{r.content}</p>
+                          <p className="text-text-primary font-medium leading-relaxed">{r.content}</p>
                         </div>
                         <div className="flex gap-1 flex-shrink-0">
                           <button
                             onClick={() => { setEditingReasoningId(r.id); setEditingReasoningContent(r.content); }}
-                            className="text-neutral-300 hover:text-blue-500 transition-colors text-xs"
+                            className="p-1 text-text-secondary hover:text-brand-primary transition-colors cursor-pointer"
                             title="Edit"
-                          >✏️</button>
+                          >
+                            <Pencil size={13} />
+                          </button>
                           <button
                             onClick={() => handleDeleteReasoning(r.id)}
-                            className="text-neutral-300 hover:text-red-500 transition-colors text-xs"
+                            className="p-1 text-text-secondary hover:text-semantic-critical transition-colors cursor-pointer"
                             title="Delete"
-                          >🗑️</button>
+                          >
+                            <Trash2 size={13} />
+                          </button>
                         </div>
                       </div>
                     )}
@@ -2163,23 +2183,23 @@ function ParticipantDetailModal({
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-neutral-400 mb-3">No reasoning entries yet.</p>
+              <p className="text-xs text-text-secondary italic">No reasoning entries yet.</p>
             )}
 
             {/* Add reasoning form */}
-            <div className="border border-neutral-700 rounded-lg p-3 bg-neutral-900/50 space-y-2">
-              <p className="text-xs font-semibold text-text-secondary">Add Reasoning Note</p>
+            <div className="border border-border rounded-xl p-3.5 bg-surface space-y-2 shadow-xs">
+              <p className="text-xs font-bold text-text-primary">Add Reasoning Note</p>
               <textarea
                 value={reasoningContent}
                 onChange={(e) => setReasoningContent(e.target.value)}
                 placeholder="Add investigative reasoning or observation..."
                 rows={3}
-                className="w-full px-3 py-2 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none"
+                className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-3 text-xs font-medium placeholder:text-text-muted resize-none"
               />
               <button
                 onClick={handleAddReasoning}
                 disabled={reasoningLoading || !reasoningContent.trim()}
-                className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                className="px-3.5 py-2 bg-brand-primary text-white text-xs font-bold rounded-xl hover:bg-brand-primary/90 disabled:opacity-50 transition-all shadow-xs cursor-pointer"
               >
                 {reasoningLoading ? '...' : '+ Add Reasoning'}
               </button>
@@ -2187,7 +2207,8 @@ function ParticipantDetailModal({
           </section>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

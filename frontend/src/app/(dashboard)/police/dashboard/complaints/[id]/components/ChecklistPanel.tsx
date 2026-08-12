@@ -209,36 +209,53 @@ function StepRow({
           </div>
 
           {/* Right side: actions + expand */}
-          <div className="flex-shrink-0 flex flex-col items-end gap-2">
-            {/* Action button */}
-            {step.status !== 'completed' && (
-              <>
+          <div className="flex-shrink-0 flex flex-col sm:flex-row items-end sm:items-center gap-2">
+            {/* Action buttons */}
+            {step.status !== 'completed' ? (
+              <div className="flex items-center gap-2 flex-wrap">
                 {isDept && !isLocked && (
                   <button
-                    onClick={() => onOpenComposer(step.step_id, step.department_entity_id || 'UNKNOWN_DEPARTMENT')}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-brand-primary hover:bg-brand-primary/90 text-white shadow-xs transition-all"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenComposer(step.step_id, step.department_entity_id || 'UNKNOWN_DEPARTMENT');
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-brand-primary hover:bg-brand-primary/90 text-white shadow-xs transition-all cursor-pointer"
                   >
                     <Send size={12} /> Request
                   </button>
                 )}
-                {isInternal && (
-                  <button
-                    onClick={() => setProofOpen(true)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-brand-primary hover:bg-brand-primary/90 text-white shadow-xs transition-all"
-                  >
-                    <CheckCircle2 size={12} /> Complete
-                  </button>
-                )}
                 {isCitizen && step.status !== 'blocked' && (
                   <button
-                    onClick={handleCitizenRequest}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCitizenRequest();
+                    }}
                     disabled={citizenLoading}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-semantic-warning text-white hover:bg-semantic-warning/90 shadow-xs transition-all disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-semantic-warning text-white hover:bg-semantic-warning/90 shadow-xs transition-all disabled:opacity-50 cursor-pointer"
                   >
                     <UserCheck size={12} /> {citizenLoading ? '…' : 'Ask Citizen'}
                   </button>
                 )}
-              </>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setProofOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-semantic-success hover:bg-semantic-success/90 text-white shadow-xs transition-all cursor-pointer"
+                >
+                  <CheckCircle2 size={12} /> Mark Done
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setProofOpen(true);
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-semantic-success/15 text-semantic-success border border-semantic-success/30 hover:bg-semantic-success/20 transition-all cursor-pointer"
+              >
+                <CheckCircle2 size={13} /> Completed ✓
+              </button>
             )}
 
             {/* Expand toggle */}

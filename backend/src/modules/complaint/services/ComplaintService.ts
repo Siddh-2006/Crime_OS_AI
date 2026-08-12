@@ -382,7 +382,7 @@ export class ComplaintService {
       logger.info(`[ComplaintIntelligence] Triggering full pipeline for ${complaintNumber}`);
 
       // 1. Primary: Microservice HTTP call
-      const microserviceUrl = env.COMPLAINT_INTELLIGENCE_URL || 'http://localhost:8000';
+      const microserviceUrl = env.COMPLAINT_INTELLIGENCE_URL || 'http://localhost:8001';
       axios.post(`${microserviceUrl}/trigger-full-pipeline`, {
         complaint_number: complaintNumber,
       }, { timeout: 15000 }).then((response) => {
@@ -395,9 +395,10 @@ export class ComplaintService {
         // Fallback execution
         const scriptPath = path.resolve(__dirname, '../../../../../services/complaint_intelligence/run_pipeline_from_atlas.py');
         const venvPythonIntell = path.resolve(__dirname, '../../../../../services/complaint_intelligence/.venv/Scripts/python.exe');
-        const venvPythonRoot = path.resolve(__dirname, '../../../../../services/.venv/Scripts/python.exe');
+        const venvPythonProject = path.resolve(__dirname, '../../../../../.venv/Scripts/python.exe');
+        const venvPythonServices = path.resolve(__dirname, '../../../../../services/.venv/Scripts/python.exe');
         const pythonExec = process.platform === 'win32'
-          ? (fs.existsSync(venvPythonIntell) ? venvPythonIntell : (fs.existsSync(venvPythonRoot) ? venvPythonRoot : 'python'))
+          ? (fs.existsSync(venvPythonIntell) ? venvPythonIntell : (fs.existsSync(venvPythonProject) ? venvPythonProject : (fs.existsSync(venvPythonServices) ? venvPythonServices : 'python')))
           : 'python';
 
         const scriptDir = path.dirname(scriptPath);

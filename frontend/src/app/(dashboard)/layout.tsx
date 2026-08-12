@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { APP_ROUTES, ROLE } from '@/lib/constants';
 import { Loader } from '@/components/ui/Loader';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { LanguageToggle } from '@/components/LanguageToggle';
 import { Watermark } from '@/components/Watermark';
 import { ParticleBackground } from '@/components/ParticleBackground';
 
@@ -99,6 +100,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
           <div className="hidden lg:block" />
           <div className="flex items-center gap-3">
+            <LanguageToggle />
             <ThemeToggle />
             <div className="flex items-center gap-3 pl-3 border-l border-border">
               <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-primary text-white text-xs font-bold shadow-xs">

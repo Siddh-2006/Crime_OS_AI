@@ -362,7 +362,7 @@ export function AnalysisPanel({
         </div>
         {sseError && (
           <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-1.5">
-            ⚠️ {sseError}
+            {sseError}
           </p>
         )}
       </Card>
@@ -556,23 +556,23 @@ export function AnalysisPanel({
                   );
 
                   return (
-                    <div key={`${safeText(recommendation.name)}-${safeArray(recommendation.roles).join(',')}`} className="rounded-xl border border-border p-4 bg-surface shadow-xs">
-                      <div className="flex items-start justify-between gap-3 mb-3">
-                        <div>
+                    <div key={`${safeText(recommendation.name)}-${safeArray(recommendation.roles).join(',')}`} className="rounded-xl border border-border p-4 bg-surface shadow-xs space-y-2">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
                           <p className="text-sm font-bold text-text-primary">{safeText(recommendation.name)}</p>
-                          <p className="text-xs text-neutral-500 mt-0.5">
+                          <p className="text-xs text-text-secondary font-medium mt-0.5">
                             {safeArray(recommendation.roles).join(', ')} • {(Number(recommendation.confidence) * 100).toFixed(0)}% confidence
                           </p>
-                          <p className="text-xs text-neutral-400 mt-1">{safeText(recommendation.reason)}</p>
+                          <p className="text-xs text-text-secondary mt-1 leading-relaxed">{safeText(recommendation.reason)}</p>
                           {recommendation.suggested_reasoning && (
-                            <div className="mt-2 bg-indigo-900/30 border border-indigo-800/50 rounded p-2">
-                              <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wide mb-0.5">🧠 AI Observation</p>
-                              <p className="text-xs text-indigo-300">{safeText(recommendation.suggested_reasoning)}</p>
+                            <div className="mt-2 bg-brand-primary/10 border border-brand-primary/20 rounded-xl p-3">
+                              <p className="text-[10px] font-bold text-brand-primary uppercase tracking-wide mb-0.5">AI Observation</p>
+                              <p className="text-xs text-text-primary leading-relaxed">{safeText(recommendation.suggested_reasoning)}</p>
                             </div>
                           )}
                         </div>
-                      <div className="flex flex-col gap-2 items-end">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300 bg-emerald-900/30 border border-emerald-700 rounded-full px-2 py-0.5">
+                        <div className="flex flex-col gap-2 items-end shrink-0">
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-semantic-success bg-semantic-success/10 border border-semantic-success/30 rounded-full px-2.5 py-0.5">
                             AI Suggestion
                           </span>
                           {!isApproved && onApproveParticipant && (
@@ -581,13 +581,13 @@ export function AnalysisPanel({
                               onClick={() => handleApproveParticipantWrap(recommendation)}
                               isLoading={loadingItemKey === participantKey}
                               disabled={actionLoading && loadingItemKey !== participantKey}
-                              className="!px-2.5 !py-1 text-[11px]"
+                              className="px-3 py-1.5 text-xs font-bold"
                             >
                               Add Participant
                             </Button>
                           )}
                           {isApproved && (
-                            <span className="text-[10px] font-bold text-green-700">Added ✓</span>
+                            <span className="text-[11px] font-bold text-semantic-success bg-semantic-success/10 border border-semantic-success/30 px-2.5 py-0.5 rounded-md">Added ✓</span>
                           )}
                           {/* Attach Reasoning button — shown when AI suggests a major observation */}
                           {recommendation.suggested_reasoning && onAttachReasoning && (() => {
@@ -600,17 +600,17 @@ export function AnalysisPanel({
                               (r) => r.content.trim() === recommendation.suggested_reasoning!.trim()
                             );
                             return alreadyAttached ? (
-                              <span className="text-[10px] font-bold text-blue-600">Reasoning Attached ✓</span>
+                              <span className="text-[11px] font-bold text-brand-primary bg-brand-primary/10 border border-brand-primary/20 px-2 py-0.5 rounded-md">Reasoning Attached ✓</span>
                             ) : (
                               <Button
                                 size="sm"
-                                variant="ghost"
+                                variant="secondary"
                                 onClick={() => handleAttachReasoningWrap(recommendation)}
                                 isLoading={loadingItemKey === reasoningKey}
                                 disabled={actionLoading && loadingItemKey !== reasoningKey}
-                                className="!px-2.5 !py-1 text-[11px] border border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                                className="px-2.5 py-1 text-xs font-semibold"
                               >
-                                🧠 Attach Reasoning
+                                Attach Reasoning
                               </Button>
                             );
                           })()}
@@ -618,8 +618,8 @@ export function AnalysisPanel({
                       </div>
 
                       {recommendation.recommended_sections && recommendation.recommended_sections.length > 0 && (
-                        <div className="space-y-2 mt-3 pt-3 border-t border-neutral-800">
-                          <p className="text-xs font-semibold text-neutral-400 mb-2">Suggested Sections</p>
+                        <div className="space-y-2 mt-3 pt-3 border-t border-border">
+                          <p className="text-[11px] font-bold text-brand-primary uppercase tracking-wider mb-2">Suggested Sections</p>
                           {recommendation.recommended_sections.map((section) => {
                             const dismissalKey = `${safeText(recommendation.name)}:${safeText(section.code)}`;
                             const sectionKey = `section:${safeText(recommendation.name)}:${safeText(section.code)}`;
@@ -635,12 +635,12 @@ export function AnalysisPanel({
                             const isSectionAccepted = appliedSections.some((s: any) => safeText(s.code) === safeText(section.code));
 
                             return (
-                              <div key={dismissalKey} className="flex items-start justify-between gap-3 rounded-md border border-neutral-800 bg-neutral-900/50 p-3">
+                              <div key={dismissalKey} className="flex items-start justify-between gap-3 rounded-xl border border-border bg-surface-elevated/40 p-3.5 shadow-xs">
                                 <div className="min-w-0">
-                                  <p className="text-sm font-semibold text-text-primary">
+                                  <p className="text-sm font-bold text-text-primary">
                                     <strong>{safeText(section.code)}</strong>: {safeText(section.title)}
                                   </p>
-                                  {safeText(section.reason) && <p className="text-xs text-neutral-500 mt-1">{safeText(section.reason)}</p>}
+                                  {safeText(section.reason) && <p className="text-xs text-text-secondary font-medium mt-1 leading-relaxed">{safeText(section.reason)}</p>}
                                 </div>
                                 <div className="flex items-center gap-2 flex-shrink-0">
                                   {isSectionAccepted ? (
@@ -720,7 +720,7 @@ export function AnalysisPanel({
                 <div className="space-y-1.5">
                   <p className="text-text-secondary font-bold">Contradictions Found</p>
                   <p className={`font-mono font-extrabold text-base ${snapshot.confidence_breakdown.contradiction_penalty > 0 ? 'text-semantic-critical' : 'text-text-secondary'}`}>
-                    {snapshot.confidence_breakdown.contradiction_penalty > 0 ? `⚠️ ${snapshot.confidence_breakdown.contradiction_penalty}` : '✓ None'}
+                    {snapshot.confidence_breakdown.contradiction_penalty > 0 ? `Penalty: ${snapshot.confidence_breakdown.contradiction_penalty}` : '✓ None'}
                   </p>
                   <p className="text-[10px] text-text-secondary leading-tight">Conflicting statements or evidence weakening the case</p>
                 </div>

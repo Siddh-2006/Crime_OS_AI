@@ -101,12 +101,12 @@ def _build_multimodal_prompt(
         "required_output": {
             "shortDescription": "short title for the complaint",
             "detailedDescription": "full paragraph-style complaint narrative generated from the complaint text and all extracted media text",
-            "incidentDate": "YYYY-MM-DD if derivable, otherwise null",
-            "incidentTime": "exact time or broad period if derivable, otherwise null",
-            "incidentPlace": "location of occurrence if derivable, otherwise null",
-            "approximateDateText": "free-form approximate date text if derivable, otherwise null",
+            "incidentDate": "YYYY-MM-DD if exact date is known, otherwise null",
+            "incidentTime": "exact time (HH:MM or 2:30 PM) if explicitly mentioned in text/attachments. Do NOT guess or hallucinate. If no time is stated, return null",
+            "incidentPlace": "physical location where the complainant was located or where physical occurrence happened (e.g., residence address, street, city, town, or physical bank branch). Never output generic terms like 'Online' or 'WhatsApp'. If no physical place is stated, return null",
+            "approximateDateText": "free-form date range or description if exact single date is unclear, otherwise null",
             "coordinates": "GPS coordinates if derivable, otherwise null",
-            "address": "full address if derivable, otherwise null",
+            "address": "full physical address where complainant was located if derivable, otherwise null",
             "category": "one of THEFT, ROBBERY, BURGLARY, ASSAULT, DOMESTIC_VIOLENCE, SEXUAL_OFFENCE, CYBERCRIME, FRAUD, PROPERTY_DISPUTE, MISSING_PERSON, ROAD_ACCIDENT, DRUG_OFFENCE, PUBLIC_NUISANCE, HARASSMENT, EXTORTION, MURDER, KIDNAPPING, OTHER — pick the closest match, or null if unclear",
             "missingFields": ["fields that still require manual entry"],
             "confidence": 0.0,
@@ -307,19 +307,29 @@ async def profile_complaint_multimodal(
         ) or (combined_text if combined_text else None),
         incidentDate=_first_non_empty(
             parsed_output.get("incidentDate"),
+            parsed_output.get("incident_date"),
             parsed_context.get("incidentDate"),
         ),
         incidentTime=_first_non_empty(
             parsed_output.get("incidentTime"),
+            parsed_output.get("incident_time"),
+            parsed_output.get("time"),
+            parsed_output.get("period"),
+            parsed_output.get("time_of_day"),
             parsed_context.get("incidentTime"),
         ),
         incidentPlace=_first_non_empty(
             parsed_output.get("incidentPlace"),
+            parsed_output.get("incident_place"),
+            parsed_output.get("location"),
+            parsed_output.get("place"),
             parsed_output.get("address"),
             parsed_context.get("incidentPlace"),
         ),
         approximateDateText=_first_non_empty(
             parsed_output.get("approximateDateText"),
+            parsed_output.get("approximate_date"),
+            parsed_output.get("date_range"),
             parsed_context.get("approximateDateText"),
         ),
         coordinates=_first_non_empty(
@@ -328,6 +338,7 @@ async def profile_complaint_multimodal(
         ),
         address=_first_non_empty(
             parsed_output.get("address"),
+            parsed_output.get("incidentPlace"),
             parsed_context.get("address"),
         ),
         category=_first_non_empty(
