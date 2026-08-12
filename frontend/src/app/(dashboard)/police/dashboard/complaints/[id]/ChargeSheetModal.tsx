@@ -13,9 +13,66 @@ interface ChargeSheetModalProps {
 
 export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeSheetModalProps) {
   const [data, setData] = useState<any>(null);
+  const [draftData, setDraftData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [regenLoading, setRegenLoading] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
   const [error, setError] = useState('');
+
+  const updateDraft = (path: Array<string | number>, value: any) => {
+    setDraftData((prev: any) => {
+      if (!prev) return prev;
+      const next = JSON.parse(JSON.stringify(prev));
+      let node: any = next;
+      for (let i = 0; i < path.length - 1; i += 1) {
+        const key = path[i];
+        if (node[key] === undefined || node[key] === null) {
+          node[key] = typeof path[i + 1] === 'number' ? [] : {};
+        }
+        node = node[key];
+      }
+      node[path[path.length - 1]] = value;
+      return next;
+    });
+  };
+
+  const setDraft = (source: any) => {
+    setData(source);
+    setDraftData(source ? JSON.parse(JSON.stringify(source)) : null);
+  };
+
+  const handlePreviewPdf = async (): Promise<string | null> => {
+    if (!draftData) return null;
+    setPreviewLoading(true);
+    setError('');
+    if (previewPdfUrl) {
+      window.URL.revokeObjectURL(previewPdfUrl);
+      setPreviewPdfUrl(null);
+    }
+
+    try {
+      const res = await apiClient.post(`/cases/${caseId}/chargesheet/pdf`, { chargeSheet: draftData }, {
+        responseType: 'blob',
+      });
+      const blobUrl = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+      setPreviewPdfUrl(blobUrl);
+      return blobUrl;
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to generate charge sheet preview PDF.');
+      return null;
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (previewPdfUrl) {
+        window.URL.revokeObjectURL(previewPdfUrl);
+      }
+    };
+  }, [previewPdfUrl]);
 
   const sectionNumbers = useMemo(() => {
     const numbers: Record<string, number | null> = {};
@@ -51,7 +108,7 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
     setError('');
     try {
       const res = await apiClient.get(`/cases/${caseId}/chargesheet`);
-      setData(res.data.data);
+      setDraft(res.data.data);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch charge sheet.');
     } finally {
@@ -73,30 +130,29 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
     }
   };
 
-  const handleDownload = () => {
-    const downloadPdf = async () => {
-      setError('');
-      setRegenLoading(true);
-      try {
-        const res = await apiClient.get(`/cases/${caseId}/chargesheet/pdf`, {
-          responseType: 'blob',
-        });
-        const blobUrl = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = `ChargeSheet_${data?.section1_filingInformation?.firNumber || 'Draft'}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        window.URL.revokeObjectURL(blobUrl);
-      } catch (err: any) {
-        setError(err.response?.data?.message || 'Failed to download charge sheet PDF.');
-      } finally {
-        setRegenLoading(false);
-      }
-    };
+  const handlePreviewModal = async () => {
+    if (!draftData?.section1_filingInformation?.magistrate?.trim()) {
+      setError('Magistrate is required before generating a charge sheet PDF.');
+      return;
+    }
+    await handlePreviewPdf();
+  };
 
-    void downloadPdf();
+const handleDownload = async () => {
+    setError('');
+    try {
+      const blobUrl = previewPdfUrl ?? (await handlePreviewPdf());
+      if (!blobUrl) return; // TypeScript narrows `blobUrl` to `string` after this line
+
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `ChargeSheet_${data?.section1_filingInformation?.firNumber || 'Draft'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to download charge sheet PDF.');
+    }
   };
 
   useEffect(() => {
