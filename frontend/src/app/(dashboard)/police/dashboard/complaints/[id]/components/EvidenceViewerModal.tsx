@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, FileText, FileAudio, FileVideo, FileImage, ExternalLink } from 'lucide-react';
 import apiClient from '@/lib/axios';
 
@@ -23,52 +24,82 @@ function evidenceTitle(ev: any): string {
 }
 
 export default function EvidenceViewerModal({ isOpen, onClose, evidence }: EvidenceViewerModalProps) {
-  if (!isOpen || !evidence) return null;
+  const [mounted, setMounted] = useState(false);
 
-  // Resolve the actual URL — prefer Cloudinary secureUrl, then storage_ref
-  const url: string =
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!isOpen || !evidence || !mounted) return null;
+
+  // Resolve the actual URL — check all common url field properties
+  const rawUrl: string =
     evidence.secureUrl ||
+    evidence.file_url ||
+    evidence.fileUrl ||
+    evidence.url ||
     evidence.storage_ref ||
     '';
 
-  const isMockUrl =
-    !url ||
-    url.startsWith('mock') ||
-    url.startsWith('seed/') ||
-    url.startsWith('email-body');
+  let url = rawUrl;
+  if (url && !url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('data:')) {
+    url = `http://localhost:5001/${url.replace(/^\/+/, '')}`;
+  }
+
+  const isMockUrl = !rawUrl;
 
   const renderContent = () => {
-    if (!isMockUrl) {
-      switch (evidence.type) {
-        case 'image':
-        case 'screenshot':
-        case 'chat_screenshot':
-          return (
-            <div className="flex justify-center items-center h-full bg-black/5 rounded-lg overflow-hidden p-2">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={url}
-                alt={evidenceTitle(evidence)}
-                className="max-w-full max-h-[380px] object-contain rounded"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                  (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
-                }}
-              />
-              <div className="hidden text-center p-6">
-                <FileImage className="w-12 h-12 text-neutral-400 mx-auto mb-2" />
-                <p className="text-sm text-neutral-500">Image could not be loaded.</p>
-                <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 underline mt-1 inline-flex items-center gap-1">
-                  Open in new tab <ExternalLink size={11} />
-                </a>
-              </div>
-            </div>
-          );
+    if (!isMockUrl && url) {
+      const lowerUrl = url.toLowerCase();
+      const isPdf = evidence.type === 'pdf' || evidence.type === 'document' || lowerUrl.endsWith('.pdf') || lowerUrl.includes('/pdf/');
 
+      if (isPdf) {
+        return (
+          <div className="flex flex-col w-full h-[420px] bg-surface rounded-xl overflow-hidden border border-border">
+            <iframe
+              src={url}
+              title={evidenceTitle(evidence)}
+              className="w-full h-full border-0 rounded-xl"
+            />
+          </div>
+        );
+      }
+      const isImage =
+        evidence.type === 'image' ||
+        evidence.type === 'screenshot' ||
+        evidence.type === 'chat_screenshot' ||
+        /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(lowerUrl) ||
+        /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(evidence.originalFilename || '');
+
+      if (isImage) {
+        return (
+          <div className="flex justify-center items-center h-full bg-surface-elevated/40 rounded-xl overflow-hidden p-2 border border-border">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={url}
+              alt={evidenceTitle(evidence)}
+              className="max-w-full max-h-[380px] object-contain rounded-lg shadow-sm"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+                (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+              }}
+            />
+            <div className="hidden text-center p-6 space-y-2">
+              <FileImage className="w-12 h-12 text-text-muted mx-auto" />
+              <p className="text-xs text-text-secondary">Image preview unavailable.</p>
+              <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-brand-primary underline inline-flex items-center gap-1">
+                Open image <ExternalLink size={12} />
+              </a>
+            </div>
+          </div>
+        );
+      }
+
+      switch (evidence.type) {
         case 'video':
         case 'screen_recording':
           return (
-            <div className="flex justify-center items-center h-full bg-black rounded-lg overflow-hidden">
+            <div className="flex justify-center items-center h-full bg-surface-elevated/40 rounded-xl overflow-hidden border border-border">
               <video controls className="max-w-full max-h-[380px]">
                 <source src={url} />
               </video>
@@ -77,9 +108,9 @@ export default function EvidenceViewerModal({ isOpen, onClose, evidence }: Evide
 
         case 'audio':
           return (
-            <div className="flex justify-center items-center h-full bg-neutral-50 rounded-lg p-8">
-              <div className="text-center w-full max-w-sm">
-                <FileAudio className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
+            <div className="flex justify-center items-center h-full bg-surface-elevated/40 rounded-xl p-8 border border-border">
+              <div className="text-center w-full max-w-sm space-y-4">
+                <FileAudio className="w-16 h-16 text-brand-primary mx-auto" />
                 <audio controls className="w-full">
                   <source src={url} />
                 </audio>
@@ -87,50 +118,51 @@ export default function EvidenceViewerModal({ isOpen, onClose, evidence }: Evide
             </div>
           );
 
-        case 'document':
-        case 'bank_statement':
-        case 'pdf':
+        default:
           return (
-            <div className="flex flex-col justify-center items-center h-full bg-neutral-50 rounded-lg p-6 gap-4">
-              <FileText className="w-14 h-14 text-neutral-300" />
+            <div className="flex flex-col justify-center items-center h-full bg-surface-elevated/40 rounded-xl p-6 gap-3 border border-border">
+              <FileText className="w-14 h-14 text-brand-primary" />
+              <p className="text-xs font-bold text-text-primary">{evidenceTitle(evidence)}</p>
               <a
                 href={url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 border border-blue-200 rounded-lg px-4 py-2 bg-neutral-900/50 hover:bg-blue-50 transition-colors"
+                className="inline-flex items-center gap-2 text-xs font-bold text-brand-primary border border-brand-primary/30 rounded-xl px-4 py-2 bg-brand-primary/10 hover:bg-brand-primary/20 transition-colors"
               >
-                <ExternalLink size={14} /> Open Document
+                <ExternalLink size={13} /> Open File in New Tab
               </a>
             </div>
           );
       }
     }
 
-    // Fallback for mock/unknown
+    // Fallback for mock/local seed files without live URL
     const IconMap: Record<string, React.ReactNode> = {
-      image: <FileImage className="w-12 h-12 text-neutral-300" />,
-      video: <FileVideo className="w-12 h-12 text-neutral-300" />,
-      audio: <FileAudio className="w-12 h-12 text-neutral-300" />,
+      image: <FileImage className="w-12 h-12 text-brand-primary" />,
+      video: <FileVideo className="w-12 h-12 text-brand-primary" />,
+      audio: <FileAudio className="w-12 h-12 text-brand-primary" />,
     };
     return (
-      <div className="flex flex-col justify-center items-center h-full bg-neutral-50 rounded-lg gap-3 p-6">
-        {IconMap[evidence.type] ?? <FileText className="w-12 h-12 text-neutral-300" />}
-        <p className="text-sm text-neutral-500">
-          {isMockUrl ? 'Preview not available (mock/local storage).' : `Preview not available for type: ${evidence.type}`}
-        </p>
-        {!isMockUrl && url && (
-          <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 underline inline-flex items-center gap-1">
-            Open in new tab <ExternalLink size={11} />
-          </a>
-        )}
+      <div className="flex flex-col justify-center items-center h-full bg-surface-elevated/40 rounded-xl gap-3 p-6 text-center border border-border">
+        {IconMap[evidence.type] ?? <FileText className="w-12 h-12 text-brand-primary" />}
+        <div className="space-y-1 max-w-xs">
+          <p className="text-xs font-bold text-text-primary">
+            {isMockUrl ? 'Local Demo Asset' : 'Preview Unavailable'}
+          </p>
+          <p className="text-[11px] text-text-secondary leading-relaxed">
+            {isMockUrl
+              ? 'This is a sample case document stored in local demo seeds. The AI pipeline has extracted all facts, OCR text, and summaries below.'
+              : `Preview not supported for file type: ${evidence.type}`}
+          </p>
+        </div>
       </div>
     );
   };
 
   const uploadedDate = fmtDate(evidence.collected_at || evidence.createdAt || evidence.uploadedAt);
 
-  return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-start justify-center z-[100] pt-20 pb-8 px-4 sm:px-6 overflow-y-auto" onClick={onClose}>
+  return createPortal(
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-start justify-center z-[9999] pt-20 pb-8 px-4 sm:px-6 overflow-y-auto" onClick={onClose}>
       <div className="bg-surface border border-border rounded-2xl shadow-2xl w-full max-w-4xl max-h-[80vh] flex flex-col overflow-hidden my-auto" onClick={(e) => e.stopPropagation()}>
 
         {/* Header */}
@@ -213,7 +245,7 @@ export default function EvidenceViewerModal({ isOpen, onClose, evidence }: Evide
                     {classification && classification !== 'Unknown' && (
                       <div className="mt-3">
                         <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-lg bg-brand-primary/10 text-brand-primary border border-brand-primary/20">
-                          📊 {classification} ({Math.round(confidence * 100)}%)
+                          {classification} ({Math.round(confidence * 100)}%)
                         </span>
                       </div>
                     )}
@@ -295,42 +327,6 @@ export default function EvidenceViewerModal({ isOpen, onClose, evidence }: Evide
                           <div className="pl-4 text-xs text-text-secondary">No transfer history.</div>
                         )}
                       </div>
-
-                      {evidence.current_location && (
-                        <div className="mt-4 pt-3 border-t border-border text-xs flex justify-between items-center">
-                          <span className="text-text-secondary">Current Location: </span>
-                          <span className="font-mono font-bold text-brand-primary uppercase bg-brand-primary/10 border border-brand-primary/20 px-2 py-0.5 rounded-lg">{evidence.current_location}</span>
-                        </div>
-                      )}
-
-                      {evidence.custody_chain?.length > 0 &&
-                        ['in_transit', 'dispatched'].includes(evidence.custody_chain[evidence.custody_chain.length - 1].status) && (
-                          <div className="mt-4">
-                            <button
-                              onClick={async () => {
-                                try {
-                                  const lastTransfer = evidence.custody_chain[evidence.custody_chain.length - 1];
-                                  const caseId = evidence.case_id;
-                                  const evId = evidence.evidence_id || evidence._id;
-                                  if (!caseId) { alert('Missing caseId on evidence'); return; }
-                                  await apiClient.post(`/cases/${caseId}/evidence/${evId}/transfer`, {
-                                    from_entity: lastTransfer.from_entity,
-                                    to_entity: lastTransfer.to_entity,
-                                    status: 'received',
-                                    notes: 'Receipt confirmed by destination',
-                                  });
-                                  alert('Receipt confirmed! Please refresh.');
-                                  onClose();
-                                } catch (e: any) {
-                                  alert(`Failed: ${e.message}`);
-                                }
-                              }}
-                              className="w-full bg-brand-primary hover:bg-brand-primary/90 text-white font-bold py-2 px-4 rounded-xl text-xs transition-all shadow-xs"
-                            >
-                              Confirm Receipt
-                            </button>
-                          </div>
-                        )}
                     </div>
                   )}
                 </div>
@@ -339,6 +335,7 @@ export default function EvidenceViewerModal({ isOpen, onClose, evidence }: Evide
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

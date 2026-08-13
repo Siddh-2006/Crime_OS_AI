@@ -294,8 +294,10 @@ export class InvestigationOrchestrator {
     let savedSnapshot: any;
 
     try {
-      await session.withTransaction(async () => {
-        savedSnapshot = await newSnapshot.save({ session });
+      const executeSaveOperations = async (optsSession?: mongoose.ClientSession) => {
+        const sessionOption = optsSession ? { session: optsSession } : {};
+
+        savedSnapshot = await newSnapshot.save(sessionOption);
         logger.info(`[Orchestrator] [6/7] Snapshot saved — id: ${savedSnapshot.snapshot_id}`);
 
         // Append Diary Entry
@@ -310,11 +312,13 @@ export class InvestigationOrchestrator {
             ranked_next_steps: savedSnapshot.ranked_next_steps
           },
           ref_ids: { snapshot_id: savedSnapshot._id.toString() }
-        }], { session });
+        }], sessionOption);
 
         // Update case_checklist statuses
         for (const step of payload.ranked_next_steps) {
-          const existingStep = await CaseChecklist.findOne({ case_id: caseId, step_id: step.step_id }).session(session);
+          const query = CaseChecklist.findOne({ case_id: caseId, step_id: step.step_id });
+          const existingStep = optsSession ? await query.session(optsSession) : await query;
+
           if (!existingStep) {
             await CaseChecklist.create([{
               case_id: caseId,
@@ -327,7 +331,7 @@ export class InvestigationOrchestrator {
               proof_evidence_ids: [],
               target: step.target,
               department_entity_id: step.department_entity_id,
-            }], { session });
+            }], sessionOption);
           } else if (existingStep.status !== 'completed' && existingStep.status !== 'blocked') {
             existingStep.title = step.reason || existingStep.title;
             existingStep.criticality = step.confidence > 0.8 ? 'high' : (step.confidence > 0.5 ? 'medium' : 'low');
@@ -337,13 +341,14 @@ export class InvestigationOrchestrator {
             const newEvidence = step.evidence_needed || [];
             existingStep.required_evidence = Array.from(new Set([...existingStep.required_evidence, ...newEvidence]));
 
-            await existingStep.save({ session });
+            await existingStep.save(sessionOption);
           }
         }
 
         if (payload.suggested_legal_sections.length > 0) {
           const { Complaint } = await import('../../complaint/models/Complaint.model');
-          const complaintDoc = await Complaint.findById(caseId).session(session);
+          const query = Complaint.findById(caseId);
+          const complaintDoc = optsSession ? await query.session(optsSession) : await query;
           if (complaintDoc) {
             const lastVersion = complaintDoc.legalSectionsHistory?.length
               ? complaintDoc.legalSectionsHistory[complaintDoc.legalSectionsHistory.length - 1].version
@@ -358,10 +363,23 @@ export class InvestigationOrchestrator {
                   timestamp: new Date()
                 }
               }
-            }, { session });
+            }, sessionOption);
           }
         }
-      });
+      };
+
+      try {
+        await session.withTransaction(async () => {
+          await executeSaveOperations(session);
+        });
+      } catch (txErr: any) {
+        if (txErr?.message?.includes('Transaction numbers') || txErr?.message?.includes('replica set')) {
+          logger.warn(`[Orchestrator] Standalone MongoDB detected — running save operations without transaction session`);
+          await executeSaveOperations(undefined);
+        } else {
+          throw txErr;
+        }
+      }
     } finally {
       session.endSession();
     }
@@ -516,8 +534,10 @@ export class InvestigationOrchestrator {
     let savedSnapshot: any;
 
     try {
-      await session.withTransaction(async () => {
-        savedSnapshot = await newSnapshot.save({ session });
+      const executeSaveOperations = async (optsSession?: mongoose.ClientSession) => {
+        const sessionOption = optsSession ? { session: optsSession } : {};
+
+        savedSnapshot = await newSnapshot.save(sessionOption);
 
         await DiaryEntry.create([{
           case_id: caseId,
@@ -530,11 +550,13 @@ export class InvestigationOrchestrator {
             correction_message: correctionMessage
           },
           ref_ids: { snapshot_id: savedSnapshot._id.toString() }
-        }], { session });
+        }], sessionOption);
 
         // Update case_checklist statuses
         for (const step of payload.ranked_next_steps) {
-          const existingStep = await CaseChecklist.findOne({ case_id: caseId, step_id: step.step_id }).session(session);
+          const query = CaseChecklist.findOne({ case_id: caseId, step_id: step.step_id });
+          const existingStep = optsSession ? await query.session(optsSession) : await query;
+
           if (!existingStep) {
             await CaseChecklist.create([{
               case_id: caseId,
@@ -547,7 +569,7 @@ export class InvestigationOrchestrator {
               proof_evidence_ids: [],
               target: step.target,
               department_entity_id: step.department_entity_id,
-            }], { session });
+            }], sessionOption);
           } else if (existingStep.status !== 'completed' && existingStep.status !== 'blocked') {
             existingStep.title = step.reason || existingStep.title;
             existingStep.criticality = step.confidence > 0.8 ? 'high' : (step.confidence > 0.5 ? 'medium' : 'low');
@@ -557,13 +579,14 @@ export class InvestigationOrchestrator {
             const newEvidence = step.evidence_needed || [];
             existingStep.required_evidence = Array.from(new Set([...existingStep.required_evidence, ...newEvidence]));
 
-            await existingStep.save({ session });
+            await existingStep.save(sessionOption);
           }
         }
 
         if (payload.suggested_legal_sections.length > 0) {
           const { Complaint } = await import('../../complaint/models/Complaint.model');
-          const complaintDoc = await Complaint.findById(caseId).session(session);
+          const query = Complaint.findById(caseId);
+          const complaintDoc = optsSession ? await query.session(optsSession) : await query;
           if (complaintDoc) {
             const lastVersion = complaintDoc.legalSectionsHistory?.length
               ? complaintDoc.legalSectionsHistory[complaintDoc.legalSectionsHistory.length - 1].version
@@ -578,10 +601,23 @@ export class InvestigationOrchestrator {
                   timestamp: new Date()
                 }
               }
-            }, { session });
+            }, sessionOption);
           }
         }
-      });
+      };
+
+      try {
+        await session.withTransaction(async () => {
+          await executeSaveOperations(session);
+        });
+      } catch (txErr: any) {
+        if (txErr?.message?.includes('Transaction numbers') || txErr?.message?.includes('replica set')) {
+          logger.warn(`[Orchestrator] Standalone MongoDB detected — running save operations without transaction session`);
+          await executeSaveOperations(undefined);
+        } else {
+          throw txErr;
+        }
+      }
     } finally {
       session.endSession();
     }

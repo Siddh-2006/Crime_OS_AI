@@ -30,7 +30,7 @@ const apiClient: AxiosInstance = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 120000,
+  timeout: 300000, // 5 minutes timeout for multimodal AI processing
 });
 
 // ─── Request interceptor — attach access token ────────────────────────────────

@@ -275,6 +275,13 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
     if (typeof document === 'undefined' || isApplyingRef.current) return;
     isApplyingRef.current = true;
 
+    // Pause the mutation observer while we apply translations to avoid
+    // triggering infinite re-translation loops and disrupting React's DOM.
+    const currentObserver = mutationObserverRef.current;
+    if (currentObserver) {
+      currentObserver.disconnect();
+    }
+
     try {
       const nodes = collectTextNodes(document.body);
       const attrs = collectAttrTargets(document.body);
@@ -314,11 +321,6 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
         console.debug('[translation] no visible texts found to translate');
       }
 
-      const currentObserver = mutationObserverRef.current;
-      if (currentObserver) {
-        currentObserver.disconnect();
-      }
-
       if (pendingTranslationTimeoutRef.current) {
         window.clearTimeout(pendingTranslationTimeoutRef.current);
         pendingTranslationTimeoutRef.current = null;
@@ -327,6 +329,7 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
       setActiveMessage('Translating... please wait until the result is returned.');
       const translations = await translateBatch(sourceTexts, targetLanguage);
 
+      // Only mutate nodes that actually need updating to minimise React disruption
       nodes.forEach((node) => {
         const stored = textNodeOriginals.get(node);
         const original = stored?.original ?? node.nodeValue ?? '';
@@ -334,8 +337,8 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
         const nextValue = targetLanguage === 'en' ? original : translations[key] ?? original;
         if (nextValue !== node.nodeValue) {
           console.debug('[translation] node text updated', { original, nextValue });
+          node.nodeValue = nextValue;
         }
-        node.nodeValue = nextValue;
         textNodeOriginals.set(node, { original, lastApplied: nextValue });
       });
 
@@ -347,8 +350,8 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
         const nextValue = targetLanguage === 'en' ? original : translations[key] ?? original;
         if (nextValue !== element.getAttribute(attr)) {
           console.debug('[translation] attr text updated', { attr, original, nextValue });
+          element.setAttribute(attr, nextValue);
         }
-        element.setAttribute(attr, nextValue);
         attrOriginals.get(element)?.set(attr, { original, lastApplied: nextValue });
       });
     } finally {
@@ -360,7 +363,7 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
         setActiveMessage(null);
       }, 2400);
 
-      const currentObserver = mutationObserverRef.current;
+      // Reconnect the observer AFTER we finish mutating the DOM
       if (currentObserver && typeof document !== 'undefined') {
         currentObserver.observe(document.body, {
           childList: true,
@@ -396,11 +399,15 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
     if (lastRouteTranslationRef.current === pathname) return;
     lastRouteTranslationRef.current = pathname;
 
-    const timers = [0, 600].map((delay) => window.setTimeout(() => {
-      void applyTranslations(languageRef.current);
-    }, delay));
+    // Only translate if a non-English language is active
+    if (languageRef.current === 'en') return;
 
-    return () => timers.forEach((timer) => window.clearTimeout(timer));
+    // Single deferred call - wait for React to finish rendering the new page
+    const timer = window.setTimeout(() => {
+      void applyTranslations(languageRef.current);
+    }, 600);
+
+    return () => window.clearTimeout(timer);
   }, [applyTranslations, isPreferenceLoaded, pathname]);
 
   useEffect(() => {
@@ -427,22 +434,36 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
 
     const observer = new MutationObserver((mutations) => {
       if (isApplyingRef.current) return;
+      // Only re-translate if the language is non-English and content was actually added
+      if (languageRef.current === 'en') return;
 
-      const shouldTranslate = mutations.some((mutation) => {
-        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) return true;
-        if (mutation.type === 'characterData' && mutation.target.nodeValue) return true;
+      const hasNewContent = mutations.some((mutation) => {
+        if (mutation.type === 'characterData' && mutation.target.nodeValue) {
+          // Ignore mutations caused by our own translation writes
+          const node = mutation.target as Text;
+          const stored = textNodeOriginals.get(node);
+          if (stored && node.nodeValue === stored.lastApplied) return false;
+          return true;
+        }
+        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+          // Only trigger if actual element or non-empty text nodes were added
+          return Array.from(mutation.addedNodes).some(
+            (n) => n.nodeType === Node.ELEMENT_NODE || (n.nodeType === Node.TEXT_NODE && (n.nodeValue?.trim().length ?? 0) > 1)
+          );
+        }
         return false;
       });
 
-      if (!shouldTranslate) return;
+      if (!hasNewContent) return;
       if (pendingTranslationTimeoutRef.current) {
         window.clearTimeout(pendingTranslationTimeoutRef.current);
       }
 
+      // Use a longer debounce (600ms) so React finishes rendering before we walk the DOM
       pendingTranslationTimeoutRef.current = window.setTimeout(() => {
         console.debug('[translation] DOM mutation detected, reapplying translations');
         void applyTranslations(languageRef.current);
-      }, 250);
+      }, 600);
     });
 
     observer.observe(document.body, {

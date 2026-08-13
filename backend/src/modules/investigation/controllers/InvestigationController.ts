@@ -982,6 +982,7 @@ export class InvestigationController {
             imageTags: tags,
             ocrText: ocr,
           },
+          applicableSections: ev.applicableSections || [],
           processingStatus: ev.processingStatus || 'PROCESSED',
           status: (ev.processingStatus === 'PROCESSED' || ev.processingStatus === 'processed') ? 'verified' : 'pending',
           source: 'complainant',

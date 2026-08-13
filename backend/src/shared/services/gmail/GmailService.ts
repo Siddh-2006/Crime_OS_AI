@@ -339,7 +339,7 @@ Update the checklist and analysis based on this new information.`.trim();
 
 function _spawnComplaintIntelligence(complaintNumber: string): void {
   try {
-    const microserviceUrl = env.COMPLAINT_INTELLIGENCE_URL || 'http://localhost:8000';
+    const microserviceUrl = env.COMPLAINT_INTELLIGENCE_URL || 'http://localhost:8001';
     axios.post(`${microserviceUrl}/trigger-full-pipeline`, {
       complaint_number: complaintNumber,
     }, { timeout: 15000 }).then((res: any) => {

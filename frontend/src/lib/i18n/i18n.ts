@@ -5,6 +5,7 @@ type I18nResources = Record<SupportedLanguage, Record<string, string>>;
 export const i18nResources: I18nResources = {
   en: {},
   hi: {
+    // Common UI
     'Dashboard': 'डैशबोर्ड',
     'File a Complaint': 'शिकायत दर्ज करें',
     'My Complaints': 'मेरी शिकायतें',
@@ -25,6 +26,55 @@ export const i18nResources: I18nResources = {
     'Loading...': 'लोड हो रहा है...',
     'Secure Government Portal': 'सुरक्षित सरकारी पोर्टल',
     'Gujarat Police Crime OS': 'गुजरात पुलिस क्राइम ओएस',
+    
+    // Actions
+    'View Details': 'विवरण देखें',
+    'Download': 'डाउनलोड करें',
+    'Regenerate': 'पुनः उत्पन्न करें',
+    'Approve': 'स्वीकृत करें',
+    'Reject': 'अस्वीकार करें',
+    'Attach': 'संलग्न करें',
+    'Request Information': 'जानकारी का अनुरोध करें',
+    'Submit Request': 'अनुरोध जमा करें',
+    'Reject Case': 'केस अस्वीकार करें',
+    'Confirm Rejection': 'अस्वीकृति की पुष्टि करें',
+    'Download (EN)': 'डाउनलोड (EN)',
+    'Download Attachment': 'संलग्नक डाउनलोड करें',
+    
+    // Investigation Workspace
+    'Investigation Workspace': 'जांच कार्यक्षेत्र',
+    'Analysis Panel': 'विश्लेषण पैनल',
+    'Case Understanding': 'केस समझ',
+    'AI Case Understanding': 'एआई केस समझ',
+    'Case Understanding Intelligence': 'केस समझ इंटेलिजेंस',
+    'Case Understanding Overview': 'केस समझ अवलोकन',
+    'Case Understanding Not Ready': 'केस समझ तैयार नहीं',
+    'The AI Case Understanding pipeline hasn\'t processed this complaint yet.': 'एआई केस समझ पाइपलाइन ने अभी तक इस शिकायत को संसाधित नहीं किया है।',
+    'Chargesheet': 'आरोपपत्र',
+    'Charge Sheet No': 'आरोपपत्र संख्या',
+    'File Chargesheet': 'आरोपपत्र दाखिल करें',
+    'Evidence Collection': 'साक्ष्य संग्रह',
+    'Add Evidence': '+ साक्ष्य जोड़ें',
+    'Attached Evidence': 'संलग्न साक्ष्य',
+    'Attached Case Evidence': 'संलग्न केस साक्ष्य',
+    'No evidence documents or media attached to this application.': 'इस आवेदन में कोई साक्ष्य दस्तावेज या मीडिया संलग्न नहीं है।',
+    'No evidence files attached to this complaint.': 'इस शिकायत में कोई साक्ष्य फ़ाइल संलग्न नहीं है।',
+    'Attach BNS': 'BNS संलग्न करें',
+    'Attach BSA': 'BSA संलग्न करें',
+    'Close Investigation': 'जांच बंद करें',
+    'Investigation Timeline': 'जांच समयरेखा',
+    'Case Participants': 'केस प्रतिभागी',
+    'Original Complaint': 'मूल शिकायत',
+    'Timeline': 'समयरेखा',
+    'Timeline Not Ready': 'समयरेखा तैयार नहीं',
+    'Evidence Intelligence': 'साक्ष्य इंटेलिजेंस',
+    'Add Place Visited': '+ स्थान जोड़ें',
+    'Recent Visited Places': 'हाल में देखे गए स्थान',
+    'No visited places have been recorded yet.': 'अभी तक कोई देखा गया स्थान दर्ज नहीं किया गया है।',
+    'Recorded': 'दर्ज किया गया',
+    'Saving…': 'सहेजा जा रहा है…',
+    
+    // Complaint Queue
     'Station Complaint Queue': 'स्टेशन शिकायत कतार',
     'Review e-applications and process FIR registrations': 'ई-आवेदन की समीक्षा करें और FIR पंजीकरण प्रक्रिया करें',
     'Search by Complaint No, short description, FIR...': 'शिकायत संख्या, संक्षिप्त विवरण, FIR द्वारा खोजें...',
@@ -49,6 +99,8 @@ export const i18nResources: I18nResources = {
     'Go Back': 'वापस जाएँ',
     'Back to My Complaints': 'मेरी शिकायतों पर वापस',
     'Review Case': 'केस की समीक्षा करें',
+    
+    // AI Analysis
     'AI Investigation Analysis': 'एआई जांच विश्लेषण',
     'Narrative Summary': 'वर्णनात्मक सारांश',
     'Applicable Legal Sections': 'लागू कानूनी धाराएँ',
@@ -64,6 +116,8 @@ export const i18nResources: I18nResources = {
     'Retry Analysis': 'फिर से विश्लेषण करें',
     'Analysis in Progress': 'विश्लेषण प्रगति पर है',
     'The AI is working through this case. Typically takes 1–4 minutes.': 'एआई इस केस पर काम कर रहा है। आमतौर पर 1-4 मिनट लगते हैं।',
+    'AI Case Analysis in Progress': 'एआई केस विश्लेषण प्रगति पर है',
+    'The Multi-modal AI Engine is processing OCR evidence, performing legal classification, and assembling case understanding. This page updates automatically when ready.': 'मल्टी-मोडल एआई इंजन OCR साक्ष्य संसाधित कर रहा है, कानूनी वर्गीकरण कर रहा है, और केस समझ को असेंबल कर रहा है। यह पृष्ठ तैयार होने पर स्वचालित रूप से अपडेट होता है।',
     'Confidence': 'आत्मविश्वास',
     'No summary generated yet.': 'अभी तक कोई सारांश उत्पन्न नहीं हुआ।',
     'Officer Authored': 'अधिकारी द्वारा लिखा गया',
@@ -100,8 +154,27 @@ export const i18nResources: I18nResources = {
     'Department Response Details': 'विभाग प्रतिक्रिया विवरण',
     'No content available.': 'कोई सामग्री उपलब्ध नहीं है।',
     'No narrative available.': 'कोई वर्णन उपलब्ध नहीं है।',
+    
+    // Rejection Modal
+    'Reject Complaint E-Application': 'शिकायत ई-आवेदन अस्वीकार करें',
+    'Please provide a mandatory reason for rejecting this complaint. The citizen will be notified immediately via email.': 'कृपया इस शिकायत को अस्वीकार करने के लिए अनिवार्य कारण प्रदान करें। नागरिक को तुरंत ईमेल के माध्यम से सूचित किया जाएगा।',
+    
+    // Filing Information
+    'Filing Information': 'दाखिल करने की जानकारी',
+    'FIR No': 'FIR संख्या',
+    'Police Station': 'पुलिस स्टेशन',
+    
+    // Department Portal
+    'Select a request from the inbox to view details': 'विवरण देखने के लिए इनबॉक्स से एक अनुरोध चुनें',
+    
+    // Processing Indicators
+    'Florence-2 & OCR Engine: Processing attached media & documents': 'Florence-2 और OCR इंजन: संलग्न मीडिया और दस्तावेज़ संसाधित कर रहा है',
+    'Complaint Intelligence: Mapping IPC/BNS legal statutes & risk score': 'शिकायत इंटेलिजेंस: IPC/BNS कानूनी धाराएं और जोखिम स्कोर मैप कर रहा है',
+    'IO Recommendation Engine: Scoring available station officers': 'IO सिफारिश इंजन: उपलब्ध स्टेशन अधिकारियों का स्कोर दे रहा है',
+    'No conflicts detected between the complaint narrative and the attached evidence.': 'शिकायत वर्णन और संलग्न साक्ष्य के बीच कोई विरोधाभास नहीं पाया गया।',
   },
   gu: {
+    // Common UI
     'Dashboard': 'ડેશબોર્ડ',
     'File a Complaint': 'ફરિયાદ નોંધાવો',
     'My Complaints': 'મારી ફરિયાદો',
@@ -122,7 +195,56 @@ export const i18nResources: I18nResources = {
     'Loading...': 'લોડ થઈ રહ્યું છે...',
     'Secure Government Portal': 'સુરક્ષિત સરકારી પોર્ટલ',
     'Gujarat Police Crime OS': 'ગુજરાત પોલીસ ક્રાઇમ ઓએસ',
-        'Station Complaint Queue': 'સ્ટેશન ફરિયાદ કતાર',
+    
+    // Actions
+    'View Details': 'વિગતો જુઓ',
+    'Download': 'ડાઉનલોડ કરો',
+    'Regenerate': 'ફરીથી બનાવો',
+    'Approve': 'મંજૂર કરો',
+    'Reject': 'નકારો',
+    'Attach': 'જોડો',
+    'Request Information': 'માહિતી માટે વિનંતી કરો',
+    'Submit Request': 'વિનંતી સબમિટ કરો',
+    'Reject Case': 'કેસ નકારો',
+    'Confirm Rejection': 'નકારની પુષ્ટિ કરો',
+    'Download (EN)': 'ડાઉનલોડ (EN)',
+    'Download Attachment': 'જોડાણ ડાઉનલોડ કરો',
+    
+    // Investigation Workspace
+    'Investigation Workspace': 'તપાસ કાર્યસ્થળ',
+    'Analysis Panel': 'વિશ્લેષણ પેનલ',
+    'Case Understanding': 'કેસ સમજણ',
+    'AI Case Understanding': 'AI કેસ સમજણ',
+    'Case Understanding Intelligence': 'કેસ સમજણ બુદ્ધિમત્તા',
+    'Case Understanding Overview': 'કેસ સમજણ વિહંગાવલોકન',
+    'Case Understanding Not Ready': 'કેસ સમજણ તૈયાર નથી',
+    'The AI Case Understanding pipeline hasn\'t processed this complaint yet.': 'AI કેસ સમજણ પાઇપલાઇને હજુ સુધી આ ફરિયાદ પર પ્રક્રિયા કરી નથી.',
+    'Chargesheet': 'આરોપપત્ર',
+    'Charge Sheet No': 'આરોપપત્ર નંબર',
+    'File Chargesheet': 'આરોપપત્ર દાખલ કરો',
+    'Evidence Collection': 'પુરાવા સંગ્રહ',
+    'Add Evidence': '+ પુરાવા ઉમેરો',
+    'Attached Evidence': 'જોડાયેલ પુરાવા',
+    'Attached Case Evidence': 'જોડાયેલ કેસ પુરાવા',
+    'No evidence documents or media attached to this application.': 'આ અરજીમાં કોઈ પુરાવા દસ્તાવેજો અથવા મીડિયા જોડાયેલ નથી.',
+    'No evidence files attached to this complaint.': 'આ ફરિયાદમાં કોઈ પુરાવા ફાઇલ જોડાયેલ નથી.',
+    'Attach BNS': 'BNS જોડો',
+    'Attach BSA': 'BSA જોડો',
+    'Close Investigation': 'તપાસ બંધ કરો',
+    'Investigation Timeline': 'તપાસ સમયરેખા',
+    'Case Participants': 'કેસ સહભાગીઓ',
+    'Original Complaint': 'મૂળ ફરિયાદ',
+    'Timeline': 'સમયરેખા',
+    'Timeline Not Ready': 'સમયરેખા તૈયાર નથી',
+    'Evidence Intelligence': 'પુરાવા બુદ્ધિમત્તા',
+    'Add Place Visited': '+ સ્થળ ઉમેરો',
+    'Recent Visited Places': 'તાજેતરમાં જોવાયેલ સ્થળો',
+    'No visited places have been recorded yet.': 'હજુ સુધી કોઈ જોવાયેલ સ્થળો નોંધાયેલ નથી.',
+    'Recorded': 'નોંધાયેલ',
+    'Saving…': 'સાચવી રહ્યું છે…',
+    
+    // Complaint Queue
+    'Station Complaint Queue': 'સ્ટેશન ફરિયાદ કતાર',
     'Review e-applications and process FIR registrations': 'ઈ-અરજીઓની સમીક્ષા કરો અને FIR નોંધણી પ્રક્રિયા કરો',
     'Search by Complaint No, short description, FIR...': 'ફરિયાદ નંબર, સંક્ષિપ્ત વર્ણન, FIR દ્વારા શોધો...',
     'Status Filter': 'સ્થિતિ ફિલ્ટર',
@@ -146,6 +268,8 @@ export const i18nResources: I18nResources = {
     'Go Back': 'પાછા જાઓ',
     'Back to My Complaints': 'મારી ફરિયાદો પર પાછા જાઓ',
     'Review Case': 'કેસની સમીક્ષા કરો',
+    
+    // AI Analysis
     'AI Investigation Analysis': 'AI તપાસ વિશ્લેષણ',
     'Narrative Summary': 'વર્ણનાત્મક સારાંશ',
     'Applicable Legal Sections': 'લાગુ પડતી કાનૂની કલમો',
@@ -161,6 +285,8 @@ export const i18nResources: I18nResources = {
     'Retry Analysis': 'વિશ્લેષણ ફરી પ્રયાસ કરો',
     'Analysis in Progress': 'વિશ્લેષણ ચાલુ છે',
     'The AI is working through this case. Typically takes 1–4 minutes.': 'AI આ કેસ પર કાર્ય કરી રહ્યું છે. સામાન્ય રીતે 1–4 મિનિટ લાગે છે.',
+    'AI Case Analysis in Progress': 'AI કેસ વિશ્લેષણ ચાલુ છે',
+    'The Multi-modal AI Engine is processing OCR evidence, performing legal classification, and assembling case understanding. This page updates automatically when ready.': 'મલ્ટી-મોડલ AI એન્જિન OCR પુરાવા પર પ્રક્રિયા કરી રહ્યું છે, કાનૂની વર્ગીકરણ કરી રહ્યું છે, અને કેસ સમજણ એસેમ્બલ કરી રહ્યું છે. આ પૃષ્ઠ તૈયાર થયા પછી આપમેળે અપડેટ થાય છે.',
     'Confidence': 'વિશ્વાસ સ્તર',
     'No summary generated yet.': 'હજુ સુધી કોઈ સારાંશ બનાવાયો નથી.',
     'Officer Authored': 'અધિકારી દ્વારા તૈયાર કરાયેલ',
@@ -197,6 +323,24 @@ export const i18nResources: I18nResources = {
     'Department Response Details': 'વિભાગ પ્રતિસાદ વિગતો',
     'No content available.': 'કોઈ સામગ્રી ઉપલબ્ધ નથી.',
     'No narrative available.': 'કોઈ વર્ણન ઉપલબ્ધ નથી.',
+    
+    // Rejection Modal
+    'Reject Complaint E-Application': 'ફરિયાદ ઈ-અરજી નકારો',
+    'Please provide a mandatory reason for rejecting this complaint. The citizen will be notified immediately via email.': 'કૃપા કરીને આ ફરિયાદને નકારવા માટે ફરજિયાત કારણ આપો. નાગરિકને તરત જ ઈમેલ દ્વારા સૂચિત કરવામાં આવશે.',
+    
+    // Filing Information
+    'Filing Information': 'દાખલ કરવાની માહિતી',
+    'FIR No': 'FIR નંબર',
+    'Police Station': 'પોલીસ સ્ટેશન',
+    
+    // Department Portal
+    'Select a request from the inbox to view details': 'વિગતો જોવા માટે ઇનબૉક્સમાંથી વિનંતી પસંદ કરો',
+    
+    // Processing Indicators
+    'Florence-2 & OCR Engine: Processing attached media & documents': 'Florence-2 અને OCR એન્જિન: જોડાયેલ મીડિયા અને દસ્તાવેજો પર પ્રક્રિયા કરી રહ્યું છે',
+    'Complaint Intelligence: Mapping IPC/BNS legal statutes & risk score': 'ફરિયાદ બુદ્ધિમત્તા: IPC/BNS કાનૂની કલમો અને જોખમ સ્કોર મેપ કરી રહ્યું છે',
+    'IO Recommendation Engine: Scoring available station officers': 'IO ભલામણ એન્જિન: ઉપલબ્ધ સ્ટેશન અધિકારીઓનો સ્કોર આપી રહ્યું છે',
+    'No conflicts detected between the complaint narrative and the attached evidence.': 'ફરિયાદ વર્ણન અને જોડાયેલ પુરાવા વચ્ચે કોઈ વિરોધાભાસ મળ્યો નથી.',
   },
 };
 

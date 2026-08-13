@@ -89,6 +89,11 @@ export class ChargeSheetGenerator {
     const lastChargeSheet = await ChargeSheet.findOne({ case_id: caseObjectId }).sort({ version: -1 });
     const nextVersion = lastChargeSheet ? lastChargeSheet.version + 1 : 1;
 
+    // Generate chargesheet number: CS-{YEAR}-{FIR_NUMBER}-{VERSION}
+    const currentYear = new Date().getFullYear();
+    const firNumber = complaint.firNumber || complaint.complaintNumber || 'UNKNOWN';
+    const generatedFilingNumber = `CS-${currentYear}-${firNumber}-V${nextVersion}`;
+
     const chargeSheetPayload = {
       case_id: caseObjectId,
       version: nextVersion,
@@ -108,6 +113,7 @@ export class ChargeSheetGenerator {
       diaryEntryIds,
       filingMetadata: {
         status: 'draft',
+        filingNumber: generatedFilingNumber,
         filedAt: new Date(),
         filedBy: new Types.ObjectId(officerId),
       },

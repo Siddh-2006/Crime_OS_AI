@@ -13,6 +13,7 @@ import apiClient from '@/lib/axios';
 import { API_ROUTES, APP_ROUTES } from '@/lib/constants';
 import { InvestigationWorkspace, WorkspaceTab } from './components/InvestigationWorkspace';
 import ChargeSheetModal from './ChargeSheetModal';
+import { CaseUnderstandingView, CaseUnderstandingData } from '@/components/case-understanding/CaseUnderstandingView';
 import {
   ArrowLeft,
   Calendar,
@@ -175,7 +176,7 @@ interface IOOfficer {
   } | null;
 }
 
-import { CaseUnderstandingView, CaseUnderstandingData } from '@/components/case-understanding/CaseUnderstandingView';
+// import { CaseUnderstandingView, CaseUnderstandingData } from '@/components/case-understanding/CaseUnderstandingView';
 
 export default function PoliceComplaintDetailPage(): React.ReactElement {
   const params = useParams();
@@ -251,9 +252,15 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
     const id = params.id as string;
     if (!id) return;
     setRerunningPipeline(true);
+    setCaseUnderstanding(null);
+    setSnapshot(null);
+    if (complaint) {
+      setComplaint({ ...complaint, processingStatus: 'PENDING' });
+    }
     try {
       await apiClient.post(API_ROUTES.COMPLAINTS.RERUN_PIPELINE(id));
       await fetchComplaint();
+      await fetchSnapshot();
     } catch (err: any) {
       alert(err?.response?.data?.message || 'Failed to trigger pipeline rerun.');
     } finally {
@@ -312,16 +319,16 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
     }
   };
 
-  const fetchSnapshot = async () => {
+  const fetchSnapshot = async (isSilent = false) => {
     const id = params.id as string;
-    setSnapshotLoading(true);
+    if (!isSilent && !snapshot) setSnapshotLoading(true);
     try {
       const res = await apiClient.get(`/cases/${id}/analysis/latest`);
       setSnapshot(res.data?.data ?? null);
     } catch {
       setSnapshot(null);
     } finally {
-      setSnapshotLoading(false);
+      if (!isSilent) setSnapshotLoading(false);
     }
   };
 
@@ -352,8 +359,8 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
   };
 
   const handleCloseCase = async () => {
-    if (!confirm('Are you sure you want to close this case? It will be permanently marked as CLOSED and indexed in the AI vector store. A Charge Sheet will also be automatically generated (this may take some time).')) return;
     setActionLoading(true);
+    setCloseInvestigationModalOpen(false);
     try {
       const id = params.id as string;
       await apiClient.patch(`/complaints/${id}/close`);
@@ -361,7 +368,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
     } catch (err: any) {
       const msg: string = err.response?.data?.message || err.message || 'Failed to close case.';
       if (msg.includes('NO_ACCUSED')) {
-        alert('⚠️ Cannot close investigation: At least one suspect must be promoted to Accused in the Case Participants tab before closing.');
+        alert('Cannot close investigation: At least one suspect must be promoted to Accused in the Case Participants tab before closing.');
       } else {
         alert(msg);
       }
@@ -369,6 +376,18 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
       setActionLoading(false);
     }
   };
+
+  const ciData = complaint?.complaintIntelligence as any;
+  const snapData = snapshot as any;
+  const hasNonEmptyCI = ciData && Object.keys(ciData).length > 0 && (
+    !!ciData.case_understanding || !!ciData.overview || !!ciData.summary || !!ciData.crimeType || !!ciData.crime_analysis || !!ciData.m12Understanding || !!ciData.m12CrimeClassification || !!ciData.m3Entities
+  );
+  const hasAIDataInMongo = !!(
+    (caseUnderstanding && Object.keys(caseUnderstanding).length > 0) ||
+    (snapData && Object.keys(snapData).length > 0) ||
+    hasNonEmptyCI
+  );
+  const isAIReady = hasAIDataInMongo || (complaint?.processingStatus?.toUpperCase() === 'PROCESSED' && (complaint?.evidence?.length === 0 || hasAIDataInMongo));
 
   useEffect(() => {
     let timer: NodeJS.Timeout | null = null;
@@ -385,17 +404,20 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
     }
   }, [params.id, user]);
 
-  // Dedicated polling effect for AI Pipeline Processing
+  // Dedicated polling effect for AI Pipeline Processing — polls silently every 3s until ready
   useEffect(() => {
-    if (complaint?.processingStatus === 'PENDING') {
+    if (!isAIReady) {
       const timer = setInterval(() => {
         fetchComplaint();
-        fetchSnapshot();
+        fetchSnapshot(true);
       }, 3000);
       return () => clearInterval(timer);
     }
-  }, [complaint?.processingStatus, params.id]);
+  }, [isAIReady, params.id]);
 
+
+  // Close Investigation confirmation modal
+  const [closeInvestigationModalOpen, setCloseInvestigationModalOpen] = useState(false);
 
   const handleReject = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -491,13 +513,6 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
   const canRegisterFir = isSHO && complaint.status !== 'FIR_REGISTERED' && complaint.status !== 'CLOSED' && complaint.status !== 'REJECTED';
   const canAssignIo = isSHO && complaint.status === 'FIR_REGISTERED';
 
-  const ciData = complaint?.complaintIntelligence as any;
-  const snapData = snapshot as any;
-  const hasNonEmptyCI = ciData && Object.keys(ciData).length > 0 && (
-    !!ciData.case_understanding || !!ciData.overview || !!ciData.summary || !!ciData.crimeType || !!ciData.crime_analysis || !!ciData.m12Understanding || !!ciData.m12CrimeClassification || !!ciData.m3Entities
-  );
-  const isAIReady = complaint?.processingStatus?.toUpperCase() === 'PROCESSED' || !!(caseUnderstanding || (snapData && Object.keys(snapData).length > 0) || hasNonEmptyCI);
-
   return (
     <div className="space-y-6 overflow-x-hidden">
       {/* Navigation & Header */}
@@ -567,7 +582,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
           <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
             {canRegisterFir && (
               <>
-                {complaint.processingStatus?.toUpperCase() === 'PENDING' ? (
+                {(!isAIReady && complaint.processingStatus?.toUpperCase() === 'PENDING') ? (
                   <Button
                     size="sm"
                     disabled
@@ -649,7 +664,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
           <Button
             variant="danger"
             size="sm"
-            onClick={handleCloseCase}
+            onClick={() => setCloseInvestigationModalOpen(true)}
             isLoading={actionLoading}
           >
             Close Investigation
@@ -954,18 +969,18 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                               <div className="flex flex-wrap items-center gap-1.5">
                                 {file.aiMetadata.classification && file.aiMetadata.classification !== 'Unknown' && (
                                   <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-brand-primary/10 text-brand-primary border border-brand-primary/20">
-                                    📊 {file.aiMetadata.classification} ({Math.round((file.aiMetadata.classificationConfidence || 0) * 100)}%)
+                                    {file.aiMetadata.classification} ({Math.round((file.aiMetadata.classificationConfidence || 0) * 100)}%)
                                   </span>
                                 )}
                                 {file.aiMetadata.imageTags?.map((tag: string) => (
                                   <span key={tag} className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-semantic-success/10 text-semantic-success border border-semantic-success/20">
-                                    🏷️ {tag}
+                                    #{tag}
                                   </span>
                                 ))}
                               </div>
                               {file.aiMetadata.ocrText && (
                                 <details className="text-[11px] text-text-secondary bg-surface p-2.5 rounded-xl border border-border cursor-pointer">
-                                  <summary className="font-semibold text-text-primary select-none">🔍 Extracted OCR Text</summary>
+                                  <summary className="font-semibold text-text-primary select-none">Extracted OCR Text</summary>
                                   <p className="mt-1.5 whitespace-pre-wrap font-mono text-[10px] bg-surface-elevated p-2 rounded-lg border border-border max-h-32 overflow-y-auto leading-relaxed text-text-primary">
                                     {file.aiMetadata.ocrText}
                                   </p>
@@ -1011,7 +1026,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
               const snap = snapshot as any;
               const hasAI = isAIReady;
 
-              if (snapshotLoading) {
+              if (snapshotLoading && !snapshot) {
                 return (
                   <div className="flex items-center justify-center py-20">
                     <Loader />
@@ -1021,42 +1036,58 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
 
               if (!hasAI) {
                 return (
-                  <Card className="min-h-[380px] flex flex-col items-center justify-center p-8 text-center space-y-5 my-4 border border-neutral-800 shadow-sm bg-surface rounded-2xl">
-                    <div className="p-4 rounded-2xl bg-indigo-900/20 border border-indigo-100 text-indigo-500">
+                  <Card className="min-h-[380px] flex flex-col items-center justify-center p-8 text-center space-y-5 my-4 border border-border shadow-xs bg-surface rounded-2xl">
+                    <div className="p-4 rounded-2xl bg-brand-primary/10 border border-brand-primary/20 text-brand-primary">
                       <Bot className="h-10 w-10 animate-pulse" />
                     </div>
 
                     <div className="space-y-1.5 max-w-md">
-                      <h3 className="text-lg font-bold text-text-primary">Analysis in Progress</h3>
+                      <h3 className="text-lg font-bold text-text-primary">AI Case Analysis in Progress</h3>
                       <p className="text-xs text-text-secondary leading-relaxed">
-                        The AI is working through this case. Typically takes 1–4 minutes. You can switch to other tabs — this view will update automatically when done.
+                        The Multi-modal AI Engine is processing OCR evidence, performing legal classification, and assembling case understanding. This page updates automatically when ready.
                       </p>
                     </div>
 
-                    <div className="w-full max-w-md space-y-2 pt-2">
+                    <div className="w-full max-w-md space-y-3 pt-2">
                       <div className="flex justify-between text-xs font-semibold text-text-secondary">
-                        <span className="truncate">Multi-modal OCR & Extracting Case Facts...</span>
-                        <span className="text-indigo-500 font-bold">65%</span>
+                        <span className="truncate">Extracting Multi-modal Evidence &amp; Running Legal Rules...</span>
+                        <span className="text-brand-primary font-bold animate-pulse">Processing</span>
                       </div>
-                      <div className="w-full bg-neutral-800 rounded-full h-2 overflow-hidden">
-                        <div className="h-2 rounded-full bg-indigo-600 transition-all duration-500 animate-pulse" style={{ width: '65%' }} />
+                      <div className="w-full bg-surface-elevated rounded-full h-2 overflow-hidden border border-border">
+                        <div className="h-2 rounded-full bg-brand-primary transition-all duration-500 animate-pulse w-3/4" />
+                      </div>
+                      <div className="bg-surface-elevated/70 border border-border rounded-xl p-3 text-left space-y-1 text-[11px] text-text-secondary">
+                        <p className="font-bold text-text-primary flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-brand-primary animate-ping" />
+                          Live Status: Executing Crime OS AI Services
+                        </p>
+                        <ul className="list-disc list-inside space-y-0.5 opacity-90 font-mono text-[10px]">
+                          <li>Florence-2 &amp; OCR Engine: Processing attached media &amp; documents</li>
+                          <li>Complaint Intelligence: Mapping IPC/BNS legal statutes &amp; risk score</li>
+                          <li>IO Recommendation Engine: Scoring available station officers</li>
+                        </ul>
                       </div>
                     </div>
 
-                    <div className="pt-3">
+                    <div className="pt-2">
                       <Button
                         size="sm"
-                        variant="ghost"
+                        variant="outline"
                         onClick={handleRerunPipeline}
                         isLoading={rerunningPipeline}
                         leftIcon={<RefreshCw size={13} />}
-                        className="text-xs text-text-secondary border-neutral-800 hover:bg-neutral-900/30 shadow-none"
+                        className="text-xs text-text-primary border-border hover:bg-surface-elevated shadow-none"
                       >
-                        {rerunningPipeline ? 'Re-triggering...' : 'Re-run AI Pipeline'}
+                        {rerunningPipeline ? 'Re-triggering...' : 'Force Re-run AI Pipeline'}
                       </Button>
                     </div>
                   </Card>
                 );
+              }
+
+              // If we have structured Case Understanding data, use the dedicated component
+              if (cuData && (cuData.case_understanding || cuData.overview || cuData.timeline)) {
+                return <CaseUnderstandingView data={cuData as CaseUnderstandingData} caseId={params.id as string} />;
               }
 
               // Calculations for fallback view
@@ -1369,8 +1400,8 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
 
                                 {/* Evidence AI Description / Summary */}
                                 {(file.aiMetadata?.aiSummary || (file.aiMetadata as any)?.caption || (file.aiMetadata as any)?.m4Caption) && (
-                                  <div className="bg-indigo-50/50 border border-indigo-100 rounded-lg p-2.5 text-xs text-indigo-950">
-                                    <span className="font-bold text-indigo-400 mr-1.5">📷 Scene Analysis:</span>
+                                  <div className="bg-brand-primary/10 border border-brand-primary/20 rounded-xl p-3 text-xs text-text-primary">
+                                    <span className="font-bold text-brand-primary uppercase text-[10px] mr-1.5 block mb-0.5">Scene Analysis:</span>
                                     {file.aiMetadata?.aiSummary || (file.aiMetadata as any)?.caption || (file.aiMetadata as any)?.m4Caption}
                                   </div>
                                 )}
@@ -1378,8 +1409,8 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                                 {/* Extracted OCR Text */}
                                 {file.aiMetadata?.ocrText && (
                                   <details className="cursor-pointer group">
-                                    <summary className="text-[11.5px] font-semibold text-indigo-400 hover:text-indigo-900 select-none flex items-center gap-1.5">
-                                      <span>🔍 Extracted OCR Text ({file.aiMetadata.ocrText.length} chars)</span>
+                                    <summary className="text-[11.5px] font-semibold text-brand-primary select-none flex items-center gap-1.5">
+                                      <span>Extracted OCR Text ({file.aiMetadata.ocrText.length} chars)</span>
                                     </summary>
                                     <pre className="mt-2 whitespace-pre-wrap text-[11px] font-mono bg-surface p-3 rounded-lg border border-neutral-800 max-h-48 overflow-y-auto text-text-primary leading-relaxed shadow-inner">
                                       {file.aiMetadata.ocrText}
@@ -1691,17 +1722,17 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
               <Loader />
             </div>
           ) : (
-            <div className="divide-y divide-neutral-100 max-h-[400px] overflow-y-auto pr-1">
+            <div className="divide-y divide-border max-h-[400px] overflow-y-auto pr-1">
               {recommendedIos.map((io) => (
                 <div key={io._id} className="py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 first:pt-0 last:pb-0">
                   <div className="space-y-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm font-bold text-text-primary">{io.officerName}</p>
-                      <span className="text-xs text-text-secondary bg-neutral-800 px-2 py-0.5 rounded border border-neutral-800">
+                      <span className="text-xs font-bold text-brand-primary bg-brand-primary/10 px-2.5 py-0.5 rounded-md border border-brand-primary/20">
                         Badge: {io.badgeNumber}
                       </span>
                       {io.aiRecommendation && (
-                        <span className="text-xs font-semibold text-indigo-400 bg-indigo-900/20 border border-indigo-800/50 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <span className="text-xs font-bold text-semantic-warning bg-semantic-warning/10 border border-semantic-warning/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
                           ⭐ {io.aiRecommendation.score.toFixed(0)}% Match
                         </span>
                       )}
@@ -1722,7 +1753,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                         </ul>
                       </div>
                     ) : (
-                      <p className="text-[11px] text-neutral-500 italic">No similar historical cases found for this officer.</p>
+                      <p className="text-[11px] text-text-secondary italic">No similar historical cases found for this officer.</p>
                     )}
                   </div>
                   <Button
@@ -1824,14 +1855,14 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
             </p>
 
             {/* Header / Meta */}
-            <div className="rounded-lg border border-neutral-800 bg-neutral-900/30 p-4 space-y-3">
-              <h4 className="font-bold text-text-primary text-sm">1. Station & Registration Meta</h4>
+            <div className="rounded-xl border border-border bg-surface-elevated/40 p-4 space-y-3 shadow-xs">
+              <h4 className="font-bold text-brand-primary text-xs uppercase tracking-wider">1. Station & Registration Meta</h4>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div>
                   <label className="font-semibold text-text-secondary block mb-1">District</label>
                   <input
                     type="text"
-                    className="w-full rounded border border-neutral-700 p-2 text-xs"
+                    className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-2.5 text-xs font-medium"
                     value={firFormData.district || ''}
                     onChange={(e) => setFirFormData({ ...firFormData, district: e.target.value })}
                   />
@@ -1840,7 +1871,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                   <label className="font-semibold text-text-secondary block mb-1">Police Station</label>
                   <input
                     type="text"
-                    className="w-full rounded border border-neutral-700 p-2 text-xs"
+                    className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-2.5 text-xs font-medium"
                     value={firFormData.policeStation || ''}
                     onChange={(e) => setFirFormData({ ...firFormData, policeStation: e.target.value })}
                   />
@@ -1849,7 +1880,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                   <label className="font-semibold text-text-secondary block mb-1">Year</label>
                   <input
                     type="number"
-                    className="w-full rounded border border-neutral-700 p-2 text-xs"
+                    className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-2.5 text-xs font-medium"
                     value={firFormData.year || new Date().getFullYear()}
                     onChange={(e) => setFirFormData({ ...firFormData, year: Number(e.target.value) })}
                   />
@@ -1858,7 +1889,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                   <label className="font-semibold text-text-secondary block mb-1">Date</label>
                   <input
                     type="text"
-                    className="w-full rounded border border-neutral-700 p-2 text-xs"
+                    className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-2.5 text-xs font-medium"
                     value={firFormData.firDate || ''}
                     onChange={(e) => setFirFormData({ ...firFormData, firDate: e.target.value })}
                   />
@@ -1867,25 +1898,25 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
             </div>
 
             {/* Section 2: Acts & Sections */}
-            <div className="rounded-lg border border-neutral-800 bg-surface p-4 space-y-2">
-              <h4 className="font-bold text-blue-900 text-xs">2. Act, Law, and Sections</h4>
+            <div className="rounded-xl border border-border bg-surface-elevated/40 p-4 space-y-2 shadow-xs">
+              <h4 className="font-bold text-brand-primary text-xs uppercase tracking-wider">2. Act, Law, and Sections</h4>
               <textarea
                 rows={2}
-                className="w-full rounded border border-neutral-700 p-2 text-xs"
+                className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-2.5 text-xs font-medium"
                 value={firFormData.actAndSections || ''}
                 onChange={(e) => setFirFormData({ ...firFormData, actAndSections: e.target.value })}
               />
             </div>
 
             {/* Section 3: Period of Crime */}
-            <div className="rounded-lg border border-neutral-800 bg-surface p-4 space-y-3">
-              <h4 className="font-bold text-blue-900 text-xs">3. Period of Crime & Station Diary Entry</h4>
+            <div className="rounded-xl border border-border bg-surface-elevated/40 p-4 space-y-3 shadow-xs">
+              <h4 className="font-bold text-brand-primary text-xs uppercase tracking-wider">3. Period of Crime & Station Diary Entry</h4>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div>
                   <label className="font-semibold text-text-secondary block mb-1">Crime Start Date</label>
                   <input
                     type="text"
-                    className="w-full rounded border border-neutral-700 p-2 text-xs"
+                    className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-2.5 text-xs font-medium"
                     value={firFormData.crimeStartDate || ''}
                     onChange={(e) => setFirFormData({ ...firFormData, crimeStartDate: e.target.value })}
                   />
@@ -1894,7 +1925,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                   <label className="font-semibold text-text-secondary block mb-1">Start Time (hrs)</label>
                   <input
                     type="text"
-                    className="w-full rounded border border-neutral-700 p-2 text-xs"
+                    className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-2.5 text-xs font-medium"
                     value={firFormData.crimeStartTime || ''}
                     onChange={(e) => setFirFormData({ ...firFormData, crimeStartTime: e.target.value })}
                   />
@@ -1903,7 +1934,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                   <label className="font-semibold text-text-secondary block mb-1">Crime End Date</label>
                   <input
                     type="text"
-                    className="w-full rounded border border-neutral-700 p-2 text-xs"
+                    className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-2.5 text-xs font-medium"
                     value={firFormData.crimeEndDate || ''}
                     onChange={(e) => setFirFormData({ ...firFormData, crimeEndDate: e.target.value })}
                   />
@@ -1912,7 +1943,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                   <label className="font-semibold text-text-secondary block mb-1">End Time (hrs)</label>
                   <input
                     type="text"
-                    className="w-full rounded border border-neutral-700 p-2 text-xs"
+                    className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-2.5 text-xs font-medium"
                     value={firFormData.crimeEndTime || ''}
                     onChange={(e) => setFirFormData({ ...firFormData, crimeEndTime: e.target.value })}
                   />
@@ -1923,7 +1954,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                   <label className="font-semibold text-text-secondary block mb-1">Date Info Received at Station</label>
                   <input
                     type="text"
-                    className="w-full rounded border border-neutral-700 p-2 text-xs"
+                    className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-2.5 text-xs font-medium"
                     value={firFormData.dateInfoReceived || ''}
                     onChange={(e) => setFirFormData({ ...firFormData, dateInfoReceived: e.target.value })}
                   />
@@ -1932,7 +1963,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                   <label className="font-semibold text-text-secondary block mb-1">Station Diary Entry Number</label>
                   <input
                     type="text"
-                    className="w-full rounded border border-neutral-700 p-2 text-xs"
+                    className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-2.5 text-xs font-medium"
                     value={firFormData.stationDiaryEntryNumber || ''}
                     onChange={(e) => setFirFormData({ ...firFormData, stationDiaryEntryNumber: e.target.value })}
                   />
@@ -1941,13 +1972,13 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
             </div>
 
             {/* Section 4 & 5: Information Type & Place of Incident */}
-            <div className="rounded-lg border border-neutral-800 bg-surface p-4 space-y-3">
-              <h4 className="font-bold text-blue-900 text-xs">4–5. Type of Information & Place of Incident</h4>
+            <div className="rounded-xl border border-border bg-surface-elevated/40 p-4 space-y-3 shadow-xs">
+              <h4 className="font-bold text-brand-primary text-xs uppercase tracking-wider">4–5. Type of Information & Place of Incident</h4>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="font-semibold text-text-secondary block mb-1">Type of Information</label>
                   <select
-                    className="w-full rounded border border-neutral-700 p-2 text-xs"
+                    className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-2.5 text-xs font-medium"
                     value={firFormData.informationType || 'Oral'}
                     onChange={(e) => setFirFormData({ ...firFormData, informationType: e.target.value })}
                   >
@@ -1959,7 +1990,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                   <label className="font-semibold text-text-secondary block mb-1">Direction & Distance</label>
                   <input
                     type="text"
-                    className="w-full rounded border border-neutral-700 p-2 text-xs"
+                    className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-2.5 text-xs font-medium"
                     value={firFormData.directionDistanceFromStation || ''}
                     onChange={(e) => setFirFormData({ ...firFormData, directionDistanceFromStation: e.target.value })}
                   />
@@ -1968,7 +1999,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                   <label className="font-semibold text-text-secondary block mb-1">Outside Jurisdiction (if any)</label>
                   <input
                     type="text"
-                    className="w-full rounded border border-neutral-700 p-2 text-xs"
+                    className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-2.5 text-xs font-medium"
                     value={firFormData.outsideJurisdiction || ''}
                     onChange={(e) => setFirFormData({ ...firFormData, outsideJurisdiction: e.target.value })}
                   />
@@ -1978,7 +2009,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                 <label className="font-semibold text-text-secondary block mb-1">Incident Address</label>
                 <textarea
                   rows={2}
-                  className="w-full rounded border border-neutral-700 p-2 text-xs"
+                  className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-2.5 text-xs font-medium"
                   value={firFormData.incidentAddress || ''}
                   onChange={(e) => setFirFormData({ ...firFormData, incidentAddress: e.target.value })}
                 />
@@ -1986,14 +2017,14 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
             </div>
 
             {/* Section 6: Complainant Details */}
-            <div className="rounded-lg border border-neutral-800 bg-surface p-4 space-y-3">
-              <h4 className="font-bold text-blue-900 text-xs">6. Complainant / Informant Details</h4>
+            <div className="rounded-xl border border-border bg-surface-elevated/40 p-4 space-y-3 shadow-xs">
+              <h4 className="font-bold text-brand-primary text-xs uppercase tracking-wider">6. Complainant / Informant Details</h4>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="font-semibold text-text-secondary block mb-1">Name</label>
                   <input
                     type="text"
-                    className="w-full rounded border border-neutral-700 p-2 text-xs"
+                    className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-2.5 text-xs font-medium"
                     value={firFormData.complainantName || ''}
                     onChange={(e) => setFirFormData({ ...firFormData, complainantName: e.target.value })}
                   />
@@ -2002,7 +2033,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                   <label className="font-semibold text-text-secondary block mb-1">Father's Name</label>
                   <input
                     type="text"
-                    className="w-full rounded border border-neutral-700 p-2 text-xs"
+                    className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-2.5 text-xs font-medium"
                     value={firFormData.complainantFatherName || ''}
                     onChange={(e) => setFirFormData({ ...firFormData, complainantFatherName: e.target.value })}
                   />
@@ -2011,7 +2042,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                   <label className="font-semibold text-text-secondary block mb-1">Mobile Numbers</label>
                   <input
                     type="text"
-                    className="w-full rounded border border-neutral-700 p-2 text-xs"
+                    className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-2.5 text-xs font-medium"
                     value={firFormData.complainantMobileNumbers || ''}
                     onChange={(e) => setFirFormData({ ...firFormData, complainantMobileNumbers: e.target.value })}
                   />
@@ -2022,7 +2053,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                   <label className="font-semibold text-text-secondary block mb-1">Occupation</label>
                   <input
                     type="text"
-                    className="w-full rounded border border-neutral-700 p-2 text-xs"
+                    className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-2.5 text-xs font-medium"
                     value={firFormData.complainantOccupation || ''}
                     onChange={(e) => setFirFormData({ ...firFormData, complainantOccupation: e.target.value })}
                   />
@@ -2031,7 +2062,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                   <label className="font-semibold text-text-secondary block mb-1">Nationality</label>
                   <input
                     type="text"
-                    className="w-full rounded border border-neutral-700 p-2 text-xs"
+                    className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-2.5 text-xs font-medium"
                     value={firFormData.complainantNationality || 'Indian'}
                     onChange={(e) => setFirFormData({ ...firFormData, complainantNationality: e.target.value })}
                   />
@@ -2040,7 +2071,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                   <label className="font-semibold text-text-secondary block mb-1">DOB / Age</label>
                   <input
                     type="text"
-                    className="w-full rounded border border-neutral-700 p-2 text-xs"
+                    className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-2.5 text-xs font-medium"
                     value={firFormData.complainantDOB || ''}
                     onChange={(e) => setFirFormData({ ...firFormData, complainantDOB: e.target.value })}
                   />
@@ -2050,7 +2081,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                 <label className="font-semibold text-text-secondary block mb-1">Full Residential Address</label>
                 <textarea
                   rows={2}
-                  className="w-full rounded border border-neutral-700 p-2 text-xs"
+                  className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-2.5 text-xs font-medium"
                   value={firFormData.complainantAddress || ''}
                   onChange={(e) => setFirFormData({ ...firFormData, complainantAddress: e.target.value })}
                 />
@@ -2058,24 +2089,24 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
             </div>
 
             {/* Section 7: Accused Details */}
-            <div className="rounded-lg border border-neutral-800 bg-surface p-4 space-y-2">
-              <h4 className="font-bold text-blue-900 text-xs">7. Details of Known / Suspected / Unknown Accused</h4>
+            <div className="rounded-xl border border-border bg-surface-elevated/40 p-4 space-y-2 shadow-xs">
+              <h4 className="font-bold text-brand-primary text-xs uppercase tracking-wider">7. Details of Known / Suspected / Unknown Accused</h4>
               <textarea
                 rows={4}
-                className="w-full rounded border border-neutral-700 p-2 text-xs font-mono"
+                className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-2.5 text-xs font-mono"
                 value={firFormData.accusedDetails || ''}
                 onChange={(e) => setFirFormData({ ...firFormData, accusedDetails: e.target.value })}
               />
             </div>
 
             {/* Section 8-11: Delay & Property */}
-            <div className="rounded-lg border border-neutral-800 bg-surface p-4 space-y-3">
-              <h4 className="font-bold text-blue-900 text-xs">8–11. Delay Reason & Involved Assets</h4>
+            <div className="rounded-xl border border-border bg-surface-elevated/40 p-4 space-y-3 shadow-xs">
+              <h4 className="font-bold text-brand-primary text-xs uppercase tracking-wider">8–11. Delay Reason & Involved Assets</h4>
               <div>
                 <label className="font-semibold text-text-secondary block mb-1">Reason for Delay in Reporting</label>
                 <textarea
                   rows={2}
-                  className="w-full rounded border border-neutral-700 p-2 text-xs"
+                  className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-2.5 text-xs font-medium"
                   value={firFormData.delayReason || ''}
                   onChange={(e) => setFirFormData({ ...firFormData, delayReason: e.target.value })}
                 />
@@ -2085,7 +2116,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                   <label className="font-semibold text-text-secondary block mb-1">Stolen / Involved Property Details</label>
                   <input
                     type="text"
-                    className="w-full rounded border border-neutral-700 p-2 text-xs"
+                    className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-2.5 text-xs font-medium"
                     value={firFormData.stolenPropertyDetails || ''}
                     onChange={(e) => setFirFormData({ ...firFormData, stolenPropertyDetails: e.target.value })}
                   />
@@ -2094,7 +2125,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                   <label className="font-semibold text-text-secondary block mb-1">Total Value of Involved Assets (₹)</label>
                   <input
                     type="text"
-                    className="w-full rounded border border-neutral-700 p-2 text-xs"
+                    className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-2.5 text-xs font-medium"
                     value={firFormData.stolenPropertyValue || ''}
                     onChange={(e) => setFirFormData({ ...firFormData, stolenPropertyValue: e.target.value })}
                   />
@@ -2103,13 +2134,13 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
             </div>
 
             {/* Section 12: Detailed Verbatim Statement */}
-            <div className="rounded-lg border border-neutral-800 bg-surface p-4 space-y-3">
-              <h4 className="font-bold text-blue-900 text-xs">12. First Information Report Narrative Statements</h4>
+            <div className="rounded-xl border border-border bg-surface-elevated/40 p-4 space-y-3 shadow-xs">
+              <h4 className="font-bold text-brand-primary text-xs uppercase tracking-wider">12. First Information Report Narrative Statements</h4>
               <div>
                 <label className="font-semibold text-text-secondary block mb-1">Statement in Gujarati-English (ગુજરાતી અહેવાલ)</label>
                 <textarea
                   rows={8}
-                  className="w-full rounded border border-neutral-700 p-2.5 text-xs font-mono leading-relaxed"
+                  className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-2.5 text-xs font-mono leading-relaxed"
                   value={firFormData.firStatement || ''}
                   onChange={(e) => setFirFormData({ ...firFormData, firStatement: e.target.value })}
                 />
@@ -2118,7 +2149,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                 <label className="font-semibold text-text-secondary block mb-1">Statement in English</label>
                 <textarea
                   rows={8}
-                  className="w-full rounded border border-neutral-700 p-2.5 text-xs font-mono leading-relaxed"
+                  className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-2.5 text-xs font-mono leading-relaxed"
                   value={firFormData.firStatementEn || ''}
                   onChange={(e) => setFirFormData({ ...firFormData, firStatementEn: e.target.value })}
                 />
@@ -2126,13 +2157,13 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
             </div>
 
             {/* Brief Summary */}
-            <div className="rounded-lg border border-neutral-800 bg-surface p-4 space-y-3">
-              <h4 className="font-bold text-blue-900 text-xs">Brief Summary of Offense</h4>
+            <div className="rounded-xl border border-border bg-surface-elevated/40 p-4 space-y-3 shadow-xs">
+              <h4 className="font-bold text-brand-primary text-xs uppercase tracking-wider">Brief Summary of Offense</h4>
               <div>
                 <label className="font-semibold text-text-secondary block mb-1">Summary in Gujarati-English</label>
                 <textarea
                   rows={3}
-                  className="w-full rounded border border-neutral-700 p-2 text-xs"
+                  className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-2.5 text-xs font-medium"
                   value={firFormData.briefSummaryGujEn || ''}
                   onChange={(e) => setFirFormData({ ...firFormData, briefSummaryGujEn: e.target.value })}
                 />
@@ -2141,7 +2172,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                 <label className="font-semibold text-text-secondary block mb-1">Summary in English</label>
                 <textarea
                   rows={3}
-                  className="w-full rounded border border-neutral-700 p-2 text-xs"
+                  className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-2.5 text-xs font-medium"
                   value={firFormData.briefSummary || ''}
                   onChange={(e) => setFirFormData({ ...firFormData, briefSummary: e.target.value })}
                 />
@@ -2150,6 +2181,52 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
           </div>
         </Modal>
       )}
+
+      {/* Close Investigation Confirmation Modal */}
+      <Modal
+        isOpen={closeInvestigationModalOpen}
+        onClose={() => setCloseInvestigationModalOpen(false)}
+        title="Close Investigation"
+        size="md"
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 p-4 bg-semantic-warning/10 border border-semantic-warning/30 rounded-lg">
+            <AlertTriangle className="h-5 w-5 text-semantic-warning flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-text-secondary">
+              <p className="font-semibold text-semantic-warning mb-2">Are you sure you want to close this investigation?</p>
+              <ul className="list-disc list-inside space-y-1 text-xs">
+                <li>The case will be permanently marked as <strong>CLOSED</strong></li>
+                <li>The investigation will be indexed in the AI vector store</li>
+                <li>A Charge Sheet will be automatically generated (this may take some time)</li>
+                <li>This action cannot be undone</li>
+              </ul>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 pt-4 border-t border-border">
+            <Button
+              variant="ghost"
+              onClick={() => setCloseInvestigationModalOpen(false)}
+              disabled={actionLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleCloseCase}
+              isLoading={actionLoading}
+            >
+              Yes, Close Investigation
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Chargesheet Modal */}
+      <ChargeSheetModal
+        isOpen={chargeSheetModalOpen}
+        onClose={() => setChargeSheetModalOpen(false)}
+        caseId={params.id as string}
+      />
     </div>
   );
 }

@@ -88,32 +88,42 @@ def _build_multimodal_prompt(
     context: dict[str, object],
 ) -> tuple[str, str]:
     system_prompt = (
-        "You extract a complaint draft from user text plus OCR, Florence captions, and audio/PDF transcription. "
-        "Return ONLY a raw JSON object. Do not add markdown, commentary, or explanations. "
-        "Use only facts grounded in the provided text and attachment notes. "
-        "When generating detailedDescription, write a clear paragraph-style complaint narrative that combines the complaint text with the extracted media content and preserves the important factual sequence."
+        "You are a complaint extraction assistant. Extract structured information from the provided complaint text and attachments. "
+        "Return ONLY a valid JSON object with the fields specified in the output format. "
+        "Do NOT add markdown formatting, code blocks, or explanations. "
+        "Use only facts from the complaint_text and attachment_notes provided. "
+        "For detailedDescription, create a comprehensive paragraph combining all information from complaint text and attachments."
     )
 
-    payload = {
-        "complaint_text": complaint_text,
-        "context": context,
-        "attachment_notes": attachment_notes,
-        "required_output": {
-            "shortDescription": "short title for the complaint",
-            "detailedDescription": "full paragraph-style complaint narrative generated from the complaint text and all extracted media text",
-            "incidentDate": "YYYY-MM-DD if derivable, otherwise null",
-            "incidentTime": "exact time or broad period if derivable, otherwise null",
-            "incidentPlace": "location of occurrence if derivable, otherwise null",
-            "approximateDateText": "free-form approximate date text if derivable, otherwise null",
-            "coordinates": "GPS coordinates if derivable, otherwise null",
-            "address": "full address if derivable, otherwise null",
-            "category": "one of THEFT, ROBBERY, BURGLARY, ASSAULT, DOMESTIC_VIOLENCE, SEXUAL_OFFENCE, CYBERCRIME, FRAUD, PROPERTY_DISPUTE, MISSING_PERSON, ROAD_ACCIDENT, DRUG_OFFENCE, PUBLIC_NUISANCE, HARASSMENT, EXTORTION, MURDER, KIDNAPPING, OTHER — pick the closest match, or null if unclear",
-            "missingFields": ["fields that still require manual entry"],
-            "confidence": 0.0,
-            "summary": "brief textual summary of the evidence-backed draft",
-        },
-    }
-    user_prompt = json.dumps(payload, ensure_ascii=False, indent=2)
+    user_prompt = f"""Extract structured complaint information from the following:
+
+COMPLAINT TEXT:
+{complaint_text if complaint_text else "No text provided"}
+
+EXTRACTED CONTENT FROM ATTACHMENTS:
+{chr(10).join(f"- {note}" for note in attachment_notes) if attachment_notes else "No attachments"}
+
+EXISTING CONTEXT (if any):
+{json.dumps(context, ensure_ascii=False, indent=2) if context else "{}"}
+
+Return a JSON object with these EXACT fields:
+{{
+  "shortDescription": "brief title (max 100 chars)",
+  "detailedDescription": "comprehensive paragraph narrative combining complaint text and all attachment content",
+  "incidentDate": "YYYY-MM-DD format if found, otherwise null",
+  "incidentTime": "time in HH:MM format or descriptive text like 'evening' if found, otherwise null",
+  "incidentPlace": "location where incident occurred if found, otherwise null",
+  "approximateDateText": "any approximate date mention like 'last week' if found, otherwise null",
+  "coordinates": "GPS coordinates if found, otherwise null",
+  "address": "full address if found, otherwise null",
+  "category": "one of: THEFT, ROBBERY, BURGLARY, ASSAULT, DOMESTIC_VIOLENCE, SEXUAL_OFFENCE, CYBERCRIME, FRAUD, PROPERTY_DISPUTE, MISSING_PERSON, ROAD_ACCIDENT, DRUG_OFFENCE, PUBLIC_NUISANCE, HARASSMENT, EXTORTION, MURDER, KIDNAPPING, OTHER",
+  "missingFields": ["list of field names that need manual entry"],
+  "confidence": 0.85,
+  "summary": "brief summary of the complaint"
+}}
+
+IMPORTANT: Extract information from BOTH complaint_text AND attachment_notes. Do not leave fields empty if information is available in the attachments."""
+
     return system_prompt, user_prompt
 
 
@@ -288,6 +298,15 @@ async def profile_complaint_multimodal(
         raw_response = await container.llm_client.generate(user_prompt, system_prompt=system_prompt)
         logger.info("[complaint] LLM raw response", extra={"raw_response": raw_response[:500] if raw_response else None})
         parsed_output = _clean_json_payload(raw_response)
+        
+        # Handle case where LLM returns data nested in 'context' key
+        if "context" in parsed_output and isinstance(parsed_output["context"], dict):
+            context_data = parsed_output["context"]
+            # Merge context data into root if fields are missing at root
+            for key in ["shortDescription", "detailedDescription", "incidentDate", "incidentTime", "incidentPlace", "approximateDateText", "coordinates", "address", "category"]:
+                if not parsed_output.get(key) and context_data.get(key):
+                    parsed_output[key] = context_data[key]
+        
         logger.info("[complaint] LLM parsed output keys", extra={"keys": list(parsed_output.keys()), "shortDescription": parsed_output.get("shortDescription"), "incidentDate": parsed_output.get("incidentDate"), "incidentTime": parsed_output.get("incidentTime"), "incidentPlace": parsed_output.get("incidentPlace"), "category": parsed_output.get("category")})
     except Exception as exc:
         logger.warning("[complaint] LLM complaint intake drafting failed; using fallback draft", extra={"error": str(exc)})
@@ -307,19 +326,29 @@ async def profile_complaint_multimodal(
         ) or (combined_text if combined_text else None),
         incidentDate=_first_non_empty(
             parsed_output.get("incidentDate"),
+            parsed_output.get("incident_date"),
             parsed_context.get("incidentDate"),
         ),
         incidentTime=_first_non_empty(
             parsed_output.get("incidentTime"),
+            parsed_output.get("incident_time"),
+            parsed_output.get("time"),
+            parsed_output.get("period"),
+            parsed_output.get("time_of_day"),
             parsed_context.get("incidentTime"),
         ),
         incidentPlace=_first_non_empty(
             parsed_output.get("incidentPlace"),
+            parsed_output.get("incident_place"),
+            parsed_output.get("location"),
+            parsed_output.get("place"),
             parsed_output.get("address"),
             parsed_context.get("incidentPlace"),
         ),
         approximateDateText=_first_non_empty(
             parsed_output.get("approximateDateText"),
+            parsed_output.get("approximate_date"),
+            parsed_output.get("date_range"),
             parsed_context.get("approximateDateText"),
         ),
         coordinates=_first_non_empty(
@@ -328,6 +357,7 @@ async def profile_complaint_multimodal(
         ),
         address=_first_non_empty(
             parsed_output.get("address"),
+            parsed_output.get("incidentPlace"),
             parsed_context.get("address"),
         ),
         category=_first_non_empty(

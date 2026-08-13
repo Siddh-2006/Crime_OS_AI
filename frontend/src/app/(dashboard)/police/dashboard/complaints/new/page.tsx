@@ -767,46 +767,42 @@ export default function NewComplaintPage(): React.ReactElement {
 
   // Normalize a time string from LLM (e.g. "2:30 PM", "14:30", "night") into
   // either an HH:MM string for the exact-time input or a period keyword.
-  const normalizeTime = (raw: string): { period: string; exact: string } => {
-    const lower = raw.trim().toLowerCase();
-    const broadPeriods = ['morning', 'afternoon', 'evening', 'night', 'unknown'];
-    if (broadPeriods.includes(lower)) return { period: lower, exact: '' };
+  const normalizeTime = (timeInput: string): { period: string; exact: string } => {
+    if (!timeInput) return { period: 'unknown', exact: '' };
+    const str = timeInput.trim().toLowerCase();
 
-    // Try to parse a 12-hour time like "2:30 PM" or "2 PM"
-    const match12 = lower.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/);
+    if (str.includes('morning')) return { period: 'morning', exact: '' };
+    if (str.includes('afternoon')) return { period: 'afternoon', exact: '' };
+    if (str.includes('evening')) return { period: 'evening', exact: '' };
+    if (str.includes('night')) return { period: 'night', exact: '' };
+    if (str.includes('unknown')) return { period: 'unknown', exact: '' };
+
+    // 12-hour format e.g. "02:30 pm" -> "14:30"
+    const match12 = str.match(/(\d{1,2}):(\d{2})\s*(am|pm)/i);
     if (match12) {
-      let hours = parseInt(match12[1], 10);
-      const minutes = parseInt(match12[2] ?? '0', 10);
-      const meridiem = match12[3];
-      if (meridiem === 'pm' && hours !== 12) hours += 12;
-      if (meridiem === 'am' && hours === 12) hours = 0;
-      return {
-        period: 'exact',
-        exact: `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`,
-      };
+      let hrs = parseInt(match12[1], 10);
+      const mins = match12[2];
+      const ampm = match12[3].toLowerCase();
+      if (ampm === 'pm' && hrs < 12) hrs += 12;
+      if (ampm === 'am' && hrs === 12) hrs = 0;
+      return { period: 'exact', exact: `${String(hrs).padStart(2, '0')}:${mins}` };
     }
 
-    // Already HH:MM or HH:MM:SS
-    const match24 = lower.match(/^(\d{1,2}):(\d{2})/);
+    // 24-hour format e.g. "14:30"
+    const match24 = str.match(/(\d{1,2}):(\d{2})/);
     if (match24) {
-      return {
-        period: 'exact',
-        exact: `${match24[1].padStart(2, '0')}:${match24[2]}`,
-      };
+      const hrs = parseInt(match24[1], 10);
+      const mins = match24[2];
+      if (hrs >= 0 && hrs <= 23) {
+        return { period: 'exact', exact: `${String(hrs).padStart(2, '0')}:${mins}` };
+      }
     }
 
-    // Fallback: treat as approximate period if it matches loosely
-    for (const p of broadPeriods) {
-      if (lower.includes(p)) return { period: p, exact: '' };
-    }
-
-    // Give up — keep as-is and let user fix
-    return { period: 'exact', exact: raw.trim() };
+    return { period: 'unknown', exact: '' };
   };
 
   const applyComplaintDraft = (draft: ComplaintDraftResponse | null | undefined) => {
-    if (!draft?.prefill) return;
-
+    if (!draft || !draft.prefill) return;
     const prefill = draft.prefill;
 
     if (prefill.shortDescription?.trim()) {
@@ -869,6 +865,7 @@ export default function NewComplaintPage(): React.ReactElement {
 
         return apiClient.post(API_ROUTES.COMPLAINTS.INTAKE_ANALYZE, formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
+          timeout: 300000,
         });
       })();
 
