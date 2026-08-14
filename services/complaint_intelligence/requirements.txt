@@ -23,5 +23,6 @@ redis==5.2.1
 python-multipart==0.0.18
 scenedetect==0.6.4
 starlette==0.41.3
+uvicorn[standard]==0.30.0
 # torch==2.13.0
 # transformers==4.41.2
