@@ -185,8 +185,14 @@ class Container:
     @property
     def ocr_engine(self) -> IOCREngine:
         if self._ocr_engine is None:
-            from app.ocr_worker.engine import PaddleOCREngine
-            self._ocr_engine = PaddleOCREngine()
+            # Production: use Gemini Vision for OCR (no PaddleOCR/GPU required)
+            # Development: use PaddleOCR (local, offline)
+            if settings.is_production:
+                from app.ocr_worker.engine import GeminiOCREngine
+                self._ocr_engine = GeminiOCREngine()
+            else:
+                from app.ocr_worker.engine import PaddleOCREngine
+                self._ocr_engine = PaddleOCREngine()
         return self._ocr_engine
 
     @ocr_engine.setter
@@ -225,8 +231,14 @@ class Container:
     @property
     def audio_transcriber(self) -> IAudioTranscriber:
         if self._audio_transcriber is None:
-            from app.audio_worker.transcriber import WhisperTranscriber
-            self._audio_transcriber = WhisperTranscriber()
+            # Production: Gemini multimodal STT (no faster-whisper / GPU required)
+            # Development: faster-whisper (local, offline)
+            if settings.is_production:
+                from app.audio_worker.transcriber import GeminiTranscriber
+                self._audio_transcriber = GeminiTranscriber()
+            else:
+                from app.audio_worker.transcriber import WhisperTranscriber
+                self._audio_transcriber = WhisperTranscriber()
         return self._audio_transcriber
 
     @audio_transcriber.setter

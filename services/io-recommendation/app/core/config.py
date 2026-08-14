@@ -31,6 +31,14 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL: str = "nomic-embed-text-v2-moe"
     EMBEDDING_TIMEOUT_SECONDS: int = 60
 
+    # ── Embedding backend selection ──────────────────────────────────────────────
+    # 'auto'  → BGE (if cached) → Nomic (llama.cpp) → mock  [default for dev]
+    # 'gemini' → Gemini text-embedding-004 API         [use in production]
+    # 'nomic'  → force llama.cpp / Nomic regardless of env
+    EMBEDDING_BACKEND: str = "auto"
+    GEMINI_API_KEY: Optional[str] = None
+    GEMINI_EMBEDDING_MODEL: str = "text-embedding-004"
+
     # ── Recommendation Hyper-parameters ─────────────────────────────────────────
     TOP_K_SIMILAR: int = 50           # how many nearest neighbours to retrieve
     SIMILARITY_THRESHOLD: float = 0.6 # minimum cosine similarity (0-1) to consider a case relevant

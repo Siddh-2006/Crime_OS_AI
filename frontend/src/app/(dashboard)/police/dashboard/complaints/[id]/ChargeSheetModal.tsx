@@ -13,11 +13,69 @@ interface ChargeSheetModalProps {
 
 export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeSheetModalProps) {
   const [data, setData] = useState<any>(null);
+  const [draftData, setDraftData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [regenLoading, setRegenLoading] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
   const [error, setError] = useState('');
 
+  const updateDraft = (path: Array<string | number>, value: any) => {
+    setDraftData((prev: any) => {
+      if (!prev) return prev;
+      const next = JSON.parse(JSON.stringify(prev));
+      let node: any = next;
+      for (let i = 0; i < path.length - 1; i += 1) {
+        const key = path[i];
+        if (node[key] === undefined || node[key] === null) {
+          node[key] = typeof path[i + 1] === 'number' ? [] : {};
+        }
+        node = node[key];
+      }
+      node[path[path.length - 1]] = value;
+      return next;
+    });
+  };
+
+  const setDraft = (source: any) => {
+    setData(source);
+    setDraftData(source ? JSON.parse(JSON.stringify(source)) : null);
+  };
+
+  const handlePreviewPdf = async (): Promise<string | null> => {
+    if (!draftData) return null;
+    setPreviewLoading(true);
+    setError('');
+    if (previewPdfUrl) {
+      window.URL.revokeObjectURL(previewPdfUrl);
+      setPreviewPdfUrl(null);
+    }
+
+    try {
+      const res = await apiClient.post(`/cases/${caseId}/chargesheet/pdf`, { chargeSheet: draftData }, {
+        responseType: 'blob',
+      });
+      const blobUrl = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+      setPreviewPdfUrl(blobUrl);
+      return blobUrl;
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to generate charge sheet preview PDF.');
+      return null;
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (previewPdfUrl) {
+        window.URL.revokeObjectURL(previewPdfUrl);
+      }
+    };
+  }, [previewPdfUrl]);
+
   const sectionNumbers = useMemo(() => {
+    const source = draftData ?? data;
     const numbers: Record<string, number | null> = {};
     let counter = 0;
 
@@ -29,29 +87,29 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
 
     addSection(true, 'filingInformation');
     addSection(true, 'caseParticulars');
-    addSection(Boolean(data?.section3_complainantDetails), 'complainantDetails');
-    addSection(Boolean(data?.section4_victimDetails?.length), 'victimDetails');
-    addSection(Boolean(data?.section5_accusedDetails?.length), 'accusedDetails');
-    addSection(Boolean(data?.section6_applicableLegalSections?.length), 'applicableLegalSections');
-    addSection(Boolean(data?.section7_evidenceLinkedSections?.length), 'evidenceLinkedSections');
+    addSection(Boolean(source?.section3_complainantDetails), 'complainantDetails');
+    addSection(Boolean(source?.section4_victimDetails?.length), 'victimDetails');
+    addSection(Boolean(source?.section5_accusedDetails?.length), 'accusedDetails');
+    addSection(Boolean(source?.section6_applicableLegalSections?.length), 'applicableLegalSections');
+    addSection(Boolean(source?.section7_evidenceLinkedSections?.length), 'evidenceLinkedSections');
     addSection(true, 'investigationSummary');
-    addSection(Boolean(data?.section9_witnesses?.length), 'witnesses');
-    addSection(Boolean(data?.section10_evidenceCollected?.length), 'evidenceCollected');
-    addSection(Boolean(data?.section11_departmentReports?.length), 'departmentReports');
+    addSection(Boolean(source?.section9_witnesses?.length), 'witnesses');
+    addSection(Boolean(source?.section10_evidenceCollected?.length), 'evidenceCollected');
+    addSection(Boolean(source?.section11_departmentReports?.length), 'departmentReports');
     addSection(true, 'investigationFindings');
-    addSection(Boolean(data?.section13_accusedAppliedSections?.length), 'accusedAppliedSections');
+    addSection(Boolean(source?.section13_accusedAppliedSections?.length), 'accusedAppliedSections');
     addSection(true, 'finalReport');
-    addSection(Boolean(data?.section15_annexures?.length), 'annexures');
+    addSection(Boolean(source?.section15_annexures?.length), 'annexures');
 
     return numbers;
-  }, [data]);
+  }, [data, draftData]);
 
   const fetchChargeSheet = async () => {
     setLoading(true);
     setError('');
     try {
       const res = await apiClient.get(`/cases/${caseId}/chargesheet`);
-      setData(res.data.data);
+      setDraft(res.data.data);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch charge sheet.');
     } finally {
@@ -73,30 +131,29 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
     }
   };
 
-  const handleDownload = () => {
-    const downloadPdf = async () => {
-      setError('');
-      setRegenLoading(true);
-      try {
-        const res = await apiClient.get(`/cases/${caseId}/chargesheet/pdf`, {
-          responseType: 'blob',
-        });
-        const blobUrl = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = `ChargeSheet_${data?.section1_filingInformation?.firNumber || 'Draft'}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        window.URL.revokeObjectURL(blobUrl);
-      } catch (err: any) {
-        setError(err.response?.data?.message || 'Failed to download charge sheet PDF.');
-      } finally {
-        setRegenLoading(false);
-      }
-    };
+  const handlePreviewModal = async () => {
+    if (!draftData?.section1_filingInformation?.magistrate?.trim()) {
+      setError('Magistrate is required before generating a charge sheet PDF.');
+      return;
+    }
+    await handlePreviewPdf();
+  };
 
-    void downloadPdf();
+const handleDownload = async () => {
+    setError('');
+    try {
+      const blobUrl = previewPdfUrl ?? (await handlePreviewPdf());
+      if (!blobUrl) return; // TypeScript narrows `blobUrl` to `string` after this line
+
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `ChargeSheet_${data?.section1_filingInformation?.firNumber || 'Draft'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to download charge sheet PDF.');
+    }
   };
 
   useEffect(() => {
@@ -107,6 +164,8 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
 
   if (!isOpen) return null;
 
+  const view = draftData ?? data;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className="bg-surface rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
@@ -114,9 +173,9 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
           <div className="flex items-center gap-2 text-neutral-800">
             <FileText className="w-5 h-5 text-indigo-600" />
             <h2 className="text-lg font-bold">Final Report / Charge Sheet</h2>
-            {data?.section1_filingInformation?.version && (
+            {view?.section1_filingInformation?.version && (
               <span className="bg-indigo-100 text-indigo-700 text-xs px-2 py-1 rounded-full font-medium">
-                v{data.section1_filingInformation.version}
+                v{view.section1_filingInformation.version}
               </span>
             )}
           </div>
@@ -147,10 +206,20 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
               <section>
                 <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3">{sectionNumbers.filingInformation ?? 1}. Filing Information</h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div><span className="font-semibold text-neutral-500">Charge Sheet No:</span> {data.section1_filingInformation.chargeSheetNumber}</div>
-                  <div><span className="font-semibold text-neutral-500">FIR No:</span> {data.section1_filingInformation.firNumber}</div>
-                  <div><span className="font-semibold text-neutral-500">Police Station:</span> {data.section1_filingInformation.policeStation}</div>
-                  <div><span className="font-semibold text-neutral-500">Filing Date:</span> {data.section1_filingInformation.filingDate ? new Date(data.section1_filingInformation.filingDate).toLocaleDateString() : 'N/A'}</div>
+                  <div><span className="font-semibold text-neutral-500">Charge Sheet No:</span> {view?.section1_filingInformation?.chargeSheetNumber}</div>
+                  <div><span className="font-semibold text-neutral-500">FIR No:</span> {view?.section1_filingInformation?.firNumber}</div>
+                  <div><span className="font-semibold text-neutral-500">Police Station:</span> {view?.section1_filingInformation?.policeStation}</div>
+                  <div><span className="font-semibold text-neutral-500">Filing Date:</span> {view?.section1_filingInformation?.filingDate ? new Date(view.section1_filingInformation.filingDate).toLocaleDateString() : 'N/A'}</div>
+                </div>
+                <div className="mt-3">
+                  <label className="block text-xs font-semibold text-neutral-600 mb-1">Magistrate</label>
+                  <input
+                    type="text"
+                    value={view?.section1_filingInformation?.magistrate || ''}
+                    onChange={(e) => updateDraft(['section1_filingInformation', 'magistrate'], e.target.value)}
+                    className="w-full rounded-md border border-input-border p-2 text-sm"
+                    placeholder="Enter Magistrate's name"
+                  />
                 </div>
               </section>
 
@@ -158,33 +227,33 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
               <section>
                 <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">{sectionNumbers.caseParticulars ?? 2}. Case Particulars</h3>
                 <div className="text-sm space-y-2">
-                  <p><span className="font-semibold text-neutral-500">Nature of Offence:</span> {data.section2_caseParticulars.natureOfOffence}</p>
-                  <p><span className="font-semibold text-neutral-500">Date/Time:</span> {data.section2_caseParticulars.dateOfOccurrence ? new Date(data.section2_caseParticulars.dateOfOccurrence).toLocaleDateString() : ''} {data.section2_caseParticulars.timeOfOccurrence}</p>
-                  <p><span className="font-semibold text-neutral-500">Place:</span> {data.section2_caseParticulars.placeOfOccurrence}</p>
+                  <p><span className="font-semibold text-neutral-500">Nature of Offence:</span> {view?.section2_caseParticulars?.natureOfOffence}</p>
+                  <p><span className="font-semibold text-neutral-500">Date/Time:</span> {view?.section2_caseParticulars?.dateOfOccurrence ? new Date(view.section2_caseParticulars.dateOfOccurrence).toLocaleDateString() : ''} {view?.section2_caseParticulars?.timeOfOccurrence}</p>
+                  <p><span className="font-semibold text-neutral-500">Place:</span> {view?.section2_caseParticulars?.placeOfOccurrence}</p>
                   <div>
                     <span className="font-semibold text-neutral-500">Brief Description:</span>
-                    <p className="mt-1 text-justify text-neutral-700 bg-neutral-50 p-3 rounded">{data.section2_caseParticulars.briefCaseDescription}</p>
+                    <p className="mt-1 text-justify text-neutral-700 bg-neutral-50 p-3 rounded">{view?.section2_caseParticulars?.briefCaseDescription}</p>
                   </div>
                 </div>
               </section>
               {/* 3. Complainant Details */}
-              {data.section3_complainantDetails && (
+              {view?.section3_complainantDetails && (
                 <section>
                   <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">{sectionNumbers.complainantDetails ?? 3}. Complainant / Informant Details</h3>
                   <div className="text-sm space-y-1">
-                    <p><span className="font-semibold text-neutral-500">Name:</span> {data.section3_complainantDetails.firstName} {data.section3_complainantDetails.lastName}</p>
-                    <p><span className="font-semibold text-neutral-500">Contact:</span> {data.section3_complainantDetails.phone} | {data.section3_complainantDetails.email}</p>
-                    <p><span className="font-semibold text-neutral-500">Address:</span> {data.section3_complainantDetails.address}</p>
+                    <p><span className="font-semibold text-neutral-500">Name:</span> {view.section3_complainantDetails.firstName} {view.section3_complainantDetails.lastName}</p>
+                    <p><span className="font-semibold text-neutral-500">Contact:</span> {view.section3_complainantDetails.phone} | {view.section3_complainantDetails.email}</p>
+                    <p><span className="font-semibold text-neutral-500">Address:</span> {view.section3_complainantDetails.address}</p>
                   </div>
                 </section>
               )}
 
               {/* 4. Victim Details */}
-              {data.section4_victimDetails?.length > 0 && (
+              {view?.section4_victimDetails?.length > 0 && (
                 <section>
                   <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">{sectionNumbers.victimDetails ?? 4}. Victim Details</h3>
                   <div className="space-y-3">
-                    {data.section4_victimDetails.map((victim: any, idx: number) => (
+                    {view.section4_victimDetails.map((victim: any, idx: number) => (
                       <div key={idx} className="text-sm p-3 bg-neutral-50 rounded border">
                         <p><span className="font-semibold text-neutral-500">Name:</span> {victim.name}</p>
                         <p><span className="font-semibold text-neutral-500">Contact:</span> {victim.contact?.phone} | {victim.contact?.email}</p>
@@ -219,11 +288,11 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
               )}
 
               {/* 5. Accused Details */}
-              {data.section5_accusedDetails?.length > 0 && (
+              {view?.section5_accusedDetails?.length > 0 && (
                 <section>
                   <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">{sectionNumbers.accusedDetails ?? 5}. Accused Details</h3>
                   <div className="space-y-3">
-                    {data.section5_accusedDetails.map((accused: any, idx: number) => (
+                    {view.section5_accusedDetails.map((accused: any, idx: number) => (
                       <div key={idx} className="text-sm p-3 bg-neutral-50 rounded border">
                         <p><span className="font-semibold text-neutral-500">Name:</span> {accused.name}</p>
                         <p><span className="font-semibold text-neutral-500">Contact:</span> {accused.contact?.phone} | {accused.contact?.address}</p>
@@ -255,12 +324,12 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
               )}
 
               {/* 6. Applicable Legal Sections */}
-              {data.section6_applicableLegalSections?.length > 0 && (
+              {view?.section6_applicableLegalSections?.length > 0 && (
                 <section>
                   <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">{sectionNumbers.applicableLegalSections ?? 6}. Applicable Legal Sections</h3>
                   <div className="text-sm">
                     <ul className="list-disc pl-5 space-y-1">
-                      {data.section6_applicableLegalSections.map((sec: any, idx: number) => (
+                      {view.section6_applicableLegalSections.map((sec: any, idx: number) => (
                         <li key={idx}><span className="font-semibold">{sec.code || sec.section_code}</span> - {sec.title || sec.short_title}</li>
                       ))}
                     </ul>
@@ -269,11 +338,11 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
               )}
 
               {/* 7. Evidence-linked sections */}
-              {data.section7_evidenceLinkedSections?.length > 0 && (
+              {view?.section7_evidenceLinkedSections?.length > 0 && (
                 <section>
                   <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">{sectionNumbers.evidenceLinkedSections ?? 7}. Evidence-linked BSA Sections</h3>
                   <div className="space-y-3">
-                    {data.section7_evidenceLinkedSections.map((entry: any, idx: number) => (
+                    {view.section7_evidenceLinkedSections.map((entry: any, idx: number) => (
                       <div key={idx} className="text-sm p-3 bg-neutral-50 rounded border">
                         <p className="font-semibold text-neutral-800">{entry.title || entry.evidence_id || 'Evidence'}</p>
                         {entry.applicable_sections?.length > 0 ? (
@@ -294,15 +363,15 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
               {/* 8. Investigation Summary */}
               <section>
                 <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">{sectionNumbers.investigationSummary ?? 8}. Investigation Summary</h3>
-                <div className="text-sm text-justify text-neutral-700 whitespace-pre-wrap">{data.section8_investigationSummary || 'No summary available.'}</div>
+                <div className="text-sm text-justify text-neutral-700 whitespace-pre-wrap">{view?.section8_investigationSummary || 'No summary available.'}</div>
               </section>
 
               {/* 9. Witnesses */}
-              {data.section9_witnesses?.length > 0 && (
+              {view?.section9_witnesses?.length > 0 && (
                 <section>
                   <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">{sectionNumbers.witnesses ?? 9}. Witnesses & Participant Statements</h3>
                   <div className="space-y-3">
-                    {data.section9_witnesses.map((witness: any, idx: number) => (
+                    {view.section9_witnesses.map((witness: any, idx: number) => (
                       <div key={idx} className="text-sm p-3 bg-neutral-50 rounded border">
                         <p><span className="font-semibold text-neutral-500">Name:</span> {witness.name}</p>
                         <p><span className="font-semibold text-neutral-500">Contact:</span> {witness.contact?.phone} | {witness.contact?.address}</p>
@@ -342,11 +411,11 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
               )}
 
               {/* 10. Evidence Collected */}
-              {data.section10_evidenceCollected?.length > 0 && (
+              {view?.section10_evidenceCollected?.length > 0 && (
                 <section>
                   <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">{sectionNumbers.evidenceCollected ?? 10}. Evidence Collected</h3>
                   <ul className="list-disc pl-5 text-sm space-y-1">
-                    {data.section10_evidenceCollected.map((ev: any, idx: number) => (
+                    {view.section10_evidenceCollected.map((ev: any, idx: number) => (
                       <li key={idx}><span className="font-semibold">{ev.title || ev.evidence_id || ev.type}:</span> {ev.description || ev.ai_description || ev.storage_ref}</li>
                     ))}
                   </ul>
@@ -354,11 +423,11 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
               )}
 
               {/* 11. Department & Forensic Reports */}
-              {data.section11_departmentReports?.length > 0 && (
+              {view?.section11_departmentReports?.length > 0 && (
                 <section>
                   <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">{sectionNumbers.departmentReports ?? 11}. Department Reports</h3>
                   <ul className="list-disc pl-5 text-sm space-y-1">
-                    {data.section11_departmentReports.map((req: any, idx: number) => (
+                    {view.section11_departmentReports.map((req: any, idx: number) => (
                       <li key={idx}><span className="font-semibold">{req.department}:</span> {req.request_type} - <span className="uppercase text-xs">{req.status}</span></li>
                     ))}
                   </ul>
@@ -367,17 +436,17 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
 
               {/* 12. Investigation Findings */}
               <section>
-                <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">{sectionNumbers.investigationFindings ?? 12}. Investigation Findings</h3>
-                <div className="text-sm text-justify text-neutral-700 whitespace-pre-wrap">{data.section12_investigationFindings || 'No findings available.'}</div>
+                    <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">{sectionNumbers.investigationFindings ?? 12}. Investigation Findings</h3>
+                    <div className="text-sm text-justify text-neutral-700 whitespace-pre-wrap">{view?.section12_investigationFindings || 'No findings available.'}</div>
               </section>
 
               {/* 13. Accused Applied Sections */}
-              {data.section13_accusedAppliedSections?.length > 0 && (
+              {view?.section13_accusedAppliedSections?.length > 0 && (
                 <section>
                   <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">{sectionNumbers.accusedAppliedSections ?? 13}. Sections Applied to Accused</h3>
                   <div className="space-y-3">
-                    {data.section13_accusedAppliedSections.map((entry: any, idx: number) => {
-                      const accused = data.section5_accusedDetails?.find((a: any) => a._id === entry.accusedId || a.id === entry.accusedId);
+                    {view.section13_accusedAppliedSections.map((entry: any, idx: number) => {
+                      const accused = view.section5_accusedDetails?.find((a: any) => a._id === entry.accusedId || a.id === entry.accusedId);
                       return (
                         <div key={idx} className="text-sm p-3 bg-neutral-50 rounded border">
                           <p><span className="font-semibold text-neutral-500">Accused Name:</span> {accused ? accused.name : 'Unknown'}</p>
@@ -397,14 +466,14 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
               {/* 14. Final Report / Prayer */}
               <section>
                 <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">{sectionNumbers.finalReport ?? 14}. Final Report / Prayer</h3>
-                <div className="text-sm text-justify text-neutral-700 whitespace-pre-wrap">{data.section14_finalReport || 'No final report available.'}</div>
+                <div className="text-sm text-justify text-neutral-700 whitespace-pre-wrap">{view?.section14_finalReport || 'No final report available.'}</div>
               </section>
 
-              {data.section15_annexures?.length > 0 && (
+              {view?.section15_annexures?.length > 0 && (
                 <section>
                   <h3 className="bg-neutral-100 p-2 font-bold uppercase text-xs tracking-wider border-l-4 border-neutral-900 mb-3 mt-6">{sectionNumbers.annexures ?? 15}. Annexures</h3>
                   <div className="space-y-3 text-sm">
-                    {data.section15_annexures.map((annex: any, idx: number) => (
+                    {view.section15_annexures.map((annex: any, idx: number) => (
                       <div key={idx} className="p-3 bg-neutral-50 rounded border">
                         <p className="font-semibold text-neutral-800">{annex.title}</p>
                         <p className="text-xs text-neutral-500 mt-1 uppercase tracking-wider">{annex.type}</p>

@@ -1,67 +1,29 @@
-# ── Web framework ─────────────────────────────────────────────────────────────
+certifi==2026.6.17
+cloudinary==1.45.0
+deep_translator==1.11.4
 fastapi==0.115.6
-uvicorn[standard]==0.32.1
-
-# ── Validation & config ───────────────────────────────────────────────────────
-pydantic==2.10.3
-pydantic-settings==2.7.0
-python-dotenv==1.0.1
-
-# ── Redis (async) ─────────────────────────────────────────────────────────────
-redis==5.2.1
-
-# ── HTTP client ───────────────────────────────────────────────────────────────
+# faster_whisper==1.1.1
+fitz==0.0.0
 httpx==0.28.1
-
-# ── MongoDB (async Motor driver + BSON + SSL cert store) ────────────────────
-motor>=3.3.2               # AsyncIOMotorClient — used in core/mongo.py and pipeline scripts
-pymongo>=4.6.0             # provides bson.ObjectId — used in run_pipeline_from_atlas.py
-certifi>=2024.2.2          # TLS CA bundle for Atlas TLS connections (tlsCAFile)
-
-# ── Language detection ────────────────────────────────────────────────────────
+json_repair==0.63.2
 langdetect==1.0.9
-
-# ── NLP / NER ─────────────────────────────────────────────────────────────────
-# Model must be downloaded once: python -m spacy download en_core_web_sm
-spacy==3.8.14
-
-# ── Image processing ──────────────────────────────────────────────────────────
+motor==3.7.1
+moviepy==1.0.3
+mutagen==1.47.0
+numpy==2.4.6
+opencv-python==5.0.0.93
+opencv-python-headless==4.10.0.84
+# paddleocr==3.7.0
 Pillow==10.4.0
-python-multipart==0.0.18
-numpy>=1.24.0              # Used in ocr_worker/engine.py (PIL→ndarray for PaddleOCR)
-
-# ── OCR (PaddleOCR + PaddlePaddle CPU) ───────────────────────────────────────
-paddlepaddle>=2.6.1        # CPU-only inference backend for PaddleOCR
-paddleocr>=2.7.3           # PaddleOCR 2.x API (use_angle_cls, lang, show_log, use_gpu)
-
-# ── Translation ───────────────────────────────────────────────────────────────
-deep-translator>=1.11.4    # GoogleTranslator backend — used in ocr_worker/translator.py
-
-# ── Audio processing ─────────────────────────────────────────────────────────
-faster-whisper==1.1.1      # CTranslate2-backed Whisper (CPU-friendly)
-mutagen==1.47.0            # Audio header parsing (no ffmpeg required)
-pydub==0.25.1              # Audio segment manipulation (fallback metadata)
-
-# ── Video processing ─────────────────────────────────────────────────────────
-scenedetect[opencv]==0.6.4      # Scene boundary detection (frame-difference, no ML)
-moviepy==1.0.3                  # Audio track extraction from video (wraps ffmpeg)
-opencv-python-headless==4.10.0.84  # Keyframe extraction + video metadata (no GUI)
-
-# ── PDF processing ────────────────────────────────────────────────────────────
-pymupdf>=1.24.14           # PDF text extraction & page rendering (fitz)
-
-# ── Testing ───────────────────────────────────────────────────────────────────
+pydantic==2.10.6
+pydantic-settings==2.7.0
+pydub==0.25.1
+pymongo==4.17.0
 pytest==8.3.4
 pytest-asyncio==0.25.0
-pytest-cov==6.0.0
-httpx==0.28.1              # also used by TestClient
-python-dateutil>=2.8.2
-
-# ── Dev / linting (not installed in production image) ─────────────────────────
-# ruff==0.8.6
-# mypy==1.13.0
-
-# ── Secure Evidence Upload ────────────────────────────────────────────────────
-qrcode[pil]>=7.4           # QR code PNG generation (pure Python, wraps Pillow)
-python-magic-bin>=0.4.14   # Magic-byte MIME detection (libmagic binaries bundled for Windows)
-cloudinary>=2.0.0          # Cloudinary cloud storage SDK
+python-magic==0.4.27
+qrcode==8.2
+scenedetect==0.6.4
+starlette==0.41.3
+# torch==2.13.0
+# transformers==4.41.2

@@ -67,6 +67,24 @@ class ChargeSheetEntry(BaseModel):
     count: Optional[int] = Field(None, description="Number of charges")
 
 
+class CaseParticipantData(BaseModel):
+    """Suspect/Accused participant with applied legal sections."""
+    name: Optional[str] = Field(None, description="Participant name")
+    roles: Optional[List[str]] = Field(default_factory=list, description="Roles: Suspect, Accused, Victim, Witness")
+    appliedSections: Optional[List[str]] = Field(default_factory=list, description="Applied section codes e.g. BNS-318")
+    statementSummary: Optional[str] = Field(None, description="First statement summary if available")
+
+
+class ArrestWarrantData(BaseModel):
+    """Arrest warrant lifecycle data for an accused in this case."""
+    accusedName: Optional[str] = Field(None, description="Name of the accused person")
+    status: Optional[str] = Field(None, description="Warrant status: approved, in_custody, produced_before_court, released")
+    appliedSections: Optional[List[str]] = Field(default_factory=list, description="Legal sections on the warrant")
+    magistrateApprovalStatus: Optional[str] = Field(None, description="pending | approved | rejected")
+    arrestedAt: Optional[str] = Field(None, description="ISO timestamp of arrest")
+    producedBeforeCourtAt: Optional[str] = Field(None, description="ISO timestamp of court production")
+
+
 class EmbedCaseRequest(BaseModel):
     """
     Payload sent by the Node backend after a case is closed.
@@ -103,6 +121,8 @@ class EmbedCaseRequest(BaseModel):
     analysisSnapshots: List[AnalysisSnapshotData] = Field(default_factory=list, description="Investigation snapshots")
     departmentRequests: List[DepartmentRequestData] = Field(default_factory=list, description="Department requests associated with this case")
     chargeSheet: List[ChargeSheetEntry] = Field(default_factory=list, description="Applied chargesheet entries")
+    participants: List[CaseParticipantData] = Field(default_factory=list, description="Suspects and accused with applied sections")
+    arrestWarrants: List[ArrestWarrantData] = Field(default_factory=list, description="Arrest warrant lifecycle data")
 
 
 class EmbedCaseResponse(BaseModel):

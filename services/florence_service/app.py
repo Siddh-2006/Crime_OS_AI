@@ -27,9 +27,17 @@ if sys.version_info >= (3, 13):
 import base64
 import io
 import logging
+import os
 import sys
 import time
 import types
+
+# ── Load .env early so VISION_BACKEND is available before lifespan ────────────
+try:
+    from dotenv import load_dotenv as _load_dotenv
+    _load_dotenv()
+except ImportError:
+    pass  # dotenv not installed — rely on shell environment
 
 # ── flash_attn: combined CPU-safe patch ──────────────────────────────────────
 # Florence-2 has TWO separate checks that must both be bypassed on CPU Windows:
@@ -106,7 +114,11 @@ def load_model():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    load_model()
+    # Skip model loading in production when using Gemini Vision backend
+    if os.environ.get("VISION_BACKEND", "florence").lower() != "gemini":
+        load_model()
+    else:
+        logger.info("VISION_BACKEND=gemini — skipping Florence model load")
     yield
 
 
@@ -128,10 +140,108 @@ class PredictResponse(BaseModel):
     task: str
 
 
+# ── Gemini Vision helper ──────────────────────────────────────────────────────
+# Task-specific prompts designed to replicate Florence-2 output format exactly:
+#
+# Florence <CAPTION>               → 1-sentence scene description
+# Florence <MORE_DETAILED_CAPTION> → 2-4 sentence rich description with all
+#                                    visible objects, people, text, setting
+# Florence <OCR>                   → verbatim text found in the image, one
+#                                    item per line (mirrors Florence OCR output)
+
+_GEMINI_PROMPTS: dict[str, str] = {
+    "<CAPTION>": (
+        "Describe this image in one clear, concise sentence. "
+        "Focus on the main subject and setting. "
+        "Output only the sentence, nothing else."
+    ),
+    "<MORE_DETAILED_CAPTION>": (
+        "Write a detailed description of this image in 2-4 sentences. "
+        "Include: the primary subject or scene, any visible people (appearance, actions, count), "
+        "vehicles (type, colour, position), objects of note, text visible in the image, "
+        "the setting or location type (indoor/outdoor/document), and any contextually "
+        "important details. Be specific and factual — describe only what you can see. "
+        "Output only the description, no headings or labels."
+    ),
+    "<OCR>": (
+        "Extract all text visible in this image. "
+        "Preserve the original reading order. Output each distinct text element on its own line. "
+        "If no readable text is present, output an empty string. "
+        "Output only the extracted text, nothing else."
+    ),
+}
+
+_DEFAULT_GEMINI_PROMPT = _GEMINI_PROMPTS["<MORE_DETAILED_CAPTION>"]
+
+
+def _gemini_predict(image_base64: str, task: str) -> str:
+    """
+    Call Gemini Vision API synchronously to replicate Florence-2 /predict output.
+    Returns a plain text string matching what Florence would return for the task.
+    Raises HTTPException on hard failures.
+    """
+    import httpx as _httpx
+
+    api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    model   = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite").strip()
+
+    if not api_key:
+        logger.error("GEMINI_API_KEY is not set but VISION_BACKEND=gemini")
+        raise HTTPException(status_code=503, detail="GEMINI_API_KEY is not configured.")
+
+    # Detect MIME type from base64 header or default to JPEG
+    mime_type = "image/jpeg"
+    if image_base64.startswith("/9j/"):
+        mime_type = "image/jpeg"
+    elif image_base64.startswith("iVBORw0K"):
+        mime_type = "image/png"
+    elif image_base64.startswith("UklGR"):
+        mime_type = "image/webp"
+
+    prompt = _GEMINI_PROMPTS.get(task, _DEFAULT_GEMINI_PROMPT)
+    url = (
+        f"https://generativelanguage.googleapis.com/v1beta/models/"
+        f"{model}:generateContent?key={api_key}"
+    )
+    payload = {
+        "contents": [{
+            "role": "user",
+            "parts": [
+                {"text": prompt},
+                {"inline_data": {"mime_type": mime_type, "data": image_base64}},
+            ],
+        }],
+        "generationConfig": {"temperature": 0.1, "maxOutputTokens": 512},
+    }
+
+    try:
+        with _httpx.Client(timeout=30.0) as client:
+            resp = client.post(url, json=payload)
+            resp.raise_for_status()
+            data = resp.json()
+            result = (
+                data.get("candidates", [{}])[0]
+                    .get("content", {})
+                    .get("parts", [{}])[0]
+                    .get("text", "")
+                    .strip()
+            )
+            if not result:
+                logger.warning("Gemini returned empty vision result")
+            return result
+    except _httpx.HTTPStatusError as exc:
+        logger.error("Gemini Vision HTTP error", extra={"status": exc.response.status_code})
+        raise HTTPException(status_code=502, detail=f"Gemini Vision API error: {exc.response.status_code}")
+    except Exception as exc:
+        logger.error("Gemini Vision unexpected error", extra={"error": str(exc)})
+        raise HTTPException(status_code=502, detail=f"Gemini Vision failed: {exc}")
+
+
 @app.get("/health")
 def health():
     logger.info("Florence health check requested")
-    return {"status": "ok", "model": MODEL_ID, "device": _state.device}
+    backend = os.environ.get("VISION_BACKEND", "florence").lower()
+    return {"status": "ok", "model": MODEL_ID if backend != "gemini" else os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite"), "device": _state.device, "backend": backend}
 
 
 @app.post("/predict", response_model=PredictResponse)
@@ -142,6 +252,18 @@ def predict(req: PredictRequest) -> PredictResponse:
         extra={"task": req.task, "image_bytes": len(req.image_base64)},
     )
 
+    # ── Gemini Vision path (production) ───────────────────────────────────────
+    backend = os.environ.get("VISION_BACKEND", "florence").lower()
+    if backend == "gemini":
+        result_text = _gemini_predict(req.image_base64, req.task)
+        duration_ms = round((time.perf_counter() - started_at) * 1000, 2)
+        logger.info(
+            "Gemini vision completed",
+            extra={"task": req.task, "duration_ms": duration_ms, "result_length": len(result_text)},
+        )
+        return PredictResponse(result=result_text, task=req.task)
+
+    # ── Florence local model path (development) ───────────────────────────────
     if _state.model is None:
         logger.error("Florence inference requested before model is loaded")
         raise HTTPException(status_code=503, detail="Model not loaded yet")

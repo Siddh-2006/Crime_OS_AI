@@ -104,3 +104,101 @@ class PaddleOCREngine(IOCREngine):
                    "avg_confidence": result.average_confidence, "duration_ms": result.processing_duration_ms},
         )
         return result
+
+
+class GeminiOCREngine(IOCREngine):
+    """
+    Production OCR engine backed by Gemini Vision API.
+    Used when APP_ENV=production — no PaddleOCR or GPU needed.
+    Uses raw httpx (already in requirements) — no extra dependency.
+
+    Prompt: extract all visible text verbatim, one item per line.
+    Returns the same OCRResult interface as PaddleOCREngine.
+    """
+
+    def __init__(self) -> None:
+        import os
+        self._api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+        self._model   = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite").strip()
+        if not self._api_key:
+            logger.warning("[gemini_ocr] GEMINI_API_KEY not set — OCR calls will return empty results")
+
+    async def run(self, image_bytes: bytes) -> OCRResult:
+        import base64
+        import httpx
+
+        logger.info("[gemini_ocr] Starting OCR inference")
+        t0 = time.monotonic()
+
+        if not self._api_key:
+            return OCRResult(raw_text="", lines=[], word_count=0,
+                             line_count=0, average_confidence=0.0,
+                             processing_duration_ms=0.0)
+
+        # Detect MIME type from magic bytes
+        mime = "image/jpeg"
+        if image_bytes[:8] == b"\x89PNG\r\n\x1a\n":
+            mime = "image/png"
+        elif image_bytes[:4] == b"RIFF":
+            mime = "image/webp"
+
+        b64 = base64.b64encode(image_bytes).decode()
+        url  = (f"https://generativelanguage.googleapis.com/v1beta/models/"
+                f"{self._model}:generateContent?key={self._api_key}")
+        payload = {
+            "contents": [{
+                "role": "user",
+                "parts": [
+                    {"text": (
+                        "Extract all text visible in this image exactly as written. "
+                        "Output each distinct text element on its own line. "
+                        "Preserve the original reading order. "
+                        "If no readable text is present output an empty string. "
+                        "Output only the extracted text, nothing else."
+                    )},
+                    {"inline_data": {"mime_type": mime, "data": b64}},
+                ],
+            }],
+            "generationConfig": {"temperature": 0.0, "maxOutputTokens": 1024},
+        }
+
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.post(url, json=payload)
+                resp.raise_for_status()
+                data = resp.json()
+                raw_text = (
+                    data.get("candidates", [{}])[0]
+                        .get("content", {})
+                        .get("parts", [{}])[0]
+                        .get("text", "")
+                        .strip()
+                )
+        except Exception as exc:
+            logger.warning("[gemini_ocr] API call failed", extra={"error": str(exc)})
+            raw_text = ""
+
+        duration_ms = (time.monotonic() - t0) * 1000
+
+        # Convert plain text to OCRResult (no bounding boxes — Gemini doesn't return them)
+        lines_text = [ln.strip() for ln in raw_text.splitlines() if ln.strip()]
+        ocr_lines = [
+            OCRLine(text=ln, confidence=0.95, bounding_box=BoundingBox(x=0, y=0, width=0, height=0))
+            for ln in lines_text
+        ]
+        word_count = sum(len(ln.split()) for ln in lines_text)
+
+        result = OCRResult(
+            raw_text=raw_text,
+            lines=ocr_lines,
+            word_count=word_count,
+            line_count=len(ocr_lines),
+            average_confidence=0.95 if ocr_lines else 0.0,
+            processing_duration_ms=round(duration_ms, 2),
+        )
+        logger.info(
+            "[gemini_ocr] OCR completed",
+            extra={"lines": result.line_count, "words": result.word_count,
+                   "duration_ms": result.processing_duration_ms},
+        )
+        return result

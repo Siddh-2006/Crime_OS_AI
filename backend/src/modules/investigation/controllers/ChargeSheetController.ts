@@ -66,4 +66,34 @@ export class ChargeSheetController {
       }
     }
   }
+
+  static async generateChargeSheetPdf(req: Request, res: Response): Promise<void> {
+    try {
+      const { chargeSheet } = req.body;
+      if (!chargeSheet || typeof chargeSheet !== 'object') {
+        sendError(res, HttpStatusCode.BAD_REQUEST, {
+          code: 'INVALID_PAYLOAD',
+          message: 'Charge sheet data is required to generate the PDF',
+        });
+        return;
+      }
+
+      if (!chargeSheet.section1_filingInformation?.magistrate?.trim()) {
+        sendError(res, HttpStatusCode.BAD_REQUEST, {
+          code: 'MAGISTRATE_REQUIRED',
+          message: 'Magistrate is required before generating a charge sheet PDF',
+        });
+        return;
+      }
+
+      await generateChargeSheetPdfStream(chargeSheet, res);
+    } catch (error) {
+      if (!res.headersSent) {
+        sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, {
+          code: 'CHARGESHEET_PDF_PREVIEW_FAILED',
+          message: error instanceof Error ? error.message : 'Failed to generate preview charge sheet PDF',
+        });
+      }
+    }
+  }
 }

@@ -71,6 +71,17 @@ export async function generateChargeSheetPdfStream(chargeSheetData: any, res: Re
       y += 30;
     };
 
+    const normalizeUrl = (url?: string): string => {
+      const raw = String(url || '').trim();
+      if (!raw) return '';
+      const normalized = /^https?:\/\//i.test(raw) ? raw : `https://${raw.replace(/^\/+/, '')}`;
+      try {
+        return encodeURI(normalized);
+      } catch {
+        return normalized;
+      }
+    };
+
     const addTextRow = (label: string, text: string) => {
       if (y > doc.page.height - 50) {
         doc.addPage();
@@ -81,6 +92,24 @@ export async function generateChargeSheetPdfStream(chargeSheetData: any, res: Re
          .font('Helvetica').fill(TEXT_DARK)
          .text(text || 'N/A', { width: CONTENT_W });
       y = doc.y + 10;
+    };
+
+    const addLinkRow = (label: string, url: string) => {
+      if (y > doc.page.height - 50) {
+        doc.addPage();
+        y = MARGIN;
+      }
+      const safeUrl = normalizeUrl(url);
+      doc.font('Helvetica-Bold').fontSize(9).fill(TEXT_MID)
+         .text(`${label}: `, MARGIN, y, { continued: true });
+      if (safeUrl) {
+        doc.fill('#1565c0').font('Helvetica').fontSize(9)
+           .text(safeUrl, { link: safeUrl, underline: true, width: CONTENT_W - 50 });
+      } else {
+        doc.fill(TEXT_DARK).font('Helvetica').fontSize(9).text('N/A', { width: CONTENT_W - 50 });
+      }
+      y = doc.y + 10;
+      doc.fill(TEXT_DARK);
     };
 
     const addLongText = (text: string) => {
@@ -95,23 +124,24 @@ export async function generateChargeSheetPdfStream(chargeSheetData: any, res: Re
 
     // 1. Filing Information
     renderSectionHeading('filingInformation', 'Filing Information');
-    const fInfo = chargeSheetData.section1_filingInformation;
-    addTextRow('Charge Sheet No', fInfo.chargeSheetNumber);
-    addTextRow('FIR No', fInfo.firNumber);
-    addTextRow('Police Station', fInfo.policeStation);
-    addTextRow('District', fInfo.district);
-    addTextRow('Court', fInfo.court);
+    const fInfo = chargeSheetData.section1_filingInformation || {};
+    addTextRow('Charge Sheet No', fInfo.chargeSheetNumber || 'N/A');
+    addTextRow('FIR No', fInfo.firNumber || 'N/A');
+    addTextRow('Police Station', fInfo.policeStation || 'N/A');
+    addTextRow('District', fInfo.district || 'N/A');
+    addTextRow('Court', fInfo.court || 'N/A');
+    addTextRow('Magistrate', fInfo.magistrate || 'N/A');
     addTextRow('Filing Date', fInfo.filingDate ? new Date(fInfo.filingDate).toLocaleDateString() : 'N/A');
-    addTextRow('Investigating Officer', fInfo.investigatingOfficer);
-    addTextRow('Status', fInfo.chargeSheetStatus);
+    addTextRow('Investigating Officer', fInfo.investigatingOfficer || 'N/A');
+    addTextRow('Status', fInfo.chargeSheetStatus || 'N/A');
 
     // 2. Case Particulars
     renderSectionHeading('caseParticulars', 'Case Particulars');
-    const cPart = chargeSheetData.section2_caseParticulars;
-    addTextRow('Brief Description', cPart.briefCaseDescription);
+    const cPart = chargeSheetData.section2_caseParticulars || {};
+    addTextRow('Brief Description', cPart.briefCaseDescription || 'N/A');
     addTextRow('Date of Occurrence', cPart.dateOfOccurrence ? new Date(cPart.dateOfOccurrence).toLocaleDateString() : 'N/A');
-    addTextRow('Place of Occurrence', cPart.placeOfOccurrence);
-    addTextRow('Nature of Offence', cPart.natureOfOffence);
+    addTextRow('Place of Occurrence', cPart.placeOfOccurrence || 'N/A');
+    addTextRow('Nature of Offence', cPart.natureOfOffence || 'N/A');
 
     // 3. Complainant / Informant Details
 if (chargeSheetData.section3_complainantDetails) {
@@ -317,7 +347,7 @@ if (chargeSheetData.section13_accusedAppliedSections?.length > 0) {
       chargeSheetData.section15_annexures.forEach((annex: any, idx: number) => {
         addTextRow(`${idx + 1}. ${annex.title || annex.type || 'Document'}`, annex.type || 'Document');
         if (annex.url) {
-          addTextRow('CDN Link', annex.url);
+          addLinkRow('CDN Link', annex.url);
         }
       });
     }

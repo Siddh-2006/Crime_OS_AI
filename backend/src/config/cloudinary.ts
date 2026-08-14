@@ -11,6 +11,7 @@ cloudinary.config({
   api_key:    env.CLOUDINARY_API_KEY,
   api_secret: env.CLOUDINARY_API_SECRET,
   secure:     true,
+  timeout:    env.CLOUDINARY_TIMEOUT_MS,
 });
 
 logger.debug('Cloudinary configured', { cloud: env.CLOUDINARY_CLOUD_NAME });

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   Shield, User, ChevronDown, ChevronUp, CheckCircle2,
   Clock, XCircle, AlertTriangle, ExternalLink, Lock,
@@ -61,42 +61,42 @@ interface CustodyPanelProps {
   onRefresh: () => void;
 }
 
-// ─── Status config ────────────────────────────────────────────────────────────
+// ─── Status config (semantic tokens) ─────────────────────────────────────────
 
 const STATUS_CFG: Record<string, { label: string; pill: string; icon: React.ReactNode }> = {
   draft: {
     label: 'Draft',
-    pill:  'bg-neutral-100 text-neutral-600 border-neutral-200',
+    pill:  'bg-surface-elevated text-text-secondary border-border',
     icon:  <Clock size={11} />,
   },
   sent_to_magistrate: {
     label: 'Sent to Magistrate',
-    pill:  'bg-blue-100 text-blue-700 border-blue-200',
+    pill:  'bg-brand-primary/10 text-brand-primary border-brand-primary/30',
     icon:  <Clock size={11} className="animate-pulse" />,
   },
   approved: {
     label: 'Magistrate Approved',
-    pill:  'bg-green-100 text-green-700 border-green-200',
+    pill:  'bg-semantic-success/10 text-semantic-success border-semantic-success/30',
     icon:  <CheckCircle2 size={11} />,
   },
   rejected: {
     label: 'Rejected',
-    pill:  'bg-red-100 text-red-700 border-red-200',
+    pill:  'bg-semantic-critical/10 text-semantic-critical border-semantic-critical/30',
     icon:  <XCircle size={11} />,
   },
   in_custody: {
     label: 'In Custody',
-    pill:  'bg-orange-100 text-orange-700 border-orange-200',
+    pill:  'bg-semantic-warning/10 text-semantic-warning border-semantic-warning/30',
     icon:  <Lock size={11} />,
   },
   produced_before_court: {
     label: 'Produced Before Court',
-    pill:  'bg-emerald-100 text-emerald-700 border-emerald-200',
+    pill:  'bg-semantic-success/10 text-semantic-success border-semantic-success/30',
     icon:  <CheckCircle2 size={11} />,
   },
   released: {
     label: 'Released',
-    pill:  'bg-neutral-200 text-neutral-600 border-neutral-300',
+    pill:  'bg-surface-elevated text-text-secondary border-border',
     icon:  <CheckCircle2 size={11} />,
   },
 };
@@ -120,14 +120,15 @@ function WarrantCard({
   onRefresh: () => void;
   showToast: (msg: string, type: 'success' | 'error' | 'info') => void;
 }) {
-  const [expanded,        setExpanded]        = useState(false);
-  const [draftOpen,       setDraftOpen]       = useState(false);
-  const [custodyLoading,  setCustodyLoading]  = useState(false);
-  const [produceLoading,  setProduceLoading]  = useState(false);
-  const [releaseLoading,  setReleaseLoading]  = useState(false);
-  const [confirmCustody,  setConfirmCustody]  = useState(false);
+  const [expanded,       setExpanded]       = useState(false);
+  const [draftOpen,      setDraftOpen]      = useState(false);
+  const [custodyLoading, setCustodyLoading] = useState(false);
+  const [produceLoading, setProduceLoading] = useState(false);
+  const [releaseLoading, setReleaseLoading] = useState(false);
+  const [confirmCustody, setConfirmCustody] = useState(false);
 
   const cfg = STATUS_CFG[warrant.status] ?? STATUS_CFG.draft;
+  const isTerminal = ['rejected', 'produced_before_court', 'released'].includes(warrant.status);
 
   const handleTakeIntoCustody = async () => {
     if (!confirmCustody) { setConfirmCustody(true); return; }
@@ -151,7 +152,7 @@ function WarrantCard({
       showToast(`${warrant.accused_name} marked as produced before court.`, 'success');
       onRefresh();
     } catch (err: any) {
-      showToast(err?.response?.data?.message ?? 'Failed to mark produced.', 'error');
+      showToast(err?.response?.data?.message ?? 'Failed.', 'error');
     } finally {
       setProduceLoading(false);
     }
@@ -164,68 +165,66 @@ function WarrantCard({
       showToast(`${warrant.accused_name} marked as released.`, 'success');
       onRefresh();
     } catch (err: any) {
-      showToast(err?.response?.data?.message ?? 'Failed to mark released.', 'error');
+      showToast(err?.response?.data?.message ?? 'Failed.', 'error');
     } finally {
       setReleaseLoading(false);
     }
   };
 
-  const isTerminal = ['rejected', 'produced_before_court', 'released'].includes(warrant.status);
-
   return (
     <>
-      <div className="rounded-xl border border-neutral-200 bg-white shadow-sm overflow-hidden">
+      <div className="rounded-xl border border-border bg-surface shadow-xs overflow-hidden">
         {/* Header row */}
         <div className="flex items-start gap-3 p-4">
-          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center">
-            <Shield size={14} className="text-slate-500" />
+          <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-surface-elevated border border-border flex items-center justify-center">
+            <Shield size={14} className="text-text-secondary" />
           </div>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-bold text-neutral-900">{warrant.accused_name}</span>
+              <span className="text-sm font-bold text-text-primary">{warrant.accused_name}</span>
               <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${cfg.pill}`}>
                 {cfg.icon} {cfg.label}
               </span>
             </div>
-            <p className="text-xs text-neutral-400 mt-0.5">
+            <p className="text-xs text-text-secondary mt-0.5">
               FIR {warrant.fir_number} · {warrant.police_station}
-              {warrant.createdAt && (
-                <> · Created {new Date(warrant.createdAt).toLocaleDateString('en-IN')}</>
-              )}
+              {warrant.createdAt && <> · Created {new Date(warrant.createdAt).toLocaleDateString('en-IN')}</>}
             </p>
           </div>
 
           <div className="flex-shrink-0 flex flex-col items-end gap-2">
-            {/* Context actions */}
+            {/* Contextual actions */}
             {warrant.status === 'draft' && (
               <button
                 onClick={() => setDraftOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border border-border bg-surface-elevated hover:bg-surface text-text-primary transition-colors cursor-pointer"
               >
                 Edit Draft
               </button>
             )}
+
             {warrant.status === 'approved' && (
               <button
                 onClick={handleTakeIntoCustody}
                 disabled={custodyLoading}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors disabled:opacity-50 ${
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl transition-colors disabled:opacity-50 cursor-pointer ${
                   confirmCustody
-                    ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse'
-                    : 'bg-orange-600 hover:bg-orange-700 text-white'
+                    ? 'bg-semantic-critical hover:bg-semantic-critical/90 text-white animate-pulse'
+                    : 'bg-semantic-warning hover:bg-semantic-warning/90 text-white'
                 }`}
               >
                 <Lock size={12} />
                 {custodyLoading ? 'Processing…' : confirmCustody ? 'Confirm Arrest?' : 'Take into Custody'}
               </button>
             )}
+
             {warrant.status === 'in_custody' && (
               <div className="flex flex-col gap-1.5 items-end">
                 <button
                   onClick={handleProduce}
                   disabled={produceLoading}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-semantic-success hover:bg-semantic-success/90 text-white transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   <CheckCircle2 size={12} />
                   {produceLoading ? 'Saving…' : 'Produced Before Court'}
@@ -233,34 +232,34 @@ function WarrantCard({
                 <button
                   onClick={handleRelease}
                   disabled={releaseLoading}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-neutral-300 bg-white hover:bg-neutral-50 text-neutral-600 transition-colors disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border border-border bg-surface-elevated hover:bg-surface text-text-secondary transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   {releaseLoading ? 'Saving…' : 'Mark Released'}
                 </button>
               </div>
             )}
+
             {warrant.signed_warrant_pdf_url && (
               <a
                 href={warrant.signed_warrant_pdf_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-[10px] text-blue-600 hover:text-blue-800 underline"
+                className="inline-flex items-center gap-1 text-[10px] text-brand-primary hover:underline"
               >
                 <ExternalLink size={10} /> Signed PDF
               </a>
             )}
 
-            {/* Expand toggle */}
             <button
               onClick={() => setExpanded(v => !v)}
-              className="text-neutral-400 hover:text-neutral-600 p-0.5 transition-colors"
+              className="text-text-secondary hover:text-text-primary p-0.5 transition-colors cursor-pointer"
             >
-              {expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+              {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
             </button>
           </div>
         </div>
 
-        {/* 24-hour countdown banner */}
+        {/* 24-hour countdown */}
         {warrant.status === 'in_custody' && warrant.custody_deadline && (
           <div className="px-4 pb-3">
             <CustodyCountdown
@@ -272,9 +271,9 @@ function WarrantCard({
           </div>
         )}
 
-        {/* Rejection reason banner */}
+        {/* Rejection reason */}
         {warrant.status === 'rejected' && warrant.magistrate_rejection_reason && (
-          <div className="mx-4 mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+          <div className="mx-4 mb-3 rounded-xl border border-semantic-critical/20 bg-semantic-critical/5 px-3 py-2 text-xs text-semantic-critical">
             <span className="font-bold">Rejection reason: </span>
             {warrant.magistrate_rejection_reason}
           </div>
@@ -282,19 +281,19 @@ function WarrantCard({
 
         {/* Expanded detail */}
         {expanded && (
-          <div className="border-t border-neutral-100 bg-neutral-50 px-4 py-3 space-y-3">
+          <div className="border-t border-border bg-surface-elevated px-4 py-3 space-y-3">
             {warrant.justification && (
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 mb-1">Justification</p>
-                <p className="text-xs text-neutral-700 leading-relaxed">{warrant.justification}</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-text-secondary mb-1">Justification</p>
+                <p className="text-xs text-text-primary leading-relaxed">{warrant.justification}</p>
               </div>
             )}
             {warrant.applied_sections && warrant.applied_sections.length > 0 && (
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 mb-1">Applied Sections</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-text-secondary mb-1">Applied Sections</p>
                 <div className="flex flex-wrap gap-1.5">
                   {warrant.applied_sections.map((s, i) => (
-                    <span key={i} className="text-[10px] px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 border border-indigo-200 font-semibold">
+                    <span key={i} className="text-[10px] px-2 py-0.5 rounded-lg bg-brand-primary/10 text-brand-primary border border-brand-primary/20 font-semibold">
                       § {s.code}: {s.title}
                     </span>
                   ))}
@@ -302,13 +301,13 @@ function WarrantCard({
               </div>
             )}
             {warrant.warrant_id && (
-              <p className="text-[10px] text-neutral-300 font-mono">ID: {warrant.warrant_id}</p>
+              <p className="text-[10px] text-text-secondary font-mono">ID: {warrant.warrant_id}</p>
             )}
           </div>
         )}
       </div>
 
-      {/* Draft / edit modal */}
+      {/* Draft modal */}
       {participant && (
         <WarrantDraftModal
           isOpen={draftOpen}
@@ -317,30 +316,29 @@ function WarrantCard({
           participant={participant}
           complaintData={complaintData}
           existingWarrant={warrant}
-          onWarrantSaved={(w) => { onRefresh(); }}
-          onWarrantSent={(w)  => { setDraftOpen(false); onRefresh(); }}
+          onWarrantSaved={() => { onRefresh(); }}
+          onWarrantSent={() => { setDraftOpen(false); onRefresh(); }}
         />
       )}
     </>
   );
 }
 
-// ─── Participant row (for suspects/accused without a warrant yet) ──────────────
+// ─── Participant row (no active warrant yet) ──────────────────────────────────
 
 function ParticipantRow({
   participant,
   caseId,
   complaintData,
   onRefresh,
-  showToast,
 }: {
   participant: Participant;
   caseId: string;
   complaintData: ComplaintData | null;
   onRefresh: () => void;
-  showToast: (msg: string, type: 'success' | 'error' | 'info') => void;
 }) {
   const [draftOpen, setDraftOpen] = useState(false);
+
   const sections: AppliedSection[] =
     (participant.accusedProfile?.appliedSections?.length
       ? participant.accusedProfile.appliedSections
@@ -348,26 +346,28 @@ function ParticipantRow({
 
   return (
     <>
-      <div className="flex items-center gap-3 rounded-xl border border-dashed border-neutral-300 bg-white px-4 py-3">
-        <div className="w-8 h-8 rounded-full bg-neutral-100 border border-neutral-200 flex items-center justify-center flex-shrink-0">
-          <User size={14} className="text-neutral-400" />
+      <div className="flex items-center gap-3 rounded-xl border border-dashed border-border bg-surface px-4 py-3">
+        <div className="w-8 h-8 rounded-lg bg-surface-elevated border border-border flex items-center justify-center flex-shrink-0">
+          <User size={14} className="text-text-secondary" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-neutral-800">{participant.name}</p>
+          <p className="text-sm font-semibold text-text-primary">{participant.name}</p>
           <div className="flex items-center gap-2 flex-wrap mt-0.5">
             {participant.roles.map(r => (
-              <span key={r} className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
+              <span key={r} className="text-[10px] font-bold px-1.5 py-0.5 rounded-lg bg-surface-elevated text-text-secondary border border-border">
                 {r}
               </span>
             ))}
             {sections.length > 0 && (
-              <span className="text-[10px] text-neutral-400">{sections.length} section{sections.length !== 1 ? 's' : ''} applied</span>
+              <span className="text-[10px] text-text-secondary">
+                {sections.length} section{sections.length !== 1 ? 's' : ''} applied
+              </span>
             )}
           </div>
         </div>
         <button
           onClick={() => setDraftOpen(true)}
-          className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-700 hover:bg-slate-800 text-white transition-colors"
+          className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-brand-primary hover:bg-brand-primary/90 text-white transition-colors cursor-pointer"
         >
           <Shield size={12} /> Draft Warrant
         </button>
@@ -380,8 +380,8 @@ function ParticipantRow({
         participant={participant}
         complaintData={complaintData}
         existingWarrant={null}
-        onWarrantSaved={(w) => { setDraftOpen(false); onRefresh(); }}
-        onWarrantSent={(w)  => { setDraftOpen(false); onRefresh(); }}
+        onWarrantSaved={() => { setDraftOpen(false); onRefresh(); }}
+        onWarrantSent={() => { setDraftOpen(false); onRefresh(); }}
       />
     </>
   );
@@ -398,12 +398,10 @@ export function CustodyPanel({
 }: CustodyPanelProps) {
   const { showToast } = useToast();
 
-  // Only suspects and accused are relevant for custody
   const eligibleParticipants = participants.filter(p =>
     p.roles.includes('Suspect') || p.roles.includes('Accused'),
   );
 
-  // Map participant_id → active warrant (non-terminal)
   const activeWarrantByParticipant = new Map<string, Warrant>();
   for (const w of warrants) {
     if (ACTIVE_STATUSES.includes(w.status)) {
@@ -411,16 +409,14 @@ export function CustodyPanel({
     }
   }
 
-  // Participants with no active warrant — show "Draft Warrant" row
   const withoutWarrant = eligibleParticipants.filter(
     p => !activeWarrantByParticipant.has(p.participant_id),
   );
 
-  // Active + terminal warrants for display
   const activeWarrants   = warrants.filter(w => ACTIVE_STATUSES.includes(w.status));
   const terminalWarrants = warrants.filter(w => !ACTIVE_STATUSES.includes(w.status));
 
-  // Deadline alerts: in_custody warrants within 2h or past
+  // Warrants within 2h of deadline or past — shown as top-level alert
   const deadlineAlerts = warrants.filter(w =>
     w.status === 'in_custody' &&
     w.custody_deadline &&
@@ -430,33 +426,34 @@ export function CustodyPanel({
   return (
     <div className="space-y-5">
 
-      {/* Page header */}
-      <div className="rounded-xl border border-slate-200 bg-gradient-to-r from-slate-900 to-slate-700 p-4 text-white">
-        <div className="flex items-center gap-3">
-          <Shield size={20} className="text-slate-300" />
+      {/* Header */}
+      <div className="rounded-xl border border-border bg-surface-elevated p-4">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-9 h-9 rounded-xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center">
+            <Shield size={18} className="text-brand-primary" />
+          </div>
           <div>
-            <h3 className="text-base font-bold">Custody & Arrest Warrants</h3>
-            <p className="text-xs text-slate-300 mt-0.5">
-              Draft and send BNSS Form No. 2 arrest warrants to the magistrate. Manage custody lifecycle and BNSS §57 deadlines.
+            <h3 className="text-sm font-bold text-text-primary">Custody & Arrest Warrants</h3>
+            <p className="text-xs text-text-secondary">
+              Draft BNSS Form No. 2 warrants · Send to magistrate · Manage BNSS §57 custody deadlines
             </p>
           </div>
         </div>
-        {/* Summary counts */}
-        <div className="mt-3 flex gap-3 flex-wrap">
+        <div className="flex gap-3 flex-wrap">
           {[
-            { label: 'Active',   count: activeWarrants.length,   cls: 'bg-white/20 text-white' },
-            { label: 'Pending',  count: withoutWarrant.length,   cls: 'bg-white/10 text-slate-300' },
-            { label: 'Resolved', count: terminalWarrants.length, cls: 'bg-white/10 text-slate-300' },
-          ].map(({ label, count, cls }) => (
-            <div key={label} className={`rounded-lg px-3 py-1.5 text-center ${cls}`}>
-              <div className="text-lg font-black">{count}</div>
-              <div className="text-[10px] font-semibold uppercase tracking-wider">{label}</div>
+            { label: 'Active',   count: activeWarrants.length },
+            { label: 'Pending',  count: withoutWarrant.length },
+            { label: 'Resolved', count: terminalWarrants.length },
+          ].map(({ label, count }) => (
+            <div key={label} className="rounded-xl border border-border bg-surface px-4 py-2 text-center min-w-[72px]">
+              <div className="text-lg font-black text-text-primary">{count}</div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-text-secondary">{label}</div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* ── Urgent deadline alerts ──────────────────────────────────────────── */}
+      {/* Top-level deadline alerts (warrants within 2h or passed) */}
       {deadlineAlerts.map(w => (
         <CustodyCountdown
           key={w.warrant_id}
@@ -474,10 +471,10 @@ export function CustodyPanel({
         />
       ))}
 
-      {/* ── Suspects/Accused without a warrant ─────────────────────────────── */}
+      {/* Suspects/Accused without a warrant */}
       {withoutWarrant.length > 0 && (
         <section>
-          <p className="text-xs font-bold uppercase tracking-wider text-neutral-400 mb-2">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-text-secondary mb-2">
             Suspects / Accused — No Active Warrant
           </p>
           <div className="space-y-2">
@@ -488,17 +485,16 @@ export function CustodyPanel({
                 caseId={caseId}
                 complaintData={complaintData}
                 onRefresh={onRefresh}
-                showToast={showToast}
               />
             ))}
           </div>
         </section>
       )}
 
-      {/* ── Active warrants ────────────────────────────────────────────────── */}
+      {/* Active warrants */}
       {activeWarrants.length > 0 && (
         <section>
-          <p className="text-xs font-bold uppercase tracking-wider text-neutral-400 mb-2">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-text-secondary mb-2">
             Active Warrants
           </p>
           <div className="space-y-3">
@@ -517,10 +513,10 @@ export function CustodyPanel({
         </section>
       )}
 
-      {/* ── Resolved warrants (collapsed) ──────────────────────────────────── */}
+      {/* Resolved warrants */}
       {terminalWarrants.length > 0 && (
         <section>
-          <p className="text-xs font-bold uppercase tracking-wider text-neutral-400 mb-2">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-text-secondary mb-2">
             Resolved Warrants
           </p>
           <div className="space-y-2">
@@ -542,10 +538,12 @@ export function CustodyPanel({
       {/* Empty state */}
       {eligibleParticipants.length === 0 && (
         <div className="flex flex-col items-center justify-center min-h-[200px] text-center gap-3">
-          <Shield size={36} className="text-neutral-300" />
+          <div className="w-14 h-14 rounded-2xl bg-surface-elevated border border-border flex items-center justify-center">
+            <Shield size={24} className="text-text-secondary" />
+          </div>
           <div>
-            <p className="text-sm font-semibold text-neutral-500">No suspects or accused on record</p>
-            <p className="text-xs text-neutral-400 mt-1">
+            <p className="text-sm font-semibold text-text-primary">No suspects or accused on record</p>
+            <p className="text-xs text-text-secondary mt-1 max-w-xs">
               Add participants with Suspect or Accused roles from the Case Participants tab or AI Analysis panel first.
             </p>
           </div>

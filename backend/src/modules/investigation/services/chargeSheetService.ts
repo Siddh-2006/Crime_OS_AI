@@ -79,11 +79,14 @@ export class ChargeSheetService {
     const resolveUrl = (candidate: any): string | undefined => {
       const raw = candidate?.secureUrl || candidate?.storage_ref || candidate?.cloudinary_url || candidate?.response_ref || candidate?.firPdfUrl || candidate?.url;
       if (typeof raw !== 'string') return undefined;
-      // Add https:// protocol if URL doesn't already have http:// or https://
-      if (!/^https?:\/\//i.test(raw)) {
-        return `https://${raw}`;
+      const trimmed = raw.trim();
+      if (!trimmed) return undefined;
+      const normalized = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed.replace(/^\/+/, '')}`;
+      try {
+        return encodeURI(normalized);
+      } catch {
+        return normalized;
       }
-      return raw;
     };
 
     if (complaint.firPdfUrl) {

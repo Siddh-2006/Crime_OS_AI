@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { AlertTriangle, Clock } from 'lucide-react';
 
 interface CustodyCountdownProps {
-  custodyDeadline: string; // ISO UTC string
+  custodyDeadline: string;
   accusedName: string;
   onProduceBefore: () => void;
   producingLoading?: boolean;
@@ -19,7 +19,7 @@ function formatRemaining(ms: number): { text: string; urgent: boolean; passed: b
   const totalMinutes = Math.floor(ms / 60_000);
   const hours   = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
-  const urgent  = ms < 2 * 60 * 60 * 1_000; // < 2 hours
+  const urgent  = ms < 2 * 60 * 60 * 1_000;
   return {
     text:   hours > 0 ? `${hours}h ${minutes}m remaining` : `${minutes}m remaining`,
     urgent,
@@ -47,46 +47,43 @@ export function CustodyCountdown({
     hour: '2-digit', minute: '2-digit', hour12: true,
   });
 
+  // Map urgency to semantic tokens
+  const containerCls = passed
+    ? 'border-semantic-critical/40 bg-semantic-critical/5'
+    : urgent
+      ? 'border-semantic-warning/50 bg-semantic-warning/5'
+      : 'border-semantic-warning/30 bg-semantic-warning/5';
+
+  const iconCls    = passed || urgent ? 'text-semantic-critical' : 'text-semantic-warning';
+  const titleCls   = passed || urgent ? 'text-semantic-critical' : 'text-semantic-warning';
+  const badgeCls   = passed
+    ? 'bg-semantic-critical/10 text-semantic-critical border border-semantic-critical/30'
+    : urgent
+      ? 'bg-semantic-warning/10 text-semantic-warning border border-semantic-warning/30'
+      : 'bg-semantic-warning/10 text-semantic-warning border border-semantic-warning/30';
+
   return (
-    <div className={`rounded-xl border p-4 ${
-      passed
-        ? 'border-red-400 bg-red-50'
-        : urgent
-          ? 'border-orange-400 bg-orange-50'
-          : 'border-yellow-300 bg-yellow-50'
-    }`}>
+    <div className={`rounded-xl border p-4 ${containerCls}`}>
       <div className="flex items-start gap-3">
-        <AlertTriangle
-          size={18}
-          className={`flex-shrink-0 mt-0.5 ${passed ? 'text-red-500' : 'text-orange-500'}`}
-        />
+        <AlertTriangle size={16} className={`flex-shrink-0 mt-0.5 ${iconCls}`} />
         <div className="flex-1 min-w-0">
-          <p className={`text-sm font-bold ${passed ? 'text-red-700' : 'text-orange-700'}`}>
+          <p className={`text-sm font-bold ${titleCls}`}>
             BNSS §57 — 24-Hour Custody Deadline
           </p>
-          <p className="text-xs text-neutral-600 mt-0.5">
-            <span className="font-semibold">{accusedName}</span> must be produced before the magistrate by{' '}
-            <span className="font-semibold">{deadlineLocal}</span>.
+          <p className="text-xs text-text-secondary mt-0.5">
+            <span className="font-semibold text-text-primary">{accusedName}</span> must be produced
+            before the magistrate by{' '}
+            <span className="font-semibold text-text-primary">{deadlineLocal}</span>.
           </p>
-
-          {/* Countdown */}
-          <div className={`mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black ${
-            passed
-              ? 'bg-red-200 text-red-800'
-              : urgent
-                ? 'bg-orange-200 text-orange-800'
-                : 'bg-yellow-200 text-yellow-800'
-          }`}>
-            <Clock size={12} />
+          <div className={`mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black ${badgeCls}`}>
+            <Clock size={11} />
             {text}
           </div>
         </div>
-
-        {/* Action */}
         <button
           onClick={onProduceBefore}
           disabled={producingLoading}
-          className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors disabled:opacity-50"
+          className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-semantic-success hover:bg-semantic-success/90 text-white transition-colors disabled:opacity-50 cursor-pointer"
         >
           {producingLoading ? 'Saving…' : 'Mark Produced'}
         </button>

@@ -169,6 +169,128 @@ class WhisperTranscriber(IAudioTranscriber):
         )
 
 
+# ── Gemini production transcriber ─────────────────────────────────────────────
+
+class GeminiTranscriber(IAudioTranscriber):
+    """
+    Production transcriber backed by Gemini multimodal API.
+    Used when APP_ENV=production — no faster-whisper / CTranslate2 needed.
+    Uses raw httpx (already in requirements) — no extra dependency.
+
+    Gemini receives the audio file as inline base64 data and returns a
+    plain-text transcription. We map this to the same AudioTranscript
+    interface as WhisperTranscriber.
+
+    Supported audio MIME types by Gemini:
+        audio/wav, audio/mp3, audio/mpeg, audio/ogg, audio/flac,
+        audio/aac, audio/webm, audio/x-m4a
+    """
+
+    def __init__(self) -> None:
+        import os
+        self._api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+        self._model   = os.environ.get("GEMINI_STT_MODEL", "gemini-2.5-flash-lite").strip()
+        if not self._api_key:
+            logger.warning("[gemini_stt] GEMINI_API_KEY not set — transcription will return empty results")
+
+    def _detect_mime(self, audio_bytes: bytes) -> str:
+        """Best-effort MIME detection from magic bytes."""
+        if audio_bytes[:4] == b"RIFF":
+            return "audio/wav"
+        if audio_bytes[:3] == b"ID3" or audio_bytes[:2] == b"\xff\xfb":
+            return "audio/mp3"
+        if audio_bytes[:4] == b"fLaC":
+            return "audio/flac"
+        if audio_bytes[:4] == b"OggS":
+            return "audio/ogg"
+        # Default — Gemini handles most audio as audio/mpeg
+        return "audio/mpeg"
+
+    async def transcribe(self, audio_bytes: bytes) -> AudioTranscript:
+        import base64
+        import httpx
+
+        if not audio_bytes:
+            raise ValueError("Audio bytes are empty — nothing to transcribe.")
+
+        if not self._api_key:
+            return AudioTranscript(
+                detected_language="en",
+                language_probability=0.0,
+                raw_text="",
+                translated_text=None,
+                segments=[],
+            )
+
+        mime = self._detect_mime(audio_bytes)
+        b64  = base64.b64encode(audio_bytes).decode()
+        url  = (
+            f"https://generativelanguage.googleapis.com/v1beta/models/"
+            f"{self._model}:generateContent?key={self._api_key}"
+        )
+        payload = {
+            "contents": [{
+                "role": "user",
+                "parts": [
+                    {"text": (
+                        "Transcribe all speech in this audio file exactly as spoken. "
+                        "If the speech is in a language other than English, first provide the original "
+                        "transcription then provide an English translation on a new line prefixed with "
+                        "'TRANSLATION: '. "
+                        "Output only the transcription (and translation if needed), nothing else."
+                    )},
+                    {"inline_data": {"mime_type": mime, "data": b64}},
+                ],
+            }],
+            "generationConfig": {"temperature": 0.0, "maxOutputTokens": 2048},
+        }
+
+        logger.info("[gemini_stt] Starting transcription")
+        raw_text = ""
+        translated_text: str | None = None
+
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                resp = await client.post(url, json=payload)
+                resp.raise_for_status()
+                data = resp.json()
+                content = (
+                    data.get("candidates", [{}])[0]
+                        .get("content", {})
+                        .get("parts", [{}])[0]
+                        .get("text", "")
+                        .strip()
+                )
+            # Split out translation if present
+            if "TRANSLATION:" in content:
+                parts = content.split("TRANSLATION:", 1)
+                raw_text = parts[0].strip()
+                translated_text = parts[1].strip() or None
+            else:
+                raw_text = content
+        except Exception as exc:
+            logger.warning("[gemini_stt] API call failed", extra={"error": str(exc)})
+
+        logger.info(
+            "[gemini_stt] Transcription completed",
+            extra={"chars": len(raw_text), "has_translation": translated_text is not None},
+        )
+
+        # Build a single segment spanning the whole audio (no timestamps from Gemini)
+        segments = (
+            [TranscriptSegment(start=0.0, end=0.0, text=raw_text, confidence=0.95)]
+            if raw_text else []
+        )
+
+        return AudioTranscript(
+            detected_language="unknown",   # Gemini doesn't expose detected language
+            language_probability=1.0,
+            raw_text=raw_text,
+            translated_text=translated_text,
+            segments=segments,
+        )
+
+
 # ── Mock implementation ────────────────────────────────────────────────────────
 
 class MockAudioTranscriber(IAudioTranscriber):

@@ -354,10 +354,25 @@ class BGEEmbedder:
     # ── Private: resolve the backend on first call ────────────────────────────
 
     def _resolve(self) -> None:
-        """Load BGE or set up Nomic fallback. Called once, on first embed request."""
+        """Load BGE or set up fallback. Called once, on first embed request."""
         if self._checked:
             return
         self._checked = True
+
+        backend = os.environ.get("EMBEDDING_BACKEND", "auto").lower()
+        app_env = os.environ.get("APP_ENV", "development").lower()
+        use_gemini = backend == "gemini" or (backend == "auto" and app_env == "production")
+
+        # ── Production / forced Gemini path ──────────────────────────────────
+        if use_gemini:
+            from legal_rag.gemini_embedder import GeminiEmbedder
+            self._fallback = GeminiEmbedder()
+            print(
+                "[BGEEmbedder] Using GeminiEmbedder (text-embedding-004) — "
+                f"backend='{backend}', APP_ENV='{app_env}'",
+                file=sys.stderr,
+            )
+            return
 
         print(
             f"[BGEEmbedder] Attempting to load sentence-transformers "

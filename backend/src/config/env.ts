@@ -44,6 +44,8 @@ const env = cleanEnv(process.env, {
   CLOUDINARY_CLOUD_NAME: str(),
   CLOUDINARY_API_KEY: str(),
   CLOUDINARY_API_SECRET: str(),
+  CLOUDINARY_TIMEOUT_MS: num({ default: 900000 }),
+  CASE_DIARY_JOB_LOCK_DURATION_MS: num({ default: 900000 }),
   COMPLAINT_INTELLIGENCE_URL: str({ default: 'http://localhost:8001' }),
   // AI_SERVICE_URL: str({ default: 'http://localhost:8000' }),
   LEGAL_AGENT_URL: str({ default: 'http://localhost:8004' }),

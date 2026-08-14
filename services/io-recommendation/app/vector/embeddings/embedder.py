@@ -97,4 +97,31 @@ class LlamaCppEmbedder:
 
 
 # ── Module-level singleton ────────────────────────────────────────────────────
-embedder = LlamaCppEmbedder()
+
+def _create_embedder() -> "LlamaCppEmbedder":
+    """
+    Factory: returns the appropriate embedder based on EMBEDDING_BACKEND.
+
+    Production  (EMBEDDING_BACKEND=gemini): GeminiAsyncEmbedder
+    Development (EMBEDDING_BACKEND=auto or nomic): LlamaCppEmbedder
+    """
+    backend = (settings.EMBEDDING_BACKEND or "auto").lower()
+    use_gemini = backend == "gemini"
+
+    if use_gemini:
+        from app.vector.embeddings.gemini_embedder import GeminiAsyncEmbedder
+        logger.info(
+            "Embedding backend: Gemini text-embedding-004 (production)",
+            extra={"model": settings.GEMINI_EMBEDDING_MODEL},
+        )
+        return GeminiAsyncEmbedder()  # type: ignore[return-value]
+
+    # Default: llama.cpp / Nomic (development)
+    logger.info(
+        "Embedding backend: LlamaCppEmbedder (development)",
+        extra={"llama_cpp_url": settings.LLAMA_CPP_URL},
+    )
+    return LlamaCppEmbedder()
+
+
+embedder = _create_embedder()

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Card, CardHeader } from '@/components/ui/Card';
-import { FileText, ShieldCheck, User, Activity, AlertTriangle, Send, Upload, Edit3, MessageSquare } from 'lucide-react';
+import { FileText, ShieldCheck, User, Activity, AlertTriangle, Send, Upload, Edit3, MessageSquare, Shield, Lock, CheckCircle2, XCircle, Clock } from 'lucide-react';
 
 interface DiaryEntry {
   _id: string;
@@ -40,6 +40,15 @@ export function CaseDiaryFeed({ entries, onEntryClick }: CaseDiaryFeedProps) {
       case 'witness_added': return <User className="text-amber-500" size={14} />;
       case 'escalation_raised': return <AlertTriangle className="text-semantic-critical" size={14} />;
       case 'override_correction': return <User className="text-amber-500" size={14} />;
+      // Custody & Arrest Warrant
+      case 'warrant_drafted': return <Shield className="text-brand-primary" size={14} />;
+      case 'warrant_sent_to_magistrate': return <Send className="text-indigo-500" size={14} />;
+      case 'warrant_approved': return <CheckCircle2 className="text-semantic-success" size={14} />;
+      case 'warrant_rejected': return <XCircle className="text-semantic-critical" size={14} />;
+      case 'suspect_taken_into_custody': return <Lock className="text-semantic-warning" size={14} />;
+      case 'custody_deadline_reached': return <Clock className="text-semantic-critical" size={14} />;
+      case 'accused_produced_before_court': return <ShieldCheck className="text-semantic-success" size={14} />;
+      case 'suspect_released': return <CheckCircle2 className="text-text-secondary" size={14} />;
       default: return <Activity className="text-text-muted" size={14} />;
     }
   };
@@ -58,6 +67,15 @@ export function CaseDiaryFeed({ entries, onEntryClick }: CaseDiaryFeedProps) {
       case 'witness_added': return 'Witness Added to Case';
       case 'escalation_raised': return 'Case Escalation Raised';
       case 'override_correction': return 'Officer AI Correction Override';
+      // Custody & Arrest Warrant
+      case 'warrant_drafted': return `Arrest Warrant Drafted — ${entry.payload?.participant_name || ''}`;
+      case 'warrant_sent_to_magistrate': return `Warrant Sent to Magistrate — ${entry.payload?.participant_name || ''}`;
+      case 'warrant_approved': return `Warrant Approved by Magistrate — ${entry.payload?.participant_name || ''}`;
+      case 'warrant_rejected': return `Warrant Rejected by Magistrate — ${entry.payload?.participant_name || ''}`;
+      case 'suspect_taken_into_custody': return `${entry.payload?.participant_name || 'Accused'} Taken into Custody`;
+      case 'custody_deadline_reached': return `⚠ BNSS §57 Custody Deadline Reached — ${entry.payload?.participant_name || ''}`;
+      case 'accused_produced_before_court': return `${entry.payload?.participant_name || 'Accused'} Produced Before Court`;
+      case 'suspect_released': return `${entry.payload?.participant_name || 'Accused'} Released from Custody`;
       default: return entry.event_type.replace(/_/g, ' ').toUpperCase();
     }
   };
@@ -80,6 +98,18 @@ export function CaseDiaryFeed({ entries, onEntryClick }: CaseDiaryFeedProps) {
     }
     if (entry.event_type === 'diary_draft_generated' || entry.event_type === 'diary_finalized') {
       return entry.payload?.summary || entry.payload?.title || '';
+    }
+    if (entry.event_type === 'warrant_sent_to_magistrate') {
+      return entry.payload?.magistrate_email ? `Sent to: ${entry.payload.magistrate_email}` : '';
+    }
+    if (entry.event_type === 'warrant_rejected') {
+      return entry.payload?.rejection_reason ? `Reason: ${entry.payload.rejection_reason}` : '';
+    }
+    if (entry.event_type === 'suspect_taken_into_custody') {
+      const deadline = entry.payload?.custody_deadline
+        ? new Date(entry.payload.custody_deadline).toLocaleString('en-IN')
+        : null;
+      return deadline ? `24h deadline: ${deadline}` : '';
     }
     return '';
   };

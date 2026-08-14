@@ -88,41 +88,75 @@ def _build_multimodal_prompt(
     context: dict[str, object],
 ) -> tuple[str, str]:
     system_prompt = (
-        "You are a complaint extraction assistant. Extract structured information from the provided complaint text and attachments. "
-        "Return ONLY a valid JSON object with the fields specified in the output format. "
-        "Do NOT add markdown formatting, code blocks, or explanations. "
-        "Use only facts from the complaint_text and attachment_notes provided. "
-        "For detailedDescription, create a comprehensive paragraph combining all information from complaint text and attachments."
+        "You are a police complaint intake assistant for Gujarat Police. "
+        "Your job is to extract structured fields from complaint text and uploaded documents/media. "
+        "\n\n"
+        "ABSOLUTE RULES — you must follow all of these without exception:\n"
+        "1. Return ONLY a valid JSON object. No markdown, no code blocks, no explanations.\n"
+        "2. Every field in the JSON MUST have a value. NEVER return null for any field.\n"
+        "3. If a field cannot be extracted from the text or attachments, INFER a reasonable value "
+        "   from context or use a sensible placeholder (e.g. 'Not specified' for text fields, "
+        "   'OTHER' for category, today's date for incidentDate if completely unknown).\n"
+        "4. For detailedDescription: combine EVERYTHING — complaint text AND all attachment "
+        "   content — into one comprehensive, coherent first-person narrative paragraph.\n"
+        "5. For shortDescription: create a crisp incident title (max 100 characters) that "
+        "   summarises the core offence. Example: 'Online fraud via UPI payment of Rs. 50,000'.\n"
+        "6. For incidentDate: extract any date mentioned. If only approximate ('last week', "
+        "   'few days ago'), compute a plausible YYYY-MM-DD. If truly unknown, use today's date.\n"
+        "7. For incidentTime: extract any time mention. If period ('evening', 'night') is given, "
+        "   keep it as-is. If completely unknown, write 'Unknown'.\n"
+        "8. For incidentPlace: extract any location, address, city, or landmark. If not explicit, "
+        "   infer from context (e.g. bank name, website, city mentioned in document). "
+        "   If still unknown, write 'Location not specified'.\n"
+        "9. For category: choose EXACTLY one from the allowed list. Prefer the most specific match. "
+        "   Default to 'CYBERCRIME' if digital/financial fraud is mentioned, 'OTHER' otherwise.\n"
+        "10. missingFields: list only fields the complainant should manually verify or correct, "
+        "    NOT fields you filled with inferred values.\n"
     )
 
-    user_prompt = f"""Extract structured complaint information from the following:
+    # Build attachment block with clear labels
+    if attachment_notes:
+        attachment_block = "CONTENT EXTRACTED FROM UPLOADED FILES:\n" + "\n".join(
+            f"  [{i+1}] {note}" for i, note in enumerate(attachment_notes)
+        )
+    else:
+        attachment_block = "UPLOADED FILES: None"
 
-COMPLAINT TEXT:
-{complaint_text if complaint_text else "No text provided"}
+    # Build existing-context block (skip empty values)
+    filled_context = {k: v for k, v in context.items() if v and str(v).strip()}
+    context_block = (
+        "ALREADY FILLED BY USER (do NOT overwrite unless empty or clearly wrong):\n"
+        + json.dumps(filled_context, ensure_ascii=False, indent=2)
+        if filled_context else "ALREADY FILLED BY USER: Nothing filled yet"
+    )
 
-EXTRACTED CONTENT FROM ATTACHMENTS:
-{chr(10).join(f"- {note}" for note in attachment_notes) if attachment_notes else "No attachments"}
+    user_prompt = f"""Analyse the following complaint information and extract ALL fields.
 
-EXISTING CONTEXT (if any):
-{json.dumps(context, ensure_ascii=False, indent=2) if context else "{}"}
+--- COMPLAINT TEXT (typed by user) ---
+{complaint_text if complaint_text.strip() else "(no text provided — extract entirely from uploaded files)"}
 
-Return a JSON object with these EXACT fields:
+--- {attachment_block} ---
+
+--- {context_block} ---
+
+Return a JSON object with EXACTLY these fields (ALL values required, no nulls):
+
 {{
-  "shortDescription": "brief title (max 100 chars)",
-  "detailedDescription": "comprehensive paragraph narrative combining complaint text and all attachment content",
-  "incidentDate": "YYYY-MM-DD format if found, otherwise null",
-  "incidentTime": "time in HH:MM format or descriptive text like 'evening' if found, otherwise null",
-  "incidentPlace": "location where incident occurred if found, otherwise null",
-  "approximateDateText": "any approximate date mention like 'last week' if found, otherwise null",
-  "coordinates": "GPS coordinates if found, otherwise null",
-  "address": "full address if found, otherwise null",
-  "category": "one of: THEFT, ROBBERY, BURGLARY, ASSAULT, DOMESTIC_VIOLENCE, SEXUAL_OFFENCE, CYBERCRIME, FRAUD, PROPERTY_DISPUTE, MISSING_PERSON, ROAD_ACCIDENT, DRUG_OFFENCE, PUBLIC_NUISANCE, HARASSMENT, EXTORTION, MURDER, KIDNAPPING, OTHER",
-  "missingFields": ["list of field names that need manual entry"],
-  "confidence": 0.85,
-  "summary": "brief summary of the complaint"
+  "shortDescription": "<concise incident title, max 100 chars>",
+  "detailedDescription": "<full coherent narrative combining complaint text + all attachment content, written as the complainant's statement>",
+  "incidentDate": "<YYYY-MM-DD — extract from text/docs; if approximate, estimate; if unknown use today's date>",
+  "incidentTime": "<HH:MM in 24h, or a period like 'morning'/'evening'/'night', or 'Unknown'>",
+  "incidentPlace": "<full address or location where incident occurred; infer from docs/context if not explicit>",
+  "approximateDateText": "<original date phrasing if approximate e.g. 'last Tuesday', 'few days ago'; empty string if exact date known>",
+  "coordinates": "<lat,lng if extractable from document, otherwise empty string>",
+  "address": "<same as incidentPlace or full address if separately mentioned>",
+  "category": "<EXACTLY one of: THEFT | ROBBERY | BURGLARY | ASSAULT | DOMESTIC_VIOLENCE | SEXUAL_OFFENCE | CYBERCRIME | FRAUD | PROPERTY_DISPUTE | MISSING_PERSON | ROAD_ACCIDENT | DRUG_OFFENCE | PUBLIC_NUISANCE | HARASSMENT | EXTORTION | MURDER | KIDNAPPING | OTHER>",
+  "missingFields": ["<list field names that definitely need manual correction by user>"],
+  "confidence": <float 0.0–1.0 reflecting how complete the extraction is>,
+  "summary": "<2-3 sentence plain English summary of the incident for officer review>"
 }}
 
-IMPORTANT: Extract information from BOTH complaint_text AND attachment_notes. Do not leave fields empty if information is available in the attachments."""
+IMPORTANT: Extract from BOTH the complaint text AND every attachment. Do not leave any field empty or null."""
 
     return system_prompt, user_prompt
 
@@ -313,11 +347,18 @@ async def profile_complaint_multimodal(
 
     combined_text = complaint_text or " ".join(attachment_notes).strip()
 
+    # ── Hard fallbacks for fields that must never be null ──────────────────────
+    from datetime import date as _date
+    _today = _date.today().isoformat()           # YYYY-MM-DD — last-resort for incidentDate
+    _first_sentence = (combined_text.split(".")[0].strip()[:97] + "...") \
+        if combined_text and len(combined_text) > 100 else combined_text or None
+
     prefill = ComplaintDraftFields(
         shortDescription=_first_non_empty(
             parsed_output.get("shortDescription"),
             parsed_output.get("short_description"),
             parsed_context.get("shortDescription"),
+            _first_sentence,          # last-resort: first sentence of text
         ),
         detailedDescription=_first_non_empty(
             parsed_output.get("detailedDescription"),
@@ -328,6 +369,7 @@ async def profile_complaint_multimodal(
             parsed_output.get("incidentDate"),
             parsed_output.get("incident_date"),
             parsed_context.get("incidentDate"),
+            _today,                   # last-resort: today's date when completely unknown
         ),
         incidentTime=_first_non_empty(
             parsed_output.get("incidentTime"),
@@ -336,6 +378,7 @@ async def profile_complaint_multimodal(
             parsed_output.get("period"),
             parsed_output.get("time_of_day"),
             parsed_context.get("incidentTime"),
+            "Unknown",                # last-resort: explicit unknown marker
         ),
         incidentPlace=_first_non_empty(
             parsed_output.get("incidentPlace"),
@@ -344,6 +387,8 @@ async def profile_complaint_multimodal(
             parsed_output.get("place"),
             parsed_output.get("address"),
             parsed_context.get("incidentPlace"),
+            parsed_context.get("address"),
+            "Location not specified", # last-resort so the field is never null
         ),
         approximateDateText=_first_non_empty(
             parsed_output.get("approximateDateText"),
@@ -359,10 +404,12 @@ async def profile_complaint_multimodal(
             parsed_output.get("address"),
             parsed_output.get("incidentPlace"),
             parsed_context.get("address"),
+            parsed_context.get("incidentPlace"),
         ),
         category=_first_non_empty(
             parsed_output.get("category"),
             parsed_context.get("category"),
+            "OTHER",                  # last-resort: safe default category
         ),
     )
 

@@ -1211,11 +1211,29 @@ export class ComplaintService {
       ? lastSections.split(',').map((s: string) => s.trim()).filter(Boolean)
       : [];
 
+    // ── Fetch all enrichment data in parallel ──────────────────────────────
+    const caseObjectId = new Types.ObjectId(id);
+    const [
+      caseParticipants,
+      diaryEntries,
+      caseChecklist,
+      analysisSnapshots,
+      departmentRequests,
+      chargeSheet,
+      arrestWarrants,
+    ] = await Promise.all([
+      CaseParticipant.find({ case_id: caseObjectId }).lean(),
+      DiaryEntry.find({ case_id: id }).sort({ timestamp: 1 }).lean(),
+      (async () => { try { const { CaseChecklist } = await import('../../investigation/models/CaseChecklist.model'); return CaseChecklist.find({ case_id: id }).lean(); } catch { return []; } })(),
+      (async () => { try { const { AnalysisSnapshot } = await import('../../investigation/models/AnalysisSnapshot.model'); return AnalysisSnapshot.find({ case_id: id }).sort({ timestamp: -1 }).limit(3).lean(); } catch { return []; } })(),
+      (async () => { try { const { DepartmentRequest } = await import('../../investigation/models/DepartmentRequest.model'); return DepartmentRequest.find({ case_id: id }).lean(); } catch { return []; } })(),
+      (async () => { try { const { ChargeSheet } = await import('../../investigation/models/ChargeSheet.model'); return ChargeSheet.findOne({ case_id: id }).lean(); } catch { return null; } })(),
+      (async () => { try { const { ArrestWarrant } = await import('../../investigation/models/ArrestWarrant.model'); return ArrestWarrant.find({ case_id: caseObjectId }).lean(); } catch { return []; } })(),
+    ]);
+
     const payload = {
       firId: saved._id.toString(),
       complaintId: saved._id.toString(),
-      // Extract ._id explicitly — these fields are populated objects after findById(),
-      // so .toString() on the whole object would serialize the full document instead of just the ID.
       officerId: (saved.assignedIO as any)?._id?.toString() || (saved.assignedIO as any)?.toString() || officerId,
       stationId: (saved.policeStation as any)?._id?.toString() || (saved.policeStation as any)?.toString(),
       district: station?.district || 'Unknown District',
@@ -1231,6 +1249,82 @@ export class ComplaintService {
       investigationSummary: lastNotes || saved.detailedDescription,
       sections: sectionsList,
       location: saved.incidentPlace,
+
+      // ── Enriched data ────────────────────────────────────────────────────
+      complaintIntelligence: saved.complaintIntelligence ? {
+        crimeType: (saved.complaintIntelligence as any).crimeType,
+        priority: (saved.complaintIntelligence as any).priority,
+        confidence: (saved.complaintIntelligence as any).confidence,
+        summary: (saved.complaintIntelligence as any).summary,
+        missingInformation: (saved.complaintIntelligence as any).missingInformation || [],
+        recommendations: (saved.complaintIntelligence as any).recommendations || [],
+      } : undefined,
+
+      diaryEntries: (diaryEntries as any[]).map((e) => ({
+        timestamp: e.timestamp?.toISOString?.() || String(e.timestamp),
+        actorType: e.actor?.type,
+        actorId: e.actor?.id,
+        eventType: e.event_type,
+        summary: e.payload?.narrative_summary || e.payload?.reason || '',
+        payload: {},
+      })),
+
+      caseChecklist: (caseChecklist as any[]).map((c) => ({
+        stepId: c.step_id,
+        title: c.title,
+        status: c.status,
+        criticality: c.criticality,
+        requiredEvidence: c.required_evidence || [],
+        proofEvidenceIds: c.proof_evidence_ids || [],
+      })),
+
+      analysisSnapshots: (analysisSnapshots as any[]).map((s) => ({
+        snapshotId: s.snapshot_id,
+        timestamp: s.timestamp?.toISOString?.() || String(s.timestamp),
+        trigger: s.trigger,
+        narrativeSummary: s.narrative_summary,
+        confidenceBreakdown: s.confidence_breakdown || {},
+        officerAuthored: s.officer_authored || false,
+        rankedNextSteps: s.ranked_next_steps || [],
+      })),
+
+      departmentRequests: (departmentRequests as any[]).map((r) => ({
+        requestId: r.request_id,
+        stepId: r.step_id,
+        departmentEntityId: r.department_entity_id,
+        status: r.status,
+        draftContent: r.draft_content,
+        sentVia: r.sent_via,
+        sentAt: r.sent_at?.toISOString?.() || String(r.sent_at || ''),
+        responseAt: r.response_at?.toISOString?.() || String(r.response_at || ''),
+      })),
+
+      chargeSheet: chargeSheet ? ((chargeSheet as any).appliedSections || []).map((s: any) => ({
+        section: typeof s === 'string' ? s : s.code,
+        offense: typeof s === 'string' ? s : s.title,
+        count: 1,
+      })) : [],
+
+      participants: (caseParticipants as any[])
+        .filter((p) => p.roles?.includes('Suspect') || p.roles?.includes('Accused'))
+        .map((p) => ({
+          name: p.name,
+          roles: p.roles || [],
+          appliedSections: [
+            ...((p.accusedProfile?.appliedSections || []).map((s: any) => s.code)),
+            ...((p.suspectProfile?.appliedSections || []).map((s: any) => s.code)),
+          ].filter(Boolean),
+          statementSummary: p.statements?.[0]?.content?.slice(0, 200) || '',
+        })),
+
+      arrestWarrants: (arrestWarrants as any[]).map((w) => ({
+        accusedName: w.accused_name,
+        status: w.status,
+        appliedSections: (w.applied_sections || []).map((s: any) => s.code || s),
+        magistrateApprovalStatus: w.magistrate_approval_status,
+        arrestedAt: w.arrested_at?.toISOString?.() || '',
+        producedBeforeCourtAt: w.produced_before_court_at?.toISOString?.() || '',
+      })),
     };
 
     // Fire-and-forget or async call to FastAPI recommendation service

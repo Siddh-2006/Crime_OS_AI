@@ -55,6 +55,8 @@ class EmbedService:
             analysis_snapshots=request.analysisSnapshots,
             department_requests=request.departmentRequests,
             charge_sheet=request.chargeSheet,
+            participants=request.participants,
+            arrest_warrants=request.arrestWarrants,
         )
 
         logger.info(

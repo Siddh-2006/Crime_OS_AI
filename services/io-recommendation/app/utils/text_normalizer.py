@@ -9,8 +9,10 @@ from typing import List, Optional
 
 from app.schemas.fir import (
     AnalysisSnapshotData,
+    ArrestWarrantData,
     CaseChecklistItem,
     CaseEntityData,
+    CaseParticipantData,
     ChargeSheetEntry,
     ComplaintIntelligenceData,
     DepartmentRequestData,
@@ -36,6 +38,8 @@ def build_fir_text(
     analysis_snapshots: Optional[List[AnalysisSnapshotData]] = None,
     department_requests: Optional[List[DepartmentRequestData]] = None,
     charge_sheet: Optional[List[ChargeSheetEntry]] = None,
+    participants: Optional[List[CaseParticipantData]] = None,
+    arrest_warrants: Optional[List[ArrestWarrantData]] = None,
 ) -> str:
     """
     Converts a closed FIR's semantic fields into a structured block of text
@@ -215,6 +219,42 @@ def build_fir_text(
                 diary_parts.append(f"Summary: {entry.summary}")
             if diary_parts:
                 parts.append("; ".join(diary_parts))
+
+    # Suspects and accused with applied legal sections
+    if participants:
+        parts.append("Case Participants:")
+        for p in participants:
+            p_parts: List[str] = []
+            if p.name:
+                p_parts.append(f"Name: {p.name}")
+            if p.roles:
+                p_parts.append(f"Roles: {', '.join(p.roles)}")
+            if p.appliedSections:
+                p_parts.append(f"Applied Sections: {', '.join(p.appliedSections)}")
+            if p.statementSummary:
+                p_parts.append(f"Statement: {p.statementSummary}")
+            if p_parts:
+                parts.append("; ".join(p_parts))
+
+    # Arrest warrant outcomes (custody lifecycle)
+    if arrest_warrants:
+        parts.append("Arrest Warrants:")
+        for w in arrest_warrants:
+            w_parts: List[str] = []
+            if w.accusedName:
+                w_parts.append(f"Accused: {w.accusedName}")
+            if w.status:
+                w_parts.append(f"Warrant Status: {w.status}")
+            if w.magistrateApprovalStatus:
+                w_parts.append(f"Magistrate Decision: {w.magistrateApprovalStatus}")
+            if w.appliedSections:
+                w_parts.append(f"Charged Under: {', '.join(w.appliedSections)}")
+            if w.arrestedAt:
+                w_parts.append(f"Arrested At: {w.arrestedAt}")
+            if w.producedBeforeCourtAt:
+                w_parts.append(f"Produced Before Court: {w.producedBeforeCourtAt}")
+            if w_parts:
+                parts.append("; ".join(w_parts))
 
     return "\n".join(parts)
 

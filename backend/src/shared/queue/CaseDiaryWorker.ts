@@ -6,6 +6,7 @@ import { createWorker } from '../../config/bullmq';
 import { QUEUE_NAMES } from '../constants/queue.constants';
 import cloudinary from '../../config/cloudinary';
 import logger from '../../config/logger';
+import env from '../../config/env';
 import type { CaseDiaryPdfJobData } from './CaseDiaryQueue';
 import { Complaint } from '../../modules/complaint/models/Complaint.model';
 import { CaseParticipant } from '../../modules/investigation/models/CaseParticipant.model';
@@ -396,16 +397,18 @@ async function generateSinglePdfBuffer(diary: any, complaint: any, participants:
 }
 
 export function startCaseDiaryWorker(): void {
-  createWorker<CaseDiaryPdfJobData>(QUEUE_NAMES.CASE_DIARY, async (job: Job<CaseDiaryPdfJobData>) => {
-    const { diaryId, caseId } = job.data;
-    logger.info('[Case_Diary] PDF generation worker started', { diaryId, caseId, jobId: job.id });
+  createWorker<CaseDiaryPdfJobData>(
+    QUEUE_NAMES.CASE_DIARY,
+    async (job: Job<CaseDiaryPdfJobData>) => {
+      const { diaryId, caseId } = job.data;
+      logger.info('[Case_Diary] PDF generation worker started', { diaryId, caseId, jobId: job.id });
 
-    const { CaseDiary } = await import('../../modules/investigation/models/CaseDiary.model');
-    const diary = await CaseDiary.findOne({ diary_id: diaryId, case_id: caseId }).exec();
+      const { CaseDiary } = await import('../../modules/investigation/models/CaseDiary.model');
+      const diary = await CaseDiary.findOne({ diary_id: diaryId, case_id: caseId }).exec();
 
-    if (!diary) {
-      throw new Error(`Case diary ${diaryId} not found`);
-    }
+      if (!diary) {
+        throw new Error(`Case diary ${diaryId} not found`);
+      }
 
     const complaint = await Complaint.findById(caseId)
       .populate('citizen', 'firstName lastName email phone address')
@@ -493,6 +496,9 @@ export function startCaseDiaryWorker(): void {
       logger.error('[Case_Diary] Cloudinary upload failed', { diaryId, caseId, error: err?.message || String(err) });
       throw err;
     }
+  }, {
+    lockDuration: env.CASE_DIARY_JOB_LOCK_DURATION_MS,
+    stalledInterval: Math.max(30000, Math.floor(env.CASE_DIARY_JOB_LOCK_DURATION_MS / 3)),
   });
 }
 
