@@ -2,7 +2,6 @@ certifi==2026.6.17
 cloudinary==1.45.0
 deep_translator==1.11.4
 fastapi==0.115.6
-fitz==0.0.0
 httpx==0.28.1
 json_repair==0.63.2
 langdetect==1.0.9
