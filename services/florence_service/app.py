@@ -39,40 +39,40 @@ try:
 except ImportError:
     pass  # dotenv not installed — rely on shell environment
 
-# ── flash_attn: combined CPU-safe patch ──────────────────────────────────────
-# Florence-2 has TWO separate checks that must both be bypassed on CPU Windows:
-#
-# 1. check_imports() — statically scans modeling_florence2.py and calls
-#    importlib.import_module("flash_attn"). Solution: put a stub in sys.modules.
-#    The stub needs __spec__ != None so find_spec() doesn't raise ValueError.
-#
-# 2. is_flash_attn_2_available() — called at runtime inside the model module.
-#    Solution: patch the transformers utility function to return False.
-#
-import types
-from importlib.machinery import ModuleSpec
+# ── Only load heavy Florence/HuggingFace dependencies when NOT using Gemini ───
+# In production (VISION_BACKEND=gemini) transformers/torch are not installed.
+# Importing them unconditionally crashes the process at startup.
+_VISION_BACKEND = os.environ.get("VISION_BACKEND", "florence").lower()
 
-_fa_stub = types.ModuleType("flash_attn")
-_fa_stub.__spec__ = ModuleSpec("flash_attn", None)   # non-None spec for find_spec
-# Bypass the strict check_imports that crashes on missing flash_attn
-import transformers.dynamic_module_utils as _dmu
-_dmu.check_imports = lambda filename: []
-sys.modules.setdefault("flash_attn.flash_attn_interface", _fa_stub)
+if _VISION_BACKEND != "gemini":
+    # ── flash_attn: combined CPU-safe patch ───────────────────────────────────
+    # Florence-2 has TWO separate checks that must both be bypassed on CPU Windows:
+    from importlib.machinery import ModuleSpec
 
-import transformers.utils.import_utils as _tiu
-_tiu.is_flash_attn_2_available = lambda: False
-_tiu.is_flash_attn_greater_or_equal_2_10 = lambda: False  # type: ignore
+    _fa_stub = types.ModuleType("flash_attn")
+    _fa_stub.__spec__ = ModuleSpec("flash_attn", None)
+    import transformers.dynamic_module_utils as _dmu
+    _dmu.check_imports = lambda filename: []
+    sys.modules.setdefault("flash_attn.flash_attn_interface", _fa_stub)
 
+    import transformers.utils.import_utils as _tiu
+    _tiu.is_flash_attn_2_available = lambda: False
+    _tiu.is_flash_attn_greater_or_equal_2_10 = lambda: False  # type: ignore
 
 from contextlib import asynccontextmanager
-from functools import lru_cache
 
-import torch
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from PIL import Image
 from pydantic import BaseModel
-from transformers import AutoModelForCausalLM, AutoProcessor
+
+if _VISION_BACKEND != "gemini":
+    import torch
+    from transformers import AutoModelForCausalLM, AutoProcessor
+else:
+    torch = None                 # type: ignore[assignment]
+    AutoModelForCausalLM = None  # type: ignore[assignment,misc]
+    AutoProcessor = None         # type: ignore[assignment,misc]
 
 MODEL_ID = "microsoft/Florence-2-base"
 

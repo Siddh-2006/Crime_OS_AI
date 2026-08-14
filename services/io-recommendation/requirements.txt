@@ -1,5 +1,12 @@
+# ── Core (always required) ────────────────────────────────────────────────────
 fastapi==0.115.6
 httpx==0.28.1
 pydantic==2.10.6
 pydantic_settings==2.7.0
 qdrant_client==1.9.2
+uvicorn[standard]==0.30.0
+
+# ── Development only — local embedding model ──────────────────────────────────
+# Not installed in production (EMBEDDING_BACKEND=gemini uses httpx above instead).
+# Requires llama-server running nomic-embed-text-v2-moe locally.
+# No pip package needed — llama-server is a separate binary.
