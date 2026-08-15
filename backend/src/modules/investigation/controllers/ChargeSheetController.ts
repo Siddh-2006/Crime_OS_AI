@@ -86,6 +86,14 @@ export class ChargeSheetController {
         return;
       }
 
+      if (!chargeSheet.section1_filingInformation?.court?.trim()) {
+        sendError(res, HttpStatusCode.BAD_REQUEST, {
+          code: 'COURT_REQUIRED',
+          message: 'Court is required before generating a charge sheet PDF',
+        });
+        return;
+      }
+
       await generateChargeSheetPdfStream(chargeSheet, res);
     } catch (error) {
       if (!res.headersSent) {
