@@ -26,6 +26,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { ChargeSheetGenerator } from '../../investigation/services/ChargeSheetGenerator';
 import { CaseParticipant } from '../../investigation/models/CaseParticipant.model';
+import { SightEngineService } from '../../../shared/services/sightengine/SightEngineService';
 
 export class ComplaintService {
   constructor(private readonly complaintRepository: IComplaintRepository) {}
@@ -320,20 +321,31 @@ export class ComplaintService {
     // (keyed by evidence_id = Cloudinary publicId) with AI metadata after processing.
     // We pre-create PENDING records here so Python's $set finds them immediately.
     if (validatedEvidence.length > 0) {
-      const evidenceDocs = validatedEvidence.map((file) => ({
-        case_id:          created._id,
-        evidence_id:      file.publicId,           // matches Python's profile.evidence_id
-        type:             file.resourceType || 'image',
-        storage_ref:      file.secureUrl || file.publicId || 'pending_upload', // Provide fallback for storage_ref
-        ai_tags:          [],
-        uploader_id:      new Types.ObjectId(actorId),
-        status:           'pending' as const,
-        source:           'complainant' as const,
-        processingStatus: 'PENDING' as const,
-        originalFilename: file.originalFilename,
-        mimeType:         file.mimeType,
-        size:             file.size,
-      }));
+      const evidenceDocs = await Promise.all(
+        validatedEvidence.map(async (file) => {
+          const confidenceScore = await SightEngineService.evaluateConfidence({
+            secureUrl: file.secureUrl,
+            resourceType: file.resourceType,
+            mimeType: file.mimeType,
+            originalFilename: file.originalFilename,
+          });
+          return {
+            case_id:          created._id,
+            evidence_id:      file.publicId,
+            type:             file.resourceType || 'image',
+            storage_ref:      file.secureUrl || file.publicId || 'pending_upload',
+            ai_tags:          [],
+            uploader_id:      new Types.ObjectId(actorId),
+            status:           'pending' as const,
+            source:           'complainant' as const,
+            processingStatus: 'PENDING' as const,
+            originalFilename: file.originalFilename,
+            mimeType:         file.mimeType,
+            size:             file.size,
+            confidence_score: confidenceScore,
+          };
+        })
+      );
       try {
         await Evidence.insertMany(evidenceDocs, { ordered: false });
         logger.debug('Seeded evidences collection for complaint', {
@@ -1065,18 +1077,31 @@ export class ComplaintService {
 
     this.checkLock(complaint);
 
-    const validatedEvidence: IEvidenceMetadata[] = evidenceData.map((file: any) => ({
-      publicId: file.publicId,
-      secureUrl: file.secureUrl,
-      resourceType: file.resourceType,
-      mimeType: file.mimeType,
-      originalFilename: file.originalFilename || 'unnamed_file',
-      extension: file.extension || 'bin',
-      size: file.size || 0,
-      uploadedBy: new Types.ObjectId(citizenId),
-      uploadedAt: new Date(),
-      processingStatus: 'PENDING',
-    }));
+    const validatedEvidence: IEvidenceMetadata[] = await Promise.all(
+      evidenceData.map(async (file: any) => {
+        const confidenceScore = await SightEngineService.evaluateConfidence({
+          secureUrl: file.secureUrl,
+          url: file.url,
+          resourceType: file.resourceType,
+          mimeType: file.mimeType,
+          originalFilename: file.originalFilename,
+        });
+
+        return {
+          publicId: file.publicId,
+          secureUrl: file.secureUrl,
+          resourceType: file.resourceType,
+          mimeType: file.mimeType,
+          originalFilename: file.originalFilename || 'unnamed_file',
+          extension: file.extension || 'bin',
+          size: file.size || 0,
+          uploadedBy: new Types.ObjectId(citizenId),
+          uploadedAt: new Date(),
+          processingStatus: 'PENDING',
+          confidence_score: confidenceScore,
+        };
+      })
+    );
 
     complaint.evidence.push(...validatedEvidence);
 
@@ -1109,6 +1134,7 @@ export class ComplaintService {
         originalFilename: file.originalFilename,
         mimeType:         file.mimeType,
         size:             file.size,
+        confidence_score: Number(file.confidence_score ?? 0),
       }));
       try {
         const { Evidence } = require('../../investigation/models/Evidence.model');

@@ -41,6 +41,7 @@ export interface IEvidenceMetadata {
     exif?: Record<string, any>;
     gps?: Record<string, any>;
   };
+  confidence_score?: number;
   cloudinaryVersion?: string;
   checksum?: string;
   isPhysical?: boolean;
@@ -204,6 +205,7 @@ const EvidenceMetadataSchema = new Schema<IEvidenceMetadata>({
     exif: { type: Schema.Types.Mixed },
     gps: { type: Schema.Types.Mixed },
   },
+  confidence_score: { type: Number, min: 0, max: 100, default: 0 },
   cloudinaryVersion: { type: String },
   checksum: { type: String },
   isPhysical: { type: Boolean, default: false },

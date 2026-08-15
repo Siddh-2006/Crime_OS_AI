@@ -191,16 +191,22 @@ export class DepartmentPortalController {
       // 2. Auto-label Default Evidence (the response text itself as a document)
       const defaultEvidenceId = uuidv4();
       threadAttachments.push(defaultEvidenceId);
+      const { SightEngineService } = require('../../../shared/services/sightengine/SightEngineService');
+      const defaultScore = await SightEngineService.evaluateConfidence({
+        secureUrl: 'mock-storage-ref',
+        originalFilename: 'department_response_text',
+      });
       await Evidence.create({
         case_id: request.case_id,
         evidence_id: defaultEvidenceId,
         type: 'document',
-        storage_ref: 'mock-storage-ref', // A real app would upload the PDF and store the URL here
+        storage_ref: 'mock-storage-ref',
         ai_description: 'Auto-ingested response via department portal.',
         ai_tags: ['department_response'],
-        uploader_id: request.case_id, // Mock uploader using case_id for ease of seeding (system actor)
+        uploader_id: request.case_id,
         status: 'verified',
         source: 'department',
+        confidence_score: defaultScore,
         linked_request_id: request.request_id
       });
 
@@ -208,6 +214,10 @@ export class DepartmentPortalController {
       if (evidence) {
         const customEvidenceId = `EV-DEPT-${Date.now()}`;
         threadAttachments.push(customEvidenceId);
+        const customScore = await SightEngineService.evaluateConfidence({
+          secureUrl: evidence.storage_ref || `mock-storage-${Date.now()}`,
+          originalFilename: evidence.title || 'department_evidence',
+        });
         await Evidence.create({
           case_id: request.case_id,
           evidence_id: customEvidenceId,
@@ -215,9 +225,10 @@ export class DepartmentPortalController {
           storage_ref: evidence.storage_ref || `mock-storage-${Date.now()}`,
           ai_description: evidence.description || 'Department provided additional evidence',
           ai_tags: evidence.tags || [],
-          uploader_id: request.case_id, // Mock
+          uploader_id: request.case_id,
           status: 'verified',
           source: 'department',
+          confidence_score: customScore,
           title: evidence.title,
           linked_request_id: request.request_id
         });
@@ -229,11 +240,16 @@ export class DepartmentPortalController {
         for (const att of attachments) {
           const customEvidenceId = `EV-DEPT-${Date.now()}-${Math.floor(Math.random()*1000)}`;
           threadAttachments.push(customEvidenceId);
+          const attScore = await SightEngineService.evaluateConfidence({
+            secureUrl: att.secureUrl,
+            resourceType: att.resourceType,
+            originalFilename: att.originalFilename,
+          });
           await Evidence.create({
             case_id: request.case_id,
             evidence_id: customEvidenceId,
             type: att.resourceType === 'image' ? 'image' : (att.resourceType === 'video' ? 'video' : 'document'),
-            storage_ref: att.secureUrl, // directly store URL
+            storage_ref: att.secureUrl,
             cloudinary_url: att.secureUrl,
             original_filename: att.originalFilename,
             ai_description: `Department uploaded file: ${att.originalFilename}`,
@@ -241,6 +257,7 @@ export class DepartmentPortalController {
             uploader_id: request.case_id,
             status: 'verified',
             source: 'department',
+            confidence_score: attScore,
             linked_request_id: request.request_id
           });
         }

@@ -1301,6 +1301,11 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
                       </p>
                     )}
 
+                    <div className="flex items-center gap-2 text-[11px] text-text-secondary">
+                      <span className="font-bold uppercase tracking-wider">Confidence Score:</span>
+                      <span className="font-bold text-text-primary">{Math.round(Number(ci.confidence ?? 0) > 1 ? Number(ci.confidence ?? 0) : (Number(ci.confidence ?? 0) * 100))}%</span>
+                    </div>
+
                     {/* Supports allegations */}
                     {supports.length > 0 && (
                       <div className="pt-2 border-t border-border">
@@ -1358,11 +1363,14 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
                     </span>
                   </div>
                   {ev.ai_description && <p className="text-xs text-text-secondary mt-2 line-clamp-2">{ev.ai_description}</p>}
-                  <div className="flex items-center gap-2 mt-2">
+                  <div className="mt-2 flex items-center justify-between gap-2">
                     <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
                       ev.status === 'verified' ? 'bg-semantic-success/10 text-semantic-success border-semantic-success/30' : 'bg-semantic-warning/10 text-semantic-warning border-semantic-warning/30'
                     }`}>
                       {ev.status === 'verified' ? '✓ Verified' : 'Unverified'}
+                    </span>
+                    <span className="text-[10px] font-bold text-text-primary">
+                      Confidence Score: {Math.round(Number(ev.confidence_score ?? 0))}%
                     </span>
                   </div>
                 </div>

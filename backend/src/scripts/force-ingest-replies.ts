@@ -128,12 +128,19 @@ async function ingest(opts: {
   for (const att of attachments) {
     const eid = uuidv4();
     evidenceIds.push(eid);
+    const { SightEngineService } = require('../../../shared/services/sightengine/SightEngineService');
+    const emailScore = await SightEngineService.evaluateConfidence({
+      secureUrl: att.secureUrl,
+      mimeType: att.mimeType,
+      originalFilename: att.filename,
+    });
     await Evidence.create({
       case_id: request.case_id, evidence_id: eid, type: mimeToEvidenceType(att.mimeType),
       storage_ref: att.secureUrl, ai_description: `Attachment "${att.filename}" from ${sender} email reply.`,
       ai_tags: [sender === 'citizen' ? 'citizen_response' : 'department_response', 'email_attachment', 'force_ingested'],
       uploader_id: SYSTEM_ID, status: 'verified',
       source: sender === 'citizen' ? 'complainant' : 'department',
+      confidence_score: emailScore,
       linked_request_id: requestId,
     });
   }

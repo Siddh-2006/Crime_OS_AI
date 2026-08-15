@@ -260,6 +260,9 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
                     const summaryText = (evItem.summary || '').trim();
                     const supports: string[] = evItem.supports || evItem.allegations_supported || [];
 
+                    const confidenceValue = Number((evItem.confidence ?? ev.confidence ?? 0) || 0);
+                    const confidencePct = confidenceValue > 1 ? confidenceValue : confidenceValue * 100;
+
                     return (
                       <div 
                         key={ev.evidence_id || idx} 
@@ -271,9 +274,15 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
                           caption: captionText
                         })}
                       >
-                        <div className="flex justify-between items-center">
+                        <div className="flex justify-between items-center gap-3">
                           <span className="font-bold text-sm text-text-primary">{captionText}</span>
-                          <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-brand-primary/10 text-brand-primary border border-brand-primary/20 uppercase">{ev.importance || 'medium'}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-brand-primary/10 text-brand-primary border border-brand-primary/20 uppercase">{ev.importance || 'medium'}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-text-secondary">
+                          <span className="font-bold uppercase tracking-wider">Confidence Score:</span>
+                          <span className="font-bold text-text-primary">{Math.round(confidencePct)}%</span>
                         </div>
                         {summaryText && <p className="text-xs text-text-secondary leading-relaxed">{summaryText}</p>}
                         {supports.length > 0 && (

@@ -57,6 +57,7 @@ export interface IEvidence extends Document {
   originalFilename?: string;
   mimeType?: string;
   size?: number;
+  confidence_score?: number;
   isEncrypted?: boolean; // Flag to track if sensitive fields are encrypted
 }
 
@@ -96,6 +97,7 @@ const EvidenceSchema = new Schema<IEvidence>(
     originalFilename:      { type: String },
     mimeType:              { type: String },
     size:                  { type: Number },
+    confidence_score:      { type: Number, min: 0, max: 100, default: 0 },
     aiMetadata: {
       ocrText: { type: String },
       speechTranscript: { type: String },

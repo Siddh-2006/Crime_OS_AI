@@ -278,10 +278,49 @@ async function ingestResponse(opts: {
       // Fire and forget polling loop so we don't block the Gmail worker
       (async () => {
         const MAX_RETRIES = 30; // 30 * 10s = 5 minutes
+        const { SightEngineService } = require('../sightengine/SightEngineService');
         let allProcessed = false;
         for (let i = 0; i < MAX_RETRIES; i++) {
           const currentEvidences = await Evidence.find({ case_id: caseId, evidence_id: { $in: evidenceIds } }).lean();
           const pendingCount = currentEvidences.filter((e: any) => e.processingStatus === 'PENDING').length;
+
+          for (const evidence of currentEvidences) {
+            const url = (evidence as any)?.storage_ref || (evidence as any)?.secureUrl || (evidence as any)?.cloudinary_url || '';
+            const score = Number((evidence as any)?.confidence_score ?? 0);
+            if (url && (!Number.isFinite(score) || score <= 0)) {
+              try {
+                const evaluatedScore = await SightEngineService.evaluateConfidence({
+                  secureUrl: url,
+                  url,
+                  originalFilename: (evidence as any)?.originalFilename || (evidence as any)?.original_filename || (evidence as any)?.filename || (evidence as any)?.evidence_id,
+                  resourceType: (evidence as any)?.type,
+                  mimeType: (evidence as any)?.mimeType,
+                }, {
+                  source: 'email_attachment',
+                  evidenceId: (evidence as any)?.evidence_id,
+                  caseId: String(caseId),
+                });
+
+                await Evidence.updateOne(
+                  { evidence_id: evidence.evidence_id },
+                  { $set: { confidence_score: evaluatedScore } }
+                );
+                logger.info('[confidence score] Email evidence scored', {
+                  evidenceId: evidence.evidence_id,
+                  score: evaluatedScore,
+                  filename: evidence?.originalFilename || evidence?.evidence_id,
+                  source: 'email_attachment',
+                  caseId: String(caseId),
+                });
+              } catch (err: any) {
+                logger.warn('[confidence score] Email evidence scoring failed', {
+                  evidenceId: evidence?.evidence_id,
+                  caseId: String(caseId),
+                  error: err?.message,
+                });
+              }
+            }
+          }
           
           if (pendingCount === 0) {
             allProcessed = true;

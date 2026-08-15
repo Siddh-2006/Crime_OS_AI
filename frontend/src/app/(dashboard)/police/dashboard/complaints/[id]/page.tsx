@@ -58,6 +58,7 @@ interface Evidence {
   originalFilename: string;
   extension: string;
   size: number;
+  confidence_score?: number;
   aiMetadata?: {
     ocrText?: string;
     speechTranscript?: string;
@@ -964,30 +965,63 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                             </a>
                           </div>
 
-                          {file.aiMetadata && (
-                            <div className="pt-3 border-t border-border space-y-2.5">
-                              <div className="flex flex-wrap items-center gap-1.5">
-                                {file.aiMetadata.classification && file.aiMetadata.classification !== 'Unknown' && (
-                                  <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-brand-primary/10 text-brand-primary border border-brand-primary/20">
-                                    {file.aiMetadata.classification} ({Math.round((file.aiMetadata.classificationConfidence || 0) * 100)}%)
-                                  </span>
-                                )}
-                                {file.aiMetadata.imageTags?.map((tag: string) => (
-                                  <span key={tag} className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-semantic-success/10 text-semantic-success border border-semantic-success/20">
-                                    #{tag}
-                                  </span>
-                                ))}
+                          <div className="pt-3 border-t border-border space-y-2.5">
+                            <div className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl bg-surface-elevated/50">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-bold uppercase tracking-wide text-text-secondary">AI Confidence Score</span>
+                                <span className="text-xs font-bold text-text-primary">{Math.round(file.confidence_score ?? 0)}%</span>
                               </div>
-                              {file.aiMetadata.ocrText && (
-                                <details className="text-[11px] text-text-secondary bg-surface p-2.5 rounded-xl border border-border cursor-pointer">
-                                  <summary className="font-semibold text-text-primary select-none">Extracted OCR Text</summary>
-                                  <p className="mt-1.5 whitespace-pre-wrap font-mono text-[10px] bg-surface-elevated p-2 rounded-lg border border-border max-h-32 overflow-y-auto leading-relaxed text-text-primary">
-                                    {file.aiMetadata.ocrText}
-                                  </p>
-                                </details>
-                              )}
+                              <div className="text-[10px] font-semibold px-2 py-1 rounded-md" style={{
+                                backgroundColor: (file.confidence_score ?? 0) < 30 ? '#10b981' : (file.confidence_score ?? 0) < 70 ? '#f59e0b' : '#ef4444',
+                                color: 'white',
+                              }}>
+                                {(file.confidence_score ?? 0) < 30 ? '✓ Likely Real' : (file.confidence_score ?? 0) < 70 ? '? Uncertain' : '⚠ Likely AI'}
+                              </div>
                             </div>
-                          )}
+
+                            {/* Analog Gauge */}
+                            <div className="flex items-center gap-2">
+                              <div className="relative flex-1 h-8">
+                                <div className="absolute inset-x-0 top-3 h-1.5 rounded-full bg-gradient-to-r from-green-400 via-yellow-400 to-red-500" />
+                                <div
+                                  className="absolute top-1.5 h-4 w-4 -translate-x-1/2 rounded-full border-2 border-white shadow-lg bg-text-primary transition-all"
+                                  style={{ left: `${Math.min(100, Math.max(0, file.confidence_score ?? 0))}%` }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Scale Labels */}
+                            <div className="flex justify-between text-[9px] font-mono text-text-secondary px-1">
+                              <span>0%</span>
+                              <span>50%</span>
+                              <span>100%</span>
+                            </div>
+
+                            {file.aiMetadata && (
+                              <div className="space-y-2.5">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  {file.aiMetadata.classification && file.aiMetadata.classification !== 'Unknown' && (
+                                    <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-brand-primary/10 text-brand-primary border border-brand-primary/20">
+                                      {file.aiMetadata.classification} ({Math.round((file.aiMetadata.classificationConfidence || 0) * 100)}%)
+                                    </span>
+                                  )}
+                                  {file.aiMetadata.imageTags?.map((tag: string) => (
+                                    <span key={tag} className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-semantic-success/10 text-semantic-success border border-semantic-success/20">
+                                      #{tag}
+                                    </span>
+                                  ))}
+                                </div>
+                                {file.aiMetadata.ocrText && (
+                                  <details className="text-[11px] text-text-secondary bg-surface p-2.5 rounded-xl border border-border cursor-pointer">
+                                    <summary className="font-semibold text-text-primary select-none">Extracted OCR Text</summary>
+                                    <p className="mt-1.5 whitespace-pre-wrap font-mono text-[10px] bg-surface-elevated p-2 rounded-lg border border-border max-h-32 overflow-y-auto leading-relaxed text-text-primary">
+                                      {file.aiMetadata.ocrText}
+                                    </p>
+                                  </details>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>

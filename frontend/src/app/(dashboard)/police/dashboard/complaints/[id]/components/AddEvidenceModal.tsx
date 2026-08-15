@@ -20,19 +20,29 @@ export function AddEvidenceModal({ isOpen, onClose, caseId, onSuccess }: AddEvid
     description: '',
     source: 'IO_UPLOAD',
     is_physical: false,
+    secureUrl: '',
+    fileType: 'application/pdf',
   });
 
   const handleSubmit = async () => {
     if (!formData.title) return;
+    if (!formData.secureUrl || !/^https?:\/\//i.test(formData.secureUrl)) {
+      alert('Please enter a valid evidence URL (http/https) before saving.');
+      return;
+    }
+
     setLoading(true);
     try {
       await apiClient.post(`/cases/${caseId}/evidence`, {
-        evidenceList: [{
-          ...formData,
-          // Since it's a UI upload, we simulate file attachment with a mock URL
-          fileUrl: 'https://mock-storage.local/uploaded-evidence.pdf',
-          fileType: 'application/pdf',
-        }]
+        title: formData.title,
+        type: formData.type,
+        description: formData.description,
+        source: formData.source,
+        is_physical: formData.is_physical,
+        secureUrl: formData.secureUrl,
+        resourceType: formData.type,
+        mimeType: formData.fileType,
+        originalFilename: formData.title || 'io_evidence',
       });
       onSuccess();
       onClose();
@@ -70,6 +80,16 @@ export function AddEvidenceModal({ isOpen, onClose, caseId, onSuccess }: AddEvid
             <option value="screenshot">Screenshot</option>
             <option value="other">Other</option>
           </select>
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-neutral-500 uppercase mb-1">Evidence URL</label>
+          <input
+            type="url"
+            className="w-full px-3 py-2 border rounded-lg text-sm"
+            placeholder="https://example.com/evidence.pdf"
+            value={formData.secureUrl}
+            onChange={(e) => setFormData({ ...formData, secureUrl: e.target.value })}
+          />
         </div>
         <div>
           <label className="block text-xs font-bold text-neutral-500 uppercase mb-1">Description</label>

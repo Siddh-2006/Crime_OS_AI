@@ -62,6 +62,12 @@ const env = cleanEnv(process.env, {
   GEMINI_API_KEY:   str({ default: '' }),   // set to enable Gemini fallback
   GEMINI_MODEL:     str({ default: 'gemini-3.5-flash-lite' }),
 
+  // ── AI deepfake detection (SightEngine) ─────────────────────────────────────
+  SIGHTENGINE_API_USER: str({ default: '' }),
+  SIGHTENGINE_API_KEY: str({ default: '' }),
+  SIGHTENGINE_TIMEOUT_MS: num({ default: 30000 }),
+  SIGHTENGINE_ENABLE_DEEPFAKE_CHECK: bool({ default: true }),
+
   // ── LLM — Sarvam-1 via llama.cpp (DISABLED — kept for reference) ─────────────
   SARVAM_BASE_URL:   str({ default: 'http://localhost:8005' }),
   SARVAM_MODEL:      str({ default: 'sarvam-1' }),

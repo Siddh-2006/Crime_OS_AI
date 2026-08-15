@@ -1057,19 +1057,43 @@ export class InvestigationController {
     try {
       const { id } = req.params;
       const { type, title, description, tags, linked_step_id } = req.body;
-      const ioId = (req as any).user?.sub ?? 'anonymous'; // fallback for mock
-      
+      const rawEvidenceUrl = req.body?.secureUrl || req.body?.url || req.body?.fileUrl || req.body?.evidenceUrl || '';
+      const evidenceUrl = typeof rawEvidenceUrl === 'string' ? rawEvidenceUrl.trim() : '';
+      const evidenceFilename = req.body?.originalFilename || req.body?.filename || title || 'io_evidence';
+      const resourceType = req.body?.resourceType || type || 'document';
+      const mimeType = req.body?.mimeType || req.body?.fileType || 'application/octet-stream';
+      const ioId = (req as any).user?.sub ?? 'anonymous';
+
+      const { SightEngineService } = require('../../../shared/services/sightengine/SightEngineService');
+      const isRealUrl = !!evidenceUrl && /^(https?:\/\/|s3:|gs:|file:)/i.test(evidenceUrl) && !/mock[-_]/i.test(evidenceUrl);
+      const ioScore = isRealUrl
+        ? await SightEngineService.evaluateConfidence({
+            secureUrl: evidenceUrl,
+            url: evidenceUrl,
+            resourceType,
+            mimeType,
+            originalFilename: evidenceFilename,
+          }, {
+            source: 'io_officer',
+            caseId: id,
+          })
+        : 0;
+
       const evidence = await Evidence.create({
         case_id: id,
         evidence_id: uuidv4(),
-        type: type || 'document',
-        storage_ref: `mock-upload-${uuidv4()}`,
+        type: resourceType || 'document',
+        storage_ref: evidenceUrl || 'pending_upload',
+        secureUrl: evidenceUrl || 'pending_upload',
         ai_description: description,
         ai_tags: tags || [],
         uploader_id: ioId,
         status: 'pending',
         source: 'io_officer',
-        title: title
+        confidence_score: ioScore,
+        title: title,
+        originalFilename: evidenceFilename,
+        mimeType,
       });
 
       // Also log it in diary
