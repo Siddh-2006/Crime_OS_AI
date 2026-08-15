@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { Shield, Plus, QrCode, RefreshCw, CheckCircle2, Clock, MapPin, UserCheck, Sparkles, Printer, Camera, Search, Filter, Maximize2, X, FileText, Package, History, Info, Users, Archive } from 'lucide-react';
+import { Shield, Plus, QrCode, RefreshCw, CheckCircle2, Clock, MapPin, UserCheck, Sparkles, Printer, Camera, Search, Filter, Maximize2, X, FileText, Package, History, Info, Users, Archive, Truck } from 'lucide-react';
 import apiClient from '@/lib/axios';
 import { AddPhysicalEvidenceModal } from './AddPhysicalEvidenceModal';
 import { ScanTransferModal } from './ScanTransferModal';
@@ -121,8 +121,8 @@ export function PhysicalEvidencePanel({ caseId }: PhysicalEvidencePanelProps) {
       };
     }
     return {
-      stepName: 'Dispatch to Forensic Lab (FSL)',
-      description: 'Parcel stored at Police Malkhana. Initiate dispatch to Forensic Science Laboratory for chemical/ballistic/DNA analysis.',
+      stepName: 'Dispatch to Forensic Lab (FSL) or Court',
+      description: 'Parcel stored at Police Malkhana. Initiate dispatch to Forensic Science Laboratory or Court exhibit vault.',
       badgeColor: 'bg-emerald-50 text-emerald-900 border-emerald-300',
     };
   };
@@ -137,38 +137,45 @@ export function PhysicalEvidencePanel({ caseId }: PhysicalEvidencePanelProps) {
     if (statusFilter === 'ALL') return matchesSearch;
     if (statusFilter === 'MALKHANA') return matchesSearch && (item.status === 'SEIZED' || item.status === 'STORED_IN_MALKHANA');
     if (statusFilter === 'IN_TRANSIT') return matchesSearch && item.status?.includes('IN_TRANSIT');
-    if (statusFilter === 'FSL') return matchesSearch && item.status?.includes('FSL');
+    if (statusFilter === 'FSL') return matchesSearch && (item.status?.includes('FSL') || item.status?.includes('COURT'));
     return matchesSearch;
   });
 
+  // KPI Metrics Calculation
+  const totalItemsCount = items.length;
+  const malkhanaCount = items.filter((i) => i.status === 'SEIZED' || i.status === 'STORED_IN_MALKHANA').length;
+  const transitCount = items.filter((i) => i.status?.includes('IN_TRANSIT')).length;
+  const externalCount = items.filter((i) => i.status?.includes('FSL') || i.status?.includes('COURT') || i.status?.includes('FACILITY')).length;
+
   return (
-    <div className="space-y-4">
-      {/* Header bar - Clean White Toolbar */}
+    <div className="space-y-4 font-sans text-slate-900">
+      
+      {/* Header Bar - Clean White Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-white rounded-2xl border border-slate-200 shadow-xs">
         <div>
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse" />
-            <h3 className="text-base font-bold text-slate-900">Physical Evidence & Custody Ledger</h3>
+            <h3 className="text-base font-bold text-slate-900">Physical Evidence & Custody Ledger Command Center</h3>
             <span className="text-xs font-mono font-bold text-blue-900 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
-              {items.length} Assets Logged
+              {items.length} Logged Seizures
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-0.5 font-medium">
-            BNSS-compliant physical evidence tracking with SHA-256 chain verification.
+            BNSS-compliant physical evidence tracking with cryptographic chain verification.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setAddModalOpen(true)}
-            className="px-3.5 py-2 bg-blue-900 hover:bg-blue-800 text-white text-xs font-bold rounded-xl transition-all shadow-xs flex items-center gap-1.5"
+            className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-xs font-bold rounded-xl transition-all shadow-xs flex items-center gap-1.5"
           >
-            <Plus size={14} /> Log Seized Item
+            <Plus size={14} /> Log Seized Evidence
           </button>
 
           <button
             onClick={() => setScanModalOpen(true)}
-            className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all shadow-xs flex items-center gap-1.5"
+            className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all shadow-xs flex items-center gap-1.5"
           >
             <Shield size={14} /> Scan QR / Handover
           </button>
@@ -184,18 +191,63 @@ export function PhysicalEvidencePanel({ caseId }: PhysicalEvidencePanelProps) {
         </div>
       </div>
 
+      {/* KPI Metrics Dashboard Bar */}
+      {items.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-900 border border-blue-200 flex items-center justify-center font-bold shrink-0">
+              <Package size={20} />
+            </div>
+            <div>
+              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Seized Assets</div>
+              <div className="text-lg font-bold font-mono text-slate-900">{totalItemsCount}</div>
+            </div>
+          </div>
+
+          <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center justify-center font-bold shrink-0">
+              <Archive size={20} />
+            </div>
+            <div>
+              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">In Malkhana Vault</div>
+              <div className="text-lg font-bold font-mono text-slate-900">{malkhanaCount}</div>
+            </div>
+          </div>
+
+          <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 flex items-center justify-center font-bold shrink-0">
+              <Truck size={20} />
+            </div>
+            <div>
+              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">In-Transit</div>
+              <div className="text-lg font-bold font-mono text-slate-900">{transitCount}</div>
+            </div>
+          </div>
+
+          <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-800 border border-purple-200 flex items-center justify-center font-bold shrink-0">
+              <Shield size={20} />
+            </div>
+            <div>
+              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">At FSL / Court / Lab</div>
+              <div className="text-lg font-bold font-mono text-slate-900">{externalCount}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {items.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-300 shadow-xs space-y-2">
-          <div className="w-10 h-10 bg-blue-50 text-blue-700 rounded-full flex items-center justify-center mx-auto border border-blue-200">
-            <Shield size={20} />
+        <div className="text-center py-14 bg-white rounded-2xl border border-dashed border-slate-300 shadow-xs space-y-3">
+          <div className="w-12 h-12 bg-blue-50 text-blue-700 rounded-full flex items-center justify-center mx-auto border border-blue-200">
+            <Shield size={24} />
           </div>
           <h4 className="text-sm font-bold text-slate-900">No Physical Evidence Logged Yet</h4>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto">
-            Log seized weapons, narcotics, documents, or property to generate a QR tag and SHA-256 custody ledger.
+          <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
+            Log seized weapons, narcotics, documents, or property to generate a printable QR tag sticker and custody ledger.
           </p>
           <button
             onClick={() => setAddModalOpen(true)}
-            className="mt-3 px-4 py-2 bg-blue-900 text-white text-xs font-bold rounded-xl hover:bg-blue-800 transition-all inline-flex items-center gap-1.5 shadow-xs"
+            className="mt-2 px-5 py-2.5 bg-blue-900 text-white text-xs font-bold rounded-xl hover:bg-blue-800 transition-all inline-flex items-center gap-1.5 shadow-xs"
           >
             <Plus size={14} /> Log First Seized Item
           </button>
@@ -204,10 +256,10 @@ export function PhysicalEvidencePanel({ caseId }: PhysicalEvidencePanelProps) {
         /* Master-Detail 2-Column Grid Layout (5 : 7 Ratio) */
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           
-          {/* ── Left Column: Master Items List (5 Columns on LG - Spacious & Prominent) ── */}
-          <div className="lg:col-span-5 space-y-3">
+          {/* ── Left Column: Master Items List (5 Columns on LG) ── */}
+          <div className="lg:col-span-5 space-y-3 min-w-0">
             {/* Search & Status Filters */}
-            <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs space-y-2.5">
+            <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs space-y-2.5">
               <div className="relative">
                 <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
                 <input
@@ -215,22 +267,22 @@ export function PhysicalEvidencePanel({ caseId }: PhysicalEvidencePanelProps) {
                   placeholder="Search Tag ID, Item Name, Memo #..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-600"
+                  className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-600 font-medium"
                 />
               </div>
 
               {/* Filter Chips */}
-              <div className="flex flex-wrap gap-1 text-[10px] font-bold">
+              <div className="flex flex-wrap gap-1.5 text-[10px] font-bold">
                 {[
                   { id: 'ALL', label: 'All Items' },
                   { id: 'MALKHANA', label: 'Malkhana' },
                   { id: 'IN_TRANSIT', label: 'In-Transit' },
-                  { id: 'FSL', label: 'At FSL' },
+                  { id: 'FSL', label: 'At FSL / Court' },
                 ].map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setStatusFilter(tab.id)}
-                    className={`px-2.5 py-1 rounded-lg border transition-all ${
+                    className={`px-3 py-1 rounded-lg border transition-all ${
                       statusFilter === tab.id
                         ? 'bg-blue-900 text-white border-blue-900 shadow-2xs'
                         : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
@@ -242,7 +294,7 @@ export function PhysicalEvidencePanel({ caseId }: PhysicalEvidencePanelProps) {
               </div>
             </div>
 
-            {/* Master Item Cards - Spacious & Clean */}
+            {/* Master Item Cards - Clean & Elevated */}
             <div className="space-y-2.5 max-h-[720px] overflow-y-auto pr-1">
               {filteredItems.length === 0 ? (
                 <div className="p-6 bg-white rounded-2xl border border-dashed border-slate-300 text-center text-xs text-slate-500">
@@ -255,10 +307,10 @@ export function PhysicalEvidencePanel({ caseId }: PhysicalEvidencePanelProps) {
                     <div
                       key={item._id}
                       onClick={() => setSelectedItem(item)}
-                      className={`p-4 rounded-2xl border transition-all cursor-pointer shadow-2xs ${
+                      className={`p-4 rounded-2xl border transition-all cursor-pointer shadow-2xs relative overflow-hidden ${
                         isSelected
-                          ? 'bg-blue-50/70 border-blue-600 ring-2 ring-blue-600/30'
-                          : 'bg-white border-slate-200 hover:border-blue-300'
+                          ? 'bg-blue-50/70 border-blue-600 ring-2 ring-blue-600/30 border-l-4 border-l-blue-700'
+                          : 'bg-white border-slate-200 hover:border-blue-300 hover:shadow-xs'
                       }`}
                     >
                       <div className="flex items-start gap-3.5">
@@ -275,14 +327,14 @@ export function PhysicalEvidencePanel({ caseId }: PhysicalEvidencePanelProps) {
                           </div>
                         )}
 
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0 overflow-hidden">
                           <div className="flex items-start justify-between gap-1.5">
-                            <span className="text-[10px] font-mono font-bold text-blue-900 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                            <span className="text-[10px] font-mono font-bold text-blue-900 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 shrink-0">
                               #{item.evidenceTagId}
                             </span>
                             <span
-                              className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded uppercase ${
-                                item.status?.includes('FSL')
+                              className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded uppercase shrink-0 ${
+                                item.status?.includes('FSL') || item.status?.includes('COURT')
                                   ? 'bg-purple-50 text-purple-900 border border-purple-200'
                                   : item.status?.includes('IN_TRANSIT')
                                   ? 'bg-amber-50 text-amber-900 border border-amber-200'
@@ -293,8 +345,8 @@ export function PhysicalEvidencePanel({ caseId }: PhysicalEvidencePanelProps) {
                             </span>
                           </div>
 
-                          <h4 className="text-sm font-bold text-slate-900 mt-1 line-clamp-1">{item.itemName}</h4>
-                          <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">{item.description}</p>
+                          <h4 className="text-sm font-bold text-slate-900 mt-1 truncate">{item.itemName}</h4>
+                          <p className="text-[11px] text-slate-500 mt-0.5 truncate">{item.description}</p>
                         </div>
                       </div>
 
@@ -315,44 +367,60 @@ export function PhysicalEvidencePanel({ caseId }: PhysicalEvidencePanelProps) {
             </div>
           </div>
 
-          {/* ── Right Column: Inspection Workspace (7 Columns on LG - Balanced) ── */}
-          <div className="lg:col-span-7 space-y-4">
+          {/* ── Right Column: Inspection Workspace (7 Columns on LG) ── */}
+          <div className="lg:col-span-7 space-y-4 min-w-0">
             {selectedItem ? (
               <>
-                {/* Clean Light Hero Card */}
-                <div className="bg-white rounded-2xl p-4 shadow-xs border border-slate-200 space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono font-bold text-blue-900 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                          {selectedItem.category}
-                        </span>
-                        <span className="text-xs font-mono text-slate-700 font-bold">Tag #{selectedItem.evidenceTagId}</span>
-                        <span
-                          className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded uppercase ${
-                            selectedItem.status?.includes('FSL')
-                              ? 'bg-purple-50 text-purple-900 border border-purple-200'
-                              : selectedItem.status?.includes('IN_TRANSIT')
-                              ? 'bg-amber-50 text-amber-900 border border-amber-200'
-                              : 'bg-emerald-50 text-emerald-900 border border-emerald-200'
-                          }`}
-                        >
-                          {selectedItem.status?.replace(/_/g, ' ')}
-                        </span>
-                      </div>
-                      <h3 className="text-lg font-bold text-slate-900 mt-1">{selectedItem.itemName}</h3>
+                {/* Hero Header Card */}
+                <div className="bg-white rounded-2xl p-5 shadow-xs border border-slate-200 space-y-4 min-w-0 overflow-hidden">
+                  {/* Top Meta Row */}
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-wrap items-center justify-between gap-2.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[10px] font-mono font-bold text-white bg-blue-900 px-2.5 py-1 rounded-md shadow-2xs uppercase">
+                        {selectedItem.category}
+                      </span>
+                      <span className="text-xs font-mono font-bold text-slate-800 bg-white px-2.5 py-1 rounded-md border border-slate-200 shadow-2xs">
+                        Tag #{selectedItem.evidenceTagId}
+                      </span>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <span
+                      className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-md uppercase flex items-center gap-1.5 shadow-2xs ${
+                        selectedItem.status?.includes('FSL') || selectedItem.status?.includes('COURT')
+                          ? 'bg-purple-100 text-purple-900 border border-purple-200'
+                          : selectedItem.status?.includes('IN_TRANSIT')
+                          ? 'bg-amber-100 text-amber-900 border border-amber-200'
+                          : 'bg-emerald-100 text-emerald-900 border border-emerald-200'
+                      }`}
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        selectedItem.status?.includes('FSL') ? 'bg-purple-600' : selectedItem.status?.includes('IN_TRANSIT') ? 'bg-amber-600' : 'bg-emerald-600'
+                      }`} />
+                      {selectedItem.status?.replace(/_/g, ' ')}
+                    </span>
+                  </div>
+
+                  {/* Main Title & Primary Actions Row */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-0.5">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-xl font-extrabold text-slate-900 truncate tracking-tight">
+                        {selectedItem.itemName}
+                      </h3>
+                      <div className="text-xs text-slate-500 font-mono mt-0.5">
+                        Seizure Memo #{selectedItem.seizureMemoNo} • Wax Seal #{selectedItem.sealNumber}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
                       <button
                         onClick={() => handlePrintTag(selectedItem)}
-                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition-all border border-slate-300 flex items-center gap-1.5 shadow-2xs"
+                        className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition-all border border-slate-300 flex items-center gap-1.5 shadow-2xs"
                       >
-                        <Printer size={13} /> Print Tag Sticker
+                        <Printer size={14} /> Print Tag Sticker
                       </button>
                       <button
                         onClick={() => setScanModalOpen(true)}
-                        className="px-3.5 py-1.5 bg-blue-900 hover:bg-blue-800 text-white text-xs font-bold rounded-xl transition-all shadow-2xs flex items-center gap-1.5"
+                        className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-xs font-bold rounded-xl transition-all shadow-2xs flex items-center gap-1.5"
                       >
                         <Shield size={14} /> Handover / Update Stage
                       </button>
@@ -398,10 +466,10 @@ export function PhysicalEvidencePanel({ caseId }: PhysicalEvidencePanelProps) {
                   {/* ── Sub-Tab 1: Overview & Asset Tags ── */}
                   {activeWorkspaceTab === 'overview' && (
                     <div className="space-y-4 pt-1">
-                      {/* Side-by-Side Asset Inspection Box: Spot Photo vs QR Barcode Label */}
+                      {/* Side-by-Side Asset Inspection Box */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                        {/* Left Box: Spot Photo + Lightbox button */}
-                        <div className="bg-slate-50/80 p-3 rounded-xl border border-slate-200 space-y-2">
+                        {/* Left Box: Spot Photo + Lightbox */}
+                        <div className="bg-slate-50/80 p-3.5 rounded-xl border border-slate-200 space-y-2">
                           <div className="text-[10px] font-bold uppercase text-slate-700 flex items-center justify-between">
                             <span className="flex items-center gap-1"><Camera size={12} className="text-blue-700" /> Evidence Spot Photo</span>
                             {selectedItem.itemPhotoUrl && (
@@ -437,12 +505,12 @@ export function PhysicalEvidencePanel({ caseId }: PhysicalEvidencePanelProps) {
                         </div>
 
                         {/* Right Box: QR Tag Card & Barcode */}
-                        <div className="bg-slate-50/80 p-3 rounded-xl border border-slate-200 space-y-2">
+                        <div className="bg-slate-50/80 p-3.5 rounded-xl border border-slate-200 space-y-2">
                           <div className="text-[10px] font-bold uppercase text-slate-700 flex items-center gap-1">
                             <QrCode size={12} className="text-emerald-700" /> QR Barcode Tag Label
                           </div>
 
-                          <div className="flex items-center gap-3 bg-white p-2.5 rounded-lg border border-slate-200">
+                          <div className="flex items-center gap-3 bg-white p-3 rounded-lg border border-slate-200">
                             {selectedItem.qrDataUrl ? (
                               <img src={selectedItem.qrDataUrl} alt="QR Code" className="w-24 h-24 bg-white p-1 rounded-md shrink-0 border border-slate-200" />
                             ) : (
@@ -558,11 +626,11 @@ export function PhysicalEvidencePanel({ caseId }: PhysicalEvidencePanelProps) {
                       </div>
 
                       {/* Description & Witnesses */}
-                      <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-200 space-y-2">
+                      <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-200 space-y-2 min-w-0 overflow-hidden w-full">
                         <div className="font-bold text-slate-900 border-b border-slate-200 pb-2">
                           Physical Condition & Marked Features
                         </div>
-                        <p className="text-slate-700 leading-relaxed">{selectedItem.description || 'No specific markings noted.'}</p>
+                        <p className="text-slate-700 leading-relaxed break-all [word-break:break-all] [overflow-wrap:anywhere] whitespace-normal min-w-0 w-full">{selectedItem.description || 'No specific markings noted.'}</p>
                         {selectedItem.quantityOrWeight && (
                           <div className="text-slate-600 font-mono text-[11px] pt-1">
                             Quantity / Net Weight: <strong>{selectedItem.quantityOrWeight}</strong>
