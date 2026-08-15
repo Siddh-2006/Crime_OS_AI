@@ -55,6 +55,8 @@ class LegalQdrantConfig:
     api_key: str | None = None          # Set for Qdrant Cloud; leave empty for local
     prefer_grpc: bool = False
     timeout: float | None = 70.0
+    quantization_enabled: bool = False
+    quantization_always_ram: bool = True
 
 
 def _default_config() -> LegalQdrantConfig:
@@ -106,9 +108,22 @@ class LegalQdrantStore:
         models = self._models
         if self.client.collection_exists(self.config.collection_name):
             return
+
+        quantization_config = None
+        if self.config.quantization_enabled:
+            if not hasattr(models, "ScalarQuantization"):
+                raise RuntimeError(
+                    "Qdrant Python client does not expose ScalarQuantization in this environment. "
+                    "Upgrade qdrant-client to a version with scalar quantization support."
+                )
+            quantization_config = models.ScalarQuantization(
+                always_ram=self.config.quantization_always_ram,
+            )
+
         self.client.create_collection(
             collection_name=self.config.collection_name,
             vectors_config=models.VectorParams(size=vector_size, distance=models.Distance.COSINE),
+            quantization_config=quantization_config,
         )
 
     def _search_points(self, query_vector: Sequence[float], *, limit: int = 20, query_filter: Any | None = None):
