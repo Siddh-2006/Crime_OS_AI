@@ -263,7 +263,7 @@ export function CustodyTimelineVisualizer({ evidenceId, evidenceTagId, custodyCh
               {selectedDetailNode.remarks && (
                 <div className="pt-1">
                   <span className="text-[10px] text-slate-500 uppercase font-bold block mb-1">Transfer Examination Notes & Remarks</span>
-                  <div className="bg-white p-3.5 rounded-xl border border-slate-200 text-xs text-slate-800 leading-relaxed italic shadow-2xs">
+                  <div className="bg-white p-3.5 rounded-xl border border-slate-200 text-xs text-slate-800 leading-relaxed italic shadow-2xs [overflow-wrap:anywhere] [word-break:break-all] whitespace-pre-wrap">
                     "{selectedDetailNode.remarks}"
                   </div>
                 </div>
