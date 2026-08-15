@@ -19,6 +19,26 @@ function processQueue(error: AxiosError | null, token: string | null): void {
 }
 
 /**
+ * Check if we should attempt offline fallback for this request.
+ */
+function shouldUseOfflineFallback(url?: string): boolean {
+  if (!url) return false;
+  
+  // Only use offline fallback for GET requests to case-related endpoints
+  return (
+    url.includes('/cases/') &&
+    (url.includes('/analysis') ||
+      url.includes('/checklist') ||
+      url.includes('/diary') ||
+      url.includes('/requests') ||
+      url.includes('/evidence') ||
+      url.includes('/participants') ||
+      url.includes('/warrants') ||
+      url.includes('/threads'))
+  ) || url.includes('/complaints/') || url.includes('/case-understanding/');
+}
+
+/**
  * Configured Axios instance with:
  * - Automatic access token attachment from localStorage
  * - Transparent refresh token rotation on 401
@@ -47,11 +67,91 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error),
 );
 
-// ─── Response interceptor — silent refresh on 401 ─────────────────────────────
+// ─── Response interceptor — silent refresh on 401 + auto-cache on success ─────
 apiClient.interceptors.response.use(
-  (response) => response,
+  async (response) => {
+    // Auto-cache successful GET responses for case-related endpoints
+    if (
+      response.config.method?.toUpperCase() === 'GET' &&
+      shouldUseOfflineFallback(response.config.url) &&
+      response.status === 200 &&
+      typeof window !== 'undefined'
+    ) {
+      try {
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          const officer_id = user._id;
+          
+          const { CaseCacheManager } = await import('./offline/caseCache');
+          
+          // Extract case_id
+          const caseIdMatch = response.config.url?.match(/\/cases\/([^\/]+)/);
+          const complaintIdMatch = response.config.url?.match(/\/complaints\/([^\/]+)/);
+          const caseUnderstandingMatch = response.config.url?.match(/\/case-understanding\/([^\/]+)/);
+          const case_id = caseIdMatch?.[1] || complaintIdMatch?.[1] || caseUnderstandingMatch?.[1];
+          
+          if (case_id && officer_id) {
+            // Get existing cache or create new
+            let existingCache = await CaseCacheManager.getCase(case_id, officer_id);
+            
+            const url = response.config.url || '';
+            const data = response.data?.data || response.data;
+            
+            // Update the appropriate field in cache
+            const updates: any = {};
+            
+            if (url.includes('/analysis')) updates.snapshot = data;
+            else if (url.includes('/checklist')) updates.checklist = data;
+            else if (url.includes('/diary/history')) updates.diaryHistory = Array.isArray(data) ? data : [];
+            else if (url.includes('/diary/places')) updates.placesVisited = Array.isArray(data) ? data : [];
+            else if (url.includes('/diary')) updates.diaryEntries = Array.isArray(data) ? data : [];
+            else if (url.includes('/requests')) updates.requests = data || [];
+            else if (url.includes('/evidence')) updates.evidence = data || [];
+            else if (url.includes('/participants')) updates.participants = Array.isArray(data) ? data : [];
+            else if (url.includes('/warrants')) updates.warrants = Array.isArray(data) ? data : [];
+            else if (url.includes('/threads')) updates.threads = data || [];
+            else if (complaintIdMatch) updates.complaintData = data;
+            else if (caseUnderstandingMatch) updates.caseUnderstanding = data;
+            
+            if (Object.keys(updates).length > 0) {
+              if (existingCache) {
+                // Update existing cache
+                await CaseCacheManager.updateCaseFields(case_id, officer_id, updates);
+                console.log(`[apiClient] ✓ Auto-cached: ${url.split('/').pop()}`);
+              } else {
+                // Create new cache entry with this data
+                const newCache = {
+                  snapshot: null,
+                  checklist: null,
+                  diaryEntries: [],
+                  diaryHistory: [],
+                  placesVisited: [],
+                  requests: [],
+                  evidence: [],
+                  participants: [],
+                  warrants: [],
+                  threads: [],
+                  complaintData: null,
+                  caseUnderstanding: null,
+                  ...updates,
+                };
+                await CaseCacheManager.saveCase(case_id, officer_id, newCache);
+                console.log(`[apiClient] ✓ Created cache with: ${url.split('/').pop()}`);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        // Cache error shouldn't break the response
+        console.error('[apiClient] Cache save failed:', error);
+      }
+    }
+    
+    return response;
+  },
   async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean; _offlineRetry?: boolean };
 
     const isPublicAuthRoute =
       originalRequest.url?.includes(API_ROUTES.AUTH.LOGIN) ||
@@ -104,6 +204,48 @@ apiClient.interceptors.response.use(
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
+      }
+    }
+
+    // Try offline fallback for network errors
+    if (
+      !originalRequest._offlineRetry &&
+      (error.code === 'ERR_NETWORK' || !navigator.onLine) &&
+      !isPublicAuthRoute
+    ) {
+      console.log(`[apiClient] ⚠️ Network error for ${originalRequest.method} ${originalRequest.url}`);
+      console.log('[apiClient] Navigator online status:', navigator.onLine);
+      console.log('[apiClient] Error code:', error.code);
+      
+      const method = originalRequest.method?.toUpperCase();
+      
+      // For GET requests, try cache
+      if (method === 'GET' && shouldUseOfflineFallback(originalRequest.url)) {
+        console.log('[apiClient] 📦 Attempting cache retrieval...');
+        originalRequest._offlineRetry = true;
+        const { OfflineApiClient } = await import('./offline/offlineApiClient');
+        try {
+          const result = await OfflineApiClient.request(originalRequest);
+          console.log('[apiClient] ✓ Cache hit!');
+          return result;
+        } catch (offlineError) {
+          console.error('[apiClient] ✗ Cache miss:', offlineError);
+        }
+      }
+      
+      // For mutations (POST/PUT/PATCH/DELETE), queue them
+      if (method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+        console.log('[apiClient] 📝 Queueing mutation for sync...');
+        originalRequest._offlineRetry = true;
+        const { OfflineApiClient } = await import('./offline/offlineApiClient');
+        try {
+          const result = await OfflineApiClient.request(originalRequest);
+          console.log('[apiClient] ✓ Mutation queued');
+          // Return success response indicating queued
+          return result;
+        } catch (offlineError) {
+          console.error('[apiClient] ✗ Failed to queue mutation:', offlineError);
+        }
       }
     }
 

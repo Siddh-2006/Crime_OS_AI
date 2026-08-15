@@ -11,6 +11,8 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { Watermark } from '@/components/Watermark';
 import { ParticleBackground } from '@/components/ParticleBackground';
+import { SyncStatusIndicator } from '@/components/SyncStatusIndicator';
+import { OfflineBanner } from '@/components/OfflineBanner';
 
 interface NavItem {
   label: string;
@@ -81,6 +83,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="flex h-screen bg-background overflow-hidden relative">
       <ParticleBackground />
       <Watermark />
+      {isPolice && <OfflineBanner />}
       {/* ── Sidebar ────────────────────────────────────────────────────────────── */}
       <CollapsibleSidebar
         navItems={navItems}
@@ -102,6 +105,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
           <div className="hidden lg:block" />
           <div className="flex items-center gap-3">
+            {isPolice && <SyncStatusIndicator />}
             <LanguageToggle />
             <ThemeToggle />
             <div className="flex items-center gap-3 pl-3 border-l border-border">

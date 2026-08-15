@@ -11,6 +11,7 @@ import Cookies from 'js-cookie';
 import apiClient from '@/lib/axios';
 import { API_ROUTES, ROLE } from '@/lib/constants';
 import type { AuthUser, ApiResponse, LoginResponse } from '@/lib/types';
+import { CaseCacheManager, OutboxManager } from '@/lib/offline';
 
 // ─── Context Shape ────────────────────────────────────────────────────────────
 
@@ -149,6 +150,16 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactElemen
     } catch {
       // Proceed with local cleanup even if server logout fails
     } finally {
+      // Clear offline data for this officer
+      if (user?._id && isPolice) {
+        try {
+          await CaseCacheManager.clearCachesForOfficer(user._id);
+          await OutboxManager.clearOutboxForOfficer(user._id);
+        } catch (error) {
+          console.error('Failed to clear offline data:', error);
+        }
+      }
+      
       localStorage.removeItem('accessToken');
       localStorage.removeItem('user');
       Cookies.remove('role', { path: '/' });
