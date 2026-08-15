@@ -1163,7 +1163,8 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                 ] : []
               );
 
-              const entities: Record<string, Array<{ v: string }>> = snap?.summary?.entities ?? {};
+              const entities: Record<string, Array<{ v: string }>> =
+                (snap?.summary?.entities && typeof snap.summary.entities === 'object') ? snap.summary.entities : {};
               const conflicts: Array<{ t: string }> = snap?.summary?.conflicts ?? (
                 ci?.m12Contradictions?.map((c: any) => ({ t: c.description || c.contradiction_type })) ??
                 ci?.correlation?.conflicts?.map((t: string) => ({ t })) ?? []
@@ -1382,15 +1383,15 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                       {aiSubTab === 'entities' && (
                         <Card>
                           <p className="text-[10.5px] text-text-secondary uppercase tracking-widest font-semibold mb-4">Involved Entities</p>
-                          {Object.keys(entities).length === 0 && (!ci?.m3Entities || ci.m3Entities.length === 0) ? (
+                          {Object.keys(entities || {}).length === 0 && (!ci?.m3Entities || ci.m3Entities.length === 0) ? (
                             <p className="text-sm text-neutral-500 italic">No entities extracted yet.</p>
                           ) : (
                             <div className="space-y-4">
-                              {Object.entries(entities).map(([label, vals]) => (
+                              {Object.entries(entities || {}).map(([label, vals]) => (
                                 <div key={label}>
                                   <p className="text-[10.5px] text-neutral-500 uppercase tracking-widest font-bold mb-2">{label}</p>
                                   <div className="flex flex-wrap gap-2">
-                                    {(vals as Array<{ v: string }>).map((ent, ei) => (
+                                    {Array.isArray(vals) && (vals as Array<{ v: string }>).map((ent, ei) => (
                                       <span key={ei} className="flex items-center gap-2 bg-neutral-900/30 border border-neutral-800 text-text-secondary text-[12.5px] font-semibold px-3 py-1.5 rounded-full">
                                         {ent.v}
                                       </span>
@@ -1401,7 +1402,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                             </div>
                           )}
                           {/* Fallback: show m3Entities from complaintIntelligence */}
-                          {Object.keys(entities).length === 0 && ci?.m3Entities && ci.m3Entities.length > 0 && (
+                          {Object.keys(entities || {}).length === 0 && ci?.m3Entities && ci.m3Entities.length > 0 && (
                             <div className="space-y-4">
                               {Array.from(new Set(ci.m3Entities.map((e: any) => e.type || e.entity_type || e.entityType))).filter(Boolean).map((type: any) => (
                                 <div key={type as string}>

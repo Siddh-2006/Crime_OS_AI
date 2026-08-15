@@ -81,6 +81,8 @@ router.get('/:id/checklist',                 InvestigationController.getCaseChec
 router.post('/:id/checklist/steps',          InvestigationController.addManualStep);
 router.post('/:id/checklist/:stepId/complete', InvestigationController.completeStep);
 router.get('/:id/requests',                  InvestigationController.getDepartmentRequests);
+router.get('/:id/threads',                   InvestigationController.getThreads);
+router.post('/:id/threads/:thread_id/export-pdf', InvestigationController.exportThreadToPdf);
 router.get('/:id/evidence',                  InvestigationController.getEvidence);
 router.post('/:id/evidence',                 InvestigationController.addEvidence);
 router.post('/:id/evidence/:evidenceId/sections/attach', InvestigationController.attachEvidenceSections);

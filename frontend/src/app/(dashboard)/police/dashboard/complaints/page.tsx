@@ -32,6 +32,7 @@ interface Complaint {
   shortDescription: string;
   citizen: Citizen;
   assignedIO?: AssignedIO;
+  assignedIOs?: AssignedIO[];
   createdAt: string;
 }
 
@@ -203,7 +204,16 @@ export default function PoliceComplaintQueuePage(): React.ReactElement {
                       </td>
                       <td className="p-4">{getStatusBadge(c.status)}</td>
                       <td className="p-4">
-                        {c.assignedIO ? (
+                        {c.assignedIOs && c.assignedIOs.length > 0 ? (
+                          <div className="flex flex-col gap-1">
+                            {c.assignedIOs.map((io, idx) => (
+                              <div key={idx} className="flex items-center gap-1.5">
+                                <span className="text-text-primary font-semibold text-xs">{io.officerName}</span>
+                                <span className="text-[10px] text-text-secondary font-mono">({io.badgeNumber})</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : c.assignedIO ? (
                           <div className="flex flex-col">
                             <span className="text-text-primary font-semibold">{c.assignedIO.officerName}</span>
                             <span className="text-xs text-text-secondary font-mono">{c.assignedIO.badgeNumber}</span>

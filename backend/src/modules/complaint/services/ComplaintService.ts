@@ -510,9 +510,13 @@ export class ComplaintService {
       }
 
       if (officer && officer.role === 'IO') {
+        const assignedIOs = (complaint.assignedIOs || []).map((id: any) => String(id._id || id));
         const assignedIOId = complaint.assignedIO ? String((complaint.assignedIO as any)._id ?? complaint.assignedIO) : null;
-        if (assignedIOId && assignedIOId !== user.sub) {
-          logger.warn('[ComplaintService] Warning: IO viewing non-assigned complaint');
+        const isAssigned =
+          (assignedIOs.length > 0 && assignedIOs.includes(user.sub)) ||
+          (assignedIOId && assignedIOId === user.sub);
+        if (!isAssigned) {
+          logger.warn(`[ComplaintService] Warning: IO (${user.sub}) viewing non-assigned complaint (${complaint._id})`);
         }
       }
     }

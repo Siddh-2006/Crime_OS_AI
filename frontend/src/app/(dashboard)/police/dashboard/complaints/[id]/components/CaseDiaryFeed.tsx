@@ -25,8 +25,10 @@ interface CaseDiaryFeedProps {
   onEntryClick?: (entry: DiaryEntry) => void;
 }
 
-export function CaseDiaryFeed({ entries, onEntryClick }: CaseDiaryFeedProps) {
-  const getEventIcon = (eventType: string) => {
+export function CaseDiaryFeed({ entries = [], onEntryClick }: CaseDiaryFeedProps) {
+  const safeEntries = Array.isArray(entries) ? entries : [];
+
+  const getEventIcon = (eventType?: string) => {
     switch (eventType) {
       case 'complaint_filed': return <FileText className="text-brand-primary" size={14} />;
       case 'evidence_added': return <Upload className="text-purple-500" size={14} />;
@@ -64,6 +66,7 @@ export function CaseDiaryFeed({ entries, onEntryClick }: CaseDiaryFeedProps) {
   };
 
   const getEventTitle = (entry: DiaryEntry) => {
+    if (!entry || !entry.event_type) return 'Investigation Event';
     switch (entry.event_type) {
       case 'complaint_filed': return 'Complaint Registered';
       case 'evidence_added': return 'Evidence Attached';
@@ -96,15 +99,16 @@ export function CaseDiaryFeed({ entries, onEntryClick }: CaseDiaryFeedProps) {
       case 'custody_deadline_reached': return `⚠ BNSS §57 Custody Deadline Reached — ${entry.payload?.participant_name || ''}`;
       case 'accused_produced_before_court': return `${entry.payload?.participant_name || 'Accused'} Produced Before Court`;
       case 'suspect_released': return `${entry.payload?.participant_name || 'Accused'} Released from Custody`;
-      default: return entry.event_type.replace(/_/g, ' ').toUpperCase();
+      default: return String(entry.event_type || 'Event').replace(/_/g, ' ').toUpperCase();
     }
   };
 
   const getEventDescription = (entry: DiaryEntry) => {
+    if (!entry || !entry.event_type) return '';
     if (entry.event_type === 'io_assigned') {
       const ios = entry.payload?.assignedIOs;
       if (Array.isArray(ios)) {
-        return `Assigned Officers: ${ios.map((i: any) => i.name).join(', ')}`;
+        return `Assigned Officers: ${ios.map((i: any) => i.name || i.officerName || i).join(', ')}`;
       }
       return 'Investigation Officer assignment modified';
     }
@@ -141,32 +145,49 @@ export function CaseDiaryFeed({ entries, onEntryClick }: CaseDiaryFeedProps) {
     return '';
   };
 
+  const getActorName = (actor: any) => {
+    if (!actor) return 'System';
+    if (typeof actor === 'string') return actor;
+    if (actor.name) return actor.name;
+    if (actor.type === 'officer' && actor.id) return `Officer ${actor.id}`;
+    return actor.type || actor.id || 'System';
+  };
+
+  const getFormattedTimestamp = (ts?: string) => {
+    if (!ts) return '';
+    try {
+      return new Date(ts).toLocaleString('en-IN');
+    } catch {
+      return String(ts);
+    }
+  };
+
   return (
     <Card glass className="h-full max-h-[800px] flex flex-col border-border animate-fade-in">
       <CardHeader title="Case Diary" subtitle="Audit trail of investigation events" />
       <div className="flex-1 overflow-y-auto p-4">
-        {entries.length === 0 ? (
+        {safeEntries.length === 0 ? (
           <p className="text-sm text-text-muted italic text-center py-8">No diary events recorded yet.</p>
         ) : (
           <div className="relative pl-6 border-l-2 border-border space-y-6 pb-4 ml-2">
-            {entries.map((entry) => (
-              <div key={entry.entry_id} className="relative group">
+            {safeEntries.map((entry, idx) => (
+              <div key={entry?.entry_id || entry?._id || idx} className="relative group">
                 <span className="absolute -left-[31px] top-1 flex h-6 w-6 items-center justify-center rounded-full bg-surface border border-border shadow-sm group-hover:scale-110 transition-transform">
-                  {getEventIcon(entry.event_type)}
+                  {getEventIcon(entry?.event_type)}
                 </span>
                 <div 
                   className={`bg-surface-elevated/40 p-3.5 rounded-2xl border border-border/60 shadow-sm transition-all duration-200 ${onEntryClick ? 'cursor-pointer hover:border-brand-primary/40 hover:bg-surface-elevated/80' : ''}`}
-                  onClick={() => onEntryClick && onEntryClick(entry)}
+                  onClick={() => onEntryClick && entry && onEntryClick(entry)}
                 >
                   <div className="flex justify-between items-start mb-1">
                     <p className="text-xs font-bold text-text-primary">{getEventTitle(entry)}</p>
                     <p className="text-[10px] text-text-muted font-mono font-medium whitespace-nowrap ml-2">
-                      {new Date(entry.timestamp).toLocaleString('en-IN')}
+                      {getFormattedTimestamp(entry?.timestamp)}
                     </p>
                   </div>
                   <p className="text-xs text-text-muted mb-1 flex items-center gap-1">
                     <span className="font-semibold capitalize text-text-secondary">
-                      {entry.actor.name || (entry.actor.type === 'officer' ? `Officer ${entry.actor.id}` : entry.actor.type)}
+                      {getActorName(entry?.actor)}
                     </span> 
                   </p>
                   {getEventDescription(entry) && (

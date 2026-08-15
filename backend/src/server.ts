@@ -93,13 +93,19 @@ async function bootstrap(): Promise<void> {
 
       chatNs.use(async (socket, next) => {
         try {
-          const token = socket.handshake.auth?.token || socket.handshake.headers?.authorization?.replace('Bearer ', '');
+          const rawHeader = socket.handshake.headers?.authorization;
+          const token =
+            socket.handshake.auth?.token ||
+            (rawHeader ? rawHeader.replace('Bearer ', '') : '');
+
           if (!token) {
+            logger.warn('[Private Room] Socket auth failed: Missing authentication token');
             return next(new Error('Authentication token required'));
           }
           const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as any;
           const officer = await Officer.findById(decoded.sub).select('officerName role policeStation').lean();
           if (!officer) {
+            logger.warn(`[Private Room] Socket auth failed: Officer not found (${decoded.sub})`);
             return next(new Error('Officer not found'));
           }
           (socket as any).officer = {
@@ -108,44 +114,53 @@ async function bootstrap(): Promise<void> {
             role: officer.role,
           };
           next();
-        } catch (err) {
+        } catch (err: any) {
+          logger.warn(`[Private Room] Socket JWT verification failed: ${err.message}`);
           next(new Error('Unauthorized socket connection'));
         }
       });
 
       chatNs.on('connection', (socket) => {
         const officer = (socket as any).officer;
-        logger.info(`Socket connected to /chat: ${officer?.name} (${socket.id})`);
+        logger.info(`[Private Room] Socket connected: ${officer?.name} (${socket.id})`);
 
         socket.on('join_room', async ({ caseId }) => {
           if (!caseId) return;
           const complaint = await Complaint.findById(caseId).select('assignedIOs assignedIO').lean();
           if (!complaint) {
+            logger.warn(`[Private Room] Complaint not found: ${caseId}`);
             socket.emit('error', { message: 'Case not found' });
             return;
           }
 
+          const assignedIOs = (complaint.assignedIOs || []).map((id: any) => id.toString());
+          const singleIO = complaint.assignedIO ? complaint.assignedIO.toString() : null;
+
           const isAssigned =
-            Array.isArray(complaint.assignedIOs) &&
-            complaint.assignedIOs.some((id: any) => id.toString() === officer.id);
+            assignedIOs.includes(officer.id) ||
+            singleIO === officer.id ||
+            officer.role === 'SHO';
 
           if (!isAssigned && officer.role === 'IO') {
+            logger.warn(`[Private Room] IO ${officer?.name} (${officer?.id}) not authorized for room case_${caseId}`);
             socket.emit('error', { message: 'Not authorized to join this case room' });
             return;
           }
 
           const roomName = `case_${caseId}`;
           socket.join(roomName);
+          logger.info(`[Private Room] ${officer?.name} joined room ${roomName}`);
           socket.emit('joined_room', { caseId, roomName });
         });
 
         socket.on('send_message', async ({ caseId, content }) => {
           if (!caseId || !content || !content.trim()) return;
           try {
+            logger.info(`[Private Room] New message from ${officer?.name} in case_${caseId}`);
             const message = await CaseRoomService.saveMessage(caseId, officer.id, officer.name, content.trim());
             chatNs.to(`case_${caseId}`).emit('new_message', message);
           } catch (err) {
-            logger.error('Error in socket send_message:', err);
+            logger.error('[Private Room] Error in socket send_message:', err);
             socket.emit('error', { message: 'Failed to send message' });
           }
         });

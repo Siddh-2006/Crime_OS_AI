@@ -14,8 +14,8 @@ const AdminSchema = new mongoose.Schema({
 
 const Admin = mongoose.model('Admin', AdminSchema);
 
-const ADMIN_USERNAME = process.env.SEED_ADMIN_USERNAME || 'admin@police.gov.in';
-const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || 'AdminPassword123!';
+const ADMIN_USERNAME = process.env.SEED_ADMIN_USERNAME || 'admin';
+const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || 'admin';
 
 mongoose.connect(MONGO_URI).then(async () => {
   const hash = await bcrypt.hash(ADMIN_PASSWORD, 10);
