@@ -18,6 +18,7 @@ import citizenRequestRoutes from './modules/investigation/routes/citizenRequest.
 // import departmentPortalRoutes from './modules/departmentPortal/routes/departmentPortal.routes';
 import caseUnderstandingRoutes from './modules/caseUnderstanding/routes/caseUnderstanding.routes';
 import translationRoutes from './modules/translation/translation.routes';
+import physicalEvidenceRoutes from './modules/investigation/routes/physicalEvidence.routes';
 import { sendError } from './shared/utils/response.util';
 import { HttpStatusCode } from './common/enums/httpStatus.enum';
 
@@ -75,6 +76,7 @@ export function createApp(): Application {
   app.use('/api/v1/citizen-request', citizenRequestRoutes);
   app.use('/api/v1/case-understanding', caseUnderstandingRoutes);
   app.use('/api/v1/translation', translationRoutes);
+  app.use('/api/v1/physical-evidence', physicalEvidenceRoutes);
 
   // ─── 404 handler ──────────────────────────────────────────────────────────────
   app.use((_req: Request, res: Response) => {

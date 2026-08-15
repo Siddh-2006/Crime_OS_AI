@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
@@ -20,6 +20,7 @@ import ThreadViewerModal from './ThreadViewerModal';
 import SnapshotDetailModal from './SnapshotDetailModal';
 import StepDetailModal from './StepDetailModal';
 import { AddEvidenceModal } from './AddEvidenceModal';
+import { PhysicalEvidencePanel } from '@/components/evidence/PhysicalEvidencePanel';
 import ComplaintDetailModal from './ComplaintDetailModal';
 import { DiaryDetailModal } from './DiaryDetailModal';
 import { useTranslation } from '@/context/TranslationContext';
@@ -33,7 +34,7 @@ interface InvestigationWorkspaceProps {
   setActiveTab: (tab: WorkspaceTab) => void;
 }
 
-export type WorkspaceTab = 'analysis' | 'diary' | 'checklist' | 'requests' | 'evidence' | 'participants' | 'complaint' | 'case_understanding' | 'timeline' | 'placesVisited' | 'custody';
+export type WorkspaceTab = 'analysis' | 'diary' | 'checklist' | 'requests' | 'evidence' | 'physical_evidence' | 'participants' | 'complaint' | 'case_understanding' | 'timeline' | 'placesVisited' | 'custody';
 
 export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: InvestigationWorkspaceProps) {
   const { toasts, showToast, removeToast } = useToast();
@@ -969,6 +970,10 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
           <EvidencePanel evidence={evidence} caseId={caseId} onRefresh={fetchWorkspaceData} snapshot={snapshot} caseUnderstanding={caseUnderstanding} />
         )}
 
+        {activeTab === 'physical_evidence' && (
+          <PhysicalEvidencePanel caseId={caseId} />
+        )}
+
         {activeTab === 'participants' && (
           <ParticipantsPanel participants={participants} caseId={caseId} onRefresh={fetchWorkspaceData} />
         )}
@@ -1169,12 +1174,12 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
   return (
     <>
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-bold text-text-primary">Case Evidence File</h3>
+        <h3 className="text-lg font-bold text-text-primary">Digital Attachments & Case Files</h3>
         <button 
           onClick={() => setAddModalOpen(true)}
           className="px-3.5 py-1.5 bg-brand-primary text-white text-xs font-bold rounded-xl hover:bg-brand-primary/90 transition-all shadow-xs"
         >
-          + Add Evidence
+          + Add Attachment
         </button>
       </div>
 

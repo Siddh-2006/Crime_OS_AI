@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { ShieldCheck, LayoutDashboard, LogOut, FileText, Bell, Plus, Bot, ClipboardList, BookOpen, MapPin, Send, FolderOpen, Users, Brain, Clock, ChevronRight, Shield } from 'lucide-react';
+import { ShieldCheck, LayoutDashboard, LogOut, FileText, Bell, Plus, Bot, ClipboardList, BookOpen, MapPin, Send, FolderOpen, Users, Brain, Clock, ChevronRight, Shield, QrCode } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { APP_ROUTES, ROLE } from '@/lib/constants';
 import { Loader } from '@/components/ui/Loader';
@@ -38,6 +38,7 @@ const caseNavItems = [
   { id: 'placesVisited', label: 'Places Visited', icon: <MapPin size={15} /> },
   { id: 'requests', label: 'Requests', icon: <Send size={15} /> },
   { id: 'evidence', label: 'Evidence', icon: <FolderOpen size={15} /> },
+  { id: 'physical_evidence', label: 'Physical Evidence (QR)', icon: <QrCode size={15} /> },
   { id: 'participants', label: 'Participants', icon: <Users size={15} /> },
   { id: 'custody', label: 'Custody', icon: <Shield size={15} /> },
   { id: 'complaint', label: 'Original Complaint', icon: <FileText size={15} /> },
