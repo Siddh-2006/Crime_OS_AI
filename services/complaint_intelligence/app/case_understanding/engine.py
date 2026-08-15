@@ -17,6 +17,7 @@ from app.case_understanding.prompt_templates import (
 from app.core.exceptions import LLMError
 from app.core.logging import logger
 from app.llm.client import ILLMClient
+from app.llm.compression_client import PromptCompressionClient
 from app.schemas.case_context import CaseContext
 from app.schemas.case_understanding import CaseUnderstanding
 
@@ -51,6 +52,7 @@ class CaseUnderstandingEngine(ICaseUnderstandingEngine):
     ) -> None:
         self._llm_client = llm_client
         self._max_retries = max_retries
+        self._compression_client = PromptCompressionClient()
 
     def _enrich_from_context(
         self, result: "CaseUnderstanding", context: "CaseContext"
@@ -137,6 +139,9 @@ class CaseUnderstandingEngine(ICaseUnderstandingEngine):
 
     async def analyze(self, context: CaseContext) -> CaseUnderstanding:
         t0 = time.monotonic()
+        
+        logger.info("[case_understanding] Compressing context before LLM prompt assembly...")
+        await context.compress_context(self._compression_client)
         logger.info(
             "[case_understanding] Starting single-pass LLM analysis",
             extra={"case_id": context.case_id, "evidence_count": len(context.evidence)},

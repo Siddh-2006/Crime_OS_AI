@@ -17,11 +17,15 @@
  *   department_requests:{ summary: {draft,reviewed,sent,acknowledged,
  *                           response_received,overdue}
  *                         items: RequestRow[] }
- *   recent_diary:       DiaryRow[]          // last 20 entries, oldest first
+ *   recent_diary:       DiaryRow[] | string // last 20 entries, or compressed string
  * }
  */
 
 import mongoose from 'mongoose';
+import { compressPrompt } from '../../../shared/clients/promptCompressionClient';
+import * as crypto from 'crypto';
+import { AnalysisSnapshot } from '../models/AnalysisSnapshot.model';
+
 import { Complaint }          from '../../complaint/models/Complaint.model';
 import { DiaryEntry }         from '../models/DiaryEntry.model';
 import { CaseChecklist }      from '../models/CaseChecklist.model';
@@ -201,7 +205,7 @@ export interface FactsObject {
     summary: RequestSummary;
     items:   RequestRow[];
   };
-  recent_diary: DiaryRow[];
+  recent_diary: DiaryRow[] | string;
 }
 
 // ─── Config ────────────────────────────────────────────────────────────────────
@@ -428,7 +432,7 @@ export async function buildFactsObject(caseId: string): Promise<FactsObject> {
   });
 
   // ── Recent diary (reverse back to chronological) ───────────────────────────
-  const recentDiary: DiaryRow[] = diaryDocs.reverse().map((d) => ({
+  let recentDiary: any = diaryDocs.reverse().map((d) => ({
     entry_id:   d.entry_id,
     timestamp:  d.timestamp,
     actor:      { type: d.actor.type, id: d.actor.id },
@@ -436,6 +440,71 @@ export async function buildFactsObject(caseId: string): Promise<FactsObject> {
     payload:    (d.payload as Record<string, unknown>) ?? {},
     ref_ids:    (d.ref_ids as Record<string, string | undefined>) ?? {},
   }));
+
+
+  // ── Prompt Compression ───────────────────────────────────────────────────────
+  // Find latest snapshot to check cache
+  const latestSnapshot = await AnalysisSnapshot.findOne({ case_id: oid }).sort({ timestamp: -1 }).lean().exec();
+  const cache = (latestSnapshot as any)?.compression_cache || {};
+
+  // Helper to extract force tokens
+  const extractForceTokens = (text: string): string[] => {
+    const tokens = new Set<string>();
+    // Evidence IDs
+    evItems.forEach(ev => tokens.add(ev.evidence_id));
+    // Dept entity IDs
+    reqItems.forEach(req => { if (req.department_entity_id) tokens.add(req.department_entity_id); });
+    
+    // Dates (YYYY-MM-DD)
+    const dates = text.match(/\b\d{4}-\d{2}-\d{2}\b/g);
+    if (dates) dates.forEach(d => tokens.add(d));
+    
+    // Phone numbers (simple heuristic: +91-XXX or 10 digits)
+    const phones = text.match(/(?:\+\d{1,3}-?)?\d{10}\b/g);
+    if (phones) phones.forEach(p => tokens.add(p));
+    
+    return Array.from(tokens);
+  };
+
+  // Compress evidence descriptions
+  for (const ev of evItems) {
+    if (ev.ai_description && ev.ai_description.length > 2000) {
+      const hash = crypto.createHash('sha256').update(ev.ai_description).digest('hex');
+      if (cache[hash]) {
+        ev.ai_description = cache[hash];
+      } else {
+        const tokens = extractForceTokens(ev.ai_description);
+        const compressed = await compressPrompt(ev.ai_description, tokens, 0.5);
+        // We temporarily store it here; the caller (InvestigationService) should ideally save it to the new snapshot
+        ev.ai_description = compressed;
+      }
+    }
+  }
+
+  // Compress recent diary
+  let diaryTextToCompress = "";
+  let compressDiary = false;
+  let diaryHash = "";
+
+  const diaryCombinedStr = JSON.stringify(recentDiary);
+  if (diaryCombinedStr.length > 8000) {
+    compressDiary = true;
+    diaryTextToCompress = diaryCombinedStr;
+    diaryHash = crypto.createHash('sha256').update(diaryTextToCompress).digest('hex');
+  }
+
+  if (compressDiary) {
+    if (cache[diaryHash]) {
+      // If we cached the compressed string, we can inject it as a special field or parse it.
+      // Since recentDiary is typed as DiaryRow[], if we stringify it, it's not a DiaryRow[] anymore.
+      // We will add a 'compressed_diary' string to the facts object and clear recent_diary if compressed.
+      (recentDiary as any) = cache[diaryHash]; // We'll handle this dynamically in facts object
+    } else {
+      const tokens = extractForceTokens(diaryTextToCompress);
+      const compressed = await compressPrompt(diaryTextToCompress, tokens, 0.5);
+      (recentDiary as any) = compressed;
+    }
+  }
 
   return {
     meta: { case_id: caseId, assembled_at: new Date() },

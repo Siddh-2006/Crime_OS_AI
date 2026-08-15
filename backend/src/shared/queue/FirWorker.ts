@@ -9,6 +9,7 @@ import cloudinary from '../../config/cloudinary';
 import logger from '../../config/logger';
 import type { FirPdfJobData } from './FirQueue';
 import type { IFirFormData } from '../../modules/investigation/services/firService';
+import { applyWatermarkAllPages } from '../utils/pdfWatermark';
 
 async function getComplaintModel() {
   const { Complaint } = await import('../../modules/complaint/models/Complaint.model');
@@ -59,6 +60,7 @@ function sanitizeGujaratiText(str: string): string {
 async function generateFirPdf(form: IFirFormData, lang: 'en' | 'guj'): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 40, autoFirstPage: true });
+    applyWatermarkAllPages(doc, { text: 'FIR — OFFICIAL COPY' });
     const chunks: Buffer[] = [];
     doc.on('data', (c: Buffer) => chunks.push(c));
     doc.on('end', () => resolve(Buffer.concat(chunks)));

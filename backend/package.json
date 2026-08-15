@@ -40,6 +40,7 @@
     "qrcode": "^1.5.4",
     "rate-limiter-flexible": "^5.0.3",
     "socket.io": "^4.8.3",
+    "svg-to-pdfkit": "^0.1.8",
     "uuid": "^14.0.1",
     "winston": "^3.13.0"
   },
@@ -53,6 +54,7 @@
     "@types/multer": "^2.2.0",
     "@types/node": "^20.14.2",
     "@types/nodemailer": "^6.4.15",
+    "@types/svg-to-pdfkit": "^0.1.4",
     "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^8.65.0",
     "@typescript-eslint/parser": "^8.65.0",

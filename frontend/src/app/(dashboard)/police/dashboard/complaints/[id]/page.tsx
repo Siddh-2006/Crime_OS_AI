@@ -1148,7 +1148,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
               const crimeType = snap?.summary?.crimeType ?? (ci?.m12CrimeClassification ? `${ci.m12CrimeClassification.primary_category.toUpperCase()} (${ci.m12CrimeClassification.sub_category})` : (ci?.crimeType ?? '—'));
               const statute = snap?.summary?.statute ?? (ci?.m12CrimeClassification?.applicable_statutes?.join(', ') ?? '—');
               const priority = snap?.summary?.priority ?? ci?.m12RiskAssessment?.level ?? ci?.priority ?? '—';
-              const confidence = snap?.summary?.confidence ?? ci?.m12ConfidenceScore ?? ci?.confidence ?? 0;
+              const confidence = snap?.confidence_breakdown?.final_score ?? snap?.summary?.confidence ?? ci?.m12ConfidenceScore ?? ci?.confidence ?? 0.85;
               const riskReason = snap?.summary?.riskReason ?? ci?.m12Understanding ?? ci?.summary ?? '—';
               const risk = (priority?.toLowerCase() === 'high' ? 'high' : priority?.toLowerCase() === 'medium' ? 'medium' : 'low');
 

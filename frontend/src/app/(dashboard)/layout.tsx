@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { ShieldCheck, LayoutDashboard, LogOut, FileText, Bell, Plus, Bot, ClipboardList, BookOpen, MapPin, Send, FolderOpen, Users, Brain, Clock, ChevronRight, Shield, MessageSquare } from 'lucide-react';
+import { ShieldCheck, LayoutDashboard, LogOut, FileText, Bell, Plus, Bot, ClipboardList, BookOpen, MapPin, Send, FolderOpen, Users, Brain, Clock, ChevronRight, Shield, MessageSquare, QrCode } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { APP_ROUTES, ROLE } from '@/lib/constants';
 import { Loader } from '@/components/ui/Loader';
@@ -12,6 +12,8 @@ import { LanguageToggle } from '@/components/LanguageToggle';
 import { Watermark } from '@/components/Watermark';
 import { ParticleBackground } from '@/components/ParticleBackground';
 import apiClient from '@/lib/axios';
+import { SyncStatusIndicator } from '@/components/SyncStatusIndicator';
+import { OfflineBanner } from '@/components/OfflineBanner';
 
 interface NavItem {
   label: string;
@@ -39,6 +41,7 @@ const caseNavItems = [
   { id: 'placesVisited', label: 'Places Visited', icon: <MapPin size={15} /> },
   { id: 'requests', label: 'Requests', icon: <Send size={15} /> },
   { id: 'evidence', label: 'Evidence', icon: <FolderOpen size={15} /> },
+  { id: 'physical_evidence', label: 'Physical Evidence (QR)', icon: <QrCode size={15} /> },
   { id: 'participants', label: 'Participants', icon: <Users size={15} /> },
   { id: 'custody', label: 'Custody', icon: <Shield size={15} /> },
   { id: 'complaint', label: 'Original Complaint', icon: <FileText size={15} /> },
@@ -82,6 +85,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="flex h-screen bg-background overflow-hidden relative">
       <ParticleBackground />
       <Watermark />
+      {isPolice && <OfflineBanner />}
       {/* ── Sidebar ────────────────────────────────────────────────────────────── */}
       <CollapsibleSidebar
         navItems={navItems}
@@ -103,6 +107,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
           <div className="hidden lg:block" />
           <div className="flex items-center gap-3">
+            {isPolice && <SyncStatusIndicator />}
             <LanguageToggle />
             <ThemeToggle />
             <div className="flex items-center gap-3 pl-3 border-l border-border">

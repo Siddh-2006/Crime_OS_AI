@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 from app.schemas.case_profile import ComplaintProfile, EvidenceProfile
+from app.llm.compression_client import PromptCompressionClient
 
 
 class EvidenceItem(BaseModel):
@@ -83,3 +84,19 @@ class CaseContext(BaseModel):
             evidence=items,
         )
 
+
+
+    async def compress_context(self, client: PromptCompressionClient) -> None:
+        if len(self.complaint_text or "") > 2000:
+            force_tokens = client.extract_force_tokens(self.complaint_text)
+            self.complaint_text = await client.compress(self.complaint_text, force_tokens)
+        
+        for ev in self.evidence:
+            if ev.florence_description and len(ev.florence_description) > 2000:
+                ev.florence_description = await client.compress(ev.florence_description, client.extract_force_tokens(ev.florence_description))
+            if ev.ocr_text and len(ev.ocr_text) > 2000:
+                ev.ocr_text = await client.compress(ev.ocr_text, client.extract_force_tokens(ev.ocr_text))
+            if ev.transcript and len(ev.transcript) > 2000:
+                ev.transcript = await client.compress(ev.transcript, client.extract_force_tokens(ev.transcript))
+            if ev.pdf_text and len(ev.pdf_text) > 2000:
+                ev.pdf_text = await client.compress(ev.pdf_text, client.extract_force_tokens(ev.pdf_text))

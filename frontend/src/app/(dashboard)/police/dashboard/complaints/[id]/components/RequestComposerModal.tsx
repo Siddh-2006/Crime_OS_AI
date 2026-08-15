@@ -75,7 +75,7 @@ export function RequestComposerModal({ isOpen, onClose, caseId, stepId, departme
   }, [isOpen, caseId, stepId, effectiveDept]);
 
   const handleUpdateDraft = async () => {
-    if (!draft) return;
+    if (!draft || !draft.request_id) return;
     setActionLoading(true);
     try {
       await apiClient.patch(`/cases/${caseId}/requests/${draft.request_id}`, {
@@ -91,7 +91,7 @@ export function RequestComposerModal({ isOpen, onClose, caseId, stepId, departme
   };
 
   const handleSend = async () => {
-    if (!draft) return;
+    if (!draft || !draft.request_id) return;
     setActionLoading(true);
     try {
       // Save latest edits and attachments first
