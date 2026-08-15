@@ -82,6 +82,13 @@ apiClient.interceptors.response.use(
         if (userStr) {
           const user = JSON.parse(userStr);
           const officer_id = user._id;
+          const role: string | undefined = user.role;
+
+          // Both officer_id and role must be present — no fallback
+          if (!officer_id || !role) {
+            console.warn('[apiClient] Missing officer_id or role, skipping cache');
+            return response;
+          }
           
           const { CaseCacheManager } = await import('./offline/caseCache');
           
@@ -91,9 +98,9 @@ apiClient.interceptors.response.use(
           const caseUnderstandingMatch = response.config.url?.match(/\/case-understanding\/([^\/]+)/);
           const case_id = caseIdMatch?.[1] || complaintIdMatch?.[1] || caseUnderstandingMatch?.[1];
           
-          if (case_id && officer_id) {
-            // Get existing cache or create new
-            let existingCache = await CaseCacheManager.getCase(case_id, officer_id);
+          if (case_id) {
+            // Get existing cache or create new — always pass role explicitly
+            const existingCache = await CaseCacheManager.getCase(case_id, officer_id, role);
             
             const url = response.config.url || '';
             const data = response.data?.data || response.data;
@@ -113,31 +120,26 @@ apiClient.interceptors.response.use(
             else if (url.includes('/threads')) updates.threads = data || [];
             else if (complaintIdMatch) updates.complaintData = data;
             else if (caseUnderstandingMatch) updates.caseUnderstanding = data;
+            // SHO-specific tabs
+            else if (url.includes('/ai-case-understanding') || url.includes('/case-understanding/ai')) updates.aiCaseUnderstanding = data;
+            else if (url.includes('/audit-timeline') || url.includes('/timeline') || url.includes('/audit')) updates.auditTimeline = data;
             
             if (Object.keys(updates).length > 0) {
               if (existingCache) {
-                // Update existing cache
-                await CaseCacheManager.updateCaseFields(case_id, officer_id, updates);
-                console.log(`[apiClient] ✓ Auto-cached: ${url.split('/').pop()}`);
+                await CaseCacheManager.updateCaseFields(case_id, officer_id, role, updates);
+                console.log(`[apiClient] ✓ Auto-cached (${role}): ${url.split('/').pop()}`);
               } else {
-                // Create new cache entry with this data
                 const newCache = {
-                  snapshot: null,
-                  checklist: null,
-                  diaryEntries: [],
-                  diaryHistory: [],
-                  placesVisited: [],
-                  requests: [],
-                  evidence: [],
-                  participants: [],
-                  warrants: [],
-                  threads: [],
-                  complaintData: null,
-                  caseUnderstanding: null,
+                  snapshot: null, checklist: null,
+                  diaryEntries: [], diaryHistory: [], placesVisited: [],
+                  requests: [], evidence: [], participants: [],
+                  warrants: [], threads: [],
+                  complaintData: null, caseUnderstanding: null,
+                  aiCaseUnderstanding: null, auditTimeline: null,
                   ...updates,
                 };
-                await CaseCacheManager.saveCase(case_id, officer_id, newCache);
-                console.log(`[apiClient] ✓ Created cache with: ${url.split('/').pop()}`);
+                await CaseCacheManager.saveCase(case_id, officer_id, role, newCache);
+                console.log(`[apiClient] ✓ Created cache (${role}): ${url.split('/').pop()}`);
               }
             }
           }

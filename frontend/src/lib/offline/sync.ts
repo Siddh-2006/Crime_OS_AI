@@ -136,29 +136,36 @@ export class SyncManager {
       return;
     }
 
-    // Always check actual online status from navigator
+    // ALWAYS check actual online status from navigator FIRST
     const actuallyOnline = typeof navigator !== 'undefined' && navigator.onLine;
+    
+    // If offline, immediately set offline status and return
+    if (!actuallyOnline) {
+      this.updateState({
+        isOnline: false,
+        status: 'offline',
+      });
+      return;
+    }
     
     const pendingCount = await OutboxManager.getPendingCount(officerId);
     
-    // Determine status based on ACTUAL online state and pending operations
+    // Determine status - we're online at this point
     let newStatus: SyncStatus;
-    if (!actuallyOnline) {
-      newStatus = 'offline';
-    } else if (pendingCount > 0) {
+    if (pendingCount > 0) {
       newStatus = 'pending';
     } else {
       newStatus = 'synced';
     }
     
     this.updateState({
-      isOnline: actuallyOnline, // Update the state too
+      isOnline: true,
       pendingCount,
       status: newStatus,
     });
 
     // Auto-sync if online and has pending operations
-    if (actuallyOnline && pendingCount > 0 && this.autoSyncEnabled) {
+    if (pendingCount > 0 && this.autoSyncEnabled) {
       await this.syncAll(officerId);
     }
   }

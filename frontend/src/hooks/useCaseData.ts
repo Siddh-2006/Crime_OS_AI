@@ -8,6 +8,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import apiClient from '@/lib/axios';
 import { CaseCacheManager, CaseData, SyncManager } from '@/lib/offline';
+import { useAuth } from '@/hooks/useAuth';
 import { API_ROUTES } from '@/lib/constants';
 
 export interface UseCaseDataResult extends CaseData {
@@ -19,6 +20,8 @@ export interface UseCaseDataResult extends CaseData {
 }
 
 export function useCaseData(caseId: string, officerId: string): UseCaseDataResult {
+  const { user } = useAuth();
+  const role = user?.role ?? '';
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCached, setIsCached] = useState(false);
@@ -37,9 +40,12 @@ export function useCaseData(caseId: string, officerId: string): UseCaseDataResul
     threads: [],
     complaintData: null,
     caseUnderstanding: null,
+    aiCaseUnderstanding: null,
+    auditTimeline: null,
   });
 
   const fetchAndCacheData = useCallback(async () => {
+    if (!role) return; // wait until auth is hydrated
     setLoading(true);
     setError(null);
     
@@ -90,18 +96,20 @@ export function useCaseData(caseId: string, officerId: string): UseCaseDataResul
           threads: threadRes.status === 'fulfilled' ? (threadRes.value.data.data || []) : [],
           complaintData: complaintRes.status === 'fulfilled' ? complaintRes.value.data.data : null,
           caseUnderstanding: cuRes.status === 'fulfilled' ? cuRes.value.data.data : null,
+          aiCaseUnderstanding: null, // SHO-only — cached separately via axios interceptor
+          auditTimeline: null,       // SHO-only — cached separately via axios interceptor
         };
 
         setCaseData(newData);
         
-        // Cache the data
-        await CaseCacheManager.saveCase(caseId, officerId, newData);
+        // Cache the data — role from React auth state, not localStorage
+        await CaseCacheManager.saveCase(caseId, officerId, role, newData);
         setIsCached(true);
         
         console.log(`[useCaseData] Fetched and cached case ${caseId}`);
       } else {
-        // Try to load from cache
-        const cached = await CaseCacheManager.getCase(caseId, officerId);
+        // Try to load from cache — role from React auth state
+        const cached = await CaseCacheManager.getCase(caseId, officerId, role);
         
         if (cached) {
           setCaseData({
@@ -117,6 +125,8 @@ export function useCaseData(caseId: string, officerId: string): UseCaseDataResul
             threads: cached.threads,
             complaintData: cached.complaintData,
             caseUnderstanding: cached.caseUnderstanding,
+            aiCaseUnderstanding: cached.aiCaseUnderstanding ?? null,
+            auditTimeline: cached.auditTimeline ?? null,
           });
           setIsCached(true);
           console.log(`[useCaseData] Loaded case ${caseId} from cache`);
@@ -127,8 +137,8 @@ export function useCaseData(caseId: string, officerId: string): UseCaseDataResul
     } catch (err: any) {
       console.error('[useCaseData] Error fetching case data:', err);
       
-      // Try cache as fallback
-      const cached = await CaseCacheManager.getCase(caseId, officerId);
+      // Try cache as fallback — role from React auth state
+      const cached = await CaseCacheManager.getCase(caseId, officerId, role);
       if (cached) {
         setCaseData({
           snapshot: cached.snapshot,
@@ -143,6 +153,8 @@ export function useCaseData(caseId: string, officerId: string): UseCaseDataResul
           threads: cached.threads,
           complaintData: cached.complaintData,
           caseUnderstanding: cached.caseUnderstanding,
+          aiCaseUnderstanding: cached.aiCaseUnderstanding ?? null,
+          auditTimeline: cached.auditTimeline ?? null,
         });
         setIsCached(true);
         setError('Using cached data (offline)');
@@ -155,10 +167,10 @@ export function useCaseData(caseId: string, officerId: string): UseCaseDataResul
   }, [caseId, officerId]);
 
   useEffect(() => {
-    if (caseId && officerId) {
+    if (caseId && officerId && role) {
       fetchAndCacheData();
     }
-  }, [caseId, officerId, fetchAndCacheData]);
+  }, [caseId, officerId, role, fetchAndCacheData]);
 
   return {
     ...caseData,

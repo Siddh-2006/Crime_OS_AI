@@ -39,6 +39,17 @@ export function OfflineWorkspaceWrapper({
     OfflineToastNotifier.setToastCallback(showToast);
   }, [showToast]);
 
+  // Refresh online status when tab changes
+  useEffect(() => {
+    if (typeof navigator !== 'undefined') {
+      const actualOnline = navigator.onLine;
+      // Force refresh to check actual network state
+      if (actualOnline !== isOnline) {
+        window.dispatchEvent(new Event(actualOnline ? 'online' : 'offline'));
+      }
+    }
+  }, [activeTab, isOnline]);
+
   // Sequential prefetch of all tabs (one by one to avoid race conditions)
   useEffect(() => {
     const prefetchAllTabs = async () => {
@@ -64,6 +75,9 @@ export function OfflineWorkspaceWrapper({
         { url: `/complaints/${caseId}`, name: 'Original Complaint' },
         { url: `/case-understanding/${caseId}`, name: 'Case Understanding' },
         { url: `/case-understanding/${caseId}/timeline`, name: 'Timeline' },
+        // SHO-specific endpoints (will fail gracefully for IO officers)
+        { url: `/cases/${caseId}/ai-case-understanding`, name: 'AI Case Understanding (SHO)' },
+        { url: `/cases/${caseId}/audit-timeline`, name: 'Audit Timeline (SHO)' },
       ];
       
       let cachedCount = 0;
@@ -79,9 +93,11 @@ export function OfflineWorkspaceWrapper({
           await new Promise(resolve => setTimeout(resolve, 300));
         } catch (error: any) {
           // Ignore 404 errors (endpoint might not exist for this case)
-          if (error.response?.status === 404) {
+          // Also ignore 403 errors (endpoint might be role-restricted)
+          if (error.response?.status === 404 || error.response?.status === 403) {
             skippedCount++;
-            console.log(`[OfflineWorkspace] ⊘ Skipped (${skippedCount}): ${endpoint.name} (not available for this case)`);
+            const reason = error.response?.status === 403 ? 'access denied' : 'not available for this case';
+            console.log(`[OfflineWorkspace] ⊘ Skipped (${skippedCount}): ${endpoint.name} (${reason})`);
           } else {
             console.error(`[OfflineWorkspace] ✗ Error prefetching ${endpoint.name}:`, error.message);
           }

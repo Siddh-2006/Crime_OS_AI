@@ -14,6 +14,7 @@ import Dexie, { Table } from 'dexie';
 export interface CachedCase {
   case_id: string;
   officer_id: string;
+  officer_role: string; // Add role for role-specific caching
   last_accessed: number; // timestamp for LRU eviction
   last_synced: number; // timestamp of last successful sync
   version: number; // for optimistic concurrency
@@ -31,6 +32,8 @@ export interface CachedCase {
   threads: any[];
   complaintData: any | null;
   caseUnderstanding: any | null;
+  aiCaseUnderstanding: any | null; // SHO-only tab
+  auditTimeline: any | null; // SHO-only tab
 }
 
 export interface MutationOperation {
@@ -61,7 +64,7 @@ export interface SyncMetadata {
 // ─── Database Schema ──────────────────────────────────────────────────────────
 
 export class OfflineDB extends Dexie {
-  cases!: Table<CachedCase, string>; // Primary key: case_id
+  cases!: Table<CachedCase, [string, string]>; // Primary key: [case_id, officer_role]
   outbox!: Table<MutationOperation, string>; // Primary key: id
   metadata!: Table<SyncMetadata, string>; // Primary key: key
 
@@ -75,6 +78,16 @@ export class OfflineDB extends Dexie {
       // Index by officer_id and status for efficient outbox processing
       outbox: 'id, officer_id, status, timestamp, [officer_id+status], depends_on',
       
+      metadata: 'key, updated_at',
+    });
+    
+    // Add officer_role field and create compound primary key
+    this.version(2).stores({
+      // Use compound key [case_id+officer_role] as primary key for role isolation
+      cases: '[case_id+officer_role], case_id, officer_id, officer_role, last_accessed, [officer_id+case_id], [officer_id+officer_role]',
+      
+      // No changes to outbox and metadata
+      outbox: 'id, officer_id, status, timestamp, [officer_id+status], depends_on',
       metadata: 'key, updated_at',
     });
   }

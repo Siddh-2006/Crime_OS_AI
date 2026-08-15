@@ -152,6 +152,11 @@ export class OfflineApiClient {
 
     const user = JSON.parse(userStr);
     const officer_id = user._id;
+    const role: string | undefined = user.role;
+
+    if (!role) {
+      throw new Error('User role not available for cache retrieval');
+    }
 
     // Extract case_id from URL
     const caseIdMatch = config.url?.match(/\/cases\/([^\/]+)/);
@@ -164,10 +169,11 @@ export class OfflineApiClient {
       throw new Error('No cached data available offline');
     }
 
-    const cachedCase = await CaseCacheManager.getCase(case_id, officer_id);
+    // Always pass role explicitly — never re-read from localStorage later
+    const cachedCase = await CaseCacheManager.getCase(case_id, officer_id, role);
 
     if (!cachedCase) {
-      throw new Error('Case not cached for offline access');
+      throw new Error(`Case not cached for offline access (${role})`);
     }
 
     // Map API endpoints to cached data
@@ -198,6 +204,10 @@ export class OfflineApiClient {
       data = cachedCase.complaintData;
     } else if (url.includes('/case-understanding/') || caseUnderstandingMatch) {
       data = cachedCase.caseUnderstanding;
+    } else if (url.includes('/ai-case-understanding') || url.includes('/case-understanding/ai')) {
+      data = cachedCase.aiCaseUnderstanding;
+    } else if (url.includes('/audit-timeline') || url.includes('/timeline') || url.includes('/audit')) {
+      data = cachedCase.auditTimeline;
     } else {
       // Try to match any part of the URL to cached data
       console.warn(`[OfflineApiClient] No exact cache mapping for URL: ${url}`);

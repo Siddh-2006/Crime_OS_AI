@@ -101,6 +101,16 @@ export class OutboxManager {
    * Execute a single operation.
    */
   static async executeOperation(operation: MutationOperation): Promise<boolean> {
+    // Guard against operations with invalid endpoints (e.g., /requests/undefined)
+    if (operation.endpoint.includes('/undefined') || operation.endpoint.includes('/null')) {
+      console.error(`[Outbox] Skipping operation ${operation.id} — invalid endpoint: ${operation.endpoint}`);
+      await db.outbox.update(operation.id, {
+        status: 'failed',
+        last_error: `Invalid endpoint: ${operation.endpoint}`,
+      });
+      return false;
+    }
+
     try {
       const config: AxiosRequestConfig = {
         method: operation.method,
