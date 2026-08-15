@@ -1,5 +1,6 @@
 import { Schema, model, Document, Types } from 'mongoose';
 import { ILegalSectionSuggestion, LegalSectionSuggestionSchema } from './LegalSection.schema';
+import { evidenceEncryptionPlugin } from '../plugins/evidenceEncryption.plugin';
 
 export type EvidenceStatus = 'pending' | 'verified' | 'rejected';
 
@@ -56,6 +57,7 @@ export interface IEvidence extends Document {
   originalFilename?: string;
   mimeType?: string;
   size?: number;
+  isEncrypted?: boolean; // Flag to track if sensitive fields are encrypted
 }
 
 const CustodyTransferSchema = new Schema<ICustodyTransfer>({
@@ -112,11 +114,39 @@ const EvidenceSchema = new Schema<IEvidence>(
       fileType: { type: String },
       exif: { type: Schema.Types.Mixed },
       gps: { type: Schema.Types.Mixed }
-    }
+    },
+    
+    // Encryption tracking
+    isEncrypted:           { type: Boolean, default: false }
   },
   { timestamps: true, versionKey: false },
 );
 
 EvidenceSchema.index({ case_id: 1, status: 1 });
+
+/**
+ * Apply Evidence Encryption Plugin
+ * Automatically encrypts/decrypts sensitive fields using AES-256-GCM
+ */
+EvidenceSchema.plugin(evidenceEncryptionPlugin, {
+  fieldsToEncrypt: [
+    'storage_ref',
+    'ai_description',
+    'ai_tags',
+    'current_location',
+    'custody_chain',
+    'originalFilename',
+    'aiMetadata.ocrText',
+    'aiMetadata.speechTranscript',
+    'aiMetadata.pdfText',
+    'aiMetadata.imageTags',
+    'aiMetadata.detectedObjects',
+    'aiMetadata.faces',
+    'aiMetadata.embeddings',
+    'aiMetadata.aiSummary',
+    'aiMetadata.exif',
+    'aiMetadata.gps',
+  ],
+});
 
 export const Evidence = model<IEvidence>('Evidence', EvidenceSchema);
