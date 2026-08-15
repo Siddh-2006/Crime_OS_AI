@@ -10,6 +10,7 @@ import env from '../../config/env';
 import type { CaseDiaryPdfJobData } from './CaseDiaryQueue';
 import { Complaint } from '../../modules/complaint/models/Complaint.model';
 import { CaseParticipant } from '../../modules/investigation/models/CaseParticipant.model';
+import { applyWatermarkAllPages } from '../utils/pdfWatermark';
 
 function getFontPath(): string | null {
   const possiblePaths = [
@@ -155,6 +156,7 @@ async function build16Fields(diary: any, complaint: any, participants: any[]): P
 async function generateSinglePdfBuffer(diary: any, complaint: any, participants: any[], narrativeText: string, _lang: 'guj_en' | 'en'): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 40, autoFirstPage: true });
+    applyWatermarkAllPages(doc, { text: 'CASE DIARY EXPORT — CONFIDENTIAL' });
     const chunks: Buffer[] = [];
 
     doc.on('data', (chunk: Buffer) => chunks.push(chunk));

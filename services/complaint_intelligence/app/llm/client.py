@@ -118,6 +118,7 @@ class OllamaLLMClient(ILLMClient):
             "model": self.model,
             "prompt": prompt,
             "stream": False,
+            "think": False,
             "format": "json",
             "options": {
                 "num_ctx": self.num_ctx,

@@ -58,6 +58,7 @@ export interface IAnalysisSnapshot extends Document {
   confidence_breakdown: Record<string, unknown>;
   officer_authored: boolean;
   parent_snapshot_id?: string;               // links to previous snapshot for diff
+  compression_cache?: Map<string, string>;
 }
 
 const RankedNextStepSchema = new Schema<IRankedNextStep>(
@@ -131,6 +132,7 @@ const AnalysisSnapshotSchema = new Schema<IAnalysisSnapshot>(
     confidence_breakdown: { type: Schema.Types.Mixed, default: {} },
     officer_authored: { type: Boolean, default: false, required: true },
     parent_snapshot_id: { type: String },
+    compression_cache: { type: Map, of: String, default: {} },
   },
   { versionKey: false },
 );

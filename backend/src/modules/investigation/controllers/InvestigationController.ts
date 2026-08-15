@@ -24,6 +24,7 @@ import { Types } from 'mongoose';
 import PDFDocument from 'pdfkit';
 import { v4 as uuidv4 } from 'uuid';
 import cloudinary from '../../../config/cloudinary';
+import { applyWatermarkAllPages } from '../../../shared/utils/pdfWatermark';
 
 export class InvestigationController {
   
@@ -1429,6 +1430,7 @@ export class InvestigationController {
 
       // Generate PDF in memory buffer
       const doc = new PDFDocument({ margin: 50 });
+    applyWatermarkAllPages(doc, { text: 'CASE THREAD — OFFICIAL EXPORT' });
       const buffers: Buffer[] = [];
       doc.on('data', buffers.push.bind(buffers));
       

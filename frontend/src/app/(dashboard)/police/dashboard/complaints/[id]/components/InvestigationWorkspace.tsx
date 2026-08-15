@@ -14,7 +14,7 @@ import { Loader } from '@/components/ui/Loader';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/hooks/useToast';
 import { ToastContainer } from '@/components/ui/Toast';
-import { Bot, BookOpen, ClipboardList, Send, FolderOpen, Sparkles, Users, FileText, Brain, Calendar, MapPin, Download, CheckCheck, Loader2, Clock, FileImage, FileVideo, FileAudio, File, ChevronRight, CheckCircle2, AlertCircle, Shield, Pencil, Trash2, Scale, X } from 'lucide-react';
+import { Bot, BookOpen, ClipboardList, Send, FolderOpen, Sparkles, Users, FileText, Brain, Calendar, MapPin, Download, CheckCheck, Loader2, Clock, FileImage, FileVideo, FileAudio, File, ChevronRight, CheckCircle2, AlertCircle, Trash2, Pencil, X, Scale } from 'lucide-react';
 import { Card, CardHeader } from '@/components/ui/Card';
 import ThreadViewerModal from './ThreadViewerModal';
 import SnapshotDetailModal from './SnapshotDetailModal';
@@ -150,18 +150,14 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
         const rawPlaces = placesRes.value.data.data;
         setPlacesVisited(Array.isArray(rawPlaces) ? rawPlaces : []);
       }
-      
+
       if (reqRes.status === 'fulfilled') setRequests(reqRes.value.data.data || []);
       if (evRes.status === 'fulfilled') setEvidence(evRes.value.data.data || []);
       if (participantRes.status === 'fulfilled') {
         const rawParticipants = participantRes.value.data.data;
         setParticipants(Array.isArray(rawParticipants) ? rawParticipants : []);
       }
-      if (warrantRes.status === 'fulfilled') {
-        const rawWarrants = warrantRes.value.data.data;
-        setWarrants(Array.isArray(rawWarrants) ? rawWarrants : []);
-      }
-      
+
       // Fetch threads specifically
       try {
         const threadRes = await apiClient.get(`/cases/${caseId}/threads`);
@@ -479,7 +475,6 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
         showToast('Participant is already approved.', 'info');
         return;
       }
-      
       await apiClient.post(`/cases/${caseId}/participants/recommendations/approve`, {
         recommendation,
         snapshot_id: snapshot?.snapshot_id,
@@ -540,7 +535,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
     { id: 'complaint', label: 'Original Complaint', icon: <FileText size={15} /> },
     { id: 'case_understanding', label: 'Case Understanding', icon: <Brain size={15} /> },
     { id: 'timeline', label: 'Timeline', icon: <Clock size={15} />, badge: caseUnderstanding?.timeline?.length || undefined },
-    { id: 'custody', label: 'Custody', icon: <Shield size={15} />, badge: warrants.filter((w: any) => ['draft','sent_to_magistrate','approved','in_custody'].includes(w.status)).length || undefined },
+    { id: 'custody', label: 'Custody', icon: <Shield size={15} />, badge: warrants.filter((w: any) => ['draft', 'sent_to_magistrate', 'approved', 'in_custody'].includes(w.status)).length || undefined },
   ];
 
   if (loading && !snapshot && !checklist && diaryEntries.length === 0) {
@@ -555,547 +550,532 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
     <div className="w-full min-w-0" style={{ minHeight: '600px' }}>
       {/* Main workspace — takes all available width */}
       <div className="w-full min-w-0 space-y-4">
-      {/* Tab Content */}
-      <div className="min-h-[500px]">
-        {activeTab === 'analysis' && (
-          <AnalysisPanel
-            caseId={caseId}
-            snapshot={snapshot}
-            loading={actionLoading && !snapshot}
-            participants={participants}
-            evidence={evidence}
-            onCorrectSnapshot={handleCorrectSnapshot}
-            onTriggerAnalysis={handleTriggerAnalysis}
-            onAnalysisComplete={fetchWorkspaceData}
-            onAttachSectionsToParticipant={handleAttachSectionsToParticipant}
-            onAttachEvidenceSections={handleAttachEvidenceSections}
-            onAcceptRecommendedSection={handleAcceptRecommendedSection}
-            onApproveParticipant={handleApproveParticipant}
-            onAttachReasoning={handleAttachReasoning}
-            actionLoading={actionLoading}
-          />
-        )}
+        {/* Tab Content */}
+        <div className="min-h-[500px]">
+          {activeTab === 'analysis' && (
+            <AnalysisPanel
+              caseId={caseId}
+              snapshot={snapshot}
+              loading={actionLoading && !snapshot}
+              participants={participants}
+              evidence={evidence}
+              onCorrectSnapshot={handleCorrectSnapshot}
+              onTriggerAnalysis={handleTriggerAnalysis}
+              onAnalysisComplete={fetchWorkspaceData}
+              onAttachSectionsToParticipant={handleAttachSectionsToParticipant}
+              onAttachEvidenceSections={handleAttachEvidenceSections}
+              onAcceptRecommendedSection={handleAcceptRecommendedSection}
+              onApproveParticipant={handleApproveParticipant}
+              onAttachReasoning={handleAttachReasoning}
+              actionLoading={actionLoading}
+            />
+          )}
 
-        {activeTab === 'checklist' && (
-          <ChecklistPanel
-            checklist={checklist}
-            onOpenComposer={openComposer}
-            evidenceList={evidence}
-            caseId={caseId}
-            onRefresh={fetchWorkspaceData}
-          />
-        )}
+          {activeTab === 'checklist' && (
+            <ChecklistPanel
+              checklist={checklist}
+              onOpenComposer={openComposer}
+              evidenceList={evidence}
+              caseId={caseId}
+              onRefresh={fetchWorkspaceData}
+            />
+          )}
 
-        {activeTab === 'diary' && (
-          <div className="space-y-4">
-            <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm space-y-4">
-              <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface-elevated/80 p-5 text-text-primary md:flex-row md:items-end md:justify-between shadow-xs">
-                <div>
-                  <h3 className="text-lg font-bold text-text-primary">Official Daily Diary</h3>
-                  <p className="mt-1 text-sm text-text-secondary">Generate a formal draft from the latest case context and finalize it for the record.</p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <input
-                    type="date"
-                    value={diaryDate}
-                    onChange={(e) => setDiaryDate(e.target.value)}
-                    className="rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:ring-2 focus:ring-brand-primary font-mono"
-                  />
-                  <button
-                    onClick={handleGenerateDiaryDraft}
-                    disabled={diaryDraftLoading}
-                    className="rounded-xl bg-brand-primary px-4 py-2 text-sm font-bold text-white shadow-xs hover:bg-brand-primary/90 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
-                  >
-                    {diaryDraftLoading ? 'Working…' : 'Generate Draft'}
-                  </button>
-                  {diaryDraft && (
-                    <button
-                      onClick={handleSaveDiaryDraft}
-                      disabled={diaryDraftLoading}
-                      className="rounded-xl border border-border bg-surface px-3 py-2 text-sm font-bold text-text-primary hover:bg-surface-elevated disabled:cursor-not-allowed transition-all"
-                    >
-                      {diaryDraftLoading ? 'Saving…' : 'Save Draft'}
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {diaryDraftError && <p className="mt-3 text-sm font-bold text-semantic-critical">{diaryDraftError}</p>}
-
-              {diaryDraft && (
-                <div className="mt-4 rounded-xl border border-border bg-surface-elevated/50 p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-bold text-text-primary">{diaryDraft.title}</p>
-                      <p className="text-xs font-mono font-bold uppercase tracking-wide text-text-secondary">Status: {diaryDraft.status || 'draft'}</p>
-                    </div>
-                    <button
-                      onClick={handleFinalizeDiaryDraft}
-                      disabled={diaryDraftLoading}
-                      className="rounded-xl border border-semantic-success/30 bg-semantic-success/10 px-3.5 py-2 text-sm font-bold text-semantic-success hover:bg-semantic-success/20 disabled:cursor-not-allowed transition-all"
-                    >
-                      {diaryDraftLoading ? 'Saving…' : 'Finalize'}
-                    </button>
-                  </div>
-                  <div className="mt-4 rounded-xl border border-border bg-surface p-4 shadow-xs">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <p className="text-xs font-bold uppercase tracking-wider text-brand-primary">Official Case Diary Form (16 Standard Fields)</p>
-                        <p className="text-xs text-text-secondary mt-0.5">Edit any values before finalization. Generated PDFs format these fields into official Police Roznamcha tables.</p>
-                      </div>
-                    </div>
-                    <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                      <div>
-                        <label className="text-[11px] font-bold uppercase tracking-wide text-text-secondary">Title</label>
-                        <input
-                          value={diaryForm.title}
-                          onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, title: e.target.value }))}
-                          className="mt-1 w-full rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[11px] font-bold uppercase tracking-wide text-text-secondary">Investigation Officer</label>
-                        <input
-                          value={diaryForm.officialOfficerId}
-                          onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, officialOfficerId: e.target.value }))}
-                          className="mt-1 w-full rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[11px] font-bold uppercase tracking-wide text-text-secondary">Crime Register No. and Section</label>
-                        <input
-                          value={diaryForm.crimeRegisterNumber}
-                          onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, crimeRegisterNumber: e.target.value }))}
-                          className="mt-1 w-full rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[11px] font-bold uppercase tracking-wide text-text-secondary">Investigation Start & End Time (Field 14)</label>
-                        <div className="flex items-center gap-2 mt-1">
-                          <input
-                            placeholder="Start (e.g. 19/40)"
-                            value={diaryForm.investigationStartTime}
-                            onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, investigationStartTime: e.target.value }))}
-                            className="w-1/2 rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
-                          />
-                          <span className="text-xs text-text-secondary font-medium">to</span>
-                          <input
-                            placeholder="End (e.g. 23/00)"
-                            value={diaryForm.investigationEndTime}
-                            onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, investigationEndTime: e.target.value }))}
-                            className="w-1/2 rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-[11px] font-bold uppercase tracking-wide text-text-secondary">Custody Status (Field 7a)</label>
-                        <input
-                          placeholder="e.g. ----- or In Police Custody"
-                          value={diaryForm.custodyStatus}
-                          onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, custodyStatus: e.target.value }))}
-                          className="mt-1 w-full rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[11px] font-bold uppercase tracking-wide text-text-secondary">Magisterial Custody Date (Field 7b)</label>
-                        <input
-                          placeholder="e.g. -----"
-                          value={diaryForm.magisterialCustodyDate}
-                          onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, magisterialCustodyDate: e.target.value }))}
-                          className="mt-1 w-full rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[11px] font-bold uppercase tracking-wide text-text-secondary">Property Stolen</label>
-                        <input
-                          value={diaryForm.propertyStolen}
-                          onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, propertyStolen: e.target.value }))}
-                          className="mt-1 w-full rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[11px] font-bold uppercase tracking-wide text-text-secondary">Property Recovered</label>
-                        <input
-                          value={diaryForm.propertyRecovered}
-                          onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, propertyRecovered: e.target.value }))}
-                          className="mt-1 w-full rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
-                        />
-                      </div>
-                      <div className="lg:col-span-2 rounded-xl border border-border bg-surface-elevated/40 p-4 shadow-xs">
-                        <label className="text-[11px] font-bold uppercase tracking-wide text-brand-primary">Record of Investigation (Gujarati-English Transliterated)</label>
-                        <textarea
-                          value={diaryForm.recordOfInvestigationGujEn}
-                          onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, recordOfInvestigationGujEn: e.target.value }))}
-                          rows={6}
-                          className="mt-2 w-full rounded-xl border border-border bg-input-bg p-3 text-xs text-text-primary font-mono leading-relaxed focus:border-brand-primary shadow-inner"
-                          placeholder="Enter the Gujarati-English narrative for the official diary."
-                        />
-                      </div>
-                      <div className="lg:col-span-2 rounded-xl border border-border bg-surface-elevated/40 p-4 shadow-xs">
-                        <label className="text-[11px] font-bold uppercase tracking-wide text-brand-primary">Record of Investigation (English Version)</label>
-                        <textarea
-                          value={diaryForm.recordOfInvestigationEn}
-                          onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, recordOfInvestigationEn: e.target.value }))}
-                          rows={6}
-                          className="mt-2 w-full rounded-xl border border-border bg-input-bg p-3 text-xs text-text-primary font-mono leading-relaxed focus:border-brand-primary shadow-inner"
-                          placeholder="Enter the English version for the final official record."
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="mt-4 rounded-2xl border border-border bg-surface p-5 shadow-sm space-y-4">
-                <div className="flex items-center justify-between gap-3">
+          {activeTab === 'diary' && (
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm space-y-4">
+                <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface-elevated/80 p-5 text-text-primary md:flex-row md:items-end md:justify-between shadow-xs">
                   <div>
-                    <p className="text-sm font-bold text-text-primary">Finalized Case Diary Records</p>
-                    <p className="text-xs text-text-secondary">Preview or download official bilingual (Gujarati-English & English) PDF copies.</p>
+                    <h3 className="text-lg font-bold text-text-primary">Official Daily Diary</h3>
+                    <p className="mt-1 text-sm text-text-secondary">Generate a formal draft from the latest case context and finalize it for the record.</p>
                   </div>
-                  <span className="text-xs font-mono font-bold text-brand-primary bg-brand-primary/10 px-2.5 py-1 rounded-lg border border-brand-primary/20">{diaryHistory.length} items</span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      type="date"
+                      value={diaryDate}
+                      onChange={(e) => setDiaryDate(e.target.value)}
+                      className="rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:ring-2 focus:ring-brand-primary font-mono"
+                    />
+                    <button
+                      onClick={handleGenerateDiaryDraft}
+                      disabled={diaryDraftLoading}
+                      className="rounded-xl bg-brand-primary px-4 py-2 text-sm font-bold text-white shadow-xs hover:bg-brand-primary/90 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
+                    >
+                      {diaryDraftLoading ? 'Working…' : 'Generate Draft'}
+                    </button>
+                    {diaryDraft && (
+                      <button
+                        onClick={handleSaveDiaryDraft}
+                        disabled={diaryDraftLoading}
+                        className="rounded-xl border border-border bg-surface px-3 py-2 text-sm font-bold text-text-primary hover:bg-surface-elevated disabled:cursor-not-allowed transition-all"
+                      >
+                        {diaryDraftLoading ? 'Saving…' : 'Save Draft'}
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                {diaryHistory.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-border bg-surface-elevated/40 px-4 py-6 text-center text-sm text-text-muted">
-                    No finalized case diary PDFs generated yet. Finalize a draft above to render official PDFs.
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {diaryHistory.map((record) => {
-                      const gujEnUrl = record.pdf_url_guj_en || record.pdf_url;
-                      const enUrl = record.pdf_url_en;
+                {diaryDraftError && <p className="mt-3 text-sm font-bold text-semantic-critical">{diaryDraftError}</p>}
 
-                      return (
-                        <div key={record.diary_id} className="flex flex-col gap-3 rounded-xl border border-border bg-surface-elevated/70 p-4 md:flex-row md:items-center md:justify-between shadow-xs">
-                          <div>
-                            <p className="font-bold text-text-primary">{record.title || `Case Diary No. ${record.diary_number}`}</p>
-                            <p className="text-xs text-text-secondary">
-                              Date: <span className="font-mono">{new Date(record.diary_date).toLocaleDateString('en-IN')}</span> &bull; Status: <span className="font-extrabold uppercase text-semantic-success">{record.status || 'completed'}</span>
-                            </p>
-                            {record.crime_register_number && (
-                              <p className="text-xs text-text-secondary font-mono">CR No.: {record.crime_register_number}</p>
-                            )}
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {gujEnUrl ? (
-                              <div className="flex items-center gap-1.5 bg-surface p-1.5 rounded-xl border border-border">
-                                <span className="text-[10px] font-extrabold text-text-secondary px-1 uppercase">Guj-Eng:</span>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setPreviewPdfUrl(gujEnUrl);
-                                    setIsDiaryPreviewOpen(true);
-                                  }}
-                                  className="rounded-lg px-2.5 py-1 text-xs font-bold text-brand-primary bg-brand-primary/10 hover:bg-brand-primary/20 border border-brand-primary/20"
-                                >
-                                  Preview
-                                </button>
-                                <a
-                                  href={gujEnUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  download
-                                  className="rounded-lg px-2.5 py-1 text-xs font-bold text-semantic-success bg-semantic-success/10 hover:bg-semantic-success/20 border border-semantic-success/20">
-                                  Download
-                                </a>
-                              </div>
-                            ) : (
-                              <span className="rounded-xl bg-semantic-warning/10 border border-semantic-warning/30 px-3 py-1.5 text-xs font-bold text-semantic-warning">Guj-Eng PDF Pending</span>
-                            )}
-
-                            {enUrl ? (
-                              <div className="flex items-center gap-1.5 bg-surface p-1.5 rounded-xl border border-border">
-                                <span className="text-[10px] font-extrabold text-text-secondary px-1 uppercase">English:</span>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setPreviewPdfUrl(enUrl);
-                                    setIsDiaryPreviewOpen(true);
-                                  }}
-                                  className="rounded-lg px-2.5 py-1 text-xs font-bold text-brand-primary bg-brand-primary/10 hover:bg-brand-primary/20 border border-brand-primary/20"
-                                >
-                                  Preview
-                                </button>
-                                <a
-                                  href={enUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  download
-                                  className="rounded-lg px-2.5 py-1 text-xs font-bold text-semantic-success bg-semantic-success/10 hover:bg-semantic-success/20 border border-semantic-success/20">
-                                  Download
-                                </a>
-                              </div>
-                            ) : (
-                              <span className="rounded-xl bg-semantic-warning/10 border border-semantic-warning/30 px-3 py-1.5 text-xs font-bold text-semantic-warning">English PDF Pending</span>
-                            )}
+                {diaryDraft && (
+                  <div className="mt-4 rounded-xl border border-border bg-surface-elevated/50 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-bold text-text-primary">{diaryDraft.title}</p>
+                        <p className="text-xs font-mono font-bold uppercase tracking-wide text-text-secondary">Status: {diaryDraft.status || 'draft'}</p>
+                      </div>
+                      <button
+                        onClick={handleFinalizeDiaryDraft}
+                        disabled={diaryDraftLoading}
+                        className="rounded-xl border border-semantic-success/30 bg-semantic-success/10 px-3.5 py-2 text-sm font-bold text-semantic-success hover:bg-semantic-success/20 disabled:cursor-not-allowed transition-all"
+                      >
+                        {diaryDraftLoading ? 'Saving…' : 'Finalize'}
+                      </button>
+                    </div>
+                    <div className="mt-4 rounded-xl border border-border bg-surface p-4 shadow-xs">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-bold uppercase tracking-wider text-brand-primary">Official Case Diary Form (16 Standard Fields)</p>
+                          <p className="text-xs text-text-secondary mt-0.5">Edit any values before finalization. Generated PDFs format these fields into official Police Roznamcha tables.</p>
+                        </div>
+                      </div>
+                      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                        <div>
+                          <label className="text-[11px] font-bold uppercase tracking-wide text-text-secondary">Title</label>
+                          <input
+                            value={diaryForm.title}
+                            onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, title: e.target.value }))}
+                            className="mt-1 w-full rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-bold uppercase tracking-wide text-text-secondary">Investigation Officer</label>
+                          <input
+                            value={diaryForm.officialOfficerId}
+                            onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, officialOfficerId: e.target.value }))}
+                            className="mt-1 w-full rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-bold uppercase tracking-wide text-text-secondary">Crime Register No. and Section</label>
+                          <input
+                            value={diaryForm.crimeRegisterNumber}
+                            onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, crimeRegisterNumber: e.target.value }))}
+                            className="mt-1 w-full rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-bold uppercase tracking-wide text-text-secondary">Investigation Start & End Time (Field 14)</label>
+                          <div className="flex items-center gap-2 mt-1">
+                            <input
+                              placeholder="Start (e.g. 19/40)"
+                              value={diaryForm.investigationStartTime}
+                              onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, investigationStartTime: e.target.value }))}
+                              className="w-1/2 rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
+                            />
+                            <span className="text-xs text-text-secondary font-medium">to</span>
+                            <input
+                              placeholder="End (e.g. 23/00)"
+                              value={diaryForm.investigationEndTime}
+                              onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, investigationEndTime: e.target.value }))}
+                              className="w-1/2 rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
+                            />
                           </div>
                         </div>
-                      );
-                    })}
+                        <div>
+                          <label className="text-[11px] font-bold uppercase tracking-wide text-text-secondary">Custody Status (Field 7a)</label>
+                          <input
+                            placeholder="e.g. ----- or In Police Custody"
+                            value={diaryForm.custodyStatus}
+                            onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, custodyStatus: e.target.value }))}
+                            className="mt-1 w-full rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-bold uppercase tracking-wide text-text-secondary">Magisterial Custody Date (Field 7b)</label>
+                          <input
+                            placeholder="e.g. -----"
+                            value={diaryForm.magisterialCustodyDate}
+                            onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, magisterialCustodyDate: e.target.value }))}
+                            className="mt-1 w-full rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-bold uppercase tracking-wide text-text-secondary">Property Stolen</label>
+                          <input
+                            value={diaryForm.propertyStolen}
+                            onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, propertyStolen: e.target.value }))}
+                            className="mt-1 w-full rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-bold uppercase tracking-wide text-text-secondary">Property Recovered</label>
+                          <input
+                            value={diaryForm.propertyRecovered}
+                            onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, propertyRecovered: e.target.value }))}
+                            className="mt-1 w-full rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
+                          />
+                        </div>
+                        <div className="lg:col-span-2 rounded-xl border border-border bg-surface-elevated/40 p-4 shadow-xs">
+                          <label className="text-[11px] font-bold uppercase tracking-wide text-brand-primary">Record of Investigation (Gujarati-English Transliterated)</label>
+                          <textarea
+                            value={diaryForm.recordOfInvestigationGujEn}
+                            onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, recordOfInvestigationGujEn: e.target.value }))}
+                            rows={6}
+                            className="mt-2 w-full rounded-xl border border-border bg-input-bg p-3 text-xs text-text-primary font-mono leading-relaxed focus:border-brand-primary shadow-inner"
+                            placeholder="Enter the Gujarati-English narrative for the official diary."
+                          />
+                        </div>
+                        <div className="lg:col-span-2 rounded-xl border border-border bg-surface-elevated/40 p-4 shadow-xs">
+                          <label className="text-[11px] font-bold uppercase tracking-wide text-brand-primary">Record of Investigation (English Version)</label>
+                          <textarea
+                            value={diaryForm.recordOfInvestigationEn}
+                            onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, recordOfInvestigationEn: e.target.value }))}
+                            rows={6}
+                            className="mt-2 w-full rounded-xl border border-border bg-input-bg p-3 text-xs text-text-primary font-mono leading-relaxed focus:border-brand-primary shadow-inner"
+                            placeholder="Enter the English version for the final official record."
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
-              </div>
-            </div>
-            <CaseDiaryFeed entries={diaryEntries} onEntryClick={handleDiaryEntryClick} />
-          </div>
-        )}
 
-        {activeTab === 'placesVisited' && (
-          <div className="space-y-4">
-            <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm space-y-4">
-              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <h3 className="text-lg font-bold text-text-primary">Places Visited</h3>
-                  <p className="text-sm text-text-secondary">Manually recorded locations visited by the investigation officer. These entries are tied to the case diary timeline.</p>
-                </div>
-                <div className="rounded-xl bg-brand-primary/10 border border-brand-primary/20 px-3 py-1.5 text-xs font-mono font-bold text-brand-primary">
-                  {placesVisited.length} recorded place{placesVisited.length === 1 ? '' : 's'}
-                </div>
-              </div>
-
-              <div className="mt-6 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-                <div className="rounded-2xl border border-border bg-surface-elevated/70 p-5 shadow-xs">
-                  <div className="mb-4 text-xs font-bold uppercase tracking-wider text-text-secondary">Add New Place</div>
-                  <div className="space-y-4">
+                <div className="mt-4 rounded-2xl border border-border bg-surface p-5 shadow-sm space-y-4">
+                  <div className="flex items-center justify-between gap-3">
                     <div>
-                      <label className="text-xs font-bold uppercase tracking-wide text-text-secondary">Location</label>
-                      <input
-                        value={placeForm.address}
-                        onChange={(e) => setPlaceForm((prev: any) => ({ ...prev, address: e.target.value }))}
-                        placeholder="123 Main Street, Surat, Gujarat"
-                        className="mt-1.5 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:ring-2 focus:ring-brand-primary"
-                      />
+                      <p className="text-sm font-bold text-text-primary">Finalized Case Diary Records</p>
+                      <p className="text-xs text-text-secondary">Preview or download official bilingual (Gujarati-English & English) PDF copies.</p>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-xs font-bold uppercase tracking-wide text-text-secondary">Visit Date</label>
-                        <input
-                          type="date"
-                          value={placeForm.visitDate}
-                          onChange={(e) => setPlaceForm((prev: any) => ({ ...prev, visitDate: e.target.value }))}
-                          className="mt-1.5 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text-primary font-mono focus:ring-2 focus:ring-brand-primary"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="text-xs font-bold uppercase tracking-wide text-text-secondary">Start Time</label>
-                          <input
-                            type="time"
-                            value={placeForm.startTime}
-                            onChange={(e) => setPlaceForm((prev: any) => ({ ...prev, startTime: e.target.value }))}
-                            className="mt-1.5 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text-primary font-mono focus:ring-2 focus:ring-brand-primary"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs font-bold uppercase tracking-wide text-text-secondary">End Time</label>
-                          <input
-                            type="time"
-                            value={placeForm.endTime}
-                            onChange={(e) => setPlaceForm((prev: any) => ({ ...prev, endTime: e.target.value }))}
-                            className="mt-1.5 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text-primary font-mono focus:ring-2 focus:ring-brand-primary"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-xs font-bold uppercase tracking-wide text-text-secondary">What Was Done</label>
-                      <textarea
-                        value={placeForm.whatWasDone}
-                        onChange={(e) => setPlaceForm((prev: any) => ({ ...prev, whatWasDone: e.target.value }))}
-                        rows={4}
-                        placeholder="Search, meet witness, collect evidence, record statement..."
-                        className="mt-1.5 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:ring-2 focus:ring-brand-primary"
-                      />
-                    </div>
-                    {placeFormError && <p className="text-sm font-bold text-semantic-critical">{placeFormError}</p>}
-                    <button
-                      type="button"
-                      onClick={handleAddPlaceVisited}
-                      disabled={placesVisitedLoading}
-                      className="inline-flex items-center justify-center rounded-xl bg-brand-primary px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-brand-primary/90 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
-                    >
-                      {placesVisitedLoading ? 'Saving…' : '+ Add Place Visited'}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-border bg-surface-elevated/70 p-5 shadow-xs">
-                  <div className="flex items-center justify-between gap-3 mb-4">
-                    <div>
-                      <p className="text-sm font-bold text-text-primary">Recent Visited Places</p>
-                      <p className="text-xs text-text-secondary">These entries are visible in the case diary timeline once recorded.</p>
-                    </div>
-                    <span className="text-xs font-mono font-bold text-text-secondary">{placesVisited.length} entries</span>
+                    <span className="text-xs font-mono font-bold text-brand-primary bg-brand-primary/10 px-2.5 py-1 rounded-lg border border-brand-primary/20">{diaryHistory.length} items</span>
                   </div>
 
-                  {placesVisited.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-border bg-surface-elevated/40 p-6 text-center text-sm text-text-secondary">
-                      No visited places have been recorded yet.
+                  {diaryHistory.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-border bg-surface-elevated/40 px-4 py-6 text-center text-sm text-text-muted">
+                      No finalized case diary PDFs generated yet. Finalize a draft above to render official PDFs.
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {placesVisited.map((place) => (
-                        <div key={place.place_id || place._id} className="rounded-2xl border border-border bg-surface-elevated/70 p-4 shadow-xs">
-                          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      {diaryHistory.map((record) => {
+                        const gujEnUrl = record.pdf_url_guj_en || record.pdf_url;
+                        const enUrl = record.pdf_url_en;
+
+                        return (
+                          <div key={record.diary_id} className="flex flex-col gap-3 rounded-xl border border-border bg-surface-elevated/70 p-4 md:flex-row md:items-center md:justify-between shadow-xs">
                             <div>
-                              <p className="font-bold text-text-primary">{place.address}</p>
-                              <p className="text-xs text-text-secondary font-mono mt-1">
-                                {new Date(place.visit_date).toLocaleDateString('en-IN')} &bull; {place.start_time || 'N/A'} - {place.end_time || 'N/A'}
+                              <p className="font-bold text-text-primary">{record.title || `Case Diary No. ${record.diary_number}`}</p>
+                              <p className="text-xs text-text-secondary">
+                                Date: <span className="font-mono">{new Date(record.diary_date).toLocaleDateString('en-IN')}</span> &bull; Status: <span className="font-extrabold uppercase text-semantic-success">{record.status || 'completed'}</span>
                               </p>
+                              {record.crime_register_number && (
+                                <p className="text-xs text-text-secondary font-mono">CR No.: {record.crime_register_number}</p>
+                              )}
                             </div>
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-brand-primary bg-brand-primary/10 border border-brand-primary/20 rounded-full px-2.5 py-0.5">Recorded</span>
+                            <div className="flex flex-wrap gap-2">
+                              {gujEnUrl ? (
+                                <div className="flex items-center gap-1.5 bg-surface p-1.5 rounded-xl border border-border">
+                                  <span className="text-[10px] font-extrabold text-text-secondary px-1 uppercase">Guj-Eng:</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setPreviewPdfUrl(gujEnUrl);
+                                      setIsDiaryPreviewOpen(true);
+                                    }}
+                                    className="rounded-lg px-2.5 py-1 text-xs font-bold text-brand-primary bg-brand-primary/10 hover:bg-brand-primary/20 border border-brand-primary/20"
+                                  >
+                                    Preview
+                                  </button>
+                                  <a
+                                    href={gujEnUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    download
+                                    className="rounded-lg px-2.5 py-1 text-xs font-bold text-semantic-success bg-semantic-success/10 hover:bg-semantic-success/20 border border-semantic-success/20">
+                                    Download
+                                  </a>
+                                </div>
+                              ) : (
+                                <span className="rounded-xl bg-semantic-warning/10 border border-semantic-warning/30 px-3 py-1.5 text-xs font-bold text-semantic-warning">Guj-Eng PDF Pending</span>
+                              )}
+
+                              {enUrl ? (
+                                <div className="flex items-center gap-1.5 bg-surface p-1.5 rounded-xl border border-border">
+                                  <span className="text-[10px] font-extrabold text-text-secondary px-1 uppercase">English:</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setPreviewPdfUrl(enUrl);
+                                      setIsDiaryPreviewOpen(true);
+                                    }}
+                                    className="rounded-lg px-2.5 py-1 text-xs font-bold text-brand-primary bg-brand-primary/10 hover:bg-brand-primary/20 border border-brand-primary/20"
+                                  >
+                                    Preview
+                                  </button>
+                                  <a
+                                    href={enUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    download
+                                    className="rounded-lg px-2.5 py-1 text-xs font-bold text-semantic-success bg-semantic-success/10 hover:bg-semantic-success/20 border border-semantic-success/20">
+                                    Download
+                                  </a>
+                                </div>
+                              ) : (
+                                <span className="rounded-xl bg-semantic-warning/10 border border-semantic-warning/30 px-3 py-1.5 text-xs font-bold text-semantic-warning">English PDF Pending</span>
+                              )}
+                            </div>
                           </div>
-                          <p className="mt-3 text-sm leading-6 text-text-secondary">{place.what_was_done || 'No description provided.'}</p>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
               </div>
+              <CaseDiaryFeed entries={diaryEntries} onEntryClick={handleDiaryEntryClick} />
             </div>
-          </div>
-        )}
-
-        {activeTab === 'requests' && (
-          <DepartmentInboxPanel
-            threads={threads}
-            onRefresh={fetchWorkspaceData}
-            caseId={caseId}
-            filter={threadFilter}
-            onFilterChange={setThreadFilter}
-          />
-        )}
-
-        {activeTab === 'evidence' && (
-          <EvidencePanel evidence={evidence} caseId={caseId} onRefresh={fetchWorkspaceData} snapshot={snapshot} caseUnderstanding={caseUnderstanding} />
-        )}
-
-        {activeTab === 'physical_evidence' && (
-          <PhysicalEvidencePanel caseId={caseId} />
-        )}
-
-        {activeTab === 'participants' && (
-          <ParticipantsPanel participants={participants} caseId={caseId} onRefresh={fetchWorkspaceData} />
-        )}
-
-        {activeTab === 'complaint' && (
-          <OriginalComplaintPanel complaint={complaintData} />
-        )}
-
-        {activeTab === 'case_understanding' && (
-          <CaseUnderstandingPanel caseUnderstanding={caseUnderstanding} />
-        )}
-
-        {activeTab === 'timeline' && (
-          <TimelinePanel caseUnderstanding={caseUnderstanding} />
-        )}
-
-        {activeTab === 'custody' && (
-          <CustodyPanel
-            caseId={caseId}
-            participants={participants}
-            warrants={warrants}
-            complaintData={complaintData}
-            onRefresh={fetchWorkspaceData}
-          />
-        )}
-      </div>
-
-      <RequestComposerModal
-        isOpen={composerOpen}
-        onClose={() => setComposerOpen(false)}
-        caseId={caseId}
-        stepId={composerStepId}
-        departmentEntityId={composerDeptId}
-        showToast={showToast}
-        onSuccess={() => {
-          setComposerOpen(false);
-          setActiveTab('requests');
-          fetchWorkspaceData();
-        }}
-      />
-
-      <EvidenceViewerModal
-        isOpen={!!viewingEvidence}
-        onClose={() => setViewingEvidence(null)}
-        evidence={evidence.find((e: any) => e.evidence_id === viewingEvidence) ?? null}
-      />
-
-      <ThreadViewerModal
-        isOpen={!!viewingThreadId}
-        onClose={() => setViewingThreadId(null)}
-        caseId={caseId}
-        threadId={viewingThreadId || ''}
-      />
-
-      <SnapshotDetailModal
-        isOpen={!!viewingSnapshotId}
-        onClose={() => setViewingSnapshotId(null)}
-        caseId={caseId}
-        snapshotId={viewingSnapshotId || ''}
-      />
-
-      <ComplaintDetailModal
-        isOpen={!!viewingComplaintData}
-        onClose={() => setViewingComplaintData(null)}
-        complaintData={viewingComplaintData}
-      />
-
-      <StepDetailModal
-        isOpen={!!viewingStepId}
-        onClose={() => setViewingStepId(null)}
-        caseId={caseId}
-        stepId={viewingStepId || ''}
-        evidenceList={evidence}
-      />
-
-      <DiaryDetailModal
-        isOpen={!!selectedDiaryEntry}
-        onClose={() => setSelectedDiaryEntry(null)}
-        entry={selectedDiaryEntry}
-      />
-
-      <Modal
-        isOpen={isDiaryPreviewOpen}
-        onClose={() => setIsDiaryPreviewOpen(false)}
-        title="Diary PDF Preview"
-        size="lg"
-      >
-        <div className="space-y-4">
-          {previewPdfUrl ? (
-            <div className="h-[70vh] rounded-lg overflow-hidden border border-neutral-700">
-              <iframe
-                src={getDiaryPreviewUrl(previewPdfUrl)}
-                title="Diary PDF Preview"
-                className="w-full h-full"
-              />
-            </div>
-          ) : (
-            <p className="text-sm text-text-secondary">No preview URL is available.</p>
           )}
-          {previewPdfUrl && (
-            <a
-              href={getDiaryPreviewUrl(previewPdfUrl)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm font-semibold text-text-secondary hover:bg-neutral-800"
-            >
-              Open in browser
-            </a>
+
+          {activeTab === 'placesVisited' && (
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm space-y-4">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <h3 className="text-lg font-bold text-text-primary">Places Visited</h3>
+                    <p className="text-sm text-text-secondary">Manually recorded locations visited by the investigation officer. These entries are tied to the case diary timeline.</p>
+                  </div>
+                  <div className="rounded-xl bg-brand-primary/10 border border-brand-primary/20 px-3 py-1.5 text-xs font-mono font-bold text-brand-primary">
+                    {placesVisited.length} recorded place{placesVisited.length === 1 ? '' : 's'}
+                  </div>
+                </div>
+
+                <div className="mt-6 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+                  <div className="rounded-2xl border border-border bg-surface-elevated/70 p-5 shadow-xs">
+                    <div className="mb-4 text-xs font-bold uppercase tracking-wider text-text-secondary">Add New Place</div>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-xs font-bold uppercase tracking-wide text-text-secondary">Location</label>
+                        <input
+                          value={placeForm.address}
+                          onChange={(e) => setPlaceForm((prev: any) => ({ ...prev, address: e.target.value }))}
+                          placeholder="123 Main Street, Surat, Gujarat"
+                          className="mt-1.5 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:ring-2 focus:ring-brand-primary"
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-xs font-bold uppercase tracking-wide text-text-secondary">Visit Date</label>
+                          <input
+                            type="date"
+                            value={placeForm.visitDate}
+                            onChange={(e) => setPlaceForm((prev: any) => ({ ...prev, visitDate: e.target.value }))}
+                            className="mt-1.5 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text-primary font-mono focus:ring-2 focus:ring-brand-primary"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-xs font-bold uppercase tracking-wide text-text-secondary">Start Time</label>
+                            <input
+                              type="time"
+                              value={placeForm.startTime}
+                              onChange={(e) => setPlaceForm((prev: any) => ({ ...prev, startTime: e.target.value }))}
+                              className="mt-1.5 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text-primary font-mono focus:ring-2 focus:ring-brand-primary"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-bold uppercase tracking-wide text-text-secondary">End Time</label>
+                            <input
+                              type="time"
+                              value={placeForm.endTime}
+                              onChange={(e) => setPlaceForm((prev: any) => ({ ...prev, endTime: e.target.value }))}
+                              className="mt-1.5 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text-primary font-mono focus:ring-2 focus:ring-brand-primary"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold uppercase tracking-wide text-text-secondary">What Was Done</label>
+                        <textarea
+                          value={placeForm.whatWasDone}
+                          onChange={(e) => setPlaceForm((prev: any) => ({ ...prev, whatWasDone: e.target.value }))}
+                          rows={4}
+                          placeholder="Search, meet witness, collect evidence, record statement..."
+                          className="mt-1.5 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:ring-2 focus:ring-brand-primary"
+                        />
+                      </div>
+                      {placeFormError && <p className="text-sm font-bold text-semantic-critical">{placeFormError}</p>}
+                      <button
+                        type="button"
+                        onClick={handleAddPlaceVisited}
+                        disabled={placesVisitedLoading}
+                        className="inline-flex items-center justify-center rounded-xl bg-brand-primary px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-brand-primary/90 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
+                      >
+                        {placesVisitedLoading ? 'Saving…' : '+ Add Place Visited'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-border bg-surface-elevated/70 p-5 shadow-xs">
+                    <div className="flex items-center justify-between gap-3 mb-4">
+                      <div>
+                        <p className="text-sm font-bold text-text-primary">Recent Visited Places</p>
+                        <p className="text-xs text-text-secondary">These entries are visible in the case diary timeline once recorded.</p>
+                      </div>
+                      <span className="text-xs font-mono font-bold text-text-secondary">{placesVisited.length} entries</span>
+                    </div>
+
+                    {placesVisited.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed border-border bg-surface-elevated/40 p-6 text-center text-sm text-text-secondary">
+                        No visited places have been recorded yet.
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {placesVisited.map((place) => (
+                          <div key={place.place_id || place._id} className="rounded-2xl border border-border bg-surface-elevated/70 p-4 shadow-xs">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                              <div>
+                                <p className="font-bold text-text-primary">{place.address}</p>
+                                <p className="text-xs text-text-secondary font-mono mt-1">
+                                  {new Date(place.visit_date).toLocaleDateString('en-IN')} &bull; {place.start_time || 'N/A'} - {place.end_time || 'N/A'}
+                                </p>
+                              </div>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-brand-primary bg-brand-primary/10 border border-brand-primary/20 rounded-full px-2.5 py-0.5">Recorded</span>
+                            </div>
+                            <p className="mt-3 text-sm leading-6 text-text-secondary">{place.what_was_done || 'No description provided.'}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'requests' && (
+            <DepartmentInboxPanel
+              threads={threads}
+              onRefresh={fetchWorkspaceData}
+              caseId={caseId}
+              filter={threadFilter}
+              onFilterChange={setThreadFilter}
+            />
+          )}
+
+          {activeTab === 'evidence' && (
+            <EvidencePanel evidence={evidence} caseId={caseId} onRefresh={fetchWorkspaceData} snapshot={snapshot} caseUnderstanding={caseUnderstanding} />
+          )}
+
+          {activeTab === 'participants' && (
+            <ParticipantsPanel participants={participants} caseId={caseId} onRefresh={fetchWorkspaceData} />
+          )}
+
+          {activeTab === 'complaint' && (
+            <OriginalComplaintPanel complaint={complaintData} />
+          )}
+
+          {activeTab === 'case_understanding' && (
+            <CaseUnderstandingPanel caseUnderstanding={caseUnderstanding} />
+          )}
+
+          {activeTab === 'timeline' && (
+            <TimelinePanel caseUnderstanding={caseUnderstanding} />
           )}
         </div>
-      </Modal>
+
+        <RequestComposerModal
+          isOpen={composerOpen}
+          onClose={() => setComposerOpen(false)}
+          caseId={caseId}
+          stepId={composerStepId}
+          departmentEntityId={composerDeptId}
+          showToast={showToast}
+          onSuccess={() => {
+            setComposerOpen(false);
+            setActiveTab('requests');
+            fetchWorkspaceData();
+          }}
+        />
+
+        <EvidenceViewerModal
+          isOpen={!!viewingEvidence}
+          onClose={() => setViewingEvidence(null)}
+          evidence={evidence.find((e: any) => e.evidence_id === viewingEvidence) ?? null}
+        />
+
+        <ThreadViewerModal
+          isOpen={!!viewingThreadId}
+          onClose={() => setViewingThreadId(null)}
+          caseId={caseId}
+          threadId={viewingThreadId || ''}
+        />
+
+        <SnapshotDetailModal
+          isOpen={!!viewingSnapshotId}
+          onClose={() => setViewingSnapshotId(null)}
+          caseId={caseId}
+          snapshotId={viewingSnapshotId || ''}
+        />
+
+        <ComplaintDetailModal
+          isOpen={!!viewingComplaintData}
+          onClose={() => setViewingComplaintData(null)}
+          complaintData={viewingComplaintData}
+        />
+
+        <StepDetailModal
+          isOpen={!!viewingStepId}
+          onClose={() => setViewingStepId(null)}
+          caseId={caseId}
+          stepId={viewingStepId || ''}
+          evidenceList={evidence}
+        />
+
+        <DiaryDetailModal
+          isOpen={!!selectedDiaryEntry}
+          onClose={() => setSelectedDiaryEntry(null)}
+          entry={selectedDiaryEntry}
+        />
+
+        <Modal
+          isOpen={isDiaryPreviewOpen}
+          onClose={() => setIsDiaryPreviewOpen(false)}
+          title="Diary PDF Preview"
+          size="lg"
+        >
+          <div className="space-y-4">
+            {previewPdfUrl ? (
+              <div className="h-[70vh] rounded-lg overflow-hidden border border-neutral-700">
+                <iframe
+                  src={getDiaryPreviewUrl(previewPdfUrl)}
+                  title="Diary PDF Preview"
+                  className="w-full h-full"
+                />
+              </div>
+            ) : (
+              <p className="text-sm text-text-secondary">No preview URL is available.</p>
+            )}
+            {previewPdfUrl && (
+              <a
+                href={getDiaryPreviewUrl(previewPdfUrl)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm font-semibold text-text-secondary hover:bg-neutral-800"
+              >
+                Open in browser
+              </a>
+            )}
+          </div>
+        </Modal>
       </div>
       {/* Floating Copilot AI Widget with Smooth Expand/Collapse Animation */}
       {typeof window !== 'undefined' && createPortal(
         <div className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end gap-3 pointer-events-none">
           {/* Animated Copilot Drawer Window */}
           <div
-            className={`transition-all duration-300 transform-gpu origin-bottom-right shadow-2xl rounded-2xl overflow-hidden border border-border w-96 max-w-[92vw] h-[560px] max-h-[calc(100vh-6.5rem)] bg-surface ${
-              copilotOpen
-                ? 'scale-100 opacity-100 translate-y-0 shadow-glow pointer-events-auto'
-                : 'scale-0 opacity-0 pointer-events-none translate-y-8'
-            }`}
+            className={`transition-all duration-300 transform-gpu origin-bottom-right shadow-2xl rounded-2xl overflow-hidden border border-border w-96 max-w-[92vw] h-[560px] max-h-[calc(100vh-6.5rem)] bg-surface ${copilotOpen
+              ? 'scale-100 opacity-100 translate-y-0 shadow-glow pointer-events-auto'
+              : 'scale-0 opacity-0 pointer-events-none translate-y-8'
+              }`}
           >
             <CopilotSidebar
               caseId={caseId}
@@ -1107,9 +1087,8 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
           {/* Floating Round Launcher Button */}
           <button
             onClick={() => setCopilotOpen((prev) => !prev)}
-            className={`h-14 w-14 rounded-full bg-brand-primary text-white shadow-xl hover:shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 flex items-center justify-center border-2 border-white/20 relative group pointer-events-auto ${
-              copilotOpen ? 'rotate-90 bg-surface-elevated text-text-primary border-border' : 'animate-pulse'
-            }`}
+            className={`h-14 w-14 rounded-full bg-brand-primary text-white shadow-xl hover:shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 flex items-center justify-center border-2 border-white/20 relative group pointer-events-auto ${copilotOpen ? 'rotate-90 bg-surface-elevated text-text-primary border-border' : 'animate-pulse'
+              }`}
             title={copilotOpen ? 'Close Copilot' : 'Open Copilot'}
           >
             {copilotOpen ? (
@@ -1127,7 +1106,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
         </div>,
         document.body
       )}
-      
+
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );
@@ -1160,7 +1139,7 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
         <p className="text-xs text-neutral-400 max-w-xs">
           Evidence items added via the investigation workflow appear here.
         </p>
-        <button 
+        <button
           onClick={() => setAddModalOpen(true)}
           className="mt-4 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
         >
@@ -1174,8 +1153,8 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
   return (
     <>
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-bold text-text-primary">Digital Attachments & Case Files</h3>
-        <button 
+        <h3 className="text-lg font-bold text-text-primary">Case Evidence File</h3>
+        <button
           onClick={() => setAddModalOpen(true)}
           className="px-3.5 py-1.5 bg-brand-primary text-white text-xs font-bold rounded-xl hover:bg-brand-primary/90 transition-all shadow-xs"
         >
@@ -1218,9 +1197,9 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
         const importanceBadgeClass = (imp: string) => {
           switch (imp?.toLowerCase()) {
             case 'critical': return 'bg-semantic-critical/10 text-semantic-critical border-semantic-critical/30';
-            case 'high':     return 'bg-semantic-warning/10 text-semantic-warning border-semantic-warning/30';
-            case 'medium':   return 'bg-brand-primary/10 text-brand-primary border-brand-primary/20';
-            default:         return 'bg-surface text-text-secondary border-border';
+            case 'high': return 'bg-semantic-warning/10 text-semantic-warning border-semantic-warning/30';
+            case 'medium': return 'bg-brand-primary/10 text-brand-primary border-brand-primary/20';
+            default: return 'bg-surface text-text-secondary border-border';
           }
         };
 
@@ -1238,29 +1217,29 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
           const importanceBorder = (imp: string) => {
             switch (imp?.toLowerCase()) {
               case 'critical': return 'border-l-semantic-critical';
-              case 'high':     return 'border-l-semantic-warning';
-              case 'medium':   return 'border-l-brand-primary';
-              default:         return 'border-l-brand-primary/40';
+              case 'high': return 'border-l-semantic-warning';
+              case 'medium': return 'border-l-brand-primary';
+              default: return 'border-l-brand-primary/40';
             }
           };
 
           const importanceBadge = (imp: string) => {
             switch (imp?.toLowerCase()) {
               case 'critical': return 'bg-semantic-critical/10 text-semantic-critical border-semantic-critical/30';
-              case 'high':     return 'bg-semantic-warning/10 text-semantic-warning border-semantic-warning/30';
-              case 'medium':   return 'bg-brand-primary/10 text-brand-primary border-brand-primary/20';
-              default:         return 'bg-surface text-text-secondary border-border';
+              case 'high': return 'bg-semantic-warning/10 text-semantic-warning border-semantic-warning/30';
+              case 'medium': return 'bg-brand-primary/10 text-brand-primary border-brand-primary/20';
+              default: return 'bg-surface text-text-secondary border-border';
             }
           };
 
           // Lucide icon by file extension
           const FileIcon = (filename: string) => {
             const ext = (filename || '').split('.').pop()?.toLowerCase() || '';
-            if (['jpg','jpeg','png','gif','webp','bmp'].includes(ext))
+            if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(ext))
               return <FileImage size={18} className="text-brand-primary" />;
-            if (['mp4','mov','avi','webm'].includes(ext))
+            if (['mp4', 'mov', 'avi', 'webm'].includes(ext))
               return <FileVideo size={18} className="text-brand-primary" />;
-            if (['mp3','wav','ogg','aac'].includes(ext))
+            if (['mp3', 'wav', 'ogg', 'aac'].includes(ext))
               return <FileAudio size={18} className="text-brand-primary" />;
             return <File size={18} className="text-brand-primary" />;
           };
@@ -1368,10 +1347,9 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
                     </span>
                   </div>
                   {ev.ai_description && <p className="text-xs text-text-secondary mt-2 line-clamp-2">{ev.ai_description}</p>}
-                  <div className="mt-2 flex items-center justify-between gap-2">
-                    <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
-                      ev.status === 'verified' ? 'bg-semantic-success/10 text-semantic-success border-semantic-success/30' : 'bg-semantic-warning/10 text-semantic-warning border-semantic-warning/30'
-                    }`}>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${ev.status === 'verified' ? 'bg-semantic-success/10 text-semantic-success border-semantic-success/30' : 'bg-semantic-warning/10 text-semantic-warning border-semantic-warning/30'
+                      }`}>
                       {ev.status === 'verified' ? '✓ Verified' : 'Unverified'}
                     </span>
                     <span className="text-[10px] font-bold text-text-primary">
@@ -1385,17 +1363,17 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
         );
       })()}
 
-      
-      <EvidenceViewerModal 
-        isOpen={!!selectedEvidence} 
-        onClose={() => setSelectedEvidence(null)} 
-        evidence={selectedEvidence} 
+
+      <EvidenceViewerModal
+        isOpen={!!selectedEvidence}
+        onClose={() => setSelectedEvidence(null)}
+        evidence={selectedEvidence}
       />
-      <AddEvidenceModal 
-        isOpen={addModalOpen} 
-        onClose={() => setAddModalOpen(false)} 
-        caseId={caseId} 
-        onSuccess={onRefresh} 
+      <AddEvidenceModal
+        isOpen={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        caseId={caseId}
+        onSuccess={onRefresh}
       />
 
       {/* ── Missing Info & Evidence (from Case Intelligence) ── */}
@@ -1477,7 +1455,7 @@ function MissingInfoCardIO({ item, caseId }: { item: { title: string; descriptio
         (req.draft_content?.includes(item.title) || req.step_title?.includes(item.title))
       );
       if (isSent) setStatus('sent');
-    }).catch(() => {});
+    }).catch(() => { });
   }, [caseId, item.title]);
 
   const handleRequest = async () => {
@@ -1510,13 +1488,12 @@ function MissingInfoCardIO({ item, caseId }: { item: { title: string; descriptio
         <button
           onClick={handleRequest}
           disabled={status !== 'idle'}
-          className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl transition-all ${
-            status === 'sent'
-              ? 'bg-semantic-success/20 text-semantic-success border border-semantic-success/30 cursor-default'
-              : status === 'loading'
+          className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl transition-all ${status === 'sent'
+            ? 'bg-semantic-success/20 text-semantic-success border border-semantic-success/30 cursor-default'
+            : status === 'loading'
               ? 'bg-surface-elevated text-text-muted border border-border cursor-not-allowed'
               : 'bg-brand-primary text-white hover:bg-brand-primary/90 shadow-xs cursor-pointer'
-          }`}
+            }`}
         >
           {status === 'sent' ? (
             <><CheckCheck size={13} /> Requested from Complainant</>
@@ -1533,7 +1510,8 @@ function MissingInfoCardIO({ item, caseId }: { item: { title: string; descriptio
 
 // ─── Participants Panel ──────────────────────────────────────────────────────
 
-function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: any[]; caseId: string; onRefresh: () => void }) {  const [roleFilter, setRoleFilter] = React.useState<string>('All');
+function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: any[]; caseId: string; onRefresh: () => void }) {
+  const [roleFilter, setRoleFilter] = React.useState<string>('All');
   const [selectedParticipant, setSelectedParticipant] = React.useState<any | null>(null);
   const [promotingId, setPromotingId] = React.useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
@@ -1643,7 +1621,7 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
               className="bg-surface border border-border rounded-2xl p-4 shadow-xs hover:border-brand-primary/40 transition-all group relative space-y-3"
             >
               <div className="flex justify-between items-start gap-2">
-                <h4 
+                <h4
                   className="text-sm font-bold text-text-primary cursor-pointer group-hover:text-brand-primary transition-colors flex-1"
                   onClick={() => setSelectedParticipant(p)}
                 >
@@ -1655,7 +1633,7 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
                       setEditingParticipant(p);
                       setIsEditModalOpen(true);
                     }}
-                    className="p-1.5 text-text-secondary hover:text-brand-primary hover:bg-surface-elevated rounded-lg transition-colors cursor-pointer" 
+                    className="p-1.5 text-text-secondary hover:text-brand-primary hover:bg-surface-elevated rounded-lg transition-colors cursor-pointer"
                     title="Edit"
                   >
                     <Pencil size={13} />
@@ -1720,7 +1698,7 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
                 </button>
               )}
 
-              <button 
+              <button
                 className="text-xs font-bold text-brand-primary hover:underline cursor-pointer inline-flex items-center gap-1 pt-1"
                 onClick={() => setSelectedParticipant(p)}
               >
@@ -1787,15 +1765,15 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
 
 // ─── Participant Detail Modal ────────────────────────────────────────────────
 
-function ParticipantDetailModal({ 
-  participant: p, 
+function ParticipantDetailModal({
+  participant: p,
   caseId,
-  onClose, 
+  onClose,
   onEdit,
   onDelete,
   onRefresh,
-}: { 
-  participant: any; 
+}: {
+  participant: any;
   caseId: string;
   onClose: () => void;
   onEdit?: (p: any) => void;
@@ -2095,18 +2073,17 @@ function ParticipantDetailModal({
                   type="button"
                   onClick={() => audioInputRef.current?.click()}
                   disabled={transcribing}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
-                    transcribing
-                      ? 'bg-neutral-800 text-neutral-400 border-neutral-700 cursor-not-allowed'
-                      : 'bg-neutral-900/50 text-purple-700 border-purple-300 hover:bg-neutral-900/50 cursor-pointer'
-                  }`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${transcribing
+                    ? 'bg-neutral-800 text-neutral-400 border-neutral-700 cursor-not-allowed'
+                    : 'bg-neutral-900/50 text-purple-700 border-purple-300 hover:bg-neutral-900/50 cursor-pointer'
+                    }`}
                   title="Upload audio file to auto-fill transcript"
                 >
                   {transcribing ? (
                     <>
                       <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                       </svg>
                       Transcribing...
                     </>
@@ -2119,11 +2096,10 @@ function ParticipantDetailModal({
 
               {/* Transcription feedback */}
               {transcribeError && (
-                <p className={`text-xs px-2 py-1 rounded ${
-                  transcribeError.startsWith('Detected language')
-                    ? 'bg-blue-900/20 text-blue-400 border border-blue-100'
-                    : 'bg-red-900/20 text-red-500 border border-red-100'
-                }`}>
+                <p className={`text-xs px-2 py-1 rounded ${transcribeError.startsWith('Detected language')
+                  ? 'bg-blue-900/20 text-blue-400 border border-blue-100'
+                  : 'bg-red-900/20 text-red-500 border border-red-100'
+                  }`}>
                   {transcribeError}
                 </p>
               )}
@@ -2560,11 +2536,10 @@ function AddParticipantModal({
               value={formData.name}
               onChange={handleNameChange}
               placeholder="Enter full name"
-              className={`w-full px-4 py-2.5 bg-surface border rounded-xl text-sm text-text-primary focus:outline-none focus:ring-2 ${
-                errors.name
-                  ? 'border-semantic-critical focus:ring-semantic-critical/20'
-                  : 'border-border focus:ring-brand-primary'
-              }`}
+              className={`w-full px-4 py-2.5 bg-surface border rounded-xl text-sm text-text-primary focus:outline-none focus:ring-2 ${errors.name
+                ? 'border-semantic-critical focus:ring-semantic-critical/20'
+                : 'border-border focus:ring-brand-primary'
+                }`}
             />
             {errors.name && <p className="text-xs font-bold text-semantic-critical mt-1">{errors.name}</p>}
           </div>
@@ -3475,7 +3450,7 @@ function EditParticipantModal({
                 {formLoading ? 'Updating...' : 'Update Participant'}
               </button>
             </div>
-          </form>         
+          </form>
 
         </div>
       </div>

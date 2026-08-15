@@ -1,9 +1,11 @@
 import PDFDocument from 'pdfkit';
 import { Response } from 'express';
+import { applyWatermarkAllPages } from './pdfWatermark';
 
 export async function generateChargeSheetPdfStream(chargeSheetData: any, res: Response): Promise<void> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 50, autoFirstPage: true });
+    applyWatermarkAllPages(doc, { text: 'CHARGESHEET — CONFIDENTIAL' });
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=ChargeSheet_${chargeSheetData.section1_filingInformation.firNumber || 'Draft'}.pdf`);

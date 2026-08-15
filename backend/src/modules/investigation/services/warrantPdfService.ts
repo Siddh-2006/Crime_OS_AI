@@ -20,6 +20,7 @@ import PDFDocument from 'pdfkit';
 import path from 'path';
 import fs from 'fs';
 import type { IArrestWarrant } from '../models/ArrestWarrant.model';
+import { applyWatermarkAllPages } from '../../../shared/utils/pdfWatermark';
 
 // ─── Font helpers (mirrors FirWorker exactly) ─────────────────────────────────
 
@@ -61,6 +62,7 @@ export async function generateWarrantPdfBuffer(
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 50, autoFirstPage: true });
+    applyWatermarkAllPages(doc, { text: 'WARRANT — OFFICIAL COPY' });
     const chunks: Buffer[] = [];
     doc.on('data', (chunk: Buffer) => chunks.push(chunk));
     doc.on('end',  () => resolve(Buffer.concat(chunks)));

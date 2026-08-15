@@ -53,6 +53,10 @@ const env = cleanEnv(process.env, {
   TRANSLATION_SERVICE_URL: str({ default: '' }),
   TRANSLATION_TIMEOUT_MS: num({ default: 30000 }),
 
+  // ✨ Prompt Compression Service ✨
+  PROMPT_COMPRESSION_ENABLED: bool({ default: false }),
+  PROMPT_COMPRESSION_URL: str({ default: 'http://localhost:8005' }),
+
   // ── LLM — Ollama (primary, local) ────────────────────────────────────────────
   OLLAMA_BASE_URL:        str({ default: 'http://localhost:11434' }),
   OLLAMA_NUM_CTX:         num({ default: 32768 }),

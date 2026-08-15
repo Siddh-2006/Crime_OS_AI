@@ -4,7 +4,7 @@ Supports MongoDB (Motor driver) with automatic fallback to InMemoryCaseRepositor
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Dict, Optional
 
 from app.case_understanding.interfaces import ICaseRepository
 from app.core.logging import logger
@@ -13,9 +13,9 @@ from app.schemas.case_understanding import CaseUnderstanding
 
 
 class MongoCaseRepository(ICaseRepository):
-    """MongoDB repository for CaseUnderstanding stored directly inside the 'complaints' collection."""
+    """MongoDB repository for CaseUnderstanding documents."""
 
-    def __init__(self, collection_name: str = "complaints") -> None:
+    def __init__(self, collection_name: str = "cases") -> None:
         self._collection_name = collection_name
         self._fallback_repo = InMemoryCaseRepository()
 
@@ -26,26 +26,11 @@ class MongoCaseRepository(ICaseRepository):
 
         if db is not None:
             try:
-                from bson import ObjectId
-                or_conditions: List[Dict[str, Any]] = [{"_id": case.case_id}, {"complaintNumber": case.case_id}]
-                if ObjectId.is_valid(case.case_id):
-                    or_conditions.append({"_id": ObjectId(case.case_id)})
-
-                res = await db[self._collection_name].update_one(
-                    {"$or": or_conditions},
-                    {"$set": {"complaintIntelligence": data, "processingStatus": "PROCESSED"}},
-                    upsert=False
+                await db[self._collection_name].replace_one(
+                    {"_id": case.case_id}, data, upsert=True
                 )
-                
-                if res.matched_count == 0:
-                    await db[self._collection_name].update_one(
-                        {"_id": case.case_id},
-                        {"$set": {"complaintIntelligence": data, "processingStatus": "PROCESSED"}},
-                        upsert=True
-                    )
-
                 logger.info(
-                    "[repository] Saved CaseUnderstanding into 'complaints' collection",
+                    "[repository] Saved CaseUnderstanding to MongoDB",
                     extra={"case_id": case.case_id},
                 )
                 return case.case_id
@@ -62,17 +47,10 @@ class MongoCaseRepository(ICaseRepository):
         db = await get_mongo_db()
         if db is not None:
             try:
-                from bson import ObjectId
-                or_conditions: List[Dict[str, Any]] = [{"_id": case_id}, {"complaintNumber": case_id}]
-                if ObjectId.is_valid(case_id):
-                    or_conditions.append({"_id": ObjectId(case_id)})
-
-                doc = await db[self._collection_name].find_one({"$or": or_conditions})
-                if doc and doc.get("complaintIntelligence"):
-                    intel = doc.get("complaintIntelligence")
-                    if isinstance(intel, dict):
-                        intel.pop("_id", None)
-                        return CaseUnderstanding.model_validate(intel)
+                doc = await db[self._collection_name].find_one({"_id": case_id})
+                if doc:
+                    doc.pop("_id", None)
+                    return CaseUnderstanding.model_validate(doc)
             except Exception as exc:
                 logger.warning(
                     "[repository] MongoDB read failed, checking fallback memory store",
