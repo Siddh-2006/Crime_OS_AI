@@ -44,4 +44,4 @@ export function startGmailPollWorker(): void {
   });
 
   logger.info('[GmailPollWorker] Gmail poll worker started');
-  return worker;
+}
