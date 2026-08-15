@@ -475,6 +475,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
         showToast('Participant is already approved.', 'info');
         return;
       }
+
       await apiClient.post(`/cases/${caseId}/participants/recommendations/approve`, {
         recommendation,
         snapshot_id: snapshot?.snapshot_id,
