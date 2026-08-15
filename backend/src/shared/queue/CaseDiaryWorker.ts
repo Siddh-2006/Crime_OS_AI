@@ -397,7 +397,7 @@ async function generateSinglePdfBuffer(diary: any, complaint: any, participants:
 }
 
 export function startCaseDiaryWorker(): void {
-  createWorker<CaseDiaryPdfJobData>(
+  const worker = createWorker<CaseDiaryPdfJobData>(
     QUEUE_NAMES.CASE_DIARY,
     async (job: Job<CaseDiaryPdfJobData>) => {
       const { diaryId, caseId } = job.data;
@@ -500,5 +500,8 @@ export function startCaseDiaryWorker(): void {
     lockDuration: env.CASE_DIARY_JOB_LOCK_DURATION_MS,
     stalledInterval: Math.max(30000, Math.floor(env.CASE_DIARY_JOB_LOCK_DURATION_MS / 3)),
   });
-}
 
+  worker.on('error', (err) => {
+    logger.error('[CaseDiaryWorker] Worker connection error', { error: err.message });
+  });
+}

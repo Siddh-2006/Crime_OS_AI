@@ -56,19 +56,23 @@ export function startCaseDiaryAutoDraftScheduler(): void {
         const yesterday = getYesterdayDate();
         const cases = await Complaint.find({ status: { $ne: 'closed' } }).select('_id').lean().exec();
         for (const item of cases) {
-          const existing = await (await import('../../modules/investigation/models/CaseDiary.model')).CaseDiary.findOne({
-            case_id: item._id,
-            diary_date: new Date(yesterday),
-          }).lean().exec();
-          if (!existing) {
-            await CaseDiaryService.createDraft({
-              caseId: String(item._id),
-              diaryDate: yesterday,
-              title: `Auto Draft — ${yesterday}`,
-              language: 'en',
-              officerId: 'system',
-              draftLanguage: 'en',
-            });
+          try {
+            const existing = await (await import('../../modules/investigation/models/CaseDiary.model')).CaseDiary.findOne({
+              case_id: item._id,
+              diary_date: new Date(yesterday),
+            }).lean().exec();
+            if (!existing) {
+              await CaseDiaryService.createDraft({
+                caseId: String(item._id),
+                diaryDate: yesterday,
+                title: `Auto Draft — ${yesterday}`,
+                language: 'en',
+                officerId: 'system',
+                draftLanguage: 'en',
+              });
+            }
+          } catch (itemErr: any) {
+            logger.warn('[Case_Diary] initial auto draft failed for case, skipping', { caseId: String(item._id), error: itemErr?.message });
           }
         }
       } catch (error) {

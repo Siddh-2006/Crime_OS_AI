@@ -48,6 +48,10 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Legal Agent API", lifespan=lifespan)
 
+@app.get("/health", tags=["Health"], summary="Service health check")
+def health():
+    return {"status": "ok", "service": "legal-agent"}
+
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     start_time = time.time()

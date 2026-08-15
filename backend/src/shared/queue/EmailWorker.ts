@@ -52,7 +52,7 @@ export function startEmailWorker(): void {
         break;
 
       default:
-        logger.warn('Unknown email job type received', { type });
+        throw new Error(`Unknown email job type: ${type}`);
     }
   });
 

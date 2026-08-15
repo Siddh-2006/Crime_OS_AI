@@ -35,9 +35,17 @@ async function bootstrap(): Promise<void> {
     // Redis & BullMQ workers are optional — server still boots without Redis
     try {
       const redisClient = getRedisClient();
-      // Quick ping to check if Redis is actually reachable before starting workers
-      await redisClient.connect();
-      await redisClient.ping();
+      // Quick ping with a hard 8-second timeout so a slow/unreachable Redis
+      // doesn't freeze startup. On Render, TLS negotiation can hang indefinitely.
+      await Promise.race([
+        (async () => {
+          await redisClient.connect();
+          await redisClient.ping();
+        })(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Redis connect timeout (8s)')), 8_000),
+        ),
+      ]);
       startEmailWorker();
       startFirWorker();
       startAnalysisWorker();
@@ -89,12 +97,16 @@ async function bootstrap(): Promise<void> {
     process.on('unhandledRejection', (reason: unknown) => {
       // Don't crash for Redis ECONNREFUSED — workers handle their own errors
       const msg = reason instanceof Error ? reason.message : String(reason);
-      if (msg.includes('ECONNREFUSED') || msg.includes('Redis')) {
-        logger.warn('Suppressed Redis unhandledRejection (Redis not available)', { reason: msg });
+      if (msg.includes('ECONNREFUSED') || msg.includes('Redis') || msg.includes('connect timeout')) {
+        logger.warn('Suppressed infrastructure unhandledRejection', { reason: msg });
         return;
       }
       logger.error('Unhandled Promise Rejection', { reason });
-      server.close(() => process.exit(1));
+      if (server) {
+        server.close(() => process.exit(1));
+      } else {
+        process.exit(1);
+      }
     });
 
     process.on('uncaughtException', (err: Error) => {

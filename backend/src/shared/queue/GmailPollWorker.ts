@@ -26,13 +26,22 @@ export function startGmailPollWorker(): void {
     logger.error('[GmailPollWorker] Failed to schedule repeatable poll job', { error: err.message });
   });
 
-  createWorker<GmailPollJobData>(
+  const worker = createWorker<GmailPollJobData>(
     QUEUE_NAMES.GMAIL_POLL,
     async (_job: Job<GmailPollJobData>) => {
-      await GmailService.pollAndIngestReplies();
+      try {
+        await GmailService.pollAndIngestReplies();
+      } catch (err: any) {
+        logger.error('[GmailPollWorker] Poll cycle failed', { error: err.message });
+        throw err; // let BullMQ record the failure and retry
+      }
     },
     { concurrency: 1 }, // never run two polls simultaneously
   );
 
+  worker.on('error', (err) => {
+    logger.error('[GmailPollWorker] Worker connection error', { error: err.message });
+  });
+
   logger.info('[GmailPollWorker] Gmail poll worker started');
-}
+  return worker;

@@ -18,7 +18,7 @@ import { CUSTODY_TIMER_QUEUE, CustodyTimerJobData } from './CustodyTimerQueue';
 import logger from '../../config/logger';
 
 export function startCustodyTimerWorker(): void {
-  createWorker<CustodyTimerJobData>(
+  const worker = createWorker<CustodyTimerJobData>(
     CUSTODY_TIMER_QUEUE,
     async (job: Job<CustodyTimerJobData>) => {
       const { warrantId, caseId, participantId, participantName, custodyDeadline } = job.data;
@@ -35,6 +35,10 @@ export function startCustodyTimerWorker(): void {
     },
     { concurrency: 5 },
   );
+
+  worker.on('error', (err) => {
+    logger.error('[CustodyTimerWorker] Worker connection error', { error: err.message });
+  });
 
   logger.info('[CustodyTimerWorker] Custody timer worker started');
 }

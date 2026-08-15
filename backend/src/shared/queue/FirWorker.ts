@@ -455,13 +455,18 @@ export function startFirWorker(): void {
     });
 
     const citizen = complaint.citizen as any;
-    await EmailQueue.enqueueFirRegisteredEmail({
-      to: citizen?.email ?? '',
-      name: `${citizen?.firstName ?? ''} ${citizen?.lastName ?? ''}`.trim(),
-      complaintNumber: complaint.complaintNumber,
-      firNumber: complaint.firNumber!,
-      firPdfUrl: urlEn,
-    });
+    const citizenEmail: string = citizen?.email ?? '';
+    if (citizenEmail) {
+      await EmailQueue.enqueueFirRegisteredEmail({
+        to: citizenEmail,
+        name: `${citizen?.firstName ?? ''} ${citizen?.lastName ?? ''}`.trim(),
+        complaintNumber: complaint.complaintNumber,
+        firNumber: complaint.firNumber!,
+        firPdfUrl: urlEn,
+      });
+    } else {
+      logger.warn('[FirWorker] Citizen email missing — FIR registered email not sent', { complaintId });
+    }
   });
 
   logger.info('[FirWorker] FIR PDF worker started');
