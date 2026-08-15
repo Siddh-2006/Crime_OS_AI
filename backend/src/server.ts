@@ -73,6 +73,104 @@ async function bootstrap(): Promise<void> {
       });
     });
 
+    // ─── Socket.io Private Room Setup ──────────────────────────────────────────
+    try {
+      const { Server: SocketIOServer } = await import('socket.io');
+      const jwt = (await import('jsonwebtoken')).default;
+      const { Officer } = await import('./modules/police/models/Officer.model');
+      const { Complaint } = await import('./modules/complaint/models/Complaint.model');
+      const { CaseRoomService } = await import('./modules/investigation/services/caseRoomService');
+      const { RedisLockService } = await import('./shared/services/redisLockService');
+
+      const io = new SocketIOServer(server, {
+        cors: {
+          origin: env.FRONTEND_URL,
+          credentials: true,
+        },
+      });
+
+      const chatNs = io.of('/chat');
+
+      chatNs.use(async (socket, next) => {
+        try {
+          const token = socket.handshake.auth?.token || socket.handshake.headers?.authorization?.replace('Bearer ', '');
+          if (!token) {
+            return next(new Error('Authentication token required'));
+          }
+          const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as any;
+          const officer = await Officer.findById(decoded.sub).select('officerName role policeStation').lean();
+          if (!officer) {
+            return next(new Error('Officer not found'));
+          }
+          (socket as any).officer = {
+            id: decoded.sub,
+            name: officer.officerName,
+            role: officer.role,
+          };
+          next();
+        } catch (err) {
+          next(new Error('Unauthorized socket connection'));
+        }
+      });
+
+      chatNs.on('connection', (socket) => {
+        const officer = (socket as any).officer;
+        logger.info(`Socket connected to /chat: ${officer?.name} (${socket.id})`);
+
+        socket.on('join_room', async ({ caseId }) => {
+          if (!caseId) return;
+          const complaint = await Complaint.findById(caseId).select('assignedIOs assignedIO').lean();
+          if (!complaint) {
+            socket.emit('error', { message: 'Case not found' });
+            return;
+          }
+
+          const isAssigned =
+            Array.isArray(complaint.assignedIOs) &&
+            complaint.assignedIOs.some((id: any) => id.toString() === officer.id);
+
+          if (!isAssigned && officer.role === 'IO') {
+            socket.emit('error', { message: 'Not authorized to join this case room' });
+            return;
+          }
+
+          const roomName = `case_${caseId}`;
+          socket.join(roomName);
+          socket.emit('joined_room', { caseId, roomName });
+        });
+
+        socket.on('send_message', async ({ caseId, content }) => {
+          if (!caseId || !content || !content.trim()) return;
+          try {
+            const message = await CaseRoomService.saveMessage(caseId, officer.id, officer.name, content.trim());
+            chatNs.to(`case_${caseId}`).emit('new_message', message);
+          } catch (err) {
+            logger.error('Error in socket send_message:', err);
+            socket.emit('error', { message: 'Failed to send message' });
+          }
+        });
+
+        socket.on('typing', ({ caseId }) => {
+          socket.to(`case_${caseId}`).emit('user_typing', { officerId: officer.id, officerName: officer.name });
+        });
+
+        socket.on('stop_typing', ({ caseId }) => {
+          socket.to(`case_${caseId}`).emit('user_stop_typing', { officerId: officer.id, officerName: officer.name });
+        });
+
+        socket.on('disconnect', () => {
+          logger.info(`Socket disconnected: ${officer?.name} (${socket.id})`);
+          if (officer?.id) {
+            RedisLockService.releaseAllLocksForOfficer(officer.id);
+          }
+        });
+      });
+
+      logger.info('Socket.io server initialized on /chat namespace');
+    } catch (socketErr) {
+      logger.warn('Failed to initialize Socket.io:', socketErr);
+    }
+
     // ─── Graceful shutdown ──────────────────────────────────────────────────────
     const shutdown = async (signal: string): Promise<void> => {
       logger.warn(`Received ${signal}. Starting graceful shutdown...`);

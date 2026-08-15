@@ -27,6 +27,7 @@ import * as fs from 'fs';
 import { ChargeSheetGenerator } from '../../investigation/services/ChargeSheetGenerator';
 import { CaseParticipant } from '../../investigation/models/CaseParticipant.model';
 import { SightEngineService } from '../../../shared/services/sightengine/SightEngineService';
+import { emitDiaryEntry } from '../../../shared/utils/diaryEntryHelper';
 
 export class ComplaintService {
   constructor(private readonly complaintRepository: IComplaintRepository) {}
@@ -608,14 +609,17 @@ export class ComplaintService {
     }
 
     if (officer.role === 'IO') {
-      query.assignedIO = new Types.ObjectId(officerId);
+      query.$or = [
+        { assignedIOs: new Types.ObjectId(officerId) },
+        { assignedIO: new Types.ObjectId(officerId) },
+      ];
     }
 
     return this.complaintRepository.findStationComplaints(query, filters);
   }
 
   // ─── Approve Complaint (SHO Only) ──────────────────────────────────────────
-  async approveComplaint(id: string, officerId: string, ioId: string, ip: string): Promise<IComplaint> {
+  async approveComplaint(id: string, officerId: string, ioIds: string[], ip: string): Promise<IComplaint> {
     const officer = await Officer.findById(officerId);
     if (!officer || officer.role !== 'SHO') {
       throw new AuthorizationError('Only the Station House Officer (SHO) can approve complaints.');
@@ -634,10 +638,20 @@ export class ComplaintService {
       throw new ValidationError(`Complaint is currently in ${complaint.status} status and cannot be approved.`);
     }
 
-    // Verify IO belongs to the same station
-    const assignedIO = await Officer.findById(ioId);
-    if (!assignedIO || assignedIO.role !== 'IO' || String(assignedIO.policeStation) !== String(officer.policeStation)) {
-      throw new ValidationError('Invalid Investigation Officer selected for this station.');
+    if (!Array.isArray(ioIds) || ioIds.length === 0) {
+      throw new ValidationError('At least one Investigation Officer must be assigned.');
+    }
+
+    // Verify all IOs belong to the same station
+    const assignedIOs = await Officer.find({ _id: { $in: ioIds }, role: 'IO' });
+    if (assignedIOs.length !== ioIds.length) {
+      throw new ValidationError('One or more selected Investigation Officers are invalid.');
+    }
+
+    for (const io of assignedIOs) {
+      if (String(io.policeStation) !== String(officer.policeStation)) {
+        throw new ValidationError(`IO ${io.officerName} does not belong to this station.`);
+      }
     }
 
     const oldStatus = complaint.status;
@@ -647,14 +661,17 @@ export class ComplaintService {
       complaint.status = ComplaintStatus.ASSIGNED_TO_IO;
     }
     complaint.assignedSHO = new Types.ObjectId(officerId);
-    complaint.assignedIO = new Types.ObjectId(ioId);
+    complaint.assignedIOs = ioIds.map((id) => new Types.ObjectId(id));
+    complaint.assignedIO = complaint.assignedIOs[0]; // backward compat
     complaint.approvedAt = new Date();
     complaint.assignedAt = new Date();
+
+    const ioNames = assignedIOs.map((io) => io.officerName).join(', ');
 
     complaint.timeline.push({
       user: `SHO (${officer.officerName})`,
       timestamp: new Date(),
-      description: `Complaint assigned to IO ${assignedIO.officerName}.`,
+      description: `Complaint assigned to IO(s): ${ioNames}.`,
     });
 
     complaint.auditLogs.push({
@@ -667,7 +684,75 @@ export class ComplaintService {
     });
 
     const saved = await this.complaintRepository.save(complaint);
-    logger.info('SHO assigned complaint to IO', { complaintId: saved._id, shoId: officerId, ioId: ioId });
+    logger.info('SHO assigned complaint to IO(s)', { complaintId: saved._id, shoId: officerId, ioIds });
+
+    // Emit DiaryEntry for IO assignment
+    await emitDiaryEntry({
+      caseId: saved._id as Types.ObjectId,
+      actor: { type: 'officer', id: officerId, name: officer.officerName },
+      eventType: 'io_assigned',
+      payload: { assignedIOs: assignedIOs.map((io) => ({ id: io._id, name: io.officerName })) },
+    });
+
+    return saved;
+  }
+
+  // ─── Reassign IOs (SHO Only) ──────────────────────────────────────────────
+  async reassignIOs(id: string, officerId: string, newIoIds: string[], ip: string): Promise<IComplaint> {
+    const officer = await Officer.findById(officerId);
+    if (!officer || officer.role !== 'SHO') {
+      throw new AuthorizationError('Only the Station House Officer (SHO) can reassign IOs.');
+    }
+
+    const complaint = await this.complaintRepository.findById(id);
+    if (!complaint) {
+      throw new NotFoundError('Complaint');
+    }
+
+    if (!Array.isArray(newIoIds) || newIoIds.length === 0) {
+      throw new ValidationError('At least one Investigation Officer must be assigned.');
+    }
+
+    const assignedIOs = await Officer.find({ _id: { $in: newIoIds }, role: 'IO' });
+    if (assignedIOs.length !== newIoIds.length) {
+      throw new ValidationError('One or more selected Investigation Officers are invalid.');
+    }
+
+    for (const io of assignedIOs) {
+      if (String(io.policeStation) !== String(officer.policeStation)) {
+        throw new ValidationError(`IO ${io.officerName} does not belong to this station.`);
+      }
+    }
+
+    complaint.assignedIOs = newIoIds.map((id) => new Types.ObjectId(id));
+    complaint.assignedIO = complaint.assignedIOs[0];
+
+    const ioNames = assignedIOs.map((io) => io.officerName).join(', ');
+
+    complaint.timeline.push({
+      user: `SHO (${officer.officerName})`,
+      timestamp: new Date(),
+      description: `Complaint reassigned to IO(s): ${ioNames}.`,
+    });
+
+    complaint.auditLogs.push({
+      actor: officerId,
+      ip,
+      timestamp: new Date(),
+      oldValue: 'REASSIGN_IOS',
+      newValue: newIoIds.join(','),
+      action: 'COMPLAINT_REASSIGN_IOS',
+    });
+
+    const saved = await this.complaintRepository.save(complaint);
+    logger.info('SHO reassigned complaint IO(s)', { complaintId: saved._id, shoId: officerId, ioIds: newIoIds });
+
+    await emitDiaryEntry({
+      caseId: saved._id as Types.ObjectId,
+      actor: { type: 'officer', id: officerId, name: officer.officerName },
+      eventType: 'io_assigned',
+      payload: { assignedIOs: assignedIOs.map((io) => ({ id: io._id, name: io.officerName })) },
+    });
 
     return saved;
   }

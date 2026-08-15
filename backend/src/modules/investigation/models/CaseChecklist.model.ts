@@ -16,6 +16,7 @@ export interface ICaseChecklist extends Document {
   department_entity_id?: string;        // External department ID needed for this step
   target?: string;
   completed_by?: Types.ObjectId;
+  completed_by_name?: string;
   completed_at?: Date;
 }
 
@@ -33,6 +34,7 @@ const CaseChecklistSchema = new Schema<ICaseChecklist>(
     department_entity_id: { type: String },
     target:               { type: String },
     completed_by:         { type: Schema.Types.ObjectId, ref: 'Officer' },
+    completed_by_name:    { type: String },
     completed_at:         { type: Date },
   },
   { timestamps: true, versionKey: false },

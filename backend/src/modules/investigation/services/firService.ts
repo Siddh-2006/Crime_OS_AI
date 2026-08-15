@@ -86,6 +86,7 @@ export async function prepareFirData(complaintId: string): Promise<IFirFormData>
   const complaint = await Complaint.findById(complaintId)
     .populate('policeStation', 'name code city district state')
     .populate('assignedIO', 'officerName badgeNumber rank')
+    .populate('assignedIOs', 'officerName badgeNumber rank')
     .populate('assignedSHO', 'officerName badgeNumber rank')
     .populate('citizen', 'firstName middleName lastName email phone address city district state pincode dateOfBirth gender idProofType idProofNumber')
     .exec();

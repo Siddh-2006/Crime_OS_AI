@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { InvestigationController } from '../controllers/InvestigationController';
 import { CitizenRequestController } from '../controllers/CitizenRequestController';
+import { CaseLockController } from '../controllers/CaseLockController';
+import { CaseRoomController } from '../controllers/CaseRoomController';
 import caseParticipantRoutes from './caseParticipant.routes';
 import chargeSheetRoutes from './chargeSheet.routes';
 import warrantRoutes from './warrant.routes';
@@ -84,8 +86,14 @@ router.post('/:id/evidence',                 InvestigationController.addEvidence
 router.post('/:id/evidence/:evidenceId/sections/attach', InvestigationController.attachEvidenceSections);
 router.post('/:id/evidence/:evidenceId/transfer', InvestigationController.transferEvidence);
 
-// Per-case thread list (distinct from /threads/:threadId above)
-router.get('/:id/threads',                   InvestigationController.getThreads);
-router.post('/:id/threads/:thread_id/export-pdf', InvestigationController.exportThreadToPdf);
+// Resource locks
+router.post('/:id/locks',                                  CaseLockController.acquireLock);
+router.delete('/:id/locks/:resourceType/:resourceId',       CaseLockController.releaseLock);
+router.get('/:id/locks',                                    CaseLockController.listLocks);
+
+// Private Room Chat
+router.get('/:id/room/messages',                           CaseRoomController.getMessages);
+router.post('/:id/room/messages',                          CaseRoomController.sendMessage);
+router.get('/:id/room/eligibility',                        CaseRoomController.getEligibility);
 
 export default router;

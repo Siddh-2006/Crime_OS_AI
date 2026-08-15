@@ -4,6 +4,7 @@ import { CaseParticipant, ICaseParticipant, ParticipantRole, IVictimProfile, IWi
 import { DiaryEntry } from '../models/DiaryEntry.model';
 import { AnalysisSnapshot, IParticipantRecommendation } from '../models/AnalysisSnapshot.model';
 import { ILegalSectionSuggestion, IAppliedLegalSection } from '../models/LegalSection.schema';
+import { emitDiaryEntry } from '../../../shared/utils/diaryEntryHelper';
 
 export interface ApproveParticipantRecommendationInput {
   recommendation: IParticipantRecommendation;
@@ -514,13 +515,25 @@ export class CaseParticipantService {
   /**
    * Delete a statement from a participant.
    */
-  static async deleteStatement(caseId: string, participantId: string, statementId: string): Promise<ICaseParticipant> {
+  static async deleteStatement(caseId: string, participantId: string, statementId: string, officerId?: string): Promise<ICaseParticipant> {
     const caseObjectId = new Types.ObjectId(caseId);
     const participant = await CaseParticipant.findOne({ case_id: caseObjectId, participant_id: participantId }).exec();
     if (!participant) throw new Error('Participant not found');
 
     participant.statements = participant.statements.filter((s) => s.id !== statementId);
     await participant.save();
+
+    await emitDiaryEntry({
+      caseId: caseObjectId,
+      actor: { type: 'officer', id: officerId || 'system' },
+      eventType: 'participant_statement_deleted',
+      payload: {
+        participant_id: participant.participant_id,
+        participant_name: participant.name,
+        statement_id: statementId,
+      },
+      refIds: { participant_id: participant.participant_id },
+    });
 
     return participant;
   }
@@ -547,18 +560,17 @@ export class CaseParticipantService {
     participant.reasoning.push(reasoning);
     await participant.save();
 
-    await DiaryEntry.create({
-      case_id: caseObjectId,
-      entry_id: uuidv4(),
+    await emitDiaryEntry({
+      caseId: caseObjectId,
       actor: { type: 'officer', id: 'system' },
-      event_type: 'participant_reasoning_attached',
+      eventType: 'participant_reasoning_attached',
       payload: {
         participant_id: participant.participant_id,
         participant_name: participant.name,
         reasoning_id: reasoning.id,
         source: reasoning.source,
       },
-      ref_ids: { participant_id: participant.participant_id },
+      refIds: { participant_id: participant.participant_id },
     });
 
     return participant;
@@ -600,7 +612,7 @@ export class CaseParticipantService {
   /**
    * Delete a participant
    */
-  static async deleteParticipant(caseId: string, participantId: string): Promise<void> {
+  static async deleteParticipant(caseId: string, participantId: string, officerId?: string): Promise<void> {
     const caseObjectId = new Types.ObjectId(caseId);
     const participant = await CaseParticipant.findOne({
       case_id: caseObjectId,
@@ -618,16 +630,15 @@ export class CaseParticipantService {
       participant_id: participantId,
     });
 
-    await DiaryEntry.create({
-      case_id: caseObjectId,
-      entry_id: uuidv4(),
-      actor: { type: 'officer', id: 'system' },
-      event_type: 'participant_deleted',
+    await emitDiaryEntry({
+      caseId: caseObjectId,
+      actor: { type: 'officer', id: officerId || 'system' },
+      eventType: 'participant_deleted',
       payload: {
         participant_id: participantId,
         participant_name: participantName,
       },
-      ref_ids: { participant_id: participantId },
+      refIds: { participant_id: participantId },
     });
   }
 }

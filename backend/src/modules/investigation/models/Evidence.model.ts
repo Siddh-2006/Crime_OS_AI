@@ -21,6 +21,7 @@ export interface IEvidence extends Document {
   ai_description?: string;
   ai_tags: string[];
   uploader_id: Types.ObjectId;
+  uploader_name?: string;
   status: EvidenceStatus;
   source?: 'complainant' | 'io_officer' | 'department' | 'cyber_analyst';
   origin?: 'post_complaint_request';
@@ -79,6 +80,7 @@ const EvidenceSchema = new Schema<IEvidence>(
     ai_description:        { type: String },
     ai_tags:               [{ type: String }],
     uploader_id:           { type: Schema.Types.ObjectId, ref: 'Officer', required: true },
+    uploader_name:         { type: String },
     status:                { type: String, enum: ['pending', 'verified', 'rejected'], default: 'pending', required: true },
     origin:                { type: String, enum: ['post_complaint_request'] },
     linked_diary_entry_id: { type: String },

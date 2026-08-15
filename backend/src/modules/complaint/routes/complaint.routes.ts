@@ -11,6 +11,7 @@ import { Role } from '../../../shared/enums/roles.enum';
 import {
   createComplaintSchema,
   approveComplaintSchema,
+  reassignIOSchema,
   rejectComplaintSchema,
   updateComplaintSchema,
   addEvidenceSchema,
@@ -107,6 +108,13 @@ router.patch(
   authorize(Role.SHO),
   validate(approveComplaintSchema),
   complaintController.approveComplaint,
+);
+router.patch(
+  '/:id/reassign-ios',
+  authenticate,
+  authorize(Role.SHO),
+  validate(reassignIOSchema),
+  complaintController.reassignIOs,
 );
 router.patch(
   '/:id/reject',

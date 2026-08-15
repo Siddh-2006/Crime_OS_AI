@@ -125,11 +125,31 @@ export class ComplaintController {
     try {
       const { id } = req.params;
       const officerId = req.user!.sub;
-      const { assignedIO } = req.body;
+      const { assignedIO, assignedIOs } = req.body;
       const ip = req.ip ?? 'unknown';
 
-      const complaint = await this.complaintService.approveComplaint(id, officerId, assignedIO, ip);
-      sendSuccess(res, HttpStatusCode.OK, 'Complaint approved and assigned to IO successfully', complaint);
+      const ioIds: string[] = Array.isArray(assignedIOs)
+        ? assignedIOs
+        : assignedIO
+          ? [assignedIO]
+          : [];
+
+      const complaint = await this.complaintService.approveComplaint(id, officerId, ioIds, ip);
+      sendSuccess(res, HttpStatusCode.OK, 'Complaint approved and assigned to IO(s) successfully', complaint);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  reassignIOs = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const officerId = req.user!.sub;
+      const { assignedIOs } = req.body;
+      const ip = req.ip ?? 'unknown';
+
+      const complaint = await this.complaintService.reassignIOs(id, officerId, assignedIOs, ip);
+      sendSuccess(res, HttpStatusCode.OK, 'Complaint IOs reassigned successfully', complaint);
     } catch (err) {
       next(err);
     }

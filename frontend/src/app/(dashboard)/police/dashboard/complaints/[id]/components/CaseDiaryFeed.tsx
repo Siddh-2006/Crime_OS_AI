@@ -2,13 +2,13 @@
 
 import React from 'react';
 import { Card, CardHeader } from '@/components/ui/Card';
-import { FileText, ShieldCheck, User, Activity, AlertTriangle, Send, Upload, Edit3, MessageSquare, Shield, Lock, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { FileText, ShieldCheck, User, Activity, AlertTriangle, Send, Upload, Edit3, MessageSquare, Shield, Lock, CheckCircle2, XCircle, Clock, MapPin } from 'lucide-react';
 
 interface DiaryEntry {
   _id: string;
   entry_id: string;
   timestamp: string;
-  actor: { type: string; id: string };
+  actor: { type: string; id: string; name?: string };
   event_type: string;
   payload: any;
   ref_ids?: {
@@ -30,7 +30,10 @@ export function CaseDiaryFeed({ entries, onEntryClick }: CaseDiaryFeedProps) {
     switch (eventType) {
       case 'complaint_filed': return <FileText className="text-brand-primary" size={14} />;
       case 'evidence_added': return <Upload className="text-purple-500" size={14} />;
+      case 'evidence_updated': return <Edit3 className="text-purple-400" size={14} />;
+      case 'evidence_deleted': return <XCircle className="text-semantic-critical" size={14} />;
       case 'checklist_step_completed': return <ShieldCheck className="text-semantic-success" size={14} />;
+      case 'checklist_step_updated': return <ShieldCheck className="text-amber-500" size={14} />;
       case 'request_drafted': return <Edit3 className="text-amber-500" size={14} />;
       case 'request_sent': return <Send className="text-indigo-500" size={14} />;
       case 'response_received': return <MessageSquare className="text-teal-500" size={14} />;
@@ -38,6 +41,13 @@ export function CaseDiaryFeed({ entries, onEntryClick }: CaseDiaryFeedProps) {
       case 'diary_draft_generated': return <FileText className="text-indigo-500" size={14} />;
       case 'diary_finalized': return <ShieldCheck className="text-semantic-success" size={14} />;
       case 'witness_added': return <User className="text-amber-500" size={14} />;
+      case 'place_visited_added': return <MapPin className="text-brand-primary" size={14} />;
+      case 'place_visited_updated': return <MapPin className="text-amber-500" size={14} />;
+      case 'place_visited_deleted': return <XCircle className="text-semantic-critical" size={14} />;
+      case 'participant_statement_added': return <User className="text-indigo-500" size={14} />;
+      case 'participant_statement_updated': return <Edit3 className="text-indigo-400" size={14} />;
+      case 'participant_statement_deleted': return <XCircle className="text-semantic-critical" size={14} />;
+      case 'io_assigned': return <User className="text-emerald-500" size={14} />;
       case 'escalation_raised': return <AlertTriangle className="text-semantic-critical" size={14} />;
       case 'override_correction': return <User className="text-amber-500" size={14} />;
       // Custody & Arrest Warrant
@@ -57,7 +67,10 @@ export function CaseDiaryFeed({ entries, onEntryClick }: CaseDiaryFeedProps) {
     switch (entry.event_type) {
       case 'complaint_filed': return 'Complaint Registered';
       case 'evidence_added': return 'Evidence Attached';
+      case 'evidence_updated': return 'Evidence Metadata Updated';
+      case 'evidence_deleted': return 'Evidence Deleted';
       case 'checklist_step_completed': return 'Checklist Step Completed';
+      case 'checklist_step_updated': return 'Checklist Step Updated';
       case 'request_drafted': return 'Department Request Drafted';
       case 'request_sent': return 'Department Request Sent';
       case 'response_received': return 'Department Response Received';
@@ -65,6 +78,13 @@ export function CaseDiaryFeed({ entries, onEntryClick }: CaseDiaryFeedProps) {
       case 'diary_draft_generated': return 'Official Daily Diary Draft Generated';
       case 'diary_finalized': return 'Official Daily Diary Finalized';
       case 'witness_added': return 'Witness Added to Case';
+      case 'place_visited_added': return `Place Visited Added: ${entry.payload?.address || ''}`;
+      case 'place_visited_updated': return `Place Visited Updated: ${entry.payload?.address || ''}`;
+      case 'place_visited_deleted': return 'Place Visited Record Deleted';
+      case 'participant_statement_added': return `Statement Recorded — ${entry.payload?.participant_name || ''}`;
+      case 'participant_statement_updated': return `Statement Updated — ${entry.payload?.participant_name || ''}`;
+      case 'participant_statement_deleted': return `Statement Deleted — ${entry.payload?.participant_name || ''}`;
+      case 'io_assigned': return 'IO(s) Assigned to Case';
       case 'escalation_raised': return 'Case Escalation Raised';
       case 'override_correction': return 'Officer AI Correction Override';
       // Custody & Arrest Warrant
@@ -81,6 +101,13 @@ export function CaseDiaryFeed({ entries, onEntryClick }: CaseDiaryFeedProps) {
   };
 
   const getEventDescription = (entry: DiaryEntry) => {
+    if (entry.event_type === 'io_assigned') {
+      const ios = entry.payload?.assignedIOs;
+      if (Array.isArray(ios)) {
+        return `Assigned Officers: ${ios.map((i: any) => i.name).join(', ')}`;
+      }
+      return 'Investigation Officer assignment modified';
+    }
     if (entry.event_type === 'override_correction') {
       return `Officer corrected AI: "${entry.payload?.correction_message}"`;
     }
@@ -138,8 +165,9 @@ export function CaseDiaryFeed({ entries, onEntryClick }: CaseDiaryFeedProps) {
                     </p>
                   </div>
                   <p className="text-xs text-text-muted mb-1 flex items-center gap-1">
-                    <span className="font-semibold capitalize text-text-secondary">{entry.actor.type}</span> 
-                    <span className="text-text-muted font-mono">({entry.actor.id})</span>
+                    <span className="font-semibold capitalize text-text-secondary">
+                      {entry.actor.name || (entry.actor.type === 'officer' ? `Officer ${entry.actor.id}` : entry.actor.type)}
+                    </span> 
                   </p>
                   {getEventDescription(entry) && (
                     <div className="mt-2 p-2.5 bg-surface border border-border rounded-xl text-xs text-text-secondary italic">

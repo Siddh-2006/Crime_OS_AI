@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
@@ -14,7 +14,8 @@ import { Loader } from '@/components/ui/Loader';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/hooks/useToast';
 import { ToastContainer } from '@/components/ui/Toast';
-import { Bot, BookOpen, ClipboardList, Send, FolderOpen, Sparkles, Users, FileText, Brain, Calendar, MapPin, Download, CheckCheck, Loader2, Clock, FileImage, FileVideo, FileAudio, File, ChevronRight, CheckCircle2, AlertCircle, Shield, Pencil, Trash2, Scale, X } from 'lucide-react';
+import { CaseRoomChat } from './CaseRoomChat';
+import { Bot, BookOpen, ClipboardList, Send, FolderOpen, Sparkles, Users, FileText, Brain, Calendar, MapPin, Download, CheckCheck, Loader2, Clock, FileImage, FileVideo, FileAudio, File, ChevronRight, CheckCircle2, AlertCircle, Shield, Pencil, Trash2, Scale, X, MessageSquare } from 'lucide-react';
 import { Card, CardHeader } from '@/components/ui/Card';
 import ThreadViewerModal from './ThreadViewerModal';
 import SnapshotDetailModal from './SnapshotDetailModal';
@@ -33,7 +34,7 @@ interface InvestigationWorkspaceProps {
   setActiveTab: (tab: WorkspaceTab) => void;
 }
 
-export type WorkspaceTab = 'analysis' | 'diary' | 'checklist' | 'requests' | 'evidence' | 'participants' | 'complaint' | 'case_understanding' | 'timeline' | 'placesVisited' | 'custody';
+export type WorkspaceTab = 'analysis' | 'diary' | 'checklist' | 'requests' | 'evidence' | 'participants' | 'complaint' | 'case_understanding' | 'timeline' | 'placesVisited' | 'custody' | 'room';
 
 export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: InvestigationWorkspaceProps) {
   const { toasts, showToast, removeToast } = useToast();
@@ -540,6 +541,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
     { id: 'case_understanding', label: 'Case Understanding', icon: <Brain size={15} /> },
     { id: 'timeline', label: 'Timeline', icon: <Clock size={15} />, badge: caseUnderstanding?.timeline?.length || undefined },
     { id: 'custody', label: 'Custody', icon: <Shield size={15} />, badge: warrants.filter((w: any) => ['draft','sent_to_magistrate','approved','in_custody'].includes(w.status)).length || undefined },
+    { id: 'room', label: 'Private Room', icon: <MessageSquare size={15} /> },
   ];
 
   if (loading && !snapshot && !checklist && diaryEntries.length === 0) {
@@ -556,6 +558,10 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
       <div className="w-full min-w-0 space-y-4">
       {/* Tab Content */}
       <div className="min-h-[500px]">
+        {activeTab === 'room' && (
+          <CaseRoomChat caseId={caseId} />
+        )}
+
         {activeTab === 'analysis' && (
           <AnalysisPanel
             caseId={caseId}

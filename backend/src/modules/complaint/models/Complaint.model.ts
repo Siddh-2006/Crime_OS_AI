@@ -115,7 +115,8 @@ export interface IComplaint extends Document {
   citizen: Types.ObjectId;
   policeStation: Types.ObjectId;
   assignedSHO?: Types.ObjectId;
-  assignedIO?: Types.ObjectId;
+  assignedIO?: Types.ObjectId; // Kept as optional for backward compat
+  assignedIOs: Types.ObjectId[];
   incidentDate: Date;
   incidentTime?: string;
   incidentPlace: string;
@@ -248,6 +249,7 @@ const ComplaintSchema = new Schema<IComplaint>(
     policeStation: { type: Schema.Types.ObjectId, ref: 'PoliceStation', required: true },
     assignedSHO: { type: Schema.Types.ObjectId, ref: 'Officer' },
     assignedIO: { type: Schema.Types.ObjectId, ref: 'Officer' },
+    assignedIOs: [{ type: Schema.Types.ObjectId, ref: 'Officer' }],
     incidentDate: { type: Date, required: true },
     incidentTime: { type: String },
     incidentPlace: { type: String, required: true, trim: true },
@@ -312,5 +314,6 @@ ComplaintSchema.index({ status: 1 });
 ComplaintSchema.index({ citizen: 1 });
 ComplaintSchema.index({ policeStation: 1 });
 ComplaintSchema.index({ assignedIO: 1 });
+ComplaintSchema.index({ assignedIOs: 1 });
 
 export const Complaint = model<IComplaint>('Complaint', ComplaintSchema);

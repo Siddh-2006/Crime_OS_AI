@@ -29,7 +29,12 @@ export const createComplaintSchema = Joi.object({
 });
 
 export const approveComplaintSchema = Joi.object({
-  assignedIO: Joi.string().pattern(objectIdPattern).required(),
+  assignedIO: Joi.string().pattern(objectIdPattern).optional(),
+  assignedIOs: Joi.array().items(Joi.string().pattern(objectIdPattern)).min(1).optional(),
+}).or('assignedIO', 'assignedIOs');
+
+export const reassignIOSchema = Joi.object({
+  assignedIOs: Joi.array().items(Joi.string().pattern(objectIdPattern)).required(),
 });
 
 export const rejectComplaintSchema = Joi.object({

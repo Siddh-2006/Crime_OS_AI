@@ -122,6 +122,11 @@ interface Complaint {
     officerName: string;
     badgeNumber: string;
   };
+  assignedIOs?: Array<{
+    _id: string;
+    officerName: string;
+    badgeNumber: string;
+  }>;
   assignedSHO?: {
     _id: string;
     officerName: string;
@@ -198,6 +203,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [recommendedIos, setRecommendedIos] = useState<IOOfficer[]>([]);
   const [recLoading, setRecLoading] = useState(false);
+  const [selectedIoIds, setSelectedIoIds] = useState<string[]>([]);
 
   // FIR Registration confirmation modal
   const [firConfirmModalOpen, setFirConfirmModalOpen] = useState(false);
@@ -507,7 +513,10 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
     );
   }
 
-  const isAssignedIO = user?.role === 'IO' && complaint.assignedIO?._id === user?._id;
+  const isAssignedIO = user?.role === 'IO' && (
+    complaint.assignedIO?._id === user?._id ||
+    complaint.assignedIOs?.some((io) => io._id === user?._id)
+  );
   const isSHO = user?.role === 'SHO';
   const isLocked = complaint.status === 'FIR_REGISTERED' || complaint.status === 'CLOSED';
   const isClosed = complaint.status === 'CLOSED';
@@ -567,7 +576,11 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
             <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-brand-primary/10 text-brand-primary border border-brand-primary/20 whitespace-nowrap">
               {complaint.status.replace(/_/g, ' ')}
             </span>
-            {complaint.assignedIO && (
+            {(complaint.assignedIOs && complaint.assignedIOs.length > 0) ? (
+              <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-semantic-success/10 text-semantic-success border border-semantic-success/30 whitespace-nowrap">
+                Assigned IO(s): {complaint.assignedIOs.map((io) => io.officerName).join(', ')}
+              </span>
+            ) : complaint.assignedIO && (
               <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-semantic-success/10 text-semantic-success border border-semantic-success/30 whitespace-nowrap">
                 Assigned IO: {complaint.assignedIO.officerName} (Badge {complaint.assignedIO.badgeNumber})
               </span>
@@ -617,6 +630,13 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
               <Button
                 size="sm"
                 onClick={() => {
+                  setSelectedIoIds(
+                    complaint?.assignedIOs && complaint.assignedIOs.length > 0
+                      ? complaint.assignedIOs.map((io) => io._id)
+                      : complaint?.assignedIO
+                        ? [complaint.assignedIO._id]
+                        : []
+                  );
                   setAssignModalOpen(true);
                   fetchRecommendations();
                 }}
@@ -1748,7 +1768,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
       >
         <div className="space-y-4">
           <p className="text-xs text-text-secondary">
-            Select an Investigation Officer (IO) to assign this case to. The list is sorted and ranked by our AI recommendation service based on historical closed case files.
+            Select one or more Investigation Officers (IOs) to assign to this case. Multiple assigned IOs will collaborate on the investigation and gain access to the E2E encrypted Private Room.
           </p>
 
           {recLoading ? (
@@ -1756,66 +1776,90 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
               <Loader />
             </div>
           ) : (
-            <div className="divide-y divide-border max-h-[400px] overflow-y-auto pr-1">
-              {recommendedIos.map((io) => (
-                <div key={io._id} className="py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 first:pt-0 last:pb-0">
-                  <div className="space-y-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-bold text-text-primary">{io.officerName}</p>
-                      <span className="text-xs font-bold text-brand-primary bg-brand-primary/10 px-2.5 py-0.5 rounded-md border border-brand-primary/20">
-                        Badge: {io.badgeNumber}
-                      </span>
-                      {io.aiRecommendation && (
-                        <span className="text-xs font-bold text-semantic-warning bg-semantic-warning/10 border border-semantic-warning/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                          ⭐ {io.aiRecommendation.score.toFixed(0)}% Match
-                        </span>
-                      )}
-                    </div>
-                    {io.aiRecommendation ? (
-                      <div className="mt-1 space-y-0.5">
-                        <p className="text-[11px] text-text-secondary font-medium">
-                          Matched Cases: {io.aiRecommendation.matchedCases} (Avg Similarity: {io.aiRecommendation.averageSimilarity.toFixed(3)})
-                        </p>
-                        <ul className="list-disc pl-4 space-y-0.5">
-                          {io.aiRecommendation.reasons.map((reason: any, idx: number) => (
-                            <li key={idx} className="text-[10px] text-text-secondary leading-normal">
-                              {typeof reason === 'string'
-                                ? reason
-                                : (reason.title ?? reason.reason ?? JSON.stringify(reason))}
-                            </li>
-                          ))}
-                        </ul>
+            <>
+              <div className="divide-y divide-border max-h-[350px] overflow-y-auto pr-1 space-y-2">
+                {recommendedIos.map((io) => {
+                  const isSelected = selectedIoIds.includes(io._id);
+                  return (
+                    <div
+                      key={io._id}
+                      onClick={() => {
+                        setSelectedIoIds((prev) =>
+                          isSelected ? prev.filter((id) => id !== io._id) : [...prev, io._id]
+                        );
+                      }}
+                      className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-start gap-3 ${
+                        isSelected
+                          ? 'bg-brand-primary/10 border-brand-primary'
+                          : 'bg-surface border-border hover:border-border/80'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => {}} // handled by parent div onClick
+                        className="mt-1 h-4 w-4 rounded border-border text-brand-primary focus:ring-brand-primary cursor-pointer"
+                      />
+                      <div className="space-y-1 min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-bold text-text-primary">{io.officerName}</p>
+                          <span className="text-xs font-bold text-brand-primary bg-brand-primary/10 px-2.5 py-0.5 rounded-md border border-brand-primary/20">
+                            Badge: {io.badgeNumber}
+                          </span>
+                          {io.aiRecommendation && (
+                            <span className="text-xs font-bold text-semantic-warning bg-semantic-warning/10 border border-semantic-warning/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                              ⭐ {io.aiRecommendation.score.toFixed(0)}% Match
+                            </span>
+                          )}
+                        </div>
+                        {io.aiRecommendation ? (
+                          <div className="mt-1 space-y-0.5">
+                            <p className="text-[11px] text-text-secondary font-medium">
+                              Matched Cases: {io.aiRecommendation.matchedCases} (Avg Similarity: {io.aiRecommendation.averageSimilarity.toFixed(3)})
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="text-[11px] text-text-secondary italic">No similar historical cases found for this officer.</p>
+                        )}
                       </div>
-                    ) : (
-                      <p className="text-[11px] text-text-secondary italic">No similar historical cases found for this officer.</p>
-                    )}
-                  </div>
-                  <Button
-                    size="sm"
-                    onClick={async () => {
-                      setAssigningId(io._id);
-                      try {
-                        const id = params.id as string;
-                        await apiClient.patch(API_ROUTES.COMPLAINTS.APPROVE(id), { assignedIO: io._id });
-                        setAssignModalOpen(false);
-                        await fetchComplaint();
-                      } catch (err: any) {
-                        alert(err.response?.data?.message || 'Failed to approve complaint.');
-                      } finally {
-                        setAssigningId(null);
+                    </div>
+                  );
+                })}
+                {recommendedIos.length === 0 && (
+                  <p className="text-sm text-neutral-500 italic text-center py-6">No officers available at this station.</p>
+                )}
+              </div>
+
+              <div className="pt-4 border-t border-border flex justify-between items-center">
+                <span className="text-xs font-bold text-text-secondary">
+                  {selectedIoIds.length} Officer(s) Selected
+                </span>
+                <Button
+                  size="sm"
+                  disabled={selectedIoIds.length === 0 || actionLoading}
+                  isLoading={actionLoading}
+                  onClick={async () => {
+                    setActionLoading(true);
+                    try {
+                      const id = params.id as string;
+                      if (complaint.status === 'ASSIGNED_TO_IO' || complaint.status === 'FIR_REGISTERED') {
+                        await apiClient.patch(`/complaints/${id}/reassign-ios`, { assignedIOs: selectedIoIds });
+                      } else {
+                        await apiClient.patch(API_ROUTES.COMPLAINTS.APPROVE(id), { assignedIOs: selectedIoIds });
                       }
-                    }}
-                    isLoading={assigningId === io._id}
-                    disabled={actionLoading || (assigningId !== null && assigningId !== io._id)}
-                  >
-                    Assign
-                  </Button>
-                </div>
-              ))}
-              {recommendedIos.length === 0 && (
-                <p className="text-sm text-neutral-500 italic text-center py-6">No officers available at this station.</p>
-              )}
-            </div>
+                      setAssignModalOpen(false);
+                      await fetchComplaint();
+                    } catch (err: any) {
+                      alert(err.response?.data?.message || 'Failed to update IO assignment.');
+                    } finally {
+                      setActionLoading(false);
+                    }
+                  }}
+                >
+                  Confirm &amp; Assign Selected ({selectedIoIds.length})
+                </Button>
+              </div>
+            </>
           )}
         </div>
       </Modal>

@@ -45,8 +45,12 @@ export function CaseSummaryBlock({ complaint, evidence }: CaseSummaryBlockProps)
           </div>
         </div>
         <div className="mt-4 md:mt-0 text-left md:text-right">
-          <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Assigned IO</p>
-          <p className="text-sm font-bold text-text-primary mt-0.5">{complaint.assignedIO?.officerName || 'Pending Assignment'}</p>
+          <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Assigned IO(s)</p>
+          <p className="text-sm font-bold text-text-primary mt-0.5">
+            {Array.isArray((complaint as any).assignedIOs) && (complaint as any).assignedIOs.length > 0
+              ? (complaint as any).assignedIOs.map((io: any) => io.officerName).join(', ')
+              : complaint.assignedIO?.officerName || 'Pending Assignment'}
+          </p>
           {complaint.assignedIO?.badgeNumber && <p className="text-xs text-text-secondary font-mono">{complaint.assignedIO.badgeNumber}</p>}
         </div>
       </div>

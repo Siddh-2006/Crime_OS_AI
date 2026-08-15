@@ -414,6 +414,7 @@ export function startCaseDiaryWorker(): void {
       .populate('citizen', 'firstName lastName email phone address')
       .populate('policeStation', 'name code city district state address')
       .populate('assignedIO', 'officerName badgeNumber')
+      .populate('assignedIOs', 'officerName badgeNumber')
       .lean()
       .exec();
 

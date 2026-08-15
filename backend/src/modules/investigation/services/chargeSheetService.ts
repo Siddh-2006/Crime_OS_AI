@@ -22,6 +22,7 @@ export class ChargeSheetService {
       .populate('citizen')
       .populate('policeStation')
       .populate('assignedIO')
+      .populate('assignedIOs')
       .exec();
 
     if (!complaint) {
@@ -172,7 +173,9 @@ export class ChargeSheetService {
         district: (complaint.policeStation as any)?.district || 'N/A',
         court: chargeSheet.filingMetadata?.courtName || 'N/A',
         filingDate: chargeSheet.filingMetadata?.filedAt || 'N/A',
-        investigatingOfficer: (complaint.assignedIO as any)?.officerName || 'N/A',
+        investigatingOfficer: Array.isArray((complaint as any).assignedIOs) && (complaint as any).assignedIOs.length > 0
+          ? (complaint as any).assignedIOs.map((io: any) => io.officerName || 'N/A').join(', ')
+          : (complaint.assignedIO as any)?.officerName || 'N/A',
         chargeSheetStatus: chargeSheet.filingMetadata?.status || 'draft',
         version: chargeSheet.version
       },

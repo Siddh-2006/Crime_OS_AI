@@ -13,6 +13,7 @@ export class ComplaintRepository implements IComplaintRepository {
       .populate('policeStation', 'name code city district state')
       .populate('assignedSHO', 'officerName badgeNumber')
       .populate('assignedIO', 'officerName badgeNumber')
+      .populate('assignedIOs', 'officerName badgeNumber')
       .exec();
   }
 
@@ -22,6 +23,7 @@ export class ComplaintRepository implements IComplaintRepository {
       .populate('policeStation', 'name code city district state')
       .populate('assignedSHO', 'officerName badgeNumber')
       .populate('assignedIO', 'officerName badgeNumber')
+      .populate('assignedIOs', 'officerName badgeNumber')
       .exec();
   }
 
@@ -63,6 +65,7 @@ export class ComplaintRepository implements IComplaintRepository {
       Complaint.find(queryObj)
         .populate('citizen', 'firstName lastName email phone')
         .populate('assignedIO', 'officerName badgeNumber')
+        .populate('assignedIOs', 'officerName badgeNumber')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)

@@ -411,6 +411,7 @@ export function startFirWorker(): void {
     const complaint = await Complaint.findById(complaintId)
       .populate('policeStation', 'name code city district state')
       .populate('assignedIO', 'officerName badgeNumber')
+      .populate('assignedIOs', 'officerName badgeNumber')
       .populate('citizen', 'firstName lastName email phone address city district state')
       .exec();
 

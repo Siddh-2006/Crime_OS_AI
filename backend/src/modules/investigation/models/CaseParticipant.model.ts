@@ -17,6 +17,8 @@ export interface IParticipantStatement {
   id: string;
   content: string;
   recordedAt: Date;
+  recorded_by_id?: string;
+  recorded_by_name?: string;
 }
 
 /** A reasoning note — can be attached from the AI analysis panel or edited manually. */
@@ -25,6 +27,7 @@ export interface IParticipantReasoning {
   content: string;
   source: 'ai' | 'officer';
   createdAt: Date;
+  created_by_name?: string;
 }
 
 export interface IVictimProfile {
@@ -89,6 +92,8 @@ const ParticipantStatementSchema = new Schema<IParticipantStatement>(
     id: { type: String, required: true, default: uuidv4 },
     content: { type: String, required: true, trim: true },
     recordedAt: { type: Date, required: true },
+    recorded_by_id: { type: String },
+    recorded_by_name: { type: String },
   },
   { _id: false },
 );
@@ -99,6 +104,7 @@ const ParticipantReasoningSchema = new Schema<IParticipantReasoning>(
     content: { type: String, required: true, trim: true },
     source: { type: String, enum: ['ai', 'officer'], required: true, default: 'officer' },
     createdAt: { type: Date, required: true, default: Date.now },
+    created_by_name: { type: String },
   },
   { _id: false },
 );

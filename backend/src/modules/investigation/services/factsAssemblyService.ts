@@ -121,6 +121,7 @@ export interface ComplaintFacts {
   short_description?: string;
   detailed_description?: string;
   assigned_io_id?: string;
+  assigned_io_ids?: string[];
   assigned_sho_id?: string;
   legal_sections_history?: Array<{
     version: number;
@@ -397,6 +398,9 @@ export async function buildFactsObject(caseId: string): Promise<FactsObject> {
     short_description: complaintDoc.shortDescription,
     detailed_description: complaintDoc.detailedDescription,
     assigned_io_id: complaintDoc.assignedIO?.toString(),
+    assigned_io_ids: Array.isArray(complaintDoc.assignedIOs)
+      ? complaintDoc.assignedIOs.map((id: any) => id?.toString())
+      : complaintDoc.assignedIO ? [complaintDoc.assignedIO.toString()] : [],
     assigned_sho_id: complaintDoc.assignedSHO?.toString(),
     legal_sections_history: (complaintDoc.legalSectionsHistory ?? []).map((entry) => ({
       version: entry.version,

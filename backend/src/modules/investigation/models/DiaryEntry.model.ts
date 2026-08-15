@@ -24,15 +24,23 @@ export type DiaryEventType =
   | 'participant_sections_attached'
   | 'participant_promoted_to_accused'
   | 'participant_statement_added'
+  | 'participant_statement_updated'
+  | 'participant_statement_deleted'
   | 'participant_reasoning_attached'
   | 'participant_identifier_uploaded'
   | 'evidence_sections_attached'
+  | 'evidence_updated'
+  | 'evidence_deleted'
+  | 'checklist_step_updated'
   | 'diary_draft_generated'
   | 'diary_finalized'
   | 'case_diary_draft_created'
   | 'case_diary_completed'
   | 'place_visited_added'
+  | 'place_visited_updated'
+  | 'place_visited_deleted'
   | 'witness_added'
+  | 'io_assigned'
   // ── Custody & Arrest Warrant lifecycle ─────────────────────────────────────
   | 'warrant_drafted'
   | 'warrant_sent_to_magistrate'
@@ -47,7 +55,7 @@ export interface IDiaryEntry extends Document {
   case_id: Types.ObjectId;
   entry_id: string;
   timestamp: Date;
-  actor: { type: DiaryActorType; id: string };
+  actor: { type: DiaryActorType; id: string; name?: string };
   event_type: DiaryEventType;
   payload: Record<string, unknown>;
   ref_ids: {
@@ -68,6 +76,7 @@ const DiaryEntrySchema = new Schema<IDiaryEntry>(
     actor: {
       type: { type: String, enum: ['officer', 'system', 'department'], required: true },
       id:   { type: String, required: true },
+      name: { type: String },
     },
     event_type: {
       type: String,
@@ -79,9 +88,12 @@ const DiaryEntrySchema = new Schema<IDiaryEntry>(
         'participant_recommendation_approved', 'participant_added_manually',
         'participant_updated', 'participant_deleted', 'participant_sections_attached',
         'participant_promoted_to_accused', 'participant_statement_added',
+        'participant_statement_updated', 'participant_statement_deleted',
         'participant_reasoning_attached', 'participant_identifier_uploaded', 'evidence_sections_attached',
+        'evidence_updated', 'evidence_deleted', 'checklist_step_updated',
         'diary_draft_generated', 'diary_finalized', 'case_diary_draft_created',
-        'case_diary_completed', 'place_visited_added', 'witness_added',
+        'case_diary_completed', 'place_visited_added', 'place_visited_updated', 'place_visited_deleted',
+        'witness_added', 'io_assigned',
         // Custody & Arrest Warrant lifecycle
         'warrant_drafted', 'warrant_sent_to_magistrate', 'warrant_approved',
         'warrant_rejected', 'suspect_taken_into_custody', 'custody_deadline_reached',

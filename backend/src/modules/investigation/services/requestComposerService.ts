@@ -33,12 +33,12 @@ export class RequestComposerService {
     }
 
     // Look up Complaint and IO details
-    const complaint = await Complaint.findById(caseId).populate('assignedIO policeStation');
-    let ioDetails = '[Name/Designation of Requesting Officer]\\n[Police Station/Unit Details]';
-    if (complaint && complaint.assignedIO && complaint.policeStation) {
-      const io = complaint.assignedIO as any;
+    const complaint = await Complaint.findById(caseId).populate('assignedIO assignedIOs policeStation');
+    let ioDetails = '[Name/Designation of Requesting Officer]\n[Police Station/Unit Details]';
+    if (complaint && (complaint.assignedIO || (complaint as any).assignedIOs?.[0]) && complaint.policeStation) {
+      const io = (complaint.assignedIO || (complaint as any).assignedIOs?.[0]) as any;
       const station = complaint.policeStation as any;
-      ioDetails = `${io.rank || 'Investigating Officer'} ${io.name || io.first_name || ''}\n${station.name || 'Cyber Crime Police Station'}\n${station.district || ''}, ${station.state || ''}`;
+      ioDetails = `${io.rank || 'Investigating Officer'} ${io.officerName || io.name || ''}\n${station.name || 'Cyber Crime Police Station'}\n${station.district || ''}, ${station.state || ''}`;
     }
 
     // Look up exact department name
