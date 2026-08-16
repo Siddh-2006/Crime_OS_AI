@@ -2,8 +2,9 @@
 Pydantic v2 schemas for the /embed-case endpoint.
 Represents a completely closed FIR sent by the Node backend.
 """
-from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class ComplaintIntelligenceData(BaseModel):
@@ -91,6 +92,8 @@ class EmbedCaseRequest(BaseModel):
     IDs are stored only in payload — never embedded in the text vector.
     """
 
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+
     # ── Metadata (stored as Qdrant payload, not embedded) ──────────────────────
     firId: str = Field(..., description="MongoDB ObjectId of the FIR/complaint document")
     complaintId: str = Field(..., description="Complaint ObjectId (may equal firId if same doc)")
@@ -103,14 +106,14 @@ class EmbedCaseRequest(BaseModel):
     createdAt: str = Field(..., description="ISO date string when complaint was created")
 
     # ── Semantic content (converted to structured text and embedded) ────────────
-    crimeCategory: str = Field(..., description="Primary crime category, e.g. THEFT")
+    crimeCategory: str = Field(default="", description="Primary crime category, e.g. THEFT")
     crimeSubCategory: Optional[str] = Field(None, description="Sub-category if applicable")
-    incidentSummary: str = Field(..., description="Brief narrative of what happened")
+    incidentSummary: str = Field(default="", description="Brief narrative of what happened")
     modusOperandi: Optional[str] = Field(None, description="How the crime was carried out")
     evidenceSummary: Optional[str] = Field(None, description="Summary of evidence collected")
     investigationSummary: Optional[str] = Field(None, description="Summary of how investigation progressed")
     sections: Optional[List[str]] = Field(default_factory=list, description="IPC/BNS sections applied")
-    location: str = Field(..., description="Place of occurrence, including district/state")
+    location: str = Field(default="", description="Place of occurrence, including district/state")
     complaintIntelligence: Optional[ComplaintIntelligenceData] = Field(
         None,
         description="Optional AI-generated complaint intelligence summary and recommendations",
@@ -123,6 +126,35 @@ class EmbedCaseRequest(BaseModel):
     chargeSheet: List[ChargeSheetEntry] = Field(default_factory=list, description="Applied chargesheet entries")
     participants: List[CaseParticipantData] = Field(default_factory=list, description="Suspects and accused with applied sections")
     arrestWarrants: List[ArrestWarrantData] = Field(default_factory=list, description="Arrest warrant lifecycle data")
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_legacy_fields(cls, value: Any) -> Any:
+        if not isinstance(value, dict):
+            return value
+
+        data = dict(value)
+
+        if "crime_category" in data and "crimeCategory" not in data:
+            data["crimeCategory"] = data["crime_category"]
+        if "crime_sub_category" in data and "crimeSubCategory" not in data:
+            data["crimeSubCategory"] = data["crime_sub_category"]
+        if "incident_summary" in data and "incidentSummary" not in data:
+            data["incidentSummary"] = data["incident_summary"]
+        if "modu_operandi" in data and "modusOperandi" not in data:
+            data["modusOperandi"] = data["modu_operandi"]
+        if "evidence_summary" in data and "evidenceSummary" not in data:
+            data["evidenceSummary"] = data["evidence_summary"]
+        if "investigation_summary" in data and "investigationSummary" not in data:
+            data["investigationSummary"] = data["investigation_summary"]
+        if "created_at" in data and "createdAt" not in data:
+            data["createdAt"] = data["created_at"]
+        if "closed_date" in data and "closedDate" not in data:
+            data["closedDate"] = data["closed_date"]
+        if "incident_place" in data and "location" not in data:
+            data["location"] = data["incident_place"]
+
+        return data
 
 
 class EmbedCaseResponse(BaseModel):
