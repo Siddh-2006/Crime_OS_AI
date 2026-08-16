@@ -411,3 +411,92 @@ The Socket.io namespace is `/case-room`. After connecting, clients must join the
 ---
 
 *Crime OS — Built for Gujarat Police | SVNIT*
+
+---
+
+## Physical Evidence API
+
+Endpoints for tracking physical evidence items, Malkhana storage, and the cryptographic chain of custody.
+
+### 1. Create Physical Evidence
+
+`POST /api/v1/physical-evidence/cases/:id/physical-evidence`
+
+Registers a newly seized physical item into the system.
+
+**Request Body (example)**
+```json
+{
+  "itemName": "Glock 19",
+  "category": "WEAPON",
+  "description": "9mm handgun found at the scene",
+  "conditionOnSeizure": "Loaded, safety off",
+  "seizureMemoNo": "SM-9092",
+  "seizureLocation": "Alleyway behind bank",
+  "sealNumber": "S-99120"
+}
+```
+
+**Response (201 Created)**
+```json
+{
+  "status": "success",
+  "message": "Physical Evidence logged successfully",
+  "data": {
+    "evidenceTagId": "PEV-2026-00491",
+    "status": "SEIZED",
+    "custodyChain": [...]
+  }
+}
+```
+
+### 2. Get Physical Evidence by Case
+
+`GET /api/v1/physical-evidence/cases/:id/physical-evidence`
+
+Returns all physical items linked to a specific case.
+
+### 3. Initiate Dispatch
+
+`POST /api/v1/physical-evidence/:id/dispatch`
+
+Initiates a custody transfer (e.g., from IO to Malkhana, or Malkhana to FSL).
+
+### 4. Acknowledge Receipt
+
+`POST /api/v1/physical-evidence/:id/acknowledge`
+
+Receiving officer accepts the item and completes the cryptographic custody node.
+
+### 5. Verify Chain Integrity
+
+`GET /api/v1/physical-evidence/:id/verify`
+
+Recalculates the hashes of the custody chain to prove no tampering has occurred.
+
+---
+
+## Case Graph API
+
+Endpoints for retrieving the relationship graph for a case.
+
+### 1. Get Case Knowledge Graph
+
+`GET /api/v1/cases/:id/graph`
+
+Dynamically builds and returns the entity-participant-evidence graph for visualization.
+
+**Response (200 OK)**
+```json
+{
+  "status": "success",
+  "data": {
+    "nodes": [
+      { "id": "60d5ec...", "label": "John Doe", "nodeType": "participant" }
+    ],
+    "edges": [
+      { "from": "60d5ec...", "to": "50c4db...", "relationship": "shared_identifier" }
+    ]
+  }
+}
+```
