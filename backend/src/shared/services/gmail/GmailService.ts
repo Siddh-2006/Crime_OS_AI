@@ -194,6 +194,7 @@ async function ingestResponse(opts: {
       const env = require('../../../config/env').default;
       
       const formData = new FormData();
+      formData.append('uploader_type', 'police');
       for (const att of attachments) {
         formData.append('files', att.buffer, {
           filename: att.filename,
@@ -351,12 +352,12 @@ Update the checklist and analysis based on this new information.`.trim();
               case_id: caseId,
               entry_id: uuidv4(),
               actor: { type: 'system', id: 'ai' },
-              event_type: 'evidence_analysis_complete',
+              event_type: 'analysis_run',
               payload: { content: prompt },
             });
 
             logger.info(`[GmailService] Triggering InvestigationOrchestrator for case ${caseId}`);
-            InvestigationOrchestrator.runAnalysis(caseId.toString(), 'evidence_processed').catch(
+            InvestigationOrchestrator.runAnalysis(caseId.toString(), 'auto_on_response').catch(
               (err: Error) => logger.error(`[GmailService] Orchestrator re-analysis failed`, { caseId, error: err.message }),
             );
             break;
@@ -366,7 +367,7 @@ Update the checklist and analysis based on this new information.`.trim();
         
         if (!allProcessed) {
           logger.warn(`[GmailService] Evidence processing timed out for case ${caseId}. Triggering Orchestrator anyway.`);
-          InvestigationOrchestrator.runAnalysis(caseId.toString(), 'evidence_timeout').catch(
+          InvestigationOrchestrator.runAnalysis(caseId.toString(), 'auto_on_complaint_filed').catch(
             (err: Error) => logger.error(`[GmailService] Orchestrator re-analysis failed`, { caseId, error: err.message }),
           );
         }

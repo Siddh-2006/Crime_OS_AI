@@ -1243,7 +1243,7 @@ export class ComplaintService {
         const { InvestigationOrchestrator } = require('../../investigation/services/investigationOrchestrator');
         // Do this asynchronously to not block the response
         setImmediate(() => {
-          InvestigationOrchestrator.runAnalysis(complaint._id.toString(), 'evidence_upload', 'en')
+          InvestigationOrchestrator.runAnalysis(complaint._id.toString(), 'auto_on_response', 'en')
             .catch((err: any) => logger.error('Failed to re-trigger analysis after addEvidence', { error: err }));
         });
       } catch (triggerErr: any) {

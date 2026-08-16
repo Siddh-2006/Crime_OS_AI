@@ -75,7 +75,7 @@ interface ToastContainerProps {
 /**
  * Toast notification container — renders in fixed bottom-right corner.
  */
-export function ToastContainer({ toasts, onRemove }: ToastContainerProps): React.ReactElement {
+export function ToastContainer({ toasts = [], onRemove }: ToastContainerProps): React.ReactElement {
   return (
     <div
       className="fixed bottom-5 right-5 z-50 flex w-full max-w-sm flex-col gap-2"

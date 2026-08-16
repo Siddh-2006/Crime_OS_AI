@@ -4,7 +4,7 @@ import { IOfficerRepository } from './IOfficerRepository';
 
 export class OfficerRepository implements IOfficerRepository {
   async findByEmail(email: string, includePassword = false): Promise<IOfficer | null> {
-    const query = Officer.findOne({ email: email.toLowerCase() });
+    const query = Officer.findOne({ email: email.trim().toLowerCase() });
     if (includePassword) {
       query.select('+password');
     }
@@ -16,7 +16,7 @@ export class OfficerRepository implements IOfficerRepository {
   }
 
   async existsByEmail(email: string): Promise<boolean> {
-    const count = await Officer.countDocuments({ email: email.toLowerCase() });
+    const count = await Officer.countDocuments({ email: email.trim().toLowerCase() });
     return count > 0;
   }
 }

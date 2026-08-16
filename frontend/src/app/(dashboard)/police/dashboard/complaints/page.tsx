@@ -52,6 +52,8 @@ export default function PoliceComplaintQueuePage(): React.ReactElement {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [limit] = useState(10);
 
   // Polling for new department notifications
   useEffect(() => {
@@ -60,8 +62,6 @@ export default function PoliceComplaintQueuePage(): React.ReactElement {
     }, 15000); // 15 seconds
     return () => clearInterval(interval);
   }, [search, status, page]);
-  const [totalPages, setTotalPages] = useState(1);
-  const [limit] = useState(10);
 
   useEffect(() => {
     fetchStationComplaints();
@@ -307,3 +307,6 @@ export default function PoliceComplaintQueuePage(): React.ReactElement {
     </div>
   );
 }
+
+
+

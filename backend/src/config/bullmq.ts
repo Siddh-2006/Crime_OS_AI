@@ -2,6 +2,8 @@ import { Queue, Worker, WorkerOptions, QueueOptions, Job } from 'bullmq';
 import env from './env';
 import logger from './logger';
 
+const DEFAULT_JOB_TIMEOUT_MS = 10 * 60 * 1000;
+
 // Redis Cloud terminates TLS at the load balancer.
 // ioredis must NOT wrap the connection in a second TLS layer.
 // The correct approach for managed Redis (Redis Cloud, Upstash, etc.) is
@@ -56,6 +58,9 @@ export function createWorker<T>(
   const worker = new Worker<T>(queueName, processor, {
     connection: redisConnection,
     concurrency: 5,
+    lockDuration: DEFAULT_JOB_TIMEOUT_MS,
+    stalledInterval: 60_000,
+    maxStalledCount: 2,
     ...options,
   });
 

@@ -1,10 +1,10 @@
+import { NotFoundError } from '../../../common/errors/NotFoundError';
 import { Request, Response, NextFunction } from 'express';
 import { Blob } from 'buffer';
-import { ComplaintService } from '../services/ComplaintService';
 import { Complaint } from '../models/Complaint.model';
+import { ComplaintService } from '../services/ComplaintService';
 import { sendSuccess } from '../../../shared/utils/response.util';
 import { HttpStatusCode } from '../../../common/enums/httpStatus.enum';
-import { NotFoundError } from '../../../common/errors/NotFoundError';
 import env from '../../../config/env';
 import logger from '../../../config/logger';
 

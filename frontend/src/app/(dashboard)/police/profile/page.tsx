@@ -68,14 +68,7 @@ export default function PoliceProfilePage() {
       </div>
 
       <Card className="p-8 bg-[#0a0a0a] border-gray-800">
-        <div className="flex items-center gap-6 mb-8 pb-8 border-b border-gray-800">
-          <div className="w-24 h-24 rounded-full bg-gray-800 flex items-center justify-center overflow-hidden">
-            {officerData?.photoUrl ? (
-              <img src={officerData.photoUrl} alt="Profile" className="w-full h-full object-cover" />
-            ) : (
-              <User size={40} className="text-gray-400" />
-            )}
-          </div>
+        <div className="flex items-start justify-between mb-8 pb-8 border-b border-gray-800">
           <div>
             <h2 className="text-2xl font-medium text-white">{officerData?.officerName}</h2>
             <div className="flex items-center gap-2 mt-2 text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full w-fit">
@@ -83,6 +76,13 @@ export default function PoliceProfilePage() {
               <span className="text-sm font-bold uppercase">{officerData?.role}</span>
             </div>
             <p className="text-gray-400 mt-2 font-mono text-sm">Badge: {officerData?.badgeNumber}</p>
+          </div>
+          <div className="w-24 h-24 rounded-full bg-gray-800 flex shrink-0 items-center justify-center overflow-hidden">
+            {officerData?.photoUrl ? (
+              <img src={officerData.photoUrl} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              <User size={40} className="text-gray-400" />
+            )}
           </div>
         </div>
 

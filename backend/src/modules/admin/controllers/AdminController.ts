@@ -21,7 +21,6 @@ const cookieOptions = {
   maxAge: env.JWT_REFRESH_EXPIRY_SECONDS * 1000,
   path: '/',
 };
-
 export class AdminController {
   constructor(private readonly adminAuthService: AdminAuthService) {}
 
