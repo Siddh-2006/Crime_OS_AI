@@ -2,6 +2,14 @@
 
 > Crime OS is a comprehensive digital platform built to assist police officers throughout the entire lifecycle of a criminal investigation — from complaint intake to charge sheet generation. It combines structured case management with deeply integrated AI to reduce manual effort, surface critical insights, and ensure nothing falls through the cracks.
 
+
+##  Live Demo
+
+Experience the deployed Crime OS platform:
+
+ **[Open Crime OS Live Demo](https://crimeos-lemon.vercel.app/login)**
+ 
+
 For the technical architecture, component design, data flows, security model, and deployment topology, see [SYSTEM_ARCHITECTURE.md](./SYSTEM_ARCHITECTURE.md).
 
 ---
