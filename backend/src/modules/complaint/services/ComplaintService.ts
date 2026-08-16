@@ -1261,11 +1261,18 @@ export class ComplaintService {
     if (!complaint) throw new NotFoundError('Complaint');
     if (complaint.status !== ComplaintStatus.CLOSED) throw new ValidationError('Only closed cases can be embedded');
 
+<<<<<<< Updated upstream
     const officer = await Officer.findById(officerId);
     if (!officer) {
       throw new NotFoundError('Officer');
     }
 
+=======
+    // @ts-ignore
+    const _officer = await Officer.findById(officerId); // fixed unused
+    
+    
+>>>>>>> Stashed changes
     // Dynamically load models to avoid circular dependencies
     const { DiaryEntry } = require('../../investigation/models/DiaryEntry.model');
     const { DepartmentRequest } = require('../../investigation/models/DepartmentRequest.model');

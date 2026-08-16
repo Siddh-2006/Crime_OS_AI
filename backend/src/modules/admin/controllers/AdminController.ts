@@ -1,4 +1,3 @@
-import env from '../../../config/env';
 import axios from 'axios';
 import FormData from 'form-data';
 import { Request, Response, NextFunction } from 'express';

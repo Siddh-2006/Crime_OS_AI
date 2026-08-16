@@ -34,7 +34,11 @@ export default function PoliceProfilePage() {
         setValue('photoUrl', data.photoUrl || '');
         setLoading(false);
       } catch (err) {
+<<<<<<< Updated upstream
         showToast('Failed to load profile', 'error');
+=======
+        showToast('error', 'Failed to load profile');
+>>>>>>> Stashed changes
         setLoading(false);
       }
     };
@@ -50,32 +54,50 @@ export default function PoliceProfilePage() {
         expertise: expertiseArr,
         photoUrl: data.photoUrl
       });
+<<<<<<< Updated upstream
       showToast('Profile updated successfully', 'success');
     } catch (err) {
       showToast('Failed to update profile', 'error');
+=======
+      showToast('success', 'Profile updated successfully');
+    } catch (err) {
+      showToast('error', 'Failed to update profile');
+>>>>>>> Stashed changes
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) return <div className="p-8 text-white">Loading profile...</div>;
+  if (loading) return <div className="p-8 text-text-primary">Loading profile...</div>;
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-12">
       <div className="mb-8">
-        <h1 className="text-3xl font-light text-white mb-2">My Profile</h1>
-        <p className="text-gray-400">Update your operational expertise and past experience.</p>
+        <h1 className="text-3xl font-light text-text-primary mb-2">My Profile</h1>
+        <p className="text-text-secondary">Update your operational expertise and past experience.</p>
       </div>
 
+<<<<<<< Updated upstream
+      <Card className="p-8 bg-surface shadow-sm border-border">
+        <div className="flex items-start justify-between mb-8 pb-8 border-b border-border">
+=======
       <Card className="p-8 bg-[#0a0a0a] border-gray-800">
         <div className="flex items-start justify-between mb-8 pb-8 border-b border-gray-800">
+>>>>>>> Stashed changes
           <div>
-            <h2 className="text-2xl font-medium text-white">{officerData?.officerName}</h2>
-            <div className="flex items-center gap-2 mt-2 text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full w-fit">
+            <h2 className="text-2xl font-medium text-text-primary">{officerData?.officerName}</h2>
+            <div className="flex items-center gap-2 mt-2 text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-sm w-fit">
               <ShieldCheck size={16} />
               <span className="text-sm font-bold uppercase">{officerData?.role}</span>
             </div>
-            <p className="text-gray-400 mt-2 font-mono text-sm">Badge: {officerData?.badgeNumber}</p>
+            <p className="text-text-secondary mt-2 font-mono text-sm">Badge: {officerData?.badgeNumber}</p>
+          </div>
+          <div className="w-24 h-24 rounded-sm bg-surface-elevated border border-border flex shrink-0 items-center justify-center overflow-hidden">
+            {officerData?.photoUrl ? (
+              <img src={officerData.photoUrl} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              <User size={40} className="text-text-secondary" />
+            )}
           </div>
           <div className="w-24 h-24 rounded-full bg-gray-800 flex shrink-0 items-center justify-center overflow-hidden">
             {officerData?.photoUrl ? (
@@ -92,7 +114,7 @@ export default function PoliceProfilePage() {
             <Input label="Phone Number" value={officerData?.phone} disabled placeholder="Phone" />
           </div>
 
-          <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 text-sm">
+          <div className="p-4 rounded-sm bg-blue-500/10 border border-blue-500/20 text-brand-primary font-bold text-sm">
             Note: Email, phone, and role are managed by administrators. You can only update your operational details below.
           </div>
 

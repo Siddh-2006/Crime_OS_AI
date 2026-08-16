@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import { InvestigationController } from '../controllers/InvestigationController';
 import { CitizenRequestController } from '../controllers/CitizenRequestController';
 import { CaseLockController } from '../controllers/CaseLockController';
@@ -10,6 +10,7 @@ import { DepartmentRegistry } from '../../admin/models/DepartmentRegistry.model'
 import { authenticate } from '../../../common/middlewares/authenticate.middleware';
 import { authorize } from '../../../common/middlewares/authorize.middleware';
 import { Role } from '../../../shared/enums/roles.enum';
+import { buildGraph } from '../services/caseGraphService';
 
 const router = Router();
 
@@ -19,7 +20,7 @@ router.use(caseParticipantRoutes);
 router.use(chargeSheetRoutes);
 router.use(warrantRoutes);
 
-// ── STATIC routes — MUST be registered before /:id dynamic routes ─────────────
+// STATIC routes MUST be registered before /:id dynamic routes
 // Express matches routes top-down; a dynamic /:id would capture 'departments'
 // and 'threads' as caseIds if registered first.
 
@@ -36,12 +37,12 @@ router.get('/departments', async (_req, res) => {
   }
 });
 
-// Thread endpoints — /threads prefix must precede /:id
+// Thread endpoints - /threads prefix must precede /:id
 router.get('/threads/:threadId',             InvestigationController.getThreadById);
 router.post('/threads/:threadId/reply',      InvestigationController.replyToThread);
 router.post('/threads/:threadId/format-response', InvestigationController.formatThreadResponse);
 
-// ── DYNAMIC /:id routes ────────────────────────────────────────────────────────
+// DYNAMIC /:id routes
 
 // Analysis
 router.post('/:id/analyze',                  InvestigationController.analyzeCase);
@@ -63,7 +64,6 @@ router.post('/:id/requests/:reqId/send',     InvestigationController.sendRequest
 // Citizen requests
 router.post('/:id/citizen-request/missing-info',  CitizenRequestController.requestFromMissingInfo);
 router.post('/:id/citizen-request',               CitizenRequestController.createCitizenRequest);
-
 
 // Escalation
 router.post('/:id/escalate',                 InvestigationController.escalateCase);
@@ -97,5 +97,28 @@ router.get('/:id/locks',                                    CaseLockController.l
 router.get('/:id/room/messages',                           CaseRoomController.getMessages);
 router.post('/:id/room/messages',                          CaseRoomController.sendMessage);
 router.get('/:id/room/eligibility',                        CaseRoomController.getEligibility);
+
+// Knowledge Graph
+router.get('/:id/graph', async (req, res) => {
+  try {
+    const graph = await buildGraph(req.params.id);
+    const nodes = graph.nodes.map((n: any) => ({
+      id: n.id,
+      label: n.label,
+      type: n.nodeType,
+      meta: n.meta,
+    }));
+    const edges = graph.edges.map((e: any, i: number) => ({
+      id: `edge-${i}`,
+      source: e.from,
+      target: e.to,
+      label: e.relationship.replace(/_/g, ' '),
+      type: e.relationship,
+    }));
+    res.json({ success: true, data: { nodes, edges } });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 
 export default router;
