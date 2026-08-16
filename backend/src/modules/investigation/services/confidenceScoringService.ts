@@ -14,7 +14,7 @@ export function computeConfidenceScore(facts: FactsObject): ConfidenceBreakdown 
   
   // 1. Evidence Coverage
   // Based on the sheer volume of evidence vs participants.
-  const numEvidence = facts.evidence?.raw?.length || 0;
+  const numEvidence = facts.evidence?.items?.length || 0;
   const numParticipants = facts.participants?.raw?.length || 1;
   // If we have at least 1.5 pieces of evidence per participant, coverage is 100%
   const targetEvidence = numParticipants * 1.5;
@@ -38,11 +38,11 @@ export function computeConfidenceScore(facts: FactsObject): ConfidenceBreakdown 
   // 3. Corroboration
   // We count evidence that has AI tags or applicable sections, or linked participants.
   let corroborationPoints = 0;
-  if (facts.evidence && facts.evidence.raw) {
-    facts.evidence.raw.forEach((ev: any) => {
+  if (facts.evidence && facts.evidence.items) {
+    facts.evidence.items.forEach((ev: any) => {
       if (ev.ai_tags && ev.ai_tags.length > 0) corroborationPoints += 0.5;
-      if (ev.applicableSections && ev.applicableSections.length > 0) corroborationPoints += 1;
-      if (ev.relatedParticipantIds && ev.relatedParticipantIds.length > 0) corroborationPoints += 1;
+      if (ev.applicable_sections && ev.applicable_sections.length > 0) corroborationPoints += 1;
+      if (ev.related_participant_ids && ev.related_participant_ids.length > 0) corroborationPoints += 1;
     });
   }
   const corroboration = Math.min(1.0, corroborationPoints / 5);

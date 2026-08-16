@@ -500,7 +500,7 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
     <>
       <TranslationContext.Provider value={value}>{children}</TranslationContext.Provider>
       {activeMessage && (
-        <div className="fixed top-4 left-1/2 z-50 w-full max-w-3xl -translate-x-1/2 rounded-2xl border border-slate-300 bg-slate-950/95 px-5 py-3 text-sm font-semibold text-white shadow-2xl shadow-slate-900/30 backdrop-blur-sm">
+        <div className="fixed top-4 left-1/2 z-50 w-full max-w-3xl -translate-x-1/2 rounded-2xl border border-border bg-surface px-5 py-3 text-sm font-semibold text-text-primary shadow-2xl backdrop-blur-sm">
           {activeMessage}
         </div>
       )}

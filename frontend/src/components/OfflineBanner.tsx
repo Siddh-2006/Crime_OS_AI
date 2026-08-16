@@ -23,9 +23,9 @@ export function OfflineBanner() {
     <div
       className={`fixed top-0 left-0 right-0 z-50 ${
         isOnline
-          ? 'bg-semantic-warning/90 text-white'
-          : 'bg-semantic-critical/90 text-white'
-      } backdrop-blur-md py-2 px-4 flex items-center justify-center gap-3 text-sm font-medium shadow-lg`}
+          ? 'bg-semantic-pending border-b border-semantic-pending/20'
+          : 'bg-semantic-critical border-b border-semantic-critical/20'
+      } backdrop-blur-md py-2 px-4 flex items-center justify-center gap-3 text-sm font-medium shadow-lg text-slate-900 dark:text-white`}
     >
       {isOnline ? (
         <>
@@ -35,7 +35,7 @@ export function OfflineBanner() {
           </span>
           <button
             onClick={triggerSync}
-            className="ml-2 rounded-lg bg-white/20 hover:bg-white/30 px-3 py-1 text-xs font-bold transition-all"
+            className="ml-2 rounded-lg bg-slate-900/20 dark:bg-white/20 hover:bg-slate-900/30 dark:hover:bg-white/30 px-3 py-1 text-xs font-bold transition-all"
           >
             Sync Now
           </button>
