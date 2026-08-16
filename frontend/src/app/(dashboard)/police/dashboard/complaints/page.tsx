@@ -62,10 +62,7 @@ export default function PoliceComplaintQueuePage(): React.ReactElement {
     }, 15000); // 15 seconds
     return () => clearInterval(interval);
   }, [search, status, page]);
-<<<<<<< Updated upstream
 
-=======
->>>>>>> Stashed changes
   useEffect(() => {
     fetchStationComplaints();
   }, [status, page]);

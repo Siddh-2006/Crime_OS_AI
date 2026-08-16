@@ -34,11 +34,7 @@ export default function PoliceProfilePage() {
         setValue('photoUrl', data.photoUrl || '');
         setLoading(false);
       } catch (err) {
-<<<<<<< Updated upstream
         showToast('Failed to load profile', 'error');
-=======
-        showToast('error', 'Failed to load profile');
->>>>>>> Stashed changes
         setLoading(false);
       }
     };
@@ -54,15 +50,9 @@ export default function PoliceProfilePage() {
         expertise: expertiseArr,
         photoUrl: data.photoUrl
       });
-<<<<<<< Updated upstream
       showToast('Profile updated successfully', 'success');
     } catch (err) {
       showToast('Failed to update profile', 'error');
-=======
-      showToast('success', 'Profile updated successfully');
-    } catch (err) {
-      showToast('error', 'Failed to update profile');
->>>>>>> Stashed changes
     } finally {
       setSaving(false);
     }
@@ -77,13 +67,8 @@ export default function PoliceProfilePage() {
         <p className="text-text-secondary">Update your operational expertise and past experience.</p>
       </div>
 
-<<<<<<< Updated upstream
       <Card className="p-8 bg-surface shadow-sm border-border">
         <div className="flex items-start justify-between mb-8 pb-8 border-b border-border">
-=======
-      <Card className="p-8 bg-[#0a0a0a] border-gray-800">
-        <div className="flex items-start justify-between mb-8 pb-8 border-b border-gray-800">
->>>>>>> Stashed changes
           <div>
             <h2 className="text-2xl font-medium text-text-primary">{officerData?.officerName}</h2>
             <div className="flex items-center gap-2 mt-2 text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-sm w-fit">

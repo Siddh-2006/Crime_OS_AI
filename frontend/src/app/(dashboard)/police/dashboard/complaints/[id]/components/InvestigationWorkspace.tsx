@@ -539,11 +539,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
     { id: 'complaint', label: 'Original Complaint', icon: <FileText size={15} /> },
     { id: 'case_understanding', label: 'Case Understanding', icon: <Brain size={15} /> },
     { id: 'timeline', label: 'Timeline', icon: <Clock size={15} />, badge: caseUnderstanding?.timeline?.length || undefined },
-<<<<<<< Updated upstream
     { id: 'custody', label: 'Custody', icon: <Shield size={15} />, badge: warrants.filter((w: any) => ['draft', 'sent_to_magistrate', 'approved', 'in_custody'].includes(w.status)).length || undefined },
-=======
-    { id: 'custody', label: 'Custody', icon: <Shield size={15} />, badge: warrants.filter((w: any) => ['draft','sent_to_magistrate','approved','in_custody'].includes(w.status)).length || undefined },
->>>>>>> Stashed changes
     { id: 'graph', label: 'Case Graph', icon: <Network size={15} /> },
     { id: 'room', label: 'Private Room', icon: <MessageSquare size={15} /> },
   ];
@@ -558,25 +554,12 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
 
   return (
     <div className="w-full min-w-0" style={{ minHeight: '600px' }}>
-      {/* Main workspace â€” takes all available width */}
+      {/* Main workspace — takes all available width */}
       <div className="w-full min-w-0 space-y-4">
-<<<<<<< Updated upstream
-        {/* Tab Content */}
         <div className="min-h-[500px]">
           {activeTab === 'graph' && (
             <CaseCorkboard caseId={caseId} refreshTrigger={refreshTrigger} />
           )}
-=======
-      {/* Tab Content */}
-      <div className="min-h-[500px]">
-        {activeTab === 'graph' && (
-          <CaseCorkboard caseId={caseId} refreshTrigger={refreshTrigger} />
-        )}
-
-        {activeTab === 'room' && (
-          <CaseRoomChat caseId={caseId} />
-        )}
->>>>>>> Stashed changes
 
           {activeTab === 'room' && (
             <CaseRoomChat caseId={caseId} />
