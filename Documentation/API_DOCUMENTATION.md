@@ -34,6 +34,8 @@ Endpoints are ordered to follow the natural flow of data through the platform: f
 17. [Case Closure & IO Recommendation](#17-case-closure--io-recommendation)
 18. [Case Understanding](#18-case-understanding)
 19. [Translation](#19-translation)
+20. [Private Case Room (Multiple IO Collaboration)](#20-private-case-room-multiple-io-collaboration)
+21. [Prompt Compression Service](#21-prompt-compression-service)
 
 ---
 
@@ -321,6 +323,61 @@ Case closure is performed via the complaint endpoint. Upon closure:
 
 ---
 
+## 20. Private Case Room (Multiple IO Collaboration)
+
+> Requires SHO or IO auth. Room becomes available only when a case has **≥ 2 assigned IOs**.
+> All messages are stored **AES-256-GCM encrypted** in MongoDB and decrypted transparently on retrieval.
+> Real-time delivery uses **Socket.io** WebSocket connections authenticated via JWT.
+
+### REST Endpoints
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/cases/:id/room/eligibility` | SHO or IO | Checks whether the case room is available. Returns `{ eligible: boolean, ioCount: number }`. A room requires `ioCount ≥ 2`. |
+| `GET` | `/cases/:id/room/messages` | SHO or IO | Fetches **paginated message history** for the case room. Messages are decrypted before being returned. Query: `?page=<n>&limit=<n>` (default: page 1, 50 messages per page). Returns `{ messages: CaseRoomMessage[], total: number }`. |
+| `POST` | `/cases/:id/room/messages` | SHO or IO | **Sends a message** to the case room. The plaintext is encrypted with AES-256-GCM before storage. Body: `{ content: string }`. The message is simultaneously broadcast to all connected Socket.io clients in the room. |
+
+### Socket.io Events
+
+The Socket.io namespace is `/case-room`. After connecting, clients must join the correct room:
+
+| Event | Direction | Payload | Description |
+|-------|-----------|---------|-------------|
+| `join_room` | Client → Server | `{ case_id, token }` | Joins the Socket.io room for a case. JWT token is validated on the server — unauthorized connections are rejected. |
+| `send_message` | Client → Server | `{ case_id, content }` | Sends a real-time message. Server encrypts, persists, and broadcasts. |
+| `new_message` | Server → Client | `CaseRoomMessage` | Broadcast to all room members when a new message arrives (decrypted content). |
+| `typing` | Client → Server | `{ case_id, officer_name }` | Notifies room members that this officer is typing. |
+| `typing_indicator` | Server → Client | `{ officer_name }` | Broadcast to other clients in the room. |
+| `officer_online` | Server → Client | `{ officer_id, officer_name }` | Emitted when an officer joins. |
+| `officer_offline` | Server → Client | `{ officer_id }` | Emitted when an officer disconnects. Room locks are cleaned up automatically. |
+
+### Access Control
+
+- Only officers assigned to the case (`assignedIOs` array or `assignedIO`) can join the room.
+- SHOs can access room messages via the REST endpoint for oversight.
+- If a case has fewer than 2 IOs, the eligibility endpoint returns `eligible: false` and the room is inaccessible.
+
+---
+
+## 21. Prompt Compression Service
+
+> This is an **internal Python FastAPI service** running on port **8005**. It is called by the Node.js backend — not directly by the frontend. Documented here for completeness and service-level debugging.
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/health` | None | Liveness probe. Returns `{ status: "ok", model: "microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank" }`. |
+| `POST` | `/compress` | None (internal) | **Compresses a text string** using LLMLingua-2. Body: `{ text: string, rate?: number (0.01–0.99, default 0.5), target_token_count?: number, force_tokens?: string[] }`. Returns `{ compressed_text: string, original_tokens: number, compressed_tokens: number, compression_ratio: number }`. |
+
+**Integration in the backend:** The `promptCompressionClient.ts` wraps this service with a 60-second timeout and graceful fallback — if the service is unavailable, the original uncompressed text is passed through to the LLM without any error. The feature is toggled by the `PROMPT_COMPRESSION_ENABLED` environment variable.
+
+**When compression is applied:**
+- Case analysis: full investigation text block compressed before being sent to Gemma
+- Copilot AGENT mode: complete case facts + legal context compressed
+- Department request letters: long case summaries compressed
+- Charge sheet narratives: detailed evidence lists compressed
+
+---
+
 ## Endpoint Summary
 
 | Group | Endpoints |
@@ -347,7 +404,9 @@ Case closure is performed via the complaint endpoint. Upon closure:
 | Case Closure | 1 |
 | Case Understanding | 1 |
 | Translation | 1 |
-| **Total** | **~103** |
+| Private Case Room (REST) | 3 |
+| Prompt Compression Service (internal) | 2 |
+| **Total** | **~108** |
 
 ---
 

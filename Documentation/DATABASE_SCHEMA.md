@@ -25,7 +25,8 @@
 17. [CaseEntity](#17-caseentity)
 18. [ChargeSheet](#18-chargesheet)
 19. [Escalation](#19-escalation)
-20. [Collection Relationships](#20-collection-relationships)
+20. [CaseRoomMessage](#20-caseroommessage)
+21. [Collection Relationships](#21-collection-relationships)
 
 ---
 
@@ -301,6 +302,22 @@ Collection: `evidences` — Detailed evidence records created by the investigati
 | `exif` | EXIF metadata (camera, timestamps, device info) |
 | `gps` | GPS coordinates extracted from file metadata |
 | `processingErrors` | Any errors during pipeline processing |
+
+### Deepfake Detection
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `confidence_score` | Number (0–100) | **AI Deepfake Confidence Score** populated by the SightEngine API. Ranges: `0–30` = Likely Real, `30–70` = Uncertain (manual review recommended), `70–100` = Likely AI-Generated/Manipulated. Defaults to `0` if detection is disabled or unavailable. Stored on the top-level evidence document, not inside `aiMetadata`. |
+
+### Encryption
+
+The `Evidence` collection uses the **`evidenceEncryptionPlugin`** (Mongoose plugin) which automatically encrypts sensitive fields using **AES-256-GCM** before persistence and decrypts them transparently on read. The following fields are encrypted at rest:
+
+`storage_ref`, `ai_description`, `ai_tags`, `current_location`, `custody_chain`, `originalFilename`, `aiMetadata.ocrText`, `aiMetadata.speechTranscript`, `aiMetadata.pdfText`, `aiMetadata.imageTags`, `aiMetadata.detectedObjects`, `aiMetadata.faces`, `aiMetadata.embeddings`, `aiMetadata.aiSummary`, `aiMetadata.exif`, `aiMetadata.gps`
+
+| Field | Description |
+|-------|-------------|
+| `isEncrypted` | Boolean flag. Set to `true` automatically by the plugin pre-save hook. Used by the post-find hook to decide whether decryption is needed. |
 
 **Indexes:** `(case_id, status)`, `(case_id)` (primary lookup)
 
@@ -702,7 +719,31 @@ Collection: `escalations` — Records of case escalations (both manual and auto-
 
 ---
 
-## 20. Collection Relationships
+## 20. CaseRoomMessage
+
+Collection: `caseroommessages` — Encrypted real-time chat messages exchanged between IOs (and SHOs) within a case's Private Chatroom. Used by the Multiple IO Collaboration feature.
+
+> **Immutability:** Messages are never edited or deleted after creation. The room is only accessible when the case has ≥ 2 assigned IOs.
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `case_id` | ObjectId → Complaint | required, indexed | The case this message belongs to |
+| `message_id` | String | unique, default: `uuidv4()` | UUID — unique identifier for the message |
+| `sender_id` | ObjectId → Officer | required | Officer who sent the message |
+| `sender_name` | String | required, trimmed | Display name of the sender (denormalized for quick display) |
+| `content` | String | required | AES-256-GCM encrypted ciphertext. Format: `enc:<iv>:<ciphertext>:<authTag>`. Decrypted transparently by `CaseRoomService.getMessages()` before returning to the client. |
+| `isEncrypted` | Boolean | default: `true` | Always `true` — indicates the `content` field is stored encrypted |
+| `sent_at` | Date | default: `Date.now` | Precise timestamp of when the message was sent |
+
+**Indexes:** `(case_id)` (primary lookup), `(case_id, sent_at asc)` (chronological message retrieval)
+
+**Encryption Detail:** The `CaseRoomService.saveMessage()` method calls `encryptValue(plaintext)` before `CaseRoomMessage.create()`. The `encryptValue` utility uses **AES-256-GCM** with a random IV per message, producing the format `enc:<iv_hex>:<ciphertext_hex>:<authTag_hex>`. The `decryptValue` utility reverses this in `CaseRoomService.getMessages()`.
+
+**Pagination:** `getMessages()` accepts `page` and `limit` parameters (default: `limit=50`). Messages are sorted ascending by `sent_at` so the oldest appear first in the history.
+
+---
+
+## 21. Collection Relationships
 
 ```
 Admin                  (standalone)
@@ -713,7 +754,7 @@ DepartmentRegistry     (standalone — vectors synced to Qdrant)
 
 Complaint              → User (citizen)
                        → PoliceStation
-                       → Officer (assignedSHO, assignedIO, firRegisteredBy)
+                       → Officer (assignedSHO, assignedIO, assignedIOs[], firRegisteredBy)
 
 Evidence               → Complaint (case_id)
                        → Officer (uploader_id)
@@ -753,6 +794,9 @@ ChargeSheet            → Complaint (case_id)
                        → Officer (filedBy)
 
 Escalation             → Complaint (case_id)
+
+CaseRoomMessage        → Complaint (case_id)   ← Private Chatroom messages
+                       → Officer (sender_id)
 ```
 
 ---
