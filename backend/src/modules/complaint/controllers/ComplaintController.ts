@@ -287,4 +287,30 @@ export class ComplaintController {
       next(err);
     }
   };
+
+  markRead = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const complaint = await Complaint.findByIdAndUpdate(id, { hasUnreadDepartmentResponse: false }, { new: true });
+      if (!complaint) throw new NotFoundError('Complaint not found');
+      
+      const { DepartmentRequest } = require('../../investigation/models/DepartmentRequest.model');
+      await DepartmentRequest.updateMany({ case_id: id }, { isRead: true });
+
+      sendSuccess(res, HttpStatusCode.OK, 'Marked as read');
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  ingestClosedCase = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const officerId = req.user!.sub;
+      await this.complaintService.triggerAIEmbedding(id, officerId);
+      sendSuccess(res, HttpStatusCode.OK, 'Case ingestion triggered successfully');
+    } catch (err) {
+      next(err);
+    }
+  };
 }

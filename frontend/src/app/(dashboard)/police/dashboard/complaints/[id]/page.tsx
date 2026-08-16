@@ -11,6 +11,8 @@ import { Select } from '@/components/ui/Select';
 import { useAuth } from '@/hooks/useAuth';
 import apiClient from '@/lib/axios';
 import { API_ROUTES, APP_ROUTES } from '@/lib/constants';
+import { useToast } from '@/hooks/useToast';
+import { ToastContainer } from '@/components/ui/Toast';
 import { InvestigationWorkspace, WorkspaceTab } from './components/InvestigationWorkspace';
 import ChargeSheetModal from './ChargeSheetModal';
 import { CaseUnderstandingView, CaseUnderstandingData } from '@/components/case-understanding/CaseUnderstandingView';
@@ -2306,6 +2308,8 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
         onClose={() => setChargeSheetModalOpen(false)}
         caseId={params.id as string}
       />
-    </div>
+    
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+</div>
   );
 }

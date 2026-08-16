@@ -30,6 +30,12 @@ router.post('/login', loginLimiter, validate(policeLoginSchema), policeControlle
 router.get('/me', authenticate, authorize(Role.SHO, Role.IO), policeController.me);
 
 /**
+ * PATCH /police/profile
+ * Updates current officer profile
+ */
+router.patch('/profile', authenticate, authorize(Role.SHO, Role.IO), policeController.updateProfile);
+
+/**
  * POST /police/logout
  * Invalidates officer refresh token from Redis
  */

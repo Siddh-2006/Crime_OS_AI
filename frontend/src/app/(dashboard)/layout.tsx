@@ -31,6 +31,7 @@ const policeNavItems: NavItem[] = [
   { label: 'Dashboard', href: '/police/dashboard', icon: <LayoutDashboard size={18} /> },
   { label: 'File a Complaint', href: APP_ROUTES.FILE_COMPLAINT, icon: <Plus size={18} /> },
   { label: 'Station Complaints', href: '/police/dashboard/complaints', icon: <FileText size={18} /> },
+  { label: 'My Profile', href: '/police/profile', icon: <Users size={18} /> },
 ];
 
 // Case-level tabs shown in the sidebar when an IO opens a complaint

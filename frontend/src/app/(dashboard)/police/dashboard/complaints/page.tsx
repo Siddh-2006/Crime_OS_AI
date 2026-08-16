@@ -1,6 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { useToast } from '@/hooks/useToast';
+import { ToastContainer } from '@/components/ui/Toast';
 import Link from 'next/link';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -33,6 +35,7 @@ interface Complaint {
   citizen: Citizen;
   assignedIO?: AssignedIO;
   assignedIOs?: AssignedIO[];
+  hasUnreadDepartmentResponse?: boolean;
   createdAt: string;
 }
 
@@ -42,6 +45,18 @@ export default function PoliceComplaintQueuePage(): React.ReactElement {
   const [error, setError] = useState<string | null>(null);
 
   // Filters State
+  
+  const { toasts, showToast, removeToast } = useToast();
+  const prevUnreadRef = useRef<Set<string>>(new Set());
+
+  // Polling for new department notifications
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchStationComplaints(true);
+    }, 15000); // 15 seconds
+    return () => clearInterval(interval);
+  }, [search, status, page]);
+
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [page, setPage] = useState(1);
@@ -52,8 +67,8 @@ export default function PoliceComplaintQueuePage(): React.ReactElement {
     fetchStationComplaints();
   }, [status, page]);
 
-  const fetchStationComplaints = async () => {
-    setLoading(true);
+  const fetchStationComplaints = async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
     setError(null);
     try {
       const res = await apiClient.get(API_ROUTES.COMPLAINTS.STATION_LIST, {
@@ -65,7 +80,21 @@ export default function PoliceComplaintQueuePage(): React.ReactElement {
         },
       });
       const data = res.data.data;
+      
       setComplaints(data.complaints || []);
+      
+      // Check for new unread notifications
+      const currentUnread = new Set<string>();
+      (data.complaints || []).forEach((c: Complaint) => {
+        if (c.hasUnreadDepartmentResponse) {
+          currentUnread.add(c._id);
+          if (!prevUnreadRef.current.has(c._id)) {
+            showToast(`New department response received for Complaint ${c.complaintNumber}`, 'success');
+          }
+        }
+      });
+      prevUnreadRef.current = currentUnread;
+
       setTotalPages(Math.ceil((data.total || 0) / limit) || 1);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch station complaints.');
@@ -175,7 +204,7 @@ export default function PoliceComplaintQueuePage(): React.ReactElement {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-surface-elevated/60 border-b border-border text-xs font-bold text-text-secondary uppercase tracking-wider">
-                    <th className="p-4">Complaint Number</th>
+                    <th className="p-4 w-1/3">Description</th>
                     <th className="p-4">Complainant</th>
                     <th className="p-4">Incident Date</th>
                     <th className="p-4">Category</th>
@@ -187,13 +216,13 @@ export default function PoliceComplaintQueuePage(): React.ReactElement {
                 <tbody className="divide-y divide-border text-sm">
                   {complaints.map((c) => (
                     <tr key={c._id} className="hover:bg-surface-elevated/50 transition-colors duration-150">
-                      <td className="p-4 font-bold text-text-primary font-mono">{c.complaintNumber}</td>
+                      <td className="p-4 text-text-primary"><p className="line-clamp-2 text-xs" title={c.shortDescription || "No description provided."}>{c.shortDescription || "No description provided."}</p></td>
                       <td className="p-4">
                         <div className="flex flex-col">
-                          <span className="font-semibold text-text-primary">
+                          <span className="font-semibold text-text-primary line-clamp-1" title={`${c.citizen.firstName} ${c.citizen.lastName}`}>
                             {c.citizen.firstName} {c.citizen.lastName}
                           </span>
-                          <span className="text-xs text-text-secondary font-mono">{c.citizen.phone}</span>
+                          <span className="text-xs text-text-secondary font-mono line-clamp-1">{c.citizen.phone}</span>
                         </div>
                       </td>
                       <td className="p-4 text-text-secondary font-medium">
@@ -224,9 +253,17 @@ export default function PoliceComplaintQueuePage(): React.ReactElement {
                       </td>
                       <td className="p-4 text-right">
                         <Link href={APP_ROUTES.POLICE_COMPLAINT_DETAIL(c._id)}>
-                          <Button variant="secondary" size="sm" leftIcon={<Eye size={14} />}>
-                            Review Case
-                          </Button>
+                          <div className="relative inline-block">
+                            {c.hasUnreadDepartmentResponse && (
+                              <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-semantic-info opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-semantic-info border-2 border-surface"></span>
+                              </span>
+                            )}
+                            <Button variant="secondary" size="sm" leftIcon={<Eye size={14} />}>
+                              Review Case
+                            </Button>
+                          </div>
                         </Link>
                       </td>
                     </tr>
@@ -266,6 +303,7 @@ export default function PoliceComplaintQueuePage(): React.ReactElement {
           )}
         </div>
       )}
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );
 }

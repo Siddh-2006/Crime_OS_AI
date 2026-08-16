@@ -57,7 +57,7 @@ function sanitizeGujaratiText(str: string): string {
  * Generates an official Gujarat Police FIR PDF.
  * lang = 'en' → English only; lang = 'guj' → Gujarati-English mixed.
  */
-async function generateFirPdf(form: IFirFormData, lang: 'en' | 'guj'): Promise<Buffer> {
+export async function generateFirPdf(form: IFirFormData, lang: 'en' | 'guj'): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 40, autoFirstPage: true });
     applyWatermarkAllPages(doc, { text: 'FIR — OFFICIAL COPY' });

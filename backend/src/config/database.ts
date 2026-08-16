@@ -38,9 +38,9 @@ export async function connectDatabase(): Promise<void> {
   try {
     logger.info('Attempting connection to Primary MongoDB...', { uri: primaryUri.replace(/\/\/.*@/, '//***@') });
     await mongoose.connect(primaryUri, {
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 8000,
-      socketTimeoutMS: 45000,
+      serverSelectionTimeoutMS: 20000,
+      connectTimeoutMS: 25000,
+      socketTimeoutMS: 60000,
     });
     logger.info('Connected to Primary MongoDB successfully.', { uri: primaryUri });
     return;
@@ -52,8 +52,8 @@ export async function connectDatabase(): Promise<void> {
   try {
     logger.info('Connecting to Local MongoDB fallback...', { uri: fallbackUri });
     await mongoose.connect(fallbackUri, {
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 8000,
+      serverSelectionTimeoutMS: 10000,
+      connectTimeoutMS: 15000,
     });
     logger.info('Connected to Local MongoDB fallback successfully.');
   } catch (localErr: any) {

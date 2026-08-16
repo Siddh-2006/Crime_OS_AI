@@ -22,6 +22,8 @@ from legal_rag.embedding import (
 from legal_rag.qdrant_store import LegalQdrantStore
 from legal_rag.models import EmbeddedDocumentRecord
 from ingestion.schemas import DeptRegistryRecord
+from app.api.ingestion import router as ingestion_router
+
 
 from contextlib import asynccontextmanager
 
@@ -47,6 +49,8 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(title="Legal Agent API", lifespan=lifespan)
+app.include_router(ingestion_router)
+
 
 @app.get("/health", tags=["Health"], summary="Service health check")
 def health():

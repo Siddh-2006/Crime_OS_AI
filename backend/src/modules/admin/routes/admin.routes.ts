@@ -20,6 +20,9 @@ const tokenService = new TokenService();
 const adminAuthService = new AdminAuthService(adminRepository, tokenService);
 const adminController = new AdminController(adminAuthService);
 
+import multer from 'multer';
+const upload = multer({ storage: multer.memoryStorage() });
+
 const router = Router();
 
 // ─── Admin Auth ──────────────────────────────────────────────────────────────
@@ -130,3 +133,7 @@ router.patch(
 );
 
 export default router;
+
+// --- RAG Ingestion ---
+router.post('/rag/ingest', authenticate, authorize(Role.ADMIN), upload.single('file'), adminController.ingestRag);
+router.get('/rag/status/:jobId', authenticate, authorize(Role.ADMIN), adminController.getRagStatus);

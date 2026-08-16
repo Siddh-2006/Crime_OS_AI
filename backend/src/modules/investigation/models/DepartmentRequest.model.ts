@@ -21,6 +21,7 @@ export interface IDepartmentRequest extends Document {
   response_at?: Date;
   token?: string;                      // for unauthenticated citizen access
   token_expires_at?: Date;
+  isRead?: boolean;
 }
 
 const DepartmentRequestSchema = new Schema<IDepartmentRequest>(
@@ -45,6 +46,7 @@ const DepartmentRequestSchema = new Schema<IDepartmentRequest>(
     response_at:  { type: Date },
     token:        { type: String, sparse: true },
     token_expires_at: { type: Date },
+    isRead: { type: Boolean, default: false },
   },
   { timestamps: true, versionKey: false },
 );

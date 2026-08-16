@@ -15,25 +15,25 @@ export function applyWatermark(doc: typeof PDFDocument, options?: any) {
   const startX = doc.x;
   const startY = doc.y;
 
-  // Try to find the SVG logo
-  let logoPath = path.join(__dirname, '../../../../frontend/public/logo.svg');
+  // Try to find the Black and White SVG logo
+  let logoPath = path.join(__dirname, '../../../../frontend/public/logo_bw.svg');
   if (!fs.existsSync(logoPath)) {
-    logoPath = path.join(process.cwd(), '../frontend/public/logo.svg'); // fallback
+    logoPath = path.join(process.cwd(), '../frontend/public/logo_bw.svg'); // fallback
   }
 
   if (fs.existsSync(logoPath)) {
     let svgContent = fs.readFileSync(logoPath, 'utf8');
     
-    // Inject opacity to the root SVG tag to make it 30% visible
+    // Inject opacity to the root SVG tag to reduce visibility (15% opacity)
     if (!svgContent.includes('opacity=')) {
-      svgContent = svgContent.replace('<svg ', '<svg opacity="0.30" ');
+      svgContent = svgContent.replace('<svg ', '<svg opacity="0.15" ');
     } else {
-      svgContent = svgContent.replace(/opacity="[^"]*"/, 'opacity="0.30"');
+      svgContent = svgContent.replace(/opacity="[^"]*"/, 'opacity="0.15"');
     }
 
-    // Scale logo to 80% of the page
-    const boxWidth = doc.page.width * 0.8;
-    const boxHeight = doc.page.height * 0.8;
+    // Scale logo slightly smaller, e.g., 65% of the page
+    const boxWidth = doc.page.width * 0.65;
+    const boxHeight = doc.page.height * 0.65;
     
     // Exact center
     const imgX = (doc.page.width - boxWidth) / 2;

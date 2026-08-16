@@ -10,6 +10,9 @@ export interface IOfficer extends Document {
   policeStation: Types.ObjectId;
   isActive: boolean;
   password: string;
+  pastExperience?: string;
+  expertise?: string[];
+  photoUrl?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -24,6 +27,9 @@ const OfficerSchema = new Schema<IOfficer>(
     policeStation: { type: Schema.Types.ObjectId, ref: 'PoliceStation', required: true },
     isActive:      { type: Boolean, default: true },
     password:      { type: String, required: true, select: false },
+    pastExperience:{ type: String },
+    expertise:     { type: [String], default: [] },
+    photoUrl:      { type: String },
   },
   {
     timestamps: true,

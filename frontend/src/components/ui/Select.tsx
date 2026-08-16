@@ -1,4 +1,4 @@
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useId } from 'react';
 
 interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
@@ -12,7 +12,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
   { label, error, options, placeholder, inputId, className = '', ...props },
   ref,
 ) {
-  const id = inputId ?? props.name ?? `select_${Math.random().toString(36).slice(2)}`;
+  const generatedId = useId();
+  const id = inputId ?? props.name ?? `select_${generatedId.replace(/:/g, '')}`;
 
   return (
     <div className="flex flex-col gap-1.5">

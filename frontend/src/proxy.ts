@@ -14,7 +14,7 @@ import { APP_ROUTES, ROLE } from '@/lib/constants';
  * We use the user role stored in a separate cookie set on login for edge-level checks.
  * The Axios interceptor handles API-level auth.
  */
-export function middleware(req: NextRequest): NextResponse {
+export default function proxy(req: NextRequest): NextResponse {
   const { pathname } = req.nextUrl;
   const roleCookie = req.cookies.get('role')?.value;
 

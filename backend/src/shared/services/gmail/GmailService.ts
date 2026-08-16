@@ -169,6 +169,10 @@ async function ingestResponse(opts: {
   request.response_at = new Date();
   await request.save();
 
+    const { Complaint } = require('../../../modules/complaint/models/Complaint.model');
+    await Complaint.findByIdAndUpdate(request.case_id, { hasUnreadDepartmentResponse: true });
+
+
   // 3. Generate upload token for Python AI Pipeline
   let uploadToken = '';
   try {

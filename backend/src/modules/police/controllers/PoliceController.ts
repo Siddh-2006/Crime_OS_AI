@@ -55,4 +55,14 @@ export class PoliceController {
       next(err);
     }
   };
+
+  updateProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const officerId = req.user!.sub;
+      const updatedOfficer = await this.policeAuthService.updateProfile(officerId, req.body);
+      sendSuccess(res, HttpStatusCode.OK, 'Profile updated', updatedOfficer);
+    } catch (err) {
+      next(err);
+    }
+  };
 }
