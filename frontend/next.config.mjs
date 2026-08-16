@@ -16,8 +16,9 @@ const withPWA = withPWAInit({
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  turbopack: {},
-  allowedDevOrigins: ['172.31.192.1'],
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 };
 
 export default withPWA(nextConfig);

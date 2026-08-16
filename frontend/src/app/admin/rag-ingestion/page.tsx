@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useRef } from 'react';
 import { Upload, FileText, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
@@ -34,22 +34,22 @@ export default function RagIngestionPage() {
       if (data.status === 'Completed' || data.status?.startsWith('Failed')) {
         setIsUploading(false);
         if (data.status === 'Completed') {
-          showToast('success', 'Document successfully ingested into RAG vector store!');
+          showToast('Document successfully ingested into RAG vector store!', 'success');
         } else {
-          showToast('error', `Ingestion failed: ${data.status}`);
+          showToast(`Ingestion failed: ${data.status}`, 'error');
         }
       } else {
         setTimeout(() => pollStatus(id), 2000);
       }
     } catch (err: any) {
       setIsUploading(false);
-      showToast('error', 'Failed to poll status.');
+      showToast('Failed to poll status.', 'error');
     }
   };
 
   const handleUpload = async () => {
     if (!file) {
-      showToast('error', 'Please select a PDF file first.');
+      showToast('Please select a PDF file first.', 'error');
       return;
     }
     
@@ -68,12 +68,12 @@ export default function RagIngestionPage() {
       
       const newJobId = res.data.data.job_id;
       setJobId(newJobId);
-      showToast('success', 'Upload successful, ingestion started.');
+      showToast('Upload successful, ingestion started.', 'success');
       
       pollStatus(newJobId);
     } catch (err: any) {
       setIsUploading(false);
-      showToast('error', err.response?.data?.message || 'Failed to upload document.');
+      showToast(err.response?.data?.message || 'Failed to upload document.', 'error');
       setJobStatus(null);
     }
   };
@@ -181,7 +181,7 @@ export default function RagIngestionPage() {
         </Card>
       </div>
 
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );
 }

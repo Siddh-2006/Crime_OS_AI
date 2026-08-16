@@ -27,6 +27,8 @@
 19. [Escalation](#19-escalation)
 20. [CaseRoomMessage](#20-caseroommessage)
 21. [Collection Relationships](#21-collection-relationships)
+22. [PhysicalEvidence](#22-physicalevidence)
+23. [Knowledge Graph (Conceptual)](#23-knowledge-graph-conceptual)
 
 ---
 
@@ -742,6 +744,50 @@ Collection: `caseroommessages` — Encrypted real-time chat messages exchanged b
 **Pagination:** `getMessages()` accepts `page` and `limit` parameters (default: `limit=50`). Messages are sorted ascending by `sent_at` so the oldest appear first in the history.
 
 ---
+
+
+---
+
+## 22. PhysicalEvidence
+
+Collection: `physicalevidences` — Dedicated collection for BNSS-compliant physical evidence tracking, complete with cryptographic custody chains and Malkhana integration.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `evidenceTagId` | String | Unique tag ID (e.g. `PEV-2026-00491`) |
+| `case_id` | ObjectId → Complaint | Associated case |
+| `firNumber` | String? | FIR reference if applicable |
+| `itemName` | String | Name of the seized item |
+| `category` | String | enum: `WEAPON`, `NARCOTICS`, `VEHICLE`, etc. |
+| `description` | String | Detailed description |
+| `seizureMemoNo` | String | — |
+| `seizedByOfficerId` | String | — |
+| `seizureDate` | Date | — |
+| `seizureLocation` | String | — |
+| `sealNumber` | String | Physical seal ID on the item |
+| `sealStatus` | String | enum: `INTACT`, `DAMAGED`, `RE_SEALED` |
+| `policeStationId` | String | Station where stored |
+| `malkhanaRegisterNo` | String? | Malkhana reference |
+| `currentCustodian` | Object | Who holds the item and where |
+| `status` | String | e.g. `STORED_IN_MALKHANA`, `IN_TRANSIT_TO_FSL` |
+| `custodyChain[]` | Array | Full cryptographic chain of custody. Each step contains `fromOfficer`, `toOfficer`, `fromLocation`, `toLocation`, `sealCondition`, and `currentHash` (SHA-256 of the transfer details). |
+
+---
+
+## 23. Knowledge Graph (Conceptual)
+
+The Knowledge Graph is dynamically assembled by the **CaseGraphService** and not stored as a distinct collection. It maps connections between `CaseParticipant`, `CaseEntity`, and `Evidence` to feed high-signal context into the AI Orchestrator.
+
+**Nodes**:
+*   **Participant**: Derived from `CaseParticipant` (Victims, Witnesses, Suspects)
+*   **Entity**: Derived from `CaseEntity` (Phones, Bank Accounts, IMEIs)
+*   **Evidence**: Derived from `Evidence` (Documents, Images, Audio)
+
+**Edges**:
+*   `corroborates`: Entity ↔ Evidence (When an entity is mentioned in evidence)
+*   `evidence_of`: Evidence ↔ Participant (When evidence relates to a participant)
+*   `shared_identifier`: Participant ↔ Participant (When two people share a phone, address, etc.)
+*   `participant_entity`: Participant ↔ Entity (When a participant uses a tracked entity)
 
 ## 21. Collection Relationships
 

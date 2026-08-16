@@ -539,7 +539,11 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
     { id: 'complaint', label: 'Original Complaint', icon: <FileText size={15} /> },
     { id: 'case_understanding', label: 'Case Understanding', icon: <Brain size={15} /> },
     { id: 'timeline', label: 'Timeline', icon: <Clock size={15} />, badge: caseUnderstanding?.timeline?.length || undefined },
+<<<<<<< Updated upstream
+    { id: 'custody', label: 'Custody', icon: <Shield size={15} />, badge: warrants.filter((w: any) => ['draft', 'sent_to_magistrate', 'approved', 'in_custody'].includes(w.status)).length || undefined },
+=======
     { id: 'custody', label: 'Custody', icon: <Shield size={15} />, badge: warrants.filter((w: any) => ['draft','sent_to_magistrate','approved','in_custody'].includes(w.status)).length || undefined },
+>>>>>>> Stashed changes
     { id: 'graph', label: 'Case Graph', icon: <Network size={15} /> },
     { id: 'room', label: 'Private Room', icon: <MessageSquare size={15} /> },
   ];
@@ -556,6 +560,13 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
     <div className="w-full min-w-0" style={{ minHeight: '600px' }}>
       {/* Main workspace â€” takes all available width */}
       <div className="w-full min-w-0 space-y-4">
+<<<<<<< Updated upstream
+        {/* Tab Content */}
+        <div className="min-h-[500px]">
+          {activeTab === 'graph' && (
+            <CaseCorkboard caseId={caseId} refreshTrigger={refreshTrigger} />
+          )}
+=======
       {/* Tab Content */}
       <div className="min-h-[500px]">
         {activeTab === 'graph' && (
@@ -565,25 +576,30 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
         {activeTab === 'room' && (
           <CaseRoomChat caseId={caseId} />
         )}
+>>>>>>> Stashed changes
 
-        {activeTab === 'analysis' && (
-          <AnalysisPanel
-            caseId={caseId}
-            snapshot={snapshot}
-            loading={actionLoading && !snapshot}
-            participants={participants}
-            evidence={evidence}
-            onCorrectSnapshot={handleCorrectSnapshot}
-            onTriggerAnalysis={handleTriggerAnalysis}
-            onAnalysisComplete={fetchWorkspaceData}
-            onAttachSectionsToParticipant={handleAttachSectionsToParticipant}
-            onAttachEvidenceSections={handleAttachEvidenceSections}
-            onAcceptRecommendedSection={handleAcceptRecommendedSection}
-            onApproveParticipant={handleApproveParticipant}
-            onAttachReasoning={handleAttachReasoning}
-            actionLoading={actionLoading}
-          />
-        )}
+          {activeTab === 'room' && (
+            <CaseRoomChat caseId={caseId} />
+          )}
+
+          {activeTab === 'analysis' && (
+            <AnalysisPanel
+              caseId={caseId}
+              snapshot={snapshot}
+              loading={actionLoading && !snapshot}
+              participants={participants}
+              evidence={evidence}
+              onCorrectSnapshot={handleCorrectSnapshot}
+              onTriggerAnalysis={handleTriggerAnalysis}
+              onAnalysisComplete={fetchWorkspaceData}
+              onAttachSectionsToParticipant={handleAttachSectionsToParticipant}
+              onAttachEvidenceSections={handleAttachEvidenceSections}
+              onAcceptRecommendedSection={handleAcceptRecommendedSection}
+              onApproveParticipant={handleApproveParticipant}
+              onAttachReasoning={handleAttachReasoning}
+              actionLoading={actionLoading}
+            />
+          )}
 
           {activeTab === 'checklist' && (
             <ChecklistPanel
@@ -3073,6 +3089,9 @@ function EditParticipantModal({
   const [viewingDocUrl, setViewingDocUrl] = React.useState<string | null>(null);
   const identifierFileRefs = React.useRef<(HTMLInputElement | null)[]>([]);
 
+  // ── Promote to Accused state ──────────────────────────────────────────────
+  const [promotingId, setPromotingId] = React.useState<string | null>(null);
+
   const roleOptions = ['Victim', 'Witness', 'Suspect', 'Accused', 'Complainant'];
 
   const roleBadgeColor = (role: string) => {
@@ -3299,6 +3318,26 @@ function EditParticipantModal({
     }
   };
 
+  // ── Promote to Accused handler ────────────────────────────────────────────
+  const handlePromoteToAccused = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if ((p.roles || []).includes('Accused')) {
+      alert('This participant is already marked as Accused.');
+      return;
+    }
+    setPromotingId(p.participant_id);
+    try {
+      const res = await apiClient.patch(`/cases/${caseId}/participants/${p.participant_id}/promote-to-accused`);
+      const updated = res.data.data;
+      setP(updated);
+      onSuccess(updated);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to promote participant to Accused.');
+    } finally {
+      setPromotingId(null);
+    }
+  };
+
   const appliedSections: any[] = p?.suspectProfile?.appliedSections || [];
 
   if (!isOpen || !p) return null;
@@ -3317,7 +3356,31 @@ function EditParticipantModal({
               ))}
             </div>
           </div>
-          <button onClick={onClose} className="p-1 text-text-secondary hover:text-text-secondary transition-colors text-2xl leading-none">Ã—</button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {(p.roles || []).includes('Suspect') && !(p.roles || []).includes('Accused') && (
+              <button
+                onClick={handlePromoteToAccused}
+                disabled={promotingId === p.participant_id}
+                className="px-4 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-semibold rounded-lg transition-colors flex items-center gap-2"
+                title="Promote this suspect to Accused status"
+              >
+                {promotingId === p.participant_id ? (
+                  <>
+                    <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                    </svg>
+                    Promoting...
+                  </>
+                ) : (
+                  <>
+                    <Scale size={16} /> Mark as Accused
+                  </>
+                )}
+              </button>
+            )}
+            <button onClick={onClose} className="p-1 text-neutral-400 hover:text-text-secondary transition-colors text-2xl leading-none">×</button>
+          </div>
         </div>
 
         <div className="p-6 space-y-8">

@@ -145,6 +145,16 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactElemen
       endpoint = API_ROUTES.ADMIN.LOGOUT;
     }
 
+    // Try to sync one last time before clearing caches
+    if (isPolice && user?._id && typeof navigator !== 'undefined' && navigator.onLine) {
+      try {
+        console.log('[Auth] Attempting pre-logout sync...');
+        await OutboxManager.processPendingOperations(user._id);
+      } catch (error) {
+        console.error('[Auth] Pre-logout sync failed:', error);
+      }
+    }
+
     try {
       await apiClient.post(endpoint);
     } catch {

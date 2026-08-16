@@ -17,6 +17,8 @@ For a functional overview of the platform and user workflows, see [README.md](./
    - [Flow 4 — Case Closure → Vector Embedding → IO Recommendation](#flow-4--case-closure--vector-embedding--io-recommendation)
    - [Flow 5 — Evidence Upload → Deepfake Detection → Confidence Score](#flow-5--evidence-upload--deepfake-detection--confidence-score)
    - [Flow 6 — Offline Mutation Outbox → Auto-Sync (PWA)](#flow-6--offline-mutation-outbox--auto-sync-pwa)
+   - [Flow 7 — Physical Evidence Custody Chain](#flow-7--physical-evidence-custody-chain)
+   - [Flow 8 — Knowledge Graph AI Enrichment](#flow-8--knowledge-graph-ai-enrichment)
 4. [Component Communication](#4-component-communication)
 5. [Security & Access Architecture](#5-security--access-architecture)
 6. [Deployment Architecture](#6-deployment-architecture)
@@ -450,6 +452,46 @@ Officer loses internet connection while working on a case
 ```
 
 ---
+
+
+### Flow 7 — Physical Evidence Custody Chain
+
+```
+Officer seizes physical item (Weapon, Narcotics, etc.)
+  │
+  ├─► Uses mobile/web UI to register Physical Evidence
+  │     └─► Backend generates unique evidenceTagId & initial custody node (Hash 1)
+  │
+  ├─► Item physically bagged and sealed (Seal: S-101)
+  │
+  ├─► Officer initiates "Dispatch" to Malkhana in the system
+  │     └─► Status: IN_TRANSIT, creates pending custody node
+  │
+  ├─► Malkhana Officer physically receives item & checks seal
+  │     ├─► Scans QR code or enters Tag ID
+  │     ├─► Clicks "Acknowledge Receipt"
+  │     └─► Backend verifies details, completes custody node (Hash 2)
+  │           └─► Chain of Custody is mathematically locked.
+```
+
+### Flow 8 — Knowledge Graph AI Enrichment
+
+```
+Investigation Orchestrator runs Analysis
+  │
+  ├─► CaseGraphService.buildGraph(caseId)
+  │     ├─► Queries CaseParticipants, CaseEntities, Evidence
+  │     ├─► Creates nodes for each.
+  │     └─► Infers edges (O(n^2) check for shared identifiers, corroborating evidence)
+  │
+  ├─► buildGraphContextSummary() runs over the graph
+  │     └─► Extracts high-signal "Aha!" moments:
+  │           "Participant A and B share phone number X"
+  │           "Entity Y is corroborated by 3 pieces of evidence"
+  │
+  └─► Feeds summary into LLM prompt
+        └─► AI recommends new suspect links or checklist steps based on hidden graph connections.
+```
 
 ## 4. Component Communication
 

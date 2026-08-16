@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -34,12 +34,16 @@ export default function PoliceProfilePage() {
         setValue('photoUrl', data.photoUrl || '');
         setLoading(false);
       } catch (err) {
+<<<<<<< Updated upstream
+        showToast('Failed to load profile', 'error');
+=======
         showToast('error', 'Failed to load profile');
+>>>>>>> Stashed changes
         setLoading(false);
       }
     };
     fetchProfile();
-  }, [setValue]);
+  }, [setValue, showToast]);
 
   const onSubmit = async (data: ProfileForm) => {
     setSaving(true);
@@ -50,9 +54,15 @@ export default function PoliceProfilePage() {
         expertise: expertiseArr,
         photoUrl: data.photoUrl
       });
+<<<<<<< Updated upstream
+      showToast('Profile updated successfully', 'success');
+    } catch (err) {
+      showToast('Failed to update profile', 'error');
+=======
       showToast('success', 'Profile updated successfully');
     } catch (err) {
       showToast('error', 'Failed to update profile');
+>>>>>>> Stashed changes
     } finally {
       setSaving(false);
     }
@@ -67,8 +77,13 @@ export default function PoliceProfilePage() {
         <p className="text-text-secondary">Update your operational expertise and past experience.</p>
       </div>
 
+<<<<<<< Updated upstream
       <Card className="p-8 bg-surface shadow-sm border-border">
         <div className="flex items-start justify-between mb-8 pb-8 border-b border-border">
+=======
+      <Card className="p-8 bg-[#0a0a0a] border-gray-800">
+        <div className="flex items-start justify-between mb-8 pb-8 border-b border-gray-800">
+>>>>>>> Stashed changes
           <div>
             <h2 className="text-2xl font-medium text-text-primary">{officerData?.officerName}</h2>
             <div className="flex items-center gap-2 mt-2 text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-sm w-fit">
@@ -82,6 +97,13 @@ export default function PoliceProfilePage() {
               <img src={officerData.photoUrl} alt="Profile" className="w-full h-full object-cover" />
             ) : (
               <User size={40} className="text-text-secondary" />
+            )}
+          </div>
+          <div className="w-24 h-24 rounded-full bg-gray-800 flex shrink-0 items-center justify-center overflow-hidden">
+            {officerData?.photoUrl ? (
+              <img src={officerData.photoUrl} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              <User size={40} className="text-gray-400" />
             )}
           </div>
         </div>
