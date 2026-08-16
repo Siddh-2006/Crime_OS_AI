@@ -18,6 +18,8 @@ For the technical architecture, component design, data flows, security model, an
    - [Case Closure & Vector Embedding](#case-closure--vector-embedding)
    - [Multi-Language Support](#multi-language-support)
 4. [Advanced Features](#4-advanced-features)
+   - [Physical Evidence Tracking & Cryptographic Custody Chain](#physical-evidence-tracking--cryptographic-custody-chain)
+   - [Knowledge Graph & Case Corkboard](#knowledge-graph--case-corkboard)
    - [Progressive Web App & Offline-First Support](#progressive-web-app--offline-first-support)
    - [Evidence Encryption & Watermarking](#evidence-encryption--watermarking)
    - [Multiple IO Collaboration & Private Chatroom](#multiple-io-collaboration--private-chatroom)
@@ -36,22 +38,43 @@ Crime OS is an internal police operations platform — there is no public-facing
 
 The platform covers the full investigation lifecycle:
 
-```
-Complaint Filed → AI Analysis → SHO Review → FIR Generated → IO Assigned → Investigation → Charge Sheet → Case Closed
+```mermaid
+flowchart LR
+    A["📋 Complaint Filed"] --> B["🤖 AI Analysis"]
+    B --> C["👮 SHO Review"]
+    C --> D["📄 FIR Generated"]
+    D --> E["🔍 IO Assigned"]
+    E --> F["🔬 Investigation"]
+    F --> G["📦 Physical Evidence\nTracked"]
+    F --> H["🕸️ Knowledge Graph\nBuilt"]
+    G & H --> I["📑 Charge Sheet"]
+    I --> J["✅ Case Closed"]
 ```
 
 ---
 
 ## 2. User Roles & Access
 
-There are two officer roles on the platform:
+```mermaid
+graph TD
+    ADMIN["🛡️ Admin\nPlatform setup only"]
+    SHO["👮 SHO\nStation House Officer"]
+    IO["🔍 IO\nInvestigating Officer"]
+    DEPT["🏢 Department\nExternal agency"]
+
+    ADMIN -->|"creates"| SHO
+    ADMIN -->|"creates"| IO
+    SHO -->|"approves complaints\nregisters FIR\nassigns cases"| IO
+    IO -->|"conducts investigation\nfiled physical evidence\nbuilds knowledge graph"| CASE["📁 Case"]
+    DEPT -->|"responds to requests\nvia email or portal"| CASE
+```
 
 | Role | Full Name | Primary Responsibility |
 |---|---|---|
 | **SHO** | Station House Officer | Reviews incoming complaints, confirms FIRs, assigns cases to IOs |
 | **IO** | Investigating Officer | Conducts the full investigation of assigned cases |
 
-Officer accounts are created exclusively by the **Admin**. When adding a new officer, the admin fills in all required details — name, badge number, contact information, station assignment, and role (SHO or IO). Officers cannot self-register. This ensures that only verified, credentialed personnel have access to the system.
+Officer accounts are created exclusively by the **Admin**. Officers cannot self-register. This ensures that only verified, credentialed personnel have access to the system.
 
 ---
 
@@ -61,35 +84,45 @@ Officer accounts are created exclusively by the **Admin**. When adding a new off
 
 Any officer (SHO or IO) can file a complaint on behalf of a complainant. Crime OS supports **Multi-Modal Complaint Ingestion** — meaning the complaint can be submitted in whatever form the information arrives, without forcing the officer to manually transcribe everything.
 
-**Multi-Modal Complaint Ingestion** refers to the platform's ability to accept complaint information across multiple input formats simultaneously:
+| Input Type | How It's Processed |
+|---|---|
+| **Manual entry** | Officer types details directly into the structured form |
+| **Image upload** | Florence-2 + PaddleOCR extract objects, text, GPS metadata |
+| **PDF upload** | PyMuPDF extracts text layer; Florence OCR handles scanned pages |
+| **Audio upload** | faster-whisper transcribes speech, detects language, translates |
+| **Video upload** | scenedetect extracts keyframes, Florence captions, Whisper transcribes audio |
 
-- **Manual entry** — The officer types in the complaint details directly into the structured form.
-- **Image upload** — A photograph of a written complaint, handwritten statement, or any physical document can be uploaded. The system extracts all readable text automatically.
-- **PDF upload** — A scanned or digital PDF of a complaint form is uploaded and its contents are parsed and populated into the case.
-- **Audio upload** — A voice recording of the complainant's statement is uploaded and automatically transcribed into text.
-
-For **evidence**, the same multi-modal support applies — images, audio, PDFs, documents, and video files can all be attached to a case.
-
-The complaint form itself captures:
-
-- Incident date, time, and location
-- Crime category (from Gujarat Police classification)
-- Short description and full detailed account
-- All attached evidence files
-
-This means an officer receiving a handwritten complaint, a scanned document, or a voice memo can file a complete case in minutes without manual re-entry.
+For **evidence**, the same multi-modal support applies — all file types can be attached to a case.
 
 ---
 
 ### Automatic Background Processing
 
-The moment a complaint is submitted, two processes begin working simultaneously without any action required from the officer:
+The moment a complaint is submitted, two processes begin working simultaneously:
 
-1. **Evidence Intelligence** — Every uploaded file (image, audio, PDF, video) is processed automatically. Images are analyzed for objects, scenes, and embedded GPS data. Audio is transcribed to text with language detection. PDFs have their full text extracted. Video is processed for key content. All extracted information is attached to the respective evidence item and is immediately available when the officer opens the case.
+```mermaid
+sequenceDiagram
+    participant Officer
+    participant Backend
+    participant EvidenceQueue as Evidence Queue (BullMQ)
+    participant CI as Complaint Intelligence
+    participant Orchestrator as Investigation Orchestrator
 
-2. **Case Analysis** — The complaint text and all evidence are analyzed together to produce a structured AI assessment of the case — identifying key entities, suggesting legal sections, recommending next steps, and generating a confidence score. This is ready and waiting by the time any officer opens the case.
+    Officer->>Backend: POST /complaints (with files)
+    Backend->>Officer: 201 Created (immediately)
+    Backend->>EvidenceQueue: enqueue evidence processing job
+    Backend->>Orchestrator: trigger analysis (async)
 
-Both of these run in the background and complete without interrupting the officer's workflow.
+    EvidenceQueue->>CI: process each file
+    CI-->>Backend: write aiMetadata to Evidence
+
+    Orchestrator->>Backend: assemble case facts
+    Orchestrator->>Backend: buildGraphContextSummary()
+    Orchestrator-->>Officer: analysis ready (SSE event)
+```
+
+1. **Evidence Intelligence** — every file is processed automatically (OCR, transcription, object detection, NER, GPS extraction, deepfake scoring).
+2. **Case Analysis** — complaint text and all evidence are analyzed together by the AI Orchestrator, which also calls the Knowledge Graph service to enrich the LLM prompt with hidden connections.
 
 ---
 
@@ -101,187 +134,111 @@ New complaints appear on the SHO's dashboard immediately after filing. The SHO c
 
 #### AI Case Analysis
 
-Alongside the original complaint, the SHO sees a fully generated **AI analysis of the case**. This is not a simple summary — it is a structured investigation-level analysis that includes:
-
-- A narrative explanation of what happened based on all available information
-- Identified entities: people, locations, financial accounts, organizations mentioned in the complaint
-- Applicable legal sections from the BNS/BNSS/BSA, retrieved from a legal knowledge base
+Alongside the original complaint, the SHO sees a fully generated **AI analysis of the case** — a structured investigation-level analysis that includes a narrative explanation, identified entities, and applicable legal sections retrieved via RAG from BNS/BNSS/BSA.
 
 #### Evidence Analysis
 
-Each piece of evidence attached to the complaint is individually analyzed and a detailed breakdown is shown — extracted text, transcription, detected objects, GPS metadata, an AI-generated summary, and a classification of what the evidence represents. The SHO can review all of this before making any decisions on the case.
-
-#### Missing Evidence Drafts
-
-If the AI determines that key information or evidence is missing from the complaint, it automatically generates ready-to-send draft requests addressed to the complainant. These drafts are fully written — the IO only needs to review and click send. No manual drafting required and it will be emailed to the complainant.
-
-#### Event Timeline
-
-The SHO can view a **chronological timeline of events** related to the case — reconstructed by the AI from all complaint details and evidence. This gives an at-a-glance picture of when things happened, in what sequence, and what is known about each event.
+Each piece of evidence is individually analyzed — extracted text, transcription, detected objects, GPS metadata, AI summary, classification, and a **Deepfake Confidence Score** (0–100). Scores ≥ 70 display a warning badge.
 
 #### FIR Generation & Confirmation
 
-When the SHO is ready to formally register the case, they click **Generate FIR**. The platform produces a complete FIR document in the official Gujarat Police format:
+When the SHO is ready to formally register the case, they click **Generate FIR**. The platform produces a complete FIR document in the official Gujarat Police format — all fields auto-populated from case data, presented as an editable form. Once confirmed:
 
-- All key fields (district, station, FIR number, crime sections, dates, complainant details, accused details, stolen property, full FIR statement) are **automatically populated** from the case data
-- All applicable **legal sections** are pre-filled based on the AI's analysis
-- The document is presented as an **editable form** — the SHO can review and modify any field before confirming
-- Once satisfied, the SHO clicks **Confirm FIR** and the official FIR is registered with a unique FIR number
-- A **downloadable PDF** of the FIR is generated in both English and bilingual Gujarati-English formats, stored securely in the system
+- A unique FIR number is assigned
+- A **downloadable PDF** is generated in both English and bilingual Gujarati-English formats
+- The FIR PDF is watermarked with the organization logo (15% opacity, centered) and stored in Cloudinary
 
 #### Assigning the Case to an IO
 
-After the FIR is confirmed, the SHO assigns the case to an IO for investigation. The platform presents a **ranked list of suggested IOs** based on:
-
-- Similarity between this case and cases the officer has previously handled
-- The officer's area of specialization
-
-The list is ordered in descending order of relevance, so the most suitable IO appears at the top. The SHO selects from this list and assigns the case with a single action.
+After FIR confirmation, the SHO sees a **ranked list of suggested IOs** ordered by how similar this case is to each officer's past closed cases. The IO Recommendation service powers this — vector embeddings of closed cases are searched via cosine similarity in Qdrant, and officers are ranked 0–100 with match reasoning.
 
 ---
 
 ### IO Workflow
 
-Once assigned, the case appears on the IO's dashboard. The IO works within a structured **Investigation Workspace** — a unified interface containing every tool needed to conduct and document the investigation.
+Once assigned, the case appears on the IO's dashboard within the **Investigation Workspace** — a unified interface with all investigation tools.
 
 #### AI Analysis & Investigation Intelligence
 
-The IO sees the same AI analysis as the SHO, but the analysis goes deeper on the investigative side. It actively assists the IO in building the case:
-
-**Case Participants**
-The AI identifies and suggests individuals who should be formally added to the case as participants, each with a designated role:
-
-| Role | Description |
-|---|---|
-| **Victim** | Person(s) directly harmed |
-| **Witness** | Individuals with relevant knowledge of the incident |
-| **Suspect** | Persons of interest based on current evidence |
-
-For each suggested participant, the AI provides:
-- Detailed reasoning drawn from the evidence
-- Applicable legal sections — **BNS sections** for suspects, **BSA sections** for evidence — retrieved using a legal knowledge base built on BNS, BNSS, BSA, Standard Operating Procedures, and the Department Registry
-
-The IO reviews each suggestion and accepts or rejects it. Accepted participants are added to the case.
-
-**Next Steps**
-The analysis also recommends concrete next investigation steps — what actions the IO should take, what evidence still needs to be gathered, and which departments or agencies to contact. These suggestions feed directly into the investigation workflow.
-
-**Legal Section Retrieval via RAG**
-All legal section suggestions (for participants, for evidence, for the case as a whole) are retrieved using **Retrieval-Augmented Generation (RAG)** — a technique where the AI searches a curated legal knowledge base (BNS, BNSS, BSA, SOPs, and the Department Registry) to find the most relevant sections for the specific facts of the case, rather than relying on general training data alone. This ensures legal accuracy grounded in the actual statutes.
+The AI analysis recommends concrete next steps, suggests participants (victim, witness, suspect) with AI reasoning, and retrieves applicable legal sections (BNS for suspects, BSA for evidence) via RAG.
 
 #### AI Copilot
 
-The IO has access to a **Copilot interface** available at all times within the Investigation Workspace. The Copilot operates in two distinct modes:
+The IO has a **Copilot** available at all times in two modes:
 
-**ASK Mode**
-The IO types any question related to the case in natural language. The Copilot uses the same RAG-based legal knowledge base to retrieve relevant laws, sections, and precedents, then answers the question with full context from the case. Examples:
-
-- *"What sections apply to online financial fraud of this nature?"*
-- *"What evidence do we still need to establish intent?"*
-- *"Summarize everything we know about the primary suspect."*
-
-**AGENT Mode**
-The IO describes a line of investigation or asks the Copilot to evaluate the current state of the case. The agent:
-
-1. Fetches the complete, up-to-date state of the case from the database
-2. Combines it with the IO's query
-3. Re-runs the full AI analysis pipeline
-4. Returns updated and progressive suggestions — new participant recommendations, updated legal sections, revised next steps, refined reasoning
-
-Every Agent mode conversation advances the investigation. Each interaction produces a new analysis snapshot that builds on the previous one, so the case intelligence compounds over time rather than starting from scratch.
+- **ASK Mode** — factual questions answered with full legal context retrieved by the Legal Agent RAG
+- **AGENT Mode** — the agent fetches the complete live case state, re-runs the full AI pipeline, and returns a structured proposal the IO can review and apply
 
 #### Department Communication
 
-During investigation, IOs frequently need to request information from external departments — forensic labs, medical examiners, banks, telecom providers, government agencies, and others.
-
-The AI automatically generates **ready-to-send formal draft letters** addressed to the relevant departments. These drafts:
-
-- Are written in official language with the correct legal citations (BNSS sections)
-- Specify exactly what information is being requested
-- Include a reasonable response deadline and the IO's details
-
-The IO reviews the draft and sends it with a single click. The email is dispatched directly to the department's registered contact.
-
-**Continuous Email Polling** — The platform continuously monitors for incoming email responses from departments. When a reply arrives, it is automatically attached to the relevant request thread in the case, the corresponding checklist step is marked complete, the new information is added as evidence, and the AI re-analyzes the case with the new data.
+AI auto-generates **ready-to-send formal draft letters** to external departments (forensic labs, banks, courts, telecom providers) with correct BNSS citations and deadlines. When a department replies, the platform's Gmail poller automatically picks it up, attaches it to the case, unblocks the checklist step, and re-triggers analysis.
 
 #### Case Participants
 
-The Case Participants section is a structured registry of all individuals connected to the case. For each participant, the IO can maintain:
+For each person connected to the case, the IO can maintain:
 
-- **Contact details** and identifiers (Aadhaar, PAN, phone number, etc.) with the option to attach identifier documents or photographs
-- **Statements** — recorded either as written text directly, or as audio files that are automatically transcribed to text. Statements are timestamped and preserved
-- **Progressive Reasoning** — an evolving, editable reasoning document that captures why this person is connected to the case, how their role has evolved over the investigation, and what the latest assessment is. This reasoning is updated collaboratively between the IO and the AI Copilot's Agent mode as the investigation progresses
-- **Applicable Legal Sections** — sections attached to suspects and accused with the IO's confirmation and timestamp
+- Contact details and government identifiers (Aadhaar, PAN, IMEI, etc.)
+- Formal statements — typed directly or auto-transcribed from audio by faster-whisper
+- Progressive Reasoning notes — evolving, editable, collaboratively maintained with the AI Copilot
+- Applied BNS/BSA legal sections with officer attribution and timestamp
 
-Suspects can be formally **promoted to Accused** as the evidence warrants, which updates their status throughout the case and in the final charge sheet.
+Suspects can be **promoted to Accused** which propagates the status to the charge sheet.
 
-#### Custody Tab
+#### Physical Evidence Management
 
-The Custody tab provides an overview of all suspects currently in custody. It displays relevant custody details, dates, and any associated information for each individual, giving the IO and SHO a clear picture of the current custody situation at any point in the investigation.
+See [Physical Evidence Tracking & Cryptographic Custody Chain](#physical-evidence-tracking--cryptographic-custody-chain).
+
+#### Knowledge Graph / Case Corkboard
+
+See [Knowledge Graph & Case Corkboard](#knowledge-graph--case-corkboard).
 
 #### Case Diary
 
-The Case Diary is the official daily log of the investigation — a legal requirement under Indian law. Crime OS makes maintaining this effortless:
+The **Case Diary** (official Roznamcha) practically writes itself:
 
-- **Auto-logging** — Every action taken within the platform (evidence added, participant approved, department request sent, step completed, analysis run, etc.) is automatically logged as a diary entry with a precise timestamp. Nothing is missed.
-- **AI-Generated Summaries** — For each logged event, the AI generates a concise, professional summary describing what happened and its significance to the investigation. Even minor updates get a proper contextual entry.
-- **Finalized Diary PDFs** — Diary entries are compiled into the official Roznamcha format, available in both English and bilingual Gujarati-English variants, and can be downloaded as PDFs at any time.
-
-The result is that the IO's case diary practically writes itself — every investigative action is documented automatically without the officer needing to stop and write notes.
-
-#### Evidence Management
-
-The IO can view all evidence attached to the case from a dedicated evidence panel. For each item:
-
-- The file is viewable directly (image preview, audio/video playback, document viewer)
-- All AI-extracted details are displayed: transcription, object detection tags, OCR text, GPS coordinates extracted from photo metadata, AI summary and classification, and processing status
-- Legal sections applicable to the evidence (BSA) are shown, with the option to attach them formally
-- Links to related case participants are shown, connecting evidence to the people it implicates
-- Physical evidence items show a full **custody chain** — a log of every transfer, storage location, and custody change, from first collection to current status
+- Every platform action is automatically logged as a `DiaryEntry` with an AI-generated professional summary
+- The IO can generate a formatted bilingual diary draft at any time (Ollama-powered)
+- Finalized diaries are compiled into official Roznamcha PDFs (English + Gujarati-English) with watermarks, stored in Cloudinary
 
 #### Confidence Score
 
-A **dynamic Confidence Score** is maintained throughout the investigation. This score is a calculated percentage that reflects the overall strength of the case at any given moment, based on:
-
-- How much of the required evidence has been collected
-- How many investigation steps have been completed
-- How well different pieces of evidence corroborate each other
-
-The score updates automatically every time new evidence is added, a step is completed, or the analysis is re-run. It gives the IO a clear, objective indicator of how ready the case is to proceed — and highlights when more work is needed before moving forward.
+A **dynamic Confidence Score** (%) reflects the strength of the case at any moment, updated automatically based on:
+- Evidence coverage of required items
+- Checklist completion progress
+- Corroboration between evidence items
 
 #### Charge Sheet Generation
 
-When the IO is confident the investigation is complete and the case is strong, they initiate **Charge Sheet Generation**. The platform assembles and generates a comprehensive legal document automatically:
+When the investigation concludes, Crime OS assembles a comprehensive charge sheet automatically:
 
-**What it contains:**
-- Complete case summary and background
-- All victims, witnesses, suspects, and accused — with their statements, identifiers, and applied legal sections
-- Deep analysis of the investigation: findings, reasoning, and conclusions
-- All evidence collected, with references and AI analysis
-- A full summary of all department requests and the responses received
-- All case diary entries
-- An **Annexures section** containing direct links to all original documents — evidence files, department reports, FIR — stored in the CDN (cloud storage), so the court can access the source documents directly from the charge sheet
+- All accused (with statements, identifiers, applied legal sections)
+- All evidence with AI analysis and BSA section mappings
+- All department request outcomes
+- Full case diary and Roznamcha entries
+- An **Annexures section** with direct Cloudinary links to source documents
+- Four AI-generated narrative sections (editable before finalization)
 
-**AI-generated narratives** are written for four key sections: brief case description, investigation summary, investigation findings, and final report. All sections are editable by the IO before finalization.
-
-The charge sheet can be **downloaded as a PDF** at any point. Multiple versions are maintained (v1, v2, etc.) as the document evolves.
+Available as a downloadable PDF at any point; versioned as the document evolves.
 
 ---
 
 ### Case Closure & Vector Embedding
 
-When the investigation concludes and the charge sheet is ready, the IO closes the case. Upon closure:
+When the investigation concludes:
 
-- The complete case — all participants, evidence, diary entries, analysis, legal sections, and outcomes — is compiled into a **vector embedding** and stored in the system's knowledge base.
-- This embedding is used directly by the **IO Recommendation engine** that the SHO sees when assigning future cases. As more cases are closed, the system becomes progressively smarter at matching new cases to the most suitable investigating officers based on genuine past experience.
+```mermaid
+flowchart LR
+    CLOSE["IO closes case"] --> EMBED["Backend assembles\ncase summary text"]
+    EMBED --> IOREC["IO Recommendation Service\nembeds via nomic-embed-text-v2-moe"]
+    IOREC --> QDRANT["Qdrant: upsert vector\n(keyed by FIR ID + officer ID)"]
+    QDRANT --> FUTURE["Future case assignment:\nSHO sees ranked IO list"]
+```
 
-All case data remains permanently accessible after closure. Nothing is deleted — the full record is preserved for audit, appeals, or future reference.
+All case data remains permanently accessible — nothing is deleted.
 
 ---
 
 ### Multi-Language Support
-
-The entire platform is fully supported in three languages:
 
 | Language | Script |
 |---|---|
@@ -289,234 +246,222 @@ The entire platform is fully supported in three languages:
 | Hindi | Devanagari |
 | Gujarati | Gujarati script |
 
-Every interface element, label, AI-generated content, analysis narrative, draft letters, case diary, and FIR document is available in the officer's preferred language. The language preference is persistent across sessions.
+Every interface element, label, AI-generated content, analysis narrative, draft letters, case diary, and FIR document is available in the officer's preferred language. Translation is done on first visit to each page via Ollama, then cached in Redis for near-zero latency on subsequent visits.
 
 ---
 
 ## 4. Advanced Features
 
-### Progressive Web App & Offline-First Support
+### Physical Evidence Tracking & Cryptographic Custody Chain
 
-Crime OS is deployed as a **Progressive Web App (PWA)** with full offline-first capability, allowing officers to continue working on cases even without internet connectivity.
+Crime OS implements a full **BNSS-compliant physical evidence management system** — covering the complete lifecycle of seized items from initial seizure through Malkhana storage, FSL dispatch, court production, and final release or destruction.
+
+**What can be tracked:**
+
+| Category | Examples |
+|---|---|
+| WEAPON | Firearms, knives, blunt objects |
+| NARCOTICS | Drugs, controlled substances |
+| VEHICLE | Cars, motorcycles |
+| DOCUMENT | Papers, IDs, contracts |
+| STOLEN_PROPERTY | Items reported as stolen |
+| BIOLOGICAL | Blood, hair, DNA swabs |
+| ELECTRONIC_DEVICE | Phones, laptops, hard drives |
+| OTHER | Any other seized item |
 
 **How it works:**
 
-1. **Installation** — The application can be installed on any device (desktop, tablet, smartphone) like a native app, with a dedicated home screen icon and app launcher integration.
+1. **Registration** — The IO registers the seized item. The system generates:
+   - A unique `evidenceTagId` (e.g. `PEV-2026-A3F7B1`)
+   - A QR code linking to the public verification URL (`/verify-custody/{tagId}`)
+   - The Genesis hash (step 1 of the cryptographic chain)
 
-2. **Offline-First Architecture**
-   - **Automatic Caching** — When an officer opens a case online, the entire case workspace is automatically cached locally using **IndexedDB**
-   - **Cached Case Data** — Up to 5 most recently accessed cases are stored per officer (LRU eviction)
-   - **All Workspace Data** — Cached data includes: AI analysis snapshots, investigation checklists, case diary entries, evidence metadata, case participants, requests, and all other workspace tabs
+2. **Cryptographic Custody Chain** — Every custody transfer (dispatch to FSL, receipt at court, Malkhana deposit, etc.) appends a new `CustodyNode` to the chain. Each node contains:
+   - The SHA-256 hash of the previous node's hash plus all transfer parameters
+   - Transfer details: from/to officer, from/to location, Road Certificate number, seal condition
+   - Status: `DISPATCHED` → `ACCEPTED` (two-step per transfer)
 
-3. **Offline Mutations** — When offline, officers can continue to:
-   - Update case participants and statements
-   - Add diary entries and notes
-   - Mark checklist steps as complete
-   - Add evidence metadata
-   - All mutations are **automatically queued** in an outbox and persisted across browser refresh
+   Hash computation:
+   ```
+   currentHash = SHA-256(
+     previousHash | step | transferAction | fromOfficerId | toOfficerName |
+     toLocation | timestamp | sealNumber | roadCertificateNo
+   )
+   ```
 
-4. **Automatic Sync** — When internet is restored:
-   - The application automatically detects the reconnection
-   - All queued mutations are **replayed in order** to the server
-   - Failed operations are **retried up to 3 times** with exponential backoff
-   - Conflict resolution uses **Last-Write-Wins (LWW)** at the field level — independent field updates don't conflict
-   - Officers receive real-time sync status notifications
+3. **Two-step Transfer Protocol**:
+   - **Dispatch** (`POST /dispatch`) — IO initiates transfer, status becomes `IN_TRANSIT_*`, a Road Certificate number is assigned
+   - **Acknowledge** (`POST /acknowledge`) — Receiving officer confirms receipt, verifies seal condition, step is marked `ACCEPTED`
 
-5. **Evidence Management Offline** — Evidence file URLs are cached from Cloudinary, and officers have the option to manually download evidence files to their device for offline viewing during investigations.
+4. **Integrity Verification** — `GET /:id/verify` re-computes every hash in the chain from scratch and reports the exact step where any tampering occurred.
 
-6. **UI Indicators** — The interface provides:
-   - Sync status in the navbar (green = synced, yellow = syncing, red = pending)
-   - Offline banner when disconnected
-   - Pending operation counter
-   - Manual sync button for immediate retry
+```mermaid
+sequenceDiagram
+    participant IO
+    participant System
+    participant Malkhana
+    participant FSL
 
-**Implementation Details:**
-- Uses `@ducanh2912/next-pwa` for service worker generation
-- Client-side database: `Dexie.js` (IndexedDB wrapper)
-- No existing API or backend code was modified
-- Transparent fallback — existing axios calls automatically use cached data on network errors
+    IO->>System: Register item (seizure)
+    System-->>IO: PEV-2026-A3F7B1, QR, H1 (genesis hash)
+
+    IO->>System: Dispatch to Malkhana
+    System-->>IO: status: IN_TRANSIT, RC-2026-4291, H2
+
+    Malkhana->>System: Acknowledge receipt
+    System-->>Malkhana: status: STORED_IN_MALKHANA, H3
+
+    System->>System: Dispatch to FSL
+    System-->>System: status: IN_TRANSIT_TO_FSL, H4
+
+    FSL->>System: Acknowledge receipt
+    System-->>FSL: status: STORED_AT_FSL, H5
+
+    Note over IO, FSL: Anyone can call GET /:id/verify<br/>to prove H1→H2→H3→H4→H5 are unbroken
+```
+
+**Physical Evidence status lifecycle:**
+
+| From Status | Action | To Status |
+|---|---|---|
+| `SEIZED` | FSL_DISPATCH | `IN_TRANSIT_TO_FSL` |
+| `SEIZED` | COURT_PRODUCTION | `IN_TRANSIT_TO_COURT` |
+| `SEIZED` | STATION_TRANSFER | `IN_TRANSIT_TO_FACILITY` |
+| Any IN_TRANSIT | Acknowledge (FSL) | `STORED_AT_FSL` |
+| Any IN_TRANSIT | Acknowledge (Court) | `PRODUCED_IN_COURT` |
+| Any IN_TRANSIT | Acknowledge (Malkhana) | `STORED_IN_MALKHANA` |
+| `PRODUCED_IN_COURT` | RELEASE_TO_OWNER | `RELEASED_TO_OWNER` |
+| `STORED_IN_MALKHANA` | Destruction order | `DESTROYED` |
+
+---
+
+### Knowledge Graph & Case Corkboard
+
+Crime OS builds a **dynamic Knowledge Graph** for every case — surfacing hidden connections between people, entities, and evidence that the IO might miss by reading raw case data alone.
+
+**What the graph maps:**
+
+```mermaid
+graph TD
+    subgraph "Graph Nodes"
+        P["👤 CaseParticipant\n(victims, suspects, witnesses)"]
+        E["📊 CaseEntity\n(phones, accounts, UPIs, IMEIs)"]
+        EV["📎 Evidence\n(images, audio, documents)"]
+    end
+    subgraph "Graph Edges"
+        R1["corroborates\nentity → evidence"]
+        R2["evidence_of\nevidence → participant"]
+        R3["shared_identifier\nparticipant ↔ participant"]
+        R4["participant_entity\nparticipant → entity"]
+    end
+```
+
+**How edges are inferred (automatically, in-memory):**
+
+| Edge Type | How it's detected |
+|---|---|
+| `corroborates` | `CaseEntity.corroborating_evidence_ids` references evidence IDs |
+| `evidence_of` | `Evidence.relatedParticipantIds` references participant IDs |
+| `shared_identifier` | O(n²) check — two participants share the same identifier value (phone number, Aadhaar, IMEI, etc.) |
+| `participant_entity` | A participant's identifier value matches a `CaseEntity.value` |
+
+**Two consumers:**
+
+1. **AI Orchestrator** — `buildGraphContextSummary()` extracts high-signal insights from the graph and injects them directly into the LLM's analysis prompt:
+   - *"Participant A and Participant B share identifier 'phone: 9876543210' [flagged: shared_identifier]"*
+   - *"Entity phone '9876543210' is corroborated by 3 pieces of evidence [flagged: multi-corroborated]"*
+   
+   This means the AI analysis actively reasons about hidden connections, not just raw case text.
+
+2. **Case Corkboard (frontend)** — The `CaseCorkboard` component (`frontend/src/components/case/CaseCorkboard.tsx`) calls `GET /api/v1/cases/:id/graph` and renders the `{ nodes[], edges[] }` response as an interactive node-edge visualization — the classic detective "string board" digitized. Officers can visually explore which suspects are connected, what evidence links to whom, and which entities appear across multiple participants.
+
+The graph is built dynamically on demand — no pre-built graph is stored in the database. It's cached in the PWA's offline IndexedDB store for offline viewing.
+
+---
+
+### Progressive Web App & Offline-First Support
+
+Crime OS is deployed as a **Progressive Web App (PWA)** with full offline-first capability.
+
+**Offline layer architecture:**
+
+```mermaid
+flowchart TD
+    API_CALL["API call (GET or mutation)"] --> NET{{"Network\navailable?"}}
+    NET -->|"Yes"| SERVER["Server responds\nIndexedDB cache updated"]
+    NET -->|"No (GET)"| CACHE["IndexedDB cache\nserved (Dexie.js)\nLRU, max 5 cases per officer"]
+    NET -->|"No (mutation)"| OUTBOX["OutboxManager\nmutation queued in IndexedDB"]
+    OUTBOX --> RECONNECT["On reconnect:\nOperations replayed in dependency order\nMax 3 retries, exponential backoff"]
+    RECONNECT --> SERVER
+    SERVER --> UI["UI updated\nSyncStatus → green"]
+```
+
+**Cached resources per case include:** AI analysis snapshots, investigation checklists, case diary entries, evidence metadata, case participants, request threads, room messages, **knowledge graph data**, and department list.
 
 ---
 
 ### Evidence Encryption & Watermarking
 
-Sensitive evidence and case documents are protected with encryption and watermarking to ensure document authenticity and prevent unauthorized access.
-
 **Encryption:**
-- **Algorithm** — AES-256-GCM (Advanced Encryption Standard, 256-bit key, Galois/Counter Mode)
-- **Application** — All sensitive case room messages and encrypted metadata fields
-- **Key Management** — Encryption key is loaded from the `ENCRYPTION_KEY` environment variable (32 bytes / 256 bits)
-- **Implementation** — Each encryption generates a random IV (Initialization Vector) and authentication tag, stored alongside the ciphertext for decryption. Format: `enc:<iv>:<ciphertext>:<authTag>`
-- **Transparent Decryption** — When encrypted data is retrieved from the database, it is automatically decrypted before being sent to the client
+- **Algorithm** — AES-256-GCM (256-bit key, Galois/Counter Mode with random IV per value)
+- **Format** — `enc:<iv_hex>:<ciphertext_hex>:<authTag_hex>`
+- **Applied to** — 16 sensitive Evidence fields (OCR text, transcripts, GPS, tags, etc.) via the `evidenceEncryptionPlugin` Mongoose plugin, and all Private Chatroom messages via `CaseRoomService`
+- **Transparent** — encryption and decryption happen entirely in Mongoose hooks; application code is unaware
 
 **Watermarking:**
-- **Applied to** — All generated PDFs: charge sheets, FIRs, and case diary documents
-- **Watermark Format** — Organization logo (SVG, semi-transparent at 15% opacity) centered on every page
-- **Position** — Centered on the page, scaled to 65% of page width to avoid obscuring content
-- **Purpose** — Provides visual proof of document authenticity and prevents unauthorized duplication
-- **Implementation** — Using PDFKit with SVG-to-PDF conversion during PDF generation
-
-**Audit Trail** — All encrypted messages include:
-- Sender identification (officer name and ID)
-- Precise timestamp
-- Message ID for tracking
+- **Applied to** — All generated PDFs: charge sheets, FIRs, case diary Roznamchas
+- **Format** — Organization SVG logo, 15% opacity, centered on every page, scaled to 65% of page width
 
 ---
 
 ### Multiple IO Collaboration & Private Chatroom
 
-Cases can be assigned to **multiple Investigating Officers (IOs)** working collaboratively. The **Private Chatroom** provides secure, real-time communication between all IOs assigned to a case.
+Cases can be assigned to multiple IOs for complex or high-priority investigations. The **Private Chatroom** provides secure real-time communication:
 
-**Multiple IO Assignment:**
-- Cases can have multiple IOs assigned simultaneously for complex or high-priority investigations
-- All assigned IOs have full access to the Investigation Workspace
-- Each IO's actions are logged and attributed to their profile
-
-**Private Chatroom Features:**
-
-1. **Real-Time Messaging** — Using **Socket.io**:
-   - Secure WebSocket connection with JWT authentication
-   - Real-time message delivery to all assigned IOs
-   - Typing indicators show when colleagues are composing messages
-   - Online/offline status tracking
-
-2. **Encrypted Messages**
-   - All chatroom messages are encrypted with AES-256-GCM (same as sensitive evidence)
-   - Messages are stored encrypted in the database
-   - Automatic decryption when retrieved for display
-   - Only officers assigned to the case can access the room
-
-3. **Message History**
-   - Complete message history is persisted and searchable
-   - Paginated message retrieval (50 messages per page)
-   - Messages timestamped to the second
-   - Includes sender identification (name, badge, role)
-
-4. **Access Control**
-   - Only officers assigned to the case can join the room
-   - SHOs can also access case rooms for oversight
-   - Room eligibility check: minimum 2 assigned IOs required
-   - Automatic cleanup of locks when officers disconnect
-
-5. **Case Diary Integration**
-   - The chatroom UI displays the Case Diary Timeline alongside messages
-   - Officers can reference diary events while chatting
-   - Resizable split view for simultaneous diary and message review
-
-**Use Cases:**
-- Joint investigation discussions
-- Coordinating evidence collection strategies
-- Reviewing AI analysis recommendations together
-- Escalating complex issues before finalizing decisions
+- **Real-time** — Socket.io WebSocket connection authenticated via JWT
+- **Encrypted** — all messages encrypted with AES-256-GCM before MongoDB persistence
+- **Room eligibility** — enforced: minimum 2 assigned IOs required
+- **Case Diary sidebar** — chatroom displays the diary timeline in a resizable split view
 
 ---
 
 ### AI Deepfake Detection for Media
 
-Every uploaded piece of evidence (images, audio, and video) is automatically scanned for **deepfake indicators** using the **SightEngine API**, which employs state-of-the-art machine learning to detect AI-generated or manipulated media.
+Every uploaded image, audio, and video evidence is automatically scanned by the **SightEngine API** for deepfake indicators:
 
-**Detection Coverage:**
-- **Images** — Detects AI-generated images, morphed faces, swapped faces
-- **Audio** — Identifies synthetic or voice-cloned speech
-- **Video** — Analyzes video frames and audio track for deepfake indicators
+| Score Range | Interpretation |
+|---|---|
+| 0–30 | Likely Real |
+| 30–70 | Uncertain (manual review recommended) |
+| 70–100 | Likely AI-Generated/Manipulated |
 
-**Workflow:**
-
-1. **Automatic Scanning** — When evidence is uploaded and processed by the Complaint Intelligence service, the deepfake check is triggered automatically
-2. **Confidence Scoring** — Each media item receives a **Deepfake Confidence Score** (0–100):
-   - `0–30` = Likely Real
-   - `30–70` = Uncertain (manual review recommended)
-   - `70–100` = Likely AI-Generated/Manipulated
-3. **Metadata Attachment** — The score and detection details are attached to the evidence metadata
-4. **Officer Alert** — If a score > 70, the evidence is flagged in the Investigation Workspace with a warning badge
-5. **Contextual Logging** — Detection results are logged with evidence ID, case ID, and timestamp for audit trails
-
-**Integration with Investigation:**
-- Detections appear in the Evidence panel alongside all other AI analysis
-- Officers can note deepfake indicators when building the case against a suspect
-- Relevant legal sections (documentary evidence BSA sections) are suggested alongside deepfake warnings
-
-**Configuration:**
-- Deepfake detection can be enabled/disabled via the `SIGHTENGINE_ENABLE_DEEPFAKE_CHECK` environment variable
-- API credentials: `SIGHTENGINE_API_USER` and `SIGHTENGINE_API_KEY` (obtained from SightEngine)
-- Timeout: Configurable via `SIGHTENGINE_TIMEOUT_MS` (default 30 seconds)
+Scores ≥ 70 display a warning badge in the Evidence panel. Configurable via `SIGHTENGINE_ENABLE_DEEPFAKE_CHECK`.
 
 ---
 
 ### Prompt Compression for Efficient LLM Processing
 
-The platform integrates **LLMLingua-2**, a state-of-the-art prompt compression model, to optimize all LLM calls. This reduces token consumption, latency, and costs while maintaining response quality.
+**LLMLingua-2** (`microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank`, ~110 MB BERT model) reduces prompt token count before every major LLM call:
 
-**How It Works:**
+| Applied to | Typical reduction |
+|---|---|
+| Case analysis full text | 30–50% |
+| Copilot AGENT mode (case facts + legal context) | 30–50% |
+| Department request letter drafts | 20–40% |
+| Charge sheet narrative generation | 30–50% |
 
-1. **Compression Algorithm** — **LLMLingua-2** (microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank):
-   - BERT-based model (~110 MB, CPU-efficient)
-   - Identifies and removes redundant or low-relevance tokens
-   - Preserves critical information and entities
-
-2. **Compression Service** — Runs as an independent Python FastAPI service (port 8005):
-   - Lazy-loads the model on first request
-   - Caches model in memory for fast compression (typical: <100ms)
-   - Supports configurable compression rates (0.1–0.99)
-
-3. **Automatic Integration** — Prompt compression is transparent to the application:
-   - Case analysis: Full investigation text compressed before being sent to Gemma
-   - Copilot queries: Legal context and case data compressed before RAG
-   - Department request letters: Long case summaries compressed
-   - Charge sheet narratives: Detailed evidence lists compressed
-
-4. **Compression Settings**:
-   - **Default rate**: 0.5 (keep 50% of tokens)
-   - **Force tokens**: Critical terms (dates, phone numbers, names) are never removed
-   - **Target token count**: Can specify exact output length instead of a ratio
-
-5. **Token Optimization**:
-   - Extracts and preserves dates (YYYY-MM-DD format)
-   - Preserves phone numbers (+91-XXX or 10 digits)
-   - Preserves key person/entity names
-   - Removes boilerplate and repetition
-
-**Benefits:**
-- **30–50% reduction** in tokens sent to the LLM
-- **Faster response times** — smaller prompts = faster inference
-- **Cost reduction** — fewer tokens used
-- **Maintained quality** — compression preserves semantic meaning
-
-**Implementation:**
-- Integrated into the Complaint Intelligence service's case understanding engine
-- Used in the PromptCompressionClient in the backend
-- Graceful fallback — if compression fails, uncompressed text is used
+Critical tokens (dates, phone numbers, names) are never removed. Graceful fallback — if the service times out (60s), the original uncompressed text is passed to the LLM without error.
 
 ---
 
 ### Vector Quantization for Scalability
 
-The **Qdrant vector database** supports optional **Scalar Quantization** to reduce the memory footprint of stored embeddings while maintaining search quality.
+The **Qdrant vector database** supports optional **Scalar Quantization** per collection:
 
-**How It Works:**
-
-1. **Quantization** — Instead of storing full 32-bit float vectors, quantization reduces vectors to lower-bit representations (e.g., 8-bit):
-   - **Memory reduction**: ~75% less space per vector
-   - **Search quality**: Minimal impact on retrieval accuracy (typically <2% degradation)
-   - **Trade-off**: Slight latency increase due to dequantization during search
-
-2. **Configuration**:
-   - `quantization_enabled`: Boolean flag to enable/disable
-   - `quantization_always_ram`: When true, quantized vectors are decompressed into RAM during search (default)
-   - Can be configured per Qdrant collection
-
-3. **Collections Affected**:
-   - **Legal sections** collection (BNS, BNSS, BSA, SOPs, Department Registry)
-   - **Closed case embeddings** collection (for IO Recommendation)
-
-4. **When to Use**:
-   - **Enabled**: When hosting large case databases with thousands of closed cases
-   - **Disabled**: In development or small-scale deployments where memory is not constrained
-
-**Benefits:**
-- Reduces Qdrant memory footprint significantly
-- Allows scaling to larger legal corpus without increased hardware costs
-- Minimal performance degradation in search quality
+- **Memory reduction** — ~75% less space per vector (32-bit floats → 8-bit integers)
+- **Search quality** — typically < 2% degradation in retrieval accuracy
+- **Collections** — Legal sections collection (BNS/BNSS/BSA/SOPs) + Closed case embeddings collection (IO Recommendation)
+- **Configuration** — `quantization_enabled` and `quantization_always_ram` flags per collection
 
 ---
 
@@ -529,92 +474,34 @@ The **Qdrant vector database** supports optional **Scalar Quantization** to redu
 | **Frontend** | Next.js 14 (App Router), React 18, TypeScript, Tailwind CSS |
 | **Backend API** | Node.js / Express (TypeScript) |
 | **Database** | MongoDB with Mongoose ODM |
-| **File Storage** | Cloudinary (direct signed-URL uploads — server never handles file bytes) |
-| **Caching & Queues** | Redis + BullMQ for background job processing and inter-service pub/sub |
-| **Email** | Nodemailer + Gmail OAuth2 (sending department request emails and polling for replies) |
-| **PDF Generation** | PDFKit (FIR, case diary, charge sheet) with embedded NotoSansGujarati font for Gujarati script |
-
----
+| **File Storage** | Cloudinary (direct signed-URL uploads) |
+| **Caching & Queues** | Redis + BullMQ |
+| **Email** | Nodemailer + Gmail OAuth2 |
+| **PDF Generation** | PDFKit with NotoSansGujarati font for Gujarati script |
+| **Real-time** | Socket.io WebSocket (Private Chatroom) + SSE (Analysis Progress) |
+| **Offline** | Dexie.js (IndexedDB) + @ducanh2912/next-pwa |
 
 ### Python AI Microservices
 
-All AI and ML workloads run as independent Python FastAPI services. Each service is isolated, independently scalable, and communicates with the Node.js backend over HTTP.
+| Service | Port | Purpose |
+|---|---|---|
+| Complaint Intelligence | 8000 | Evidence processing pipeline (PDF, image, audio, video, NER) |
+| Florence-2 | 8002 | Image captioning and OCR (resident in memory) |
+| IO Recommendation | 8003 | Closed-case vector search + officer ranking |
+| Legal Agent | 8004 | Hybrid BM25 + vector RAG over BNS/BNSS/BSA/SOPs |
+| Prompt Compression | 8005 | LLMLingua-2 token reduction before LLM calls |
 
-#### 1. Complaint Intelligence Service
-The primary evidence processing pipeline. Every file uploaded to a case passes through this service.
+### LLM Layer
 
-| Media Type | Processing |
+| Component | Details |
 |---|---|
-| **PDF** | `PyMuPDF (fitz)` extracts the embedded text layer per page. Scanned/image-only pages are automatically detected and routed to Florence-2 for OCR instead. |
-| **Images & Scanned PDFs** | `microsoft/Florence-2-base` (via a dedicated Florence REST microservice) runs with the `<MORE_DETAILED_CAPTION>` task to produce a rich natural-language description, from which scene type, tags, and entity flags (people, vehicles, weapons, documents) are parsed. PaddleOCR 2.7.3 runs in parallel on images to extract any printed or handwritten text. |
-| **Audio** | `faster-whisper` (CTranslate2 backend, `tiny` model) transcribes speech to text, auto-detects the source language, and produces an English translation if the source is non-English. VAD (Voice Activity Detection) filtering is applied to skip silent segments. |
-| **Video** | `scenedetect` (OpenCV-based, frame-difference algorithm) detects scene boundaries and extracts keyframes. `moviepy` extracts the audio track, which is then passed through the same Whisper transcription pipeline. Extracted keyframes are processed by Florence-2 for visual captioning. |
-| **NER / Entity Extraction** | `spaCy (en_core_web_sm)` performs named entity recognition across all extracted text to identify people, locations, organisations, and dates. |
-
-#### 2. Florence-2 Service
-A standalone FastAPI microservice wrapping `microsoft/Florence-2-base`. Loaded once on startup and kept resident in memory. Accepts base64-encoded images and returns structured captions.
-
-#### 3. Legal Agent Service
-The RAG (Retrieval-Augmented Generation) engine that powers all legal section lookups — used in AI analysis, Copilot queries, and case participant reasoning.
-
-**Knowledge Base:** BNS, BNSS, BSA, Standard Operating Procedures (SOPs), and the Department Registry — all embedded and stored in Qdrant.
-
-**Retrieval Pipeline:**
-```
-Query
-  → BM25 Search (keyword, schema-aware field weighting)
-  → Vector Search (Qdrant cosine similarity)
-  → Weighted Reciprocal Rank Fusion  [BM25: 0.4 | Vector: 0.6]
-  → ONNX Reranker (cross-encoder, exported to ONNX for low-latency CPU inference)
-  → Top 5 context sections returned
-```
-
-**Embedding Model:** `BAAI/bge-base-en-v1.5` (via `sentence-transformers`) — a symmetric dense retrieval model. Falls back to `nomic-embed-text-v2-moe` served via `llama.cpp` if sentence-transformers is not available locally.
-
-This hybrid approach — BM25 for keyword precision, vector search for semantic similarity, fused and reranked — was tested and validated to produce significantly better section retrieval than either method alone.
-
-#### 4. IO Recommendation Service
-A FastAPI service that powers the IO assignment suggestions the SHO sees when assigning a case.
-
-When a case is **closed**, the complete case data is converted to structured text, embedded, and stored in Qdrant. When a SHO opens the assignment screen for a **new case**, the service:
-1. Embeds the new complaint using `nomic-embed-text-v2-moe` (GGUF quantized, served by `llama.cpp`)
-2. Retrieves the top-50 most similar closed cases from Qdrant, filtered by station
-3. Aggregates similarity scores per officer using weighted voting
-4. Returns officers ranked by score (0–100) with matched case count and similarity reasoning
-
-**Embedding Model:** `nomic-embed-text-v2-moe` Q4_K_M (GGUF) — an asymmetric model using `search_document:` and `search_query:` prefixes for document vs. query embedding. 768-dimensional vectors.
-
----
-
-### Primary LLM — Gemma 4 (gemma4:e2b via Ollama)
-
-All generative AI tasks on the platform — investigation analysis, Copilot responses, department request drafts, escalation summaries, charge sheet narratives, and more — are handled by **`gemma4:e2b`**, run locally via **Ollama** with a 32,768-token context window.
-
-The model is used in two modes depending on the task:
-- **Fast calls** (temperature 0.3, 512 tokens) — quick summaries, copilot factual answers, escalation drafts
-- **Deep calls** (temperature 0.1, 1024 tokens, JSON mode) — full investigation analysis, charge sheet generation, department request letters, Copilot agent proposals
-
----
-
-### Translation System
-
-The platform supports English, Hindi, and Gujarati across every page. Translation is handled by sending Gemma (via Ollama) the full block of UI text for a given page and receiving the translated version back in JSON format.
-
-Key design decision: translation is done **per page, on first visit**, then cached. This means:
-- The first time an officer visits a page in a non-English language, the text is translated in the background with minimal interruption
-- Every subsequent visit to the same page in the same language is served instantly from cache
-- There is no pre-translation of the entire application — only the pages actually visited are ever translated
-
-This gives the system a smooth, low-latency multilingual experience without the overhead of translating content that is never seen.
-
----
-
-### Vector Database
-
-**Qdrant** is used as the vector store across all services:
-- Legal section embeddings (BNS, BNSS, BSA, SOPs, Department Registry) — queried by the Legal Agent
-- Closed case embeddings — queried by the IO Recommendation service
-- Department Registry vectors — synced live as the admin adds or deactivates departments
+| **Ollama** | gemma4:e2b, 32,768-token context window |
+| Fast calls | temp=0.3, 512 tokens (summaries, factual answers, escalation drafts) |
+| Deep calls | temp=0.1, 1024 tokens, JSON mode (analysis, charge sheet, department letters) |
+| **nomic-embed-text-v2-moe** | GGUF Q4_K_M via llama.cpp — IO Recommendation + Legal Agent fallback |
+| **BAAI/bge-base-en-v1.5** | sentence-transformers — Legal Agent primary embedder |
+| **LLMLingua-2** | BERT-base multilingual — prompt compression |
+| **ONNX cross-encoder** | Reranker for Legal Agent hybrid retrieval |
 
 ---
 
@@ -631,35 +518,26 @@ This gives the system a smooth, low-latency multilingual experience without the 
 | **ffmpeg** | Any | Required by `moviepy` for video audio extraction — must be on system PATH |
 | **MongoDB** | 6.0+ | Run locally or connect via Atlas URI |
 
----
-
 ### Node.js — Backend (`backend/package.json`)
 
 | Package | Version | Purpose |
 |---|---|---|
 | `express` | ^4.19 | HTTP server and routing |
 | `mongoose` | ^8.4 | MongoDB ODM |
-| `bullmq` | ^5.8 | Background job queues (evidence, email, diary PDF) |
-| `ioredis` | ^5.4 | Redis client (caching + BullMQ + SSE pub/sub) |
-| `jsonwebtoken` | ^9.0 | JWT access + refresh token generation |
+| `bullmq` | ^5.8 | Background job queues |
+| `ioredis` | ^5.4 | Redis client |
+| `jsonwebtoken` | ^9.0 | JWT tokens |
 | `bcrypt` | ^5.1 | Password hashing |
-| `pdfkit` | ^0.19 | FIR, case diary, charge sheet PDF generation |
-| `cloudinary` | ^2.10 | Signed URL generation + file metadata |
-| `googleapis` | ^173 | Gmail OAuth2 (send department emails + poll replies) |
+| `pdfkit` | ^0.19 | PDF generation |
+| `cloudinary` | ^2.10 | Signed URL generation |
+| `googleapis` | ^173 | Gmail OAuth2 |
 | `nodemailer` | ^9.0 | SMTP email dispatch |
-| `@google/genai` | ^2.13 | Gemini API client (fallback LLM) |
-| `axios` | ^1.7 | HTTP calls to Python microservices |
-| `helmet` | ^7.1 | Security headers |
-| `rate-limiter-flexible` | ^5.0 | API rate limiting |
+| `socket.io` | latest | WebSocket server (Private Chatroom) |
+| `axios` | ^1.7 | HTTP calls to Python services |
 | `joi` | ^17.13 | Request body validation |
-| `multer` | ^2.2 | Multipart file upload handling |
-| `uuid` | ^14.0 | UUID generation |
-| `cookie-parser` | ^1.4 | HTTP-only cookie parsing |
-| `compression` | ^1.7 | Response compression |
-| `qrcode` | ^1.5 | QR code generation for citizen token links |
-| `winston` | ^3.13 | Structured logging |
-
----
+| `multer` | ^2.2 | Multipart file upload |
+| `qrcode` | ^1.5 | QR code generation for physical evidence |
+| `crypto` (built-in) | — | SHA-256 custody chain hashing, AES-256-GCM encryption |
 
 ### Node.js — Frontend (`frontend/package.json`)
 
@@ -672,80 +550,19 @@ This gives the system a smooth, low-latency multilingual experience without the 
 | `axios` | ^1.18 | API calls |
 | `react-hook-form` | ^7.81 | Form state management |
 | `react-markdown` | ^10.1 | Renders AI markdown responses |
-| `lucide-react` | ^1.24 | Icon library |
-| `js-cookie` | ^3.0 | Cookie access in browser |
 | `@ducanh2912/next-pwa` | latest | PWA / service worker generation |
 | `dexie` | ^4 | IndexedDB wrapper for offline case caching |
 | `socket.io-client` | latest | WebSocket client for Private Chatroom |
 
----
+### Python Services — Key Dependencies
 
-### Python — Complaint Intelligence Service
-
-| Package | Version | Purpose |
-|---|---|---|
-| `fastapi` | 0.115.6 | HTTP API framework |
-| `uvicorn[standard]` | 0.32.1 | ASGI server |
-| `pydantic` | 2.10.3 | Schema validation |
-| `redis` | 5.2.1 | Async Redis for job queue |
-| `httpx` | 0.28.1 | Async HTTP client |
-| `spacy` | 3.8.14 | NER — run `python -m spacy download en_core_web_sm` after install |
-| `faster-whisper` | 1.1.1 | Audio transcription (CTranslate2) |
-| `pymupdf` | ≥1.24.14 | PDF text extraction |
-| `scenedetect[opencv]` | 0.6.4 | Video scene boundary detection |
-| `moviepy` | 1.0.3 | Video audio track extraction |
-| `opencv-python-headless` | 4.10 | Keyframe extraction |
-| `Pillow` | 10.4.0 | Image processing |
-| `cloudinary` | ≥2.0 | Evidence file upload |
-| `pydub` | 0.25.1 | Audio metadata fallback |
-| `langdetect` | 1.0.9 | Source language detection |
-| `python-magic-bin` | ≥0.4.14 | MIME type detection |
-
-### Python — Florence-2 Service
-
-| Package | Version | Purpose |
-|---|---|---|
-| `torch` | 2.13.0 | Model inference |
-| `torchvision` | 0.28.0 | — |
-| `transformers` | 4.41.2 | Florence-2 model loading |
-| `einops` | 0.8.2 | Tensor operations required by Florence-2 |
-| `timm` | 1.0.28 | Vision model backbone |
-| `Pillow` | 10.4.0 | Image decoding |
-
-### Python — Legal Agent Service
-
-| Package | Version | Purpose |
-|---|---|---|
-| `pydantic` | ≥2.0 | — |
-| `PyMuPDF` | ≥1.23 | Legal corpus PDF parsing |
-| `qdrant-client` | ≥1.10 | Vector search |
-| `sentence-transformers` | ≥3.0 | BGE embedding (primary) |
-| `transformers` | 4.41.2 | Tokenizers |
-| `optimum[onnxruntime]` | ≥1.20 | ONNX reranker export |
-| `onnxruntime` | ≥1.18 | Fast CPU inference for reranker |
-| `torch` | ≥2.0 | — |
-
-### Python — IO Recommendation Service
-
-| Package | Version | Purpose |
-|---|---|---|
-| `fastapi` | ≥0.111 | — |
-| `uvicorn[standard]` | ≥0.30 | — |
-| `pydantic` | ≥2.7 | — |
-| `qdrant-client` | ≥1.9.1, <1.10 | Vector store |
-| `httpx` | ≥0.27 | Calls llama.cpp embedding server |
-| `pydantic-settings` | ≥2.2 | Config management |
-
-### Python — Prompt Compression Service
-
-| Package | Version | Purpose |
-|---|---|---|
-| `fastapi` | ≥0.111 | HTTP API framework |
-| `uvicorn[standard]` | ≥0.30 | ASGI server |
-| `llmlingua` | latest | LLMLingua-2 prompt compressor |
-| `torch` | ≥2.0 | Model inference backend |
-
----
+| Service | Key Packages |
+|---|---|
+| Complaint Intelligence | `fastapi`, `faster-whisper`, `pymupdf`, `scenedetect`, `moviepy`, `spacy`, `paddleocr` |
+| Florence-2 | `torch`, `transformers`, `einops`, `timm` |
+| Legal Agent | `qdrant-client`, `sentence-transformers`, `optimum[onnxruntime]`, `onnxruntime` |
+| IO Recommendation | `qdrant-client`, `httpx` (calls llama.cpp) |
+| Prompt Compression | `llmlingua`, `torch` |
 
 ### External Services Required
 
@@ -754,7 +571,7 @@ This gives the system a smooth, low-latency multilingual experience without the 
 | **MongoDB** | Primary database | Local install or MongoDB Atlas URI |
 | **Cloudinary** | File + PDF storage | Create a free account at cloudinary.com |
 | **Gmail account** | Department email dispatch + polling | Enable OAuth2 in Google Cloud Console |
-| **SightEngine** | AI deepfake detection for media evidence | Create account at sightengine.com (free tier available) |
+| **SightEngine** | AI deepfake detection for media evidence | Create account at sightengine.com |
 
 ---
 
@@ -785,8 +602,6 @@ docker run -d --name crime-os-qdrant -p 6333:6333 -p 6334:6334 qdrant/qdrant
 
 ### Step 3 — Create shared Python virtual environment
 
-All four Python services share a single `.venv` at the project root.
-
 ```bash
 python -m venv .venv
 
@@ -795,24 +610,18 @@ python -m venv .venv
 
 # macOS / Linux
 source .venv/bin/activate
-```
 
-Install dependencies for each service:
-
-```bash
+# Install all Python service dependencies
 pip install -r services/complaint_intelligence/requirements.txt
 pip install -r services/florence_service/requirements.txt
 pip install -r services/legal_agent/requirements.txt
 pip install -r services/io-recommendation/requirements.txt
 pip install -r services/prompt_compression/requirements.txt
 
-# Download spaCy NER model (required by Complaint Intelligence)
+# Download spaCy NER model
 python -m spacy download en_core_web_sm
-```
 
-Export the ONNX reranker weights for the Legal Agent (one-time):
-
-```bash
+# Export ONNX reranker weights for Legal Agent (one-time)
 cd services/legal_agent
 python export_weights.py
 cd ../..
@@ -835,36 +644,26 @@ ollama pull gemma4:e2b
 ```bash
 cd backend
 npm install
-```
-
-Copy and fill in the environment file:
-
-```bash
 cp .env.example .env
 ```
 
-Required values to set in `backend/.env`:
+Required values in `backend/.env`:
 
 | Variable | Description |
 |---|---|
 | `MONGODB_URI` | MongoDB connection string |
-| `JWT_ACCESS_SECRET` | Random secret string (min 32 chars) |
-| `JWT_REFRESH_SECRET` | Different random secret string |
+| `JWT_ACCESS_SECRET` | Random secret (min 32 chars) |
+| `JWT_REFRESH_SECRET` | Different random secret |
 | `COOKIE_SECRET` | Random secret for signed cookies |
-| `CLOUDINARY_CLOUD_NAME` | From your Cloudinary dashboard |
-| `CLOUDINARY_API_KEY` | — |
-| `CLOUDINARY_API_SECRET` | — |
-| `GMAIL_CLIENT_ID` | From Google Cloud Console OAuth2 client |
-| `GMAIL_CLIENT_SECRET` | — |
-| `GMAIL_REFRESH_TOKEN` | Generate via Google OAuth Playground |
+| `CLOUDINARY_CLOUD_NAME` / `API_KEY` / `API_SECRET` | From your Cloudinary dashboard |
+| `GMAIL_CLIENT_ID` / `CLIENT_SECRET` / `REFRESH_TOKEN` | From Google Cloud Console |
 | `GMAIL_POLICE_EMAIL` | Gmail address used for sending/receiving |
-| `ENCRYPTION_KEY` | 32-byte hex string for AES-256-GCM evidence encryption |
-| `SIGHTENGINE_API_USER` | SightEngine account user ID (deepfake detection) |
-| `SIGHTENGINE_API_KEY` | SightEngine API secret key |
-| `SIGHTENGINE_ENABLE_DEEPFAKE_CHECK` | `true` / `false` — enable or disable deepfake scanning (default: true) |
-| `SIGHTENGINE_TIMEOUT_MS` | Timeout in ms for SightEngine API calls (default: 30000) |
-
-All other values (ports, Ollama URL, service URLs) use sensible defaults and typically do not need to change for local development.
+| `ENCRYPTION_KEY` | 32-byte hex string for AES-256-GCM encryption |
+| `SIGHTENGINE_API_USER` / `API_KEY` | From sightengine.com |
+| `SIGHTENGINE_ENABLE_DEEPFAKE_CHECK` | `true` / `false` (default: `true`) |
+| `SIGHTENGINE_TIMEOUT_MS` | Timeout in ms (default: `30000`) |
+| `PROMPT_COMPRESSION_ENABLED` | `true` / `false` |
+| `FRONTEND_URL` | e.g. `http://localhost:3000` |
 
 ---
 
@@ -879,8 +678,6 @@ npm install
 
 ### Step 7 — Seed the database
 
-Create the initial admin account and station data:
-
 ```bash
 cd backend
 npx ts-node src/scripts/seed-police.ts
@@ -889,8 +686,6 @@ npx ts-node src/scripts/seed-police.ts
 ---
 
 ### Step 8 — Ingest the legal knowledge base into Qdrant
-
-The Legal Agent needs BNS, BNSS, BSA, SOPs, and the Department Registry embedded into Qdrant before it can serve legal section lookups. From the legal agent directory:
 
 ```bash
 cd services/legal_agent
@@ -912,20 +707,7 @@ Run the startup script from the project root:
 start_all.bat
 ```
 
-This opens separate terminal windows for each service in the correct startup order:
-
-1. Ollama (LLM server)
-2. Legal Agent — port 8004
-3. IO Recommendation — port 8003
-4. Complaint Intelligence — port 8001
-5. Florence-2 Service — port 8002
-6. Prompt Compression — port 8005
-7. Backend (Node.js) — port 5001
-8. Frontend (Next.js) — port 3000
-
-The platform is ready when all windows show their respective startup messages. Open `http://localhost:3000` to access the application.
-
----
+This opens separate terminal windows for each service in the correct startup order.
 
 ### Service Port Reference
 
@@ -933,7 +715,7 @@ The platform is ready when all windows show their respective startup messages. O
 |---|---|
 | Next.js Frontend | 3000 |
 | Node.js Backend | 5001 |
-| Complaint Intelligence | 8001 |
+| Complaint Intelligence | 8000 |
 | Florence-2 | 8002 |
 | IO Recommendation | 8003 |
 | Legal Agent | 8004 |
@@ -944,6 +726,8 @@ The platform is ready when all windows show their respective startup messages. O
 | Redis | 6379 |
 | Qdrant HTTP | 6333 |
 | Qdrant gRPC | 6334 |
+
+The platform is ready when all windows show their startup messages. Open `http://localhost:3000` to access the application.
 
 ---
 
