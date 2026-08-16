@@ -160,6 +160,17 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactElemen
         }
       }
       
+      // Clear Service Worker Caches to prevent cross-role data leaks
+      if (typeof window !== 'undefined' && 'caches' in window) {
+        try {
+          const cacheKeys = await caches.keys();
+          await Promise.all(cacheKeys.map(key => caches.delete(key)));
+          console.log('[Auth] Cleared Service Worker caches');
+        } catch (error) {
+          console.error('[Auth] Failed to clear Service Worker caches:', error);
+        }
+      }
+
       localStorage.removeItem('accessToken');
       localStorage.removeItem('user');
       Cookies.remove('role', { path: '/' });
