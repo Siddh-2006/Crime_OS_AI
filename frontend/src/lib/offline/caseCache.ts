@@ -27,6 +27,9 @@ export interface CaseData {
   caseUnderstanding: any | null;
   aiCaseUnderstanding: any | null; // SHO-only tab
   auditTimeline: any | null;       // SHO-only tab
+  roomMessages?: any[];
+  graph?: any | null;
+  departments?: any[];
 }
 
 export class CaseCacheManager {

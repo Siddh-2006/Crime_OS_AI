@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -34,7 +34,7 @@ export default function PoliceProfilePage() {
         setValue('photoUrl', data.photoUrl || '');
         setLoading(false);
       } catch (err) {
-        showToast('error', 'Failed to load profile');
+        showToast('Failed to load profile', 'error');
         setLoading(false);
       }
     };
@@ -50,9 +50,9 @@ export default function PoliceProfilePage() {
         expertise: expertiseArr,
         photoUrl: data.photoUrl
       });
-      showToast('success', 'Profile updated successfully');
+      showToast('Profile updated successfully', 'success');
     } catch (err) {
-      showToast('error', 'Failed to update profile');
+      showToast('Failed to update profile', 'error');
     } finally {
       setSaving(false);
     }

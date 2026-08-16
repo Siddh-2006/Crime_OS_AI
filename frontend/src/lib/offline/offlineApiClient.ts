@@ -200,6 +200,12 @@ export class OfflineApiClient {
       data = cachedCase.warrants;
     } else if (url.includes('/threads')) {
       data = cachedCase.threads;
+    } else if (url.includes('/room')) {
+      data = cachedCase.roomMessages;
+    } else if (url.includes('/graph')) {
+      data = cachedCase.graph;
+    } else if (url.includes('/departments')) {
+      data = cachedCase.departments;
     } else if (url.includes('/complaints/') || complaintIdMatch) {
       data = cachedCase.complaintData;
     } else if (url.includes('/case-understanding/') || caseUnderstandingMatch) {
