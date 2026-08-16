@@ -26,9 +26,45 @@
 18. [ChargeSheet](#18-chargesheet)
 19. [Escalation](#19-escalation)
 20. [CaseRoomMessage](#20-caseroommessage)
-21. [Collection Relationships](#21-collection-relationships)
-22. [PhysicalEvidence](#22-physicalevidence)
-23. [Knowledge Graph (Conceptual)](#23-knowledge-graph-conceptual)
+21. [PhysicalEvidence](#21-physicalevidence)
+22. [Knowledge Graph (Conceptual)](#22-knowledge-graph-conceptual)
+23. [Collection Relationships](#23-collection-relationships)
+
+---
+
+## Collection Overview
+
+```mermaid
+mindmap
+  root((MongoDB Collections))
+    Users & Accounts
+      admins
+      officers
+      users
+      policestations
+    Case Lifecycle
+      complaints
+      analysissnapshots
+      casechecklists
+    Evidence
+      evidences
+      physicalevidences
+      caseentities
+    People
+      caseparticipants
+    Communication
+      departmentrequests
+      requestthreads
+      caseroommessages
+    Documentation
+      casediaries
+      diaryentries
+      placesvisited
+      chargesheets
+      escalations
+    Registry
+      departmentregistries
+```
 
 ---
 
@@ -168,13 +204,27 @@ Collection: `complaints` — Central record for each complaint filed. The primar
 | `incidentDate` | Date | When the incident occurred |
 | `incidentTime` | String? | Time of incident (optional, in addition to date) |
 | `incidentPlace` | String | Location description |
-| `approximateDateText` | String? | Plain-language date if exact date unknown (e.g. "sometime last Tuesday") |
+| `approximateDateText` | String? | Plain-language date if exact date unknown |
 | `coordinates` | String? | GPS coordinates of incident |
 | `category` | String? | enum from `ComplaintCategory` — official Gujarat Police crime category |
 | `crimeCategory` | String? | Free-text category override or supplemental label |
 | `shortDescription` | String | One-line summary (max 255 chars) |
 | `detailedDescription` | String | Full account of the incident |
 | `currentVersionNumber` | Number | Increments with each IO edit to the complaint |
+
+Complaint status lifecycle:
+
+```mermaid
+stateDiagram-v2
+    [*] --> SUBMITTED : Complaint filed
+    SUBMITTED --> UNDER_REVIEW : SHO opens case
+    UNDER_REVIEW --> ASSIGNED_TO_IO : SHO assigns IO
+    UNDER_REVIEW --> REJECTED : SHO rejects
+    ASSIGNED_TO_IO --> FIR_REGISTERED : SHO registers FIR
+    FIR_REGISTERED --> CLOSED : IO closes case
+    REJECTED --> [*]
+    CLOSED --> [*]
+```
 
 ### History Arrays
 
@@ -215,10 +265,6 @@ Each stores a versioned audit trail of edits. Every entry has: `version` (Number
 | `firPdfUrl` | Legacy single PDF URL (kept for backward compatibility) |
 | `firFormData` | Cached JSON of the 15-section FIR form for SHO editing before finalization |
 
-### Status Timestamps
-
-`rejectionReason`, `rejectedAt`, `approvedAt`, `assignedAt`, `investigationStartedAt`
-
 ### AI Intelligence
 
 `complaintIntelligence` — Populated by the Python Complaint Intelligence pipeline:
@@ -232,18 +278,9 @@ Each stores a versioned audit trail of edits. Every entry has: `version` (Number
 | `people_and_entities` | Structured entity breakdown |
 | `evidence_analysis[]` | Per-evidence AI analysis |
 | `crime_analysis` | Overall crime type analysis |
-| `missing_information[]` | Information the AI identified as absent from the complaint |
+| `missing_information[]` | Information the AI identified as absent |
 | `missing_evidence[]` | Evidence types the AI recommends collecting |
 | `sections` | Legal section mapping from the intelligence pipeline |
-
-### Other
-
-| Field | Description |
-|-------|-------------|
-| `processingStatus` | Overall pipeline status for this complaint |
-| `timeline[]` | Manual event timeline (user, timestamp, description, metadata) |
-| `auditLogs[]` | Security audit log: actor, IP, action, old/new values, timestamp |
-| `isDeleted` | Soft-delete flag |
 
 **Indexes:** `status`, `citizen`, `policeStation`, `assignedIO`
 
@@ -266,7 +303,7 @@ Collection: `evidences` — Detailed evidence records created by the investigati
 | `uploader_id` | ObjectId → Officer | — |
 | `status` | String | enum: `pending`, `verified`, `rejected` |
 | `source` | String? | Who provided it: `complainant`, `io_officer`, `department`, `cyber_analyst` |
-| `origin` | String? | `post_complaint_request` — marks evidence uploaded by a citizen via token link |
+| `origin` | String? | `post_complaint_request` — marks evidence uploaded by citizen via token link |
 | `linked_diary_entry_id` | String? | Diary entry where this evidence was first recorded |
 | `linked_request_id` | String? | Department/citizen request this evidence came from |
 | `relatedParticipantIds` | ObjectId[] → CaseParticipant | Participants this evidence is linked to |
@@ -274,13 +311,15 @@ Collection: `evidences` — Detailed evidence records created by the investigati
 | `processingStatus` | String | `PENDING` / `PROCESSED` / `FAILED` — set by the Python pipeline |
 | `originalFilename`, `mimeType`, `size` | — | — |
 
-### Physical Evidence
+### Physical Evidence Fields (on Evidence collection)
+
+> These fields are for *linked* physical context on digital evidence. For dedicated physical item tracking, see [PhysicalEvidence](#21-physicalevidence).
 
 | Field | Description |
 |-------|-------------|
 | `is_physical` | True for physically seized items |
 | `current_location` | Where the item is currently held (default: `malkhana`) |
-| `custody_chain[]` | Full transfer history — each entry: `timestamp`, `from_entity`, `to_entity`, `status` (`dispatched`/`received`/`in_transit`/`returned`), `proof_storage_ref`, `notes` |
+| `custody_chain[]` | Transfer history — each entry: `timestamp`, `from_entity`, `to_entity`, `status` (`dispatched`/`received`/`in_transit`/`returned`), `proof_storage_ref`, `notes` |
 
 ### AI Metadata
 
@@ -309,11 +348,11 @@ Collection: `evidences` — Detailed evidence records created by the investigati
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `confidence_score` | Number (0–100) | **AI Deepfake Confidence Score** populated by the SightEngine API. Ranges: `0–30` = Likely Real, `30–70` = Uncertain (manual review recommended), `70–100` = Likely AI-Generated/Manipulated. Defaults to `0` if detection is disabled or unavailable. Stored on the top-level evidence document, not inside `aiMetadata`. |
+| `confidence_score` | Number (0–100) | AI Deepfake Confidence Score from SightEngine. `0–30` = Likely Real, `30–70` = Uncertain, `70–100` = Likely AI-Generated/Manipulated. Defaults to `0` if detection is disabled or unavailable. |
 
 ### Encryption
 
-The `Evidence` collection uses the **`evidenceEncryptionPlugin`** (Mongoose plugin) which automatically encrypts sensitive fields using **AES-256-GCM** before persistence and decrypts them transparently on read. The following fields are encrypted at rest:
+The `Evidence` collection uses the **`evidenceEncryptionPlugin`** which automatically encrypts sensitive fields using **AES-256-GCM** before persistence and decrypts them transparently on read. The following fields are encrypted at rest:
 
 `storage_ref`, `ai_description`, `ai_tags`, `current_location`, `custody_chain`, `originalFilename`, `aiMetadata.ocrText`, `aiMetadata.speechTranscript`, `aiMetadata.pdfText`, `aiMetadata.imageTags`, `aiMetadata.detectedObjects`, `aiMetadata.faces`, `aiMetadata.embeddings`, `aiMetadata.aiSummary`, `aiMetadata.exif`, `aiMetadata.gps`
 
@@ -345,13 +384,26 @@ Collection: `casechecklists` — Investigation steps auto-generated from SOPs wh
 | `completed_by` | ObjectId → Officer | — |
 | `completed_at` | Date | — |
 
+Checklist step lifecycle:
+
+```mermaid
+stateDiagram-v2
+    [*] --> pending : Step created
+    pending --> in_progress : IO starts work
+    pending --> blocked : Department request sent
+    in_progress --> blocked : Waiting on response
+    blocked --> in_progress : Response received / request resolved
+    in_progress --> completed : IO marks complete
+    completed --> [*]
+```
+
 **Indexes:** `(case_id, status)`, `(case_id, sop_id)`
 
 ---
 
 ## 10. AnalysisSnapshot
 
-Collection: `analysissnapshots` — A versioned record of the AI's analysis of the case at a specific point in time. New snapshots are created on each analysis run; old ones are preserved for audit.
+Collection: `analysissnapshots` — A versioned record of the AI's analysis of the case at a specific point in time.
 
 ### Core Fields
 
@@ -360,58 +412,38 @@ Collection: `analysissnapshots` — A versioned record of the AI's analysis of t
 | `case_id` | ObjectId → Complaint | — |
 | `snapshot_id` | String | UUID — unique per snapshot |
 | `timestamp` | Date | When this snapshot was created |
-| `trigger` | String | What caused this run: `manual`, `auto_on_complaint_filed`, `auto_on_response`, `officer_override` |
+| `trigger` | String | `manual`, `auto_on_complaint_filed`, `auto_on_response`, `officer_override` |
 | `facts_used` | Mixed | The exact assembled facts object fed to the LLM — preserved for audit/diff |
 | `narrative_summary` | String | Markdown narrative written by the LLM summarising the case state |
 | `confidence_breakdown` | Mixed | All confidence scoring components (evidence coverage, checklist progress, corroboration) |
 | `officer_authored` | Boolean | True if this snapshot was created manually by an officer without LLM involvement |
 | `parent_snapshot_id` | String? | Links to the previous snapshot — forms a chain for correction/diff tracking |
 
+Snapshot chain (corrections create a linked list):
+
+```mermaid
+graph LR
+    S1["Snapshot v1\nauto_on_complaint_filed"]
+    S2["Snapshot v2\nauto_on_response"]
+    S3["Snapshot v3\nofficer_override\ncorrection"]
+    S4["Snapshot v4\nmanual"]
+
+    S1 -->|"parent_snapshot_id"| S2
+    S2 -->|"parent_snapshot_id"| S3
+    S3 -->|"parent_snapshot_id"| S4
+```
+
 ### Recommendation Arrays
 
-**`ranked_next_steps[]`** — Actions the AI recommends the IO take next:
+**`ranked_next_steps[]`** — Actions the AI recommends the IO take next.
 
-| Sub-field | Description |
-|-----------|-------------|
-| `step_id` | Unique identifier for this recommended step |
-| `reason` | Why this step is recommended |
-| `confidence` | 0.0–1.0 |
-| `evidence_needed[]` | What evidence to collect for this step |
-| `target` | Person or entity to focus on |
-| `department_entity_id` | Department to contact for this step |
+**`suspect_candidates[]`** — Persons identified as potential suspects with supporting/contradicting evidence.
 
-**`suspect_candidates[]`** — Persons identified as potential suspects:
+**`participant_recommendations[]`** — Suggested case participants with roles, confidence, and AI reasoning.
 
-| Sub-field | Description |
-|-----------|-------------|
-| `entity` | Name or description |
-| `confidence` | 0.0–1.0 |
-| `supporting_evidence_ids[]` | Evidence that points to this person |
-| `contradicting_evidence_ids[]` | Evidence that counts against this person |
-| `recommended_sections[]` | LegalSectionSuggestion[] — BNS sections for this suspect |
+**`evidence_section_recommendations[]`** — Per-evidence legal section suggestions (BSA sections).
 
-**`participant_recommendations[]`** — Suggested case participants (more detailed than suspects):
-
-| Sub-field | Description |
-|-----------|-------------|
-| `name` | — |
-| `roles[]` | `Victim`, `Witness`, `Suspect`, `Accused`, `Complainant` |
-| `confidence` | 0.0–1.0 |
-| `reason` | AI's reasoning for this recommendation |
-| `supporting_evidence_ids[]` | — |
-| `contradicting_evidence_ids[]` | — |
-| `recommended_sections[]` | Legal sections with `reason` per section |
-| `suggested_reasoning` | AI-written reasoning text that can be attached to the participant |
-
-**`evidence_section_recommendations[]`** — Per-evidence legal section suggestions:
-
-| Sub-field | Description |
-|-----------|-------------|
-| `evidence_id` | — |
-| `evidence_title` | Display name of the evidence |
-| `applicable_sections[]` | LegalSectionSuggestion[] — BSA sections for this evidence item |
-
-**`suggested_legal_sections[]`** — Case-level BNS/BNSS/BSA sections as LegalSectionSuggestion[]
+**`suggested_legal_sections[]`** — Case-level BNS/BNSS/BSA sections.
 
 **Indexes:** `(case_id, timestamp desc)` — most recent snapshot is the primary query
 
@@ -421,67 +453,31 @@ Collection: `analysissnapshots` — A versioned record of the AI's analysis of t
 
 Collection: `caseparticipants` — All people formally connected to a case: victims, witnesses, suspects, accused, complainants.
 
-### Core Fields
-
 | Field | Type | Description |
 |-------|------|-------------|
 | `case_id` | ObjectId → Complaint | — |
 | `participant_id` | String | UUID — unique identifier |
 | `name` | String | Full name |
 | `contact` | Object? | `phone`, `email`, `address` |
-| `identifiers[]` | — | Govt IDs, phone numbers, etc. |
+| `identifiers[]` | — | Govt IDs, phone numbers, etc. — also used by Knowledge Graph shared_identifier edges |
 | `roles[]` | String[] | enum: `Victim`, `Witness`, `Suspect`, `Accused`, `Complainant` |
 | `statements[]` | — | Formal recorded statements |
 | `reasoning[]` | — | Investigative reasoning notes |
 
-### Identifiers Sub-document
-
-| Field | Description |
-|-------|-------------|
-| `type` | e.g. `Aadhaar`, `PAN`, `phone`, `IMEI` |
-| `value` | The actual identifier value |
-| `fileUrl` | Cloudinary URL of an uploaded supporting document (scan, photo) |
-
-### Statements Sub-document
-
-| Field | Description |
-|-------|-------------|
-| `id` | UUID |
-| `content` | Full text of the statement (typed or auto-transcribed from audio) |
-| `recordedAt` | Timestamp of when the statement was given |
-
-### Reasoning Sub-document
-
-| Field | Description |
-|-------|-------------|
-| `id` | UUID |
-| `content` | Investigative reasoning text — editable, can evolve as case progresses |
-| `source` | `officer` (manually written) or `ai` (from analysis snapshot) |
-| `createdAt` | — |
-
 ### Role-Specific Profiles
 
-**`victimProfile`**
-| Field | Description |
-|-------|-------------|
-| `injuryDetails` | Physical/psychological injuries |
-| `lossDetails` | Financial or property losses |
-
-**`witnessProfile`**
-| Field | Description |
-|-------|-------------|
-| `evidenceIds[]` | Evidence items this witness is linked to |
-
 **`suspectProfile`**
+
 | Field | Description |
 |-------|-------------|
 | `appliedSections[]` | AppliedLegalSection[] — BNS sections formally attached to this suspect |
 | `isAccused` | Set to true when the suspect is promoted to Accused |
 
-**`complainantProfile`**
-| Field | Description |
-|-------|-------------|
-| `relationshipToIncident` | e.g. "Direct victim", "Relative of victim" |
+**`victimProfile`** — `injuryDetails`, `lossDetails`
+
+**`witnessProfile`** — `evidenceIds[]` (evidence this witness is linked to)
+
+**`complainantProfile`** — `relationshipToIncident`
 
 **Indexes:** `(case_id, roles)`, `(case_id, name)`, `(case_id, identifiers.value)`
 
@@ -494,18 +490,12 @@ Collection: `departmentrequests` — Formal information request letters sent by 
 | Field | Type | Description |
 |-------|------|-------------|
 | `case_id` | ObjectId → Complaint | — |
-| `request_id` | String | UUID — unique identifier |
+| `request_id` | String | UUID |
 | `step_id` | String | Checklist step this request is linked to |
 | `request_type` | String | `external_department`, `inter_station_assignment`, `citizen_request` |
-| `recipient_type` | String | Category of recipient (e.g. `Bank`, `Telecom`, `citizen`) |
 | `department_entity_id` | String? | References DepartmentRegistry — not set for citizen requests |
 | `draft_content` | String | Full text of the AI-drafted letter |
-| `attachments[]` | String[] | Evidence IDs attached to this request |
-| `status` | String | Lifecycle: `draft` → `reviewed` → `sent` → `acknowledged` → `response_received` → `overdue` |
-| `sent_via` | String? | `email` or `portal_mock` |
-| `sent_at` | Date? | When the email was dispatched |
-| `response_ref` | String? | Storage ref or text of the received response |
-| `response_at` | Date? | When the response was received |
+| `status` | String | `draft` → `reviewed` → `sent` → `acknowledged` → `response_received` → `overdue` |
 | `token` | String? | One-time secure token embedded in the citizen's email link |
 | `token_expires_at` | Date? | Expiry of the citizen token |
 
@@ -515,7 +505,7 @@ Collection: `departmentrequests` — Formal information request letters sent by 
 
 ## 13. RequestThread
 
-Collection: `requestthreads` — Conversation thread between the IO and a department or citizen, attached to a `DepartmentRequest`.
+Collection: `requestthreads` — Conversation thread between the IO and a department or citizen.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -523,25 +513,14 @@ Collection: `requestthreads` — Conversation thread between the IO and a depart
 | `request_id` | String | Matches `DepartmentRequest.request_id` — one thread per request |
 | `department_entity_id` | String? | Department entity (null for citizen threads) |
 | `step_title` | String | Title of the checklist step this thread belongs to |
-| `request_type` | String | Same enum as DepartmentRequest |
-| `recipient_type` | String | — |
-| `unread_by_io` | Boolean | Set true when a department/citizen reply arrives; cleared when IO opens the thread |
-| `messages[]` | — | Full conversation history |
-
-### ThreadMessage Sub-document
-
-| Field | Description |
-|-------|-------------|
-| `sender` | `io`, `department`, or `citizen` |
-| `content` | Message text |
-| `timestamp` | — |
-| `attachments[]` | Evidence IDs attached to this message |
+| `unread_by_io` | Boolean | Set true when a department/citizen reply arrives |
+| `messages[]` | — | Full conversation history (sender, content, timestamp, attachments) |
 
 ---
 
 ## 14. CaseDiary
 
-Collection: `casediaries` — Official Roznamcha (case diary) documents. One per diary session; multiple diaries can exist per case.
+Collection: `casediaries` — Official Roznamcha (case diary) documents.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -549,47 +528,32 @@ Collection: `casediaries` — Official Roznamcha (case diary) documents. One per
 | `diary_id` | String | UUID |
 | `diary_date` | Date | The date this diary entry covers |
 | `diary_number` | Number | Sequential diary number for this case |
-| `title` | String | — |
 | `status` | String | `draft` → `completed` → `finalized` |
 | `generated_by` | String | `ai` or `officer` |
-| `content` | Mixed | Raw AI-generated content object |
-| `places_visited[]` | String[] | Addresses of places visited (plain text list for display) |
-| `place_visited_ids[]` | ObjectId[] → PlaceVisited | References to structured PlaceVisited records |
-| `language_preference` | String? | Officer's UI language at time of generation |
-| `draft_language` | String? | Language of the written narrative: `guj_en` or `en` |
-| `official_officer_id` | String? | Officer ID as it appears on the official Roznamcha |
-| `crime_register_number` | String? | Station crime register number |
-| `property_stolen` | String? | Description of stolen property |
-| `property_recovered` | String? | Description of recovered property |
 | `record_of_investigation` | String? | Raw mixed-language investigation narrative |
 | `record_of_investigation_guj_en` | String? | Gujarati-English bilingual narrative |
 | `record_of_investigation_en` | String? | English-only narrative |
+| `pdf_url`, `pdf_url_guj_en`, `pdf_url_en` | String? | Cloudinary URLs for generated PDFs |
 | `structured_data` | Mixed? | Parsed tabular data (e.g. bank accounts, transaction layers) |
-| `pdf_url`, `pdf_url_guj_en`, `pdf_url_en` | String? | Cloudinary URLs for generated PDFs (default / Gujarati-English / English) |
-| `cloudinary_id`, `cloudinary_id_guj_en`, `cloudinary_id_en` | String? | Cloudinary public IDs for each PDF variant |
-| `investigation_start_time`, `investigation_end_time` | String? | HH:MM times of investigation session |
-| `custody_status` | String? | Current custody status of suspects |
-| `magisterial_custody_date` | String? | Date of magisterial custody remand |
-| `last_diary_number`, `last_diary_date` | Number/String? | Reference to the previous diary entry |
 
 ---
 
 ## 15. DiaryEntry
 
-Collection: `diaryentries` — **Append-only** auto-log of every meaningful event that occurs in the system. The backbone of the automated case diary. Every platform action that matters is written here automatically.
+Collection: `diaryentries` — **Append-only** auto-log of every meaningful event. The backbone of the automated case diary.
 
-> **Enforcement:** Schema-level `pre` hooks throw an error on any `updateOne`, `findOneAndUpdate`, or delete operation. Records are immutable once created.
+> **Enforcement:** Schema-level `pre` hooks throw on any `updateOne`, `findOneAndUpdate`, or delete. Records are immutable once created.
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `case_id` | ObjectId → Complaint | — |
 | `entry_id` | String | UUID |
-| `timestamp` | Date | Exact time of the event (not auto-managed — explicitly set) |
-| `actor.type` | String | Who triggered the event: `officer`, `system`, `department` |
+| `timestamp` | Date | Exact time of the event |
+| `actor.type` | String | `officer`, `system`, `department` |
 | `actor.id` | String | Officer ID, system identifier, or department entity ID |
-| `event_type` | String | One of ~28 enum values covering every trackable action (see below) |
+| `event_type` | String | One of ~28 enum values (see below) |
 | `payload` | Mixed | Event-specific data — varies by `event_type` |
-| `ref_ids` | Object | Optional cross-references: `evidence_id`, `request_id`, `step_id`, `participant_id`, `snapshot_id` |
+| `ref_ids` | Object | Cross-references: `evidence_id`, `request_id`, `step_id`, `participant_id`, `snapshot_id` |
 
 ### Event Types
 
@@ -621,7 +585,6 @@ Collection: `placesvisited` — Locations visited by the IO during investigation
 | `visit_date` | Date | — |
 | `start_time`, `end_time` | String? | HH:MM visit window |
 | `what_was_done` | String? | What the officer did at this location |
-| `added_by` | String? | Officer ID who recorded this visit |
 | `source` | String? | How this record was created (e.g. `diary_finalization`) |
 | `event_type` | String? | Classification of visit (e.g. `crime_scene`, `witness_location`) |
 
@@ -629,15 +592,15 @@ Collection: `placesvisited` — Locations visited by the IO during investigation
 
 ## 17. CaseEntity
 
-Collection: `caseentities` — Distinct entities (phone numbers, bank accounts, UPI IDs, IMEIs, names) extracted and tracked across a case.
+Collection: `caseentities` — Distinct entities (phone numbers, bank accounts, UPI IDs, IMEIs, names) extracted and tracked across a case. These become **entity nodes** in the Knowledge Graph.
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `case_id` | ObjectId → Complaint | — |
 | `entity_type` | String | e.g. `phone`, `account`, `upi`, `imei`, `name` |
 | `value` | String | The actual extracted value |
-| `first_seen_entry_id` | String | DiaryEntry `entry_id` where this entity was first noted — for traceability |
-| `corroborating_evidence_ids[]` | String[] | Evidence IDs that mention or corroborate this entity |
+| `first_seen_entry_id` | String | DiaryEntry `entry_id` where this entity was first noted |
+| `corroborating_evidence_ids[]` | String[] | Evidence IDs that mention or corroborate this entity — used to build `corroborates` edges in the Knowledge Graph |
 
 **Indexes:** `(case_id, entity_type)`, `(case_id, value)`
 
@@ -647,55 +610,19 @@ Collection: `caseentities` — Distinct entities (phone numbers, bank accounts, 
 
 Collection: `chargesheets` — Final legal document assembled from all case artifacts. Multiple versions can exist per case.
 
-### Participant References
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `case_id` | ObjectId → Complaint | — |
-| `victimIds[]` | ObjectId[] → CaseParticipant | — |
-| `witnessIds[]` | ObjectId[] → CaseParticipant | — |
-| `accusedIds[]` | ObjectId[] → CaseParticipant | Participants with `suspectProfile.isAccused = true` |
-| `suspectIds[]` | ObjectId[] → CaseParticipant | Remaining suspects not yet formally accused |
-
-### Legal Sections
-
 | Field | Description |
 |-------|-------------|
-| `applicableLegalSections[]` | Case-level LegalSectionSuggestion[] — overall sections for the case |
-| `appliedSectionsByAccused[]` | Per-accused sections — each entry: `accusedId` (ObjectId) + `sections[]` (AppliedLegalSection[]) |
-
-### Evidence & Records
-
-| Field | Description |
-|-------|-------------|
-| `evidenceIds[]` | All Evidence records included in this charge sheet |
-| `departmentRequestIds[]` | All DepartmentRequest records (responses included via ref) |
-| `diaryEntryIds[]` | All DiaryEntry records forming the investigation log |
-| `investigationSummarySnapshotId` | ObjectId → AnalysisSnapshot — the snapshot used as basis for the AI narratives |
-
-### AI-Generated Narratives (all editable before filing)
-
-| Field | Description |
-|-------|-------------|
-| `briefCaseDescription` | Short summary of the case |
-| `investigationSummary` | Overview of how the investigation was conducted |
-| `investigationFindings` | Key findings and evidence analysis |
-| `finalReport` | Conclusions and recommendations for court |
-
-### Filing Metadata
-
-| Field | Description |
-|-------|-------------|
-| `filingMetadata.status` | `draft` → `ready_for_review` → `filed` → `returned` |
-| `filingMetadata.filingNumber` | Court filing reference number |
-| `filingMetadata.courtName` | Name of the court where the charge sheet is filed |
-| `filingMetadata.filedAt` | Date of filing |
-| `filingMetadata.filedBy` | ObjectId → Officer |
-| `filingMetadata.notes` | Additional notes |
-
-| Field | Description |
-|-------|-------------|
-| `version` | Version number — increments with each regeneration (v1, v2, …) |
+| `case_id` | ObjectId → Complaint |
+| `victimIds[]`, `witnessIds[]`, `accusedIds[]`, `suspectIds[]` | ObjectId[] → CaseParticipant |
+| `applicableLegalSections[]` | Case-level LegalSectionSuggestion[] |
+| `appliedSectionsByAccused[]` | Per-accused sections |
+| `evidenceIds[]` | All Evidence records included |
+| `briefCaseDescription` | AI-generated short summary |
+| `investigationSummary` | AI-generated overview of how investigation was conducted |
+| `investigationFindings` | AI-generated key findings and evidence analysis |
+| `finalReport` | AI-generated conclusions and court recommendations |
+| `filingMetadata` | `status`, `filingNumber`, `courtName`, `filedAt`, `filedBy`, `notes` |
+| `version` | Increments with each regeneration |
 
 **Unique index:** `(case_id, version)`
 
@@ -703,19 +630,17 @@ Collection: `chargesheets` — Final legal document assembled from all case arti
 
 ## 19. Escalation
 
-Collection: `escalations` — Records of case escalations (both manual and auto-triggered by the orchestrator).
+Collection: `escalations` — Records of case escalations.
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `case_id` | ObjectId → Complaint | — |
 | `escalation_id` | String | UUID |
-| `reason` | String | IO's stated reason or auto-detected condition (e.g. "stalled — no new evidence in 3 runs") |
+| `reason` | String | IO's stated reason or auto-detected condition |
 | `triggered_at` | Date | — |
-| `summary` | String | AI-written 2–3 sentence professional escalation summary (generated by Ollama fast call) |
+| `summary` | String | AI-written 2–3 sentence professional escalation summary |
 | `sent_to` | String | Recipient — SHO badge/ID or department name |
 | `status` | String | `pending` → `sent` → `resolved` |
-
-**Note:** The orchestrator checks for an unresolved escalation before creating a new one — deduplication prevents spam escalations on the same stalled case.
 
 **Index:** `(case_id, status)`
 
@@ -723,126 +648,237 @@ Collection: `escalations` — Records of case escalations (both manual and auto-
 
 ## 20. CaseRoomMessage
 
-Collection: `caseroommessages` — Encrypted real-time chat messages exchanged between IOs (and SHOs) within a case's Private Chatroom. Used by the Multiple IO Collaboration feature.
-
-> **Immutability:** Messages are never edited or deleted after creation. The room is only accessible when the case has ≥ 2 assigned IOs.
+Collection: `caseroommessages` — Encrypted real-time chat messages exchanged between IOs within a case's Private Chatroom.
 
 | Field | Type | Constraints | Description |
 |-------|------|-------------|-------------|
 | `case_id` | ObjectId → Complaint | required, indexed | The case this message belongs to |
-| `message_id` | String | unique, default: `uuidv4()` | UUID — unique identifier for the message |
+| `message_id` | String | unique, default: `uuidv4()` | UUID |
 | `sender_id` | ObjectId → Officer | required | Officer who sent the message |
-| `sender_name` | String | required, trimmed | Display name of the sender (denormalized for quick display) |
-| `content` | String | required | AES-256-GCM encrypted ciphertext. Format: `enc:<iv>:<ciphertext>:<authTag>`. Decrypted transparently by `CaseRoomService.getMessages()` before returning to the client. |
-| `isEncrypted` | Boolean | default: `true` | Always `true` — indicates the `content` field is stored encrypted |
-| `sent_at` | Date | default: `Date.now` | Precise timestamp of when the message was sent |
+| `sender_name` | String | required | Denormalized for quick display |
+| `content` | String | required | AES-256-GCM encrypted ciphertext. Format: `enc:<iv>:<ciphertext>:<authTag>` |
+| `isEncrypted` | Boolean | default: `true` | Always `true` |
+| `sent_at` | Date | default: `Date.now` | Precise timestamp |
 
-**Indexes:** `(case_id)` (primary lookup), `(case_id, sent_at asc)` (chronological message retrieval)
-
-**Encryption Detail:** The `CaseRoomService.saveMessage()` method calls `encryptValue(plaintext)` before `CaseRoomMessage.create()`. The `encryptValue` utility uses **AES-256-GCM** with a random IV per message, producing the format `enc:<iv_hex>:<ciphertext_hex>:<authTag_hex>`. The `decryptValue` utility reverses this in `CaseRoomService.getMessages()`.
-
-**Pagination:** `getMessages()` accepts `page` and `limit` parameters (default: `limit=50`). Messages are sorted ascending by `sent_at` so the oldest appear first in the history.
+**Indexes:** `(case_id)`, `(case_id, sent_at asc)`
 
 ---
 
+## 21. PhysicalEvidence
 
----
+Collection: `physicalevidences` — Dedicated BNSS-compliant physical evidence tracking with cryptographic custody chains and Malkhana integration.
 
-## 22. PhysicalEvidence
+```mermaid
+classDiagram
+    class PhysicalEvidence {
+        +String evidenceTagId
+        +ObjectId case_id
+        +String firNumber
+        +String itemName
+        +PhysicalEvidenceCategory category
+        +String description
+        +String quantityOrWeight
+        +String conditionOnSeizure
+        +String seizureMemoNo
+        +String seizedByOfficerId
+        +String seizedByOfficerName
+        +Date seizureDate
+        +String seizureLocation
+        +String sealNumber
+        +SealStatus sealStatus
+        +String itemPhotoUrl
+        +String policeStationId
+        +String malkhanaRegisterNo
+        +String rackNo
+        +String shelfNo
+        +String lockerNo
+        +CurrentCustodian currentCustodian
+        +PhysicalEvidenceStatus status
+        +String qrDataUrl
+        +CustodyNode[] custodyChain
+    }
+    class CustodyNode {
+        +Number step
+        +Date timestamp
+        +TransferAction transferAction
+        +OfficerDetails fromOfficer
+        +OfficerDetails toOfficer
+        +String fromLocation
+        +String toLocation
+        +String roadCertificateNo
+        +String fslLabEntryNo
+        +String sealNumberOnTransfer
+        +SealStatus sealCondition
+        +String previousHash
+        +String currentHash
+        +TransferStatus transferStatus
+        +String remarks
+    }
+    class OfficerDetails {
+        +String id
+        +String name
+        +String badge
+        +String station
+    }
+    class CurrentCustodian {
+        +String holderId
+        +String holderName
+        +String holderRole
+        +String location
+        +Date heldSince
+        +Boolean isTransiting
+    }
+    PhysicalEvidence "1" --> "many" CustodyNode : custodyChain
+    CustodyNode --> OfficerDetails : fromOfficer
+    CustodyNode --> OfficerDetails : toOfficer
+    PhysicalEvidence --> CurrentCustodian : currentCustodian
+```
 
-Collection: `physicalevidences` — Dedicated collection for BNSS-compliant physical evidence tracking, complete with cryptographic custody chains and Malkhana integration.
+### Category Enum
+
+| Value | Description |
+|-------|-------------|
+| `WEAPON` | Firearms, knives, blunt objects |
+| `NARCOTICS` | Drugs, controlled substances |
+| `VEHICLE` | Cars, motorcycles, etc. |
+| `DOCUMENT` | Papers, IDs, contracts |
+| `STOLEN_PROPERTY` | Items reported as stolen |
+| `BIOLOGICAL` | Blood samples, hair, DNA swabs |
+| `ELECTRONIC_DEVICE` | Phones, laptops, hard drives |
+| `OTHER` | Anything else |
+
+### Status Lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> SEIZED : Initial seizure registered
+    SEIZED --> IN_TRANSIT_TO_FSL : FSL_DISPATCH initiated
+    SEIZED --> IN_TRANSIT_TO_COURT : COURT_PRODUCTION initiated
+    SEIZED --> IN_TRANSIT_TO_FACILITY : STATION_TRANSFER initiated
+    SEIZED --> STORED_IN_MALKHANA : MALKHANA_DEPOSIT acknowledged
+    IN_TRANSIT_TO_FSL --> STORED_AT_FSL : FSL_RECEIPT acknowledged
+    IN_TRANSIT_TO_COURT --> PRODUCED_IN_COURT : Receipt acknowledged at court
+    IN_TRANSIT_TO_FACILITY --> STORED_AT_FACILITY : FACILITY_RECEIPT acknowledged
+    STORED_AT_FSL --> IN_TRANSIT_TO_COURT : COURT_PRODUCTION initiated
+    PRODUCED_IN_COURT --> RELEASED_TO_OWNER : RELEASE_TO_OWNER
+    STORED_IN_MALKHANA --> DESTROYED : Destruction order
+    RELEASED_TO_OWNER --> [*]
+    DESTROYED --> [*]
+```
+
+### CustodyNode Sub-document (Cryptographic Chain)
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `evidenceTagId` | String | Unique tag ID (e.g. `PEV-2026-00491`) |
-| `case_id` | ObjectId → Complaint | Associated case |
-| `firNumber` | String? | FIR reference if applicable |
-| `itemName` | String | Name of the seized item |
-| `category` | String | enum: `WEAPON`, `NARCOTICS`, `VEHICLE`, etc. |
-| `description` | String | Detailed description |
-| `seizureMemoNo` | String | — |
-| `seizedByOfficerId` | String | — |
-| `seizureDate` | Date | — |
-| `seizureLocation` | String | — |
-| `sealNumber` | String | Physical seal ID on the item |
-| `sealStatus` | String | enum: `INTACT`, `DAMAGED`, `RE_SEALED` |
-| `policeStationId` | String | Station where stored |
-| `malkhanaRegisterNo` | String? | Malkhana reference |
-| `currentCustodian` | Object | Who holds the item and where |
-| `status` | String | e.g. `STORED_IN_MALKHANA`, `IN_TRANSIT_TO_FSL` |
-| `custodyChain[]` | Array | Full cryptographic chain of custody. Each step contains `fromOfficer`, `toOfficer`, `fromLocation`, `toLocation`, `sealCondition`, and `currentHash` (SHA-256 of the transfer details). |
+| `step` | Number | Sequential step number starting at 1 |
+| `timestamp` | Date | When this transfer occurred |
+| `transferAction` | String | enum: `INITIAL_SEIZURE`, `MALKHANA_DEPOSIT`, `FSL_DISPATCH`, `FSL_RECEIPT`, `COURT_PRODUCTION`, `STATION_TRANSFER`, `HOSPITAL_MEDICAL_DISPATCH`, `FACILITY_DISPATCH`, `FACILITY_RECEIPT`, `RELEASE_TO_OWNER` |
+| `fromOfficer` | OfficerDetails | Officer handing the item over |
+| `toOfficer` | OfficerDetails | Officer receiving the item |
+| `fromLocation` | String | Transfer origin |
+| `toLocation` | String | Transfer destination |
+| `roadCertificateNo` | String? | Road Certificate number for transit |
+| `fslLabEntryNo` | String? | FSL lab entry number on receipt |
+| `sealNumberOnTransfer` | String | Seal ID verified at this transfer |
+| `sealCondition` | String | `INTACT` / `DAMAGED` / `RE_SEALED` |
+| `previousHash` | String | SHA-256 hash of the previous node (genesis = `"0000...0"`) |
+| `currentHash` | String | SHA-256 of: `previousHash|step|transferAction|fromOfficerId|toOfficerName|toLocation|timestamp|sealNo|roadCertNo` |
+| `transferStatus` | String | `DISPATCHED` / `ACCEPTED` / `REJECTED` |
+| `remarks` | String? | Optional notes |
+
+**Indexes:** `evidenceTagId` (unique), `case_id`
 
 ---
 
-## 23. Knowledge Graph (Conceptual)
+## 22. Knowledge Graph (Conceptual)
 
-The Knowledge Graph is dynamically assembled by the **CaseGraphService** and not stored as a distinct collection. It maps connections between `CaseParticipant`, `CaseEntity`, and `Evidence` to feed high-signal context into the AI Orchestrator.
+The Knowledge Graph is **not a persisted collection**. It is dynamically assembled on demand by the **`CaseGraphService`** (`backend/src/modules/investigation/services/caseGraphService.ts`) by querying three existing collections in parallel. The result — a `{ nodes[], edges[] }` object — is returned directly to the frontend for visualization and injected as context into the LLM prompt during analysis.
 
-**Nodes**:
-*   **Participant**: Derived from `CaseParticipant` (Victims, Witnesses, Suspects)
-*   **Entity**: Derived from `CaseEntity` (Phones, Bank Accounts, IMEIs)
-*   **Evidence**: Derived from `Evidence` (Documents, Images, Audio)
+### Node Types
 
-**Edges**:
-*   `corroborates`: Entity ↔ Evidence (When an entity is mentioned in evidence)
-*   `evidence_of`: Evidence ↔ Participant (When evidence relates to a participant)
-*   `shared_identifier`: Participant ↔ Participant (When two people share a phone, address, etc.)
-*   `participant_entity`: Participant ↔ Entity (When a participant uses a tracked entity)
+| `nodeType` | Source Collection | Label Format | Key `meta` Fields |
+|------------|-------------------|--------------|-------------------|
+| `participant` | `CaseParticipant` | Person's name | `roles[]`, `identifiers[]` |
+| `entity` | `CaseEntity` | `{entity_type}: {value}` | `entity_type`, `value`, `corroborating_evidence_ids[]` |
+| `evidence` | `Evidence` | `Evidence [{type}]` | `type`, `status`, `evidence_id` |
 
-## 21. Collection Relationships
+### Edge Types
 
+| `relationship` | Direction | Inferred From |
+|----------------|-----------|---------------|
+| `corroborates` | entity → evidence | `CaseEntity.corroborating_evidence_ids` |
+| `evidence_of` | evidence → participant | `Evidence.relatedParticipantIds` |
+| `shared_identifier` | participant ↔ participant | O(n²) match on `identifiers[].value` |
+| `participant_entity` | participant → entity | Identifier value matches `CaseEntity.value` |
+
+```mermaid
+graph LR
+    subgraph Participants
+        P1["👤 John Doe\n[Suspect]"]
+        P2["👤 Jane Smith\n[Witness]"]
+    end
+    subgraph Entities
+        E1["📱 phone: 9876543210"]
+        E2["🏦 account: 1234567890"]
+    end
+    subgraph Evidence
+        EV1["🖼️ Evidence [image]"]
+        EV2["📄 Evidence [document]"]
+        EV3["🎙️ Evidence [audio]"]
+    end
+
+    P1 -->|"participant_entity"| E1
+    P2 -->|"participant_entity"| E1
+    P1 <-->|"shared_identifier\n(phone)"| P2
+    E1 -->|"corroborates"| EV1
+    E1 -->|"corroborates"| EV2
+    E2 -->|"corroborates"| EV2
+    EV1 -->|"evidence_of"| P1
+    EV3 -->|"evidence_of"| P2
 ```
-Admin                  (standalone)
-PoliceStation          (standalone)
-Officer                → PoliceStation
-User                   (standalone)
-DepartmentRegistry     (standalone — vectors synced to Qdrant)
 
-Complaint              → User (citizen)
-                       → PoliceStation
-                       → Officer (assignedSHO, assignedIO, assignedIOs[], firRegisteredBy)
+### High-Signal Insights (used in LLM prompt)
 
-Evidence               → Complaint (case_id)
-                       → Officer (uploader_id)
-                       → CaseParticipant[] (relatedParticipantIds)
+The `buildGraphContextSummary()` method scans the graph and produces plain-text insights that are directly injected into the AI analysis prompt:
 
-CaseChecklist          → Complaint (case_id)
-                       → Officer (completed_by)
+- **Shared identifiers:** `"Participant A and Participant B share identifier 'phone: 9876543210' [flagged: shared_identifier]"`
+- **Multi-corroborated entities:** `"Entity phone '9876543210' is corroborated by 3 pieces of evidence [flagged: multi-corroborated]"`
 
-AnalysisSnapshot       → Complaint (case_id)
-                       ← AnalysisSnapshot (parent_snapshot_id — self-reference for correction chain)
+These surface hidden connections the LLM would otherwise miss when reasoning only from raw case text.
 
-CaseParticipant        → Complaint (case_id)
-                       → Evidence[] (witnessProfile.evidenceIds)
-                       → Officer (suspectProfile.appliedSections[].attachedBy)
+---
 
-DepartmentRequest      → Complaint (case_id)
+## 23. Collection Relationships
 
-RequestThread          → Complaint (case_id)
-                       ← DepartmentRequest (request_id — 1:1 match)
+```mermaid
+erDiagram
+    Complaint ||--o{ Evidence : "has many"
+    Complaint ||--o{ PhysicalEvidence : "has many"
+    Complaint ||--o{ CaseChecklist : "has steps"
+    Complaint ||--o{ AnalysisSnapshot : "has versions"
+    Complaint ||--o{ CaseParticipant : "has participants"
+    Complaint ||--o{ DepartmentRequest : "has requests"
+    Complaint ||--o{ CaseDiary : "has diaries"
+    Complaint ||--o{ DiaryEntry : "has entries"
+    Complaint ||--o{ ChargeSheet : "has versions"
+    Complaint ||--o{ Escalation : "may have"
+    Complaint ||--o{ CaseRoomMessage : "has chat"
+    Complaint ||--o{ CaseEntity : "has entities"
+    Complaint ||--o{ PlaceVisited : "has places"
 
-CaseDiary              → Complaint (case_id)
-                       → PlaceVisited[] (place_visited_ids)
+    DepartmentRequest ||--|| RequestThread : "one thread"
 
-DiaryEntry             → Complaint (case_id)
-                       (append-only — no FK enforcement, refs stored as strings in ref_ids)
+    CaseParticipant }o--|| Complaint : "belongs to"
+    Evidence }o--o{ CaseParticipant : "relatedParticipantIds"
+    CaseEntity }o--o{ Evidence : "corroborating_evidence_ids"
 
-PlaceVisited           → Complaint (case_id)
+    Officer }o--|| PoliceStation : "stationed at"
+    Complaint }o--|| PoliceStation : "filed at"
+    Complaint }o--o| Officer : "assignedSHO"
+    Complaint }o--o| Officer : "assignedIO"
 
-CaseEntity             → Complaint (case_id)
-
-ChargeSheet            → Complaint (case_id)
-                       → CaseParticipant[] (victims, witnesses, accused, suspects)
-                       → Evidence[]
-                       → DepartmentRequest[]
-                       → DiaryEntry[]
-                       → AnalysisSnapshot (investigationSummarySnapshotId)
-                       → Officer (filedBy)
-
-Escalation             → Complaint (case_id)
-
-CaseRoomMessage        → Complaint (case_id)   ← Private Chatroom messages
-                       → Officer (sender_id)
+    DepartmentRegistry }o--o{ DepartmentRequest : "referenced by"
+    PhysicalEvidence }o--|| Complaint : "belongs to case"
 ```
 
 ---
