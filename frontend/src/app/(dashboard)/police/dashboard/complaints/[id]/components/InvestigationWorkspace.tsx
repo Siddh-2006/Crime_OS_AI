@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
@@ -204,12 +204,12 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
       const res = await apiClient.post(`/cases/${caseId}/diary/draft`, {
         diary_date: diaryDate,
         language,
-        title: `Daily Diary — ${diaryDate}`,
+        title: `Daily Diary â€” ${diaryDate}`,
       });
       const draft = res.data.data;
       setDiaryDraft(draft);
       setDiaryForm({
-        title: draft?.title || `Daily Diary — ${diaryDate}`,
+        title: draft?.title || `Daily Diary â€” ${diaryDate}`,
         officialOfficerId: draft?.official_officer_id || '',
         crimeRegisterNumber: draft?.crime_register_number || '',
         propertyStolen: draft?.property_stolen || '',
@@ -393,7 +393,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
     setActionLoading(true);
     try {
       await apiClient.post(`/cases/${caseId}/analyze`, { language });
-      // SSE in AnalysisPanel handles progress — no polling loop needed here
+      // SSE in AnalysisPanel handles progress â€” no polling loop needed here
     } catch (error) {
       console.error('Failed to trigger analysis', error);
       alert('Failed to trigger analysis.');
@@ -554,7 +554,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
 
   return (
     <div className="w-full min-w-0" style={{ minHeight: '600px' }}>
-      {/* Main workspace — takes all available width */}
+      {/* Main workspace â€” takes all available width */}
       <div className="w-full min-w-0 space-y-4">
       {/* Tab Content */}
       <div className="min-h-[500px]">
@@ -597,8 +597,8 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
 
           {activeTab === 'diary' && (
             <div className="space-y-4">
-              <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm space-y-4">
-                <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface-elevated/80 p-5 text-text-primary md:flex-row md:items-end md:justify-between shadow-xs">
+              <div className="rounded-sm border border-border bg-surface p-5 shadow-sm space-y-4">
+                <div className="flex flex-col gap-3 rounded-sm border border-border bg-surface-elevated/80 p-5 text-text-primary md:flex-row md:items-end md:justify-between shadow-xs">
                   <div>
                     <h3 className="text-lg font-bold text-text-primary">Official Daily Diary</h3>
                     <p className="mt-1 text-sm text-text-secondary">Generate a formal draft from the latest case context and finalize it for the record.</p>
@@ -608,22 +608,22 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
                       type="date"
                       value={diaryDate}
                       onChange={(e) => setDiaryDate(e.target.value)}
-                      className="rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:ring-2 focus:ring-brand-primary font-mono"
+                      className="rounded-sm border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:ring-2 focus:ring-brand-primary font-mono"
                     />
                     <button
                       onClick={handleGenerateDiaryDraft}
                       disabled={diaryDraftLoading}
-                      className="rounded-xl bg-brand-primary px-4 py-2 text-sm font-bold text-white shadow-xs hover:bg-brand-primary/90 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
+                      className="rounded-sm bg-brand-primary px-4 py-2 text-sm font-bold text-text-primary shadow-xs hover:bg-brand-primary/90 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
                     >
-                      {diaryDraftLoading ? 'Working…' : 'Generate Draft'}
+                      {diaryDraftLoading ? 'Workingâ€¦' : 'Generate Draft'}
                     </button>
                     {diaryDraft && (
                       <button
                         onClick={handleSaveDiaryDraft}
                         disabled={diaryDraftLoading}
-                        className="rounded-xl border border-border bg-surface px-3 py-2 text-sm font-bold text-text-primary hover:bg-surface-elevated disabled:cursor-not-allowed transition-all"
+                        className="rounded-sm border border-border bg-surface px-3 py-2 text-sm font-bold text-text-primary hover:bg-surface-elevated disabled:cursor-not-allowed transition-all"
                       >
-                        {diaryDraftLoading ? 'Saving…' : 'Save Draft'}
+                        {diaryDraftLoading ? 'Savingâ€¦' : 'Save Draft'}
                       </button>
                     )}
                   </div>
@@ -632,7 +632,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
                 {diaryDraftError && <p className="mt-3 text-sm font-bold text-semantic-critical">{diaryDraftError}</p>}
 
                 {diaryDraft && (
-                  <div className="mt-4 rounded-xl border border-border bg-surface-elevated/50 p-4">
+                  <div className="mt-4 rounded-sm border border-border bg-surface-elevated/50 p-4">
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="text-sm font-bold text-text-primary">{diaryDraft.title}</p>
@@ -641,12 +641,12 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
                       <button
                         onClick={handleFinalizeDiaryDraft}
                         disabled={diaryDraftLoading}
-                        className="rounded-xl border border-semantic-success/30 bg-semantic-success/10 px-3.5 py-2 text-sm font-bold text-semantic-success hover:bg-semantic-success/20 disabled:cursor-not-allowed transition-all"
+                        className="rounded-sm border border-semantic-success/30 bg-semantic-success/10 px-3.5 py-2 text-sm font-bold text-semantic-success hover:bg-semantic-success/20 disabled:cursor-not-allowed transition-all"
                       >
-                        {diaryDraftLoading ? 'Saving…' : 'Finalize'}
+                        {diaryDraftLoading ? 'Savingâ€¦' : 'Finalize'}
                       </button>
                     </div>
-                    <div className="mt-4 rounded-xl border border-border bg-surface p-4 shadow-xs">
+                    <div className="mt-4 rounded-sm border border-border bg-surface p-4 shadow-xs">
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
                           <p className="text-xs font-bold uppercase tracking-wider text-brand-primary">Official Case Diary Form (16 Standard Fields)</p>
@@ -659,7 +659,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
                           <input
                             value={diaryForm.title}
                             onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, title: e.target.value }))}
-                            className="mt-1 w-full rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
+                            className="mt-1 w-full rounded-sm border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
                           />
                         </div>
                         <div>
@@ -667,7 +667,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
                           <input
                             value={diaryForm.officialOfficerId}
                             onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, officialOfficerId: e.target.value }))}
-                            className="mt-1 w-full rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
+                            className="mt-1 w-full rounded-sm border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
                           />
                         </div>
                         <div>
@@ -675,7 +675,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
                           <input
                             value={diaryForm.crimeRegisterNumber}
                             onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, crimeRegisterNumber: e.target.value }))}
-                            className="mt-1 w-full rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
+                            className="mt-1 w-full rounded-sm border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
                           />
                         </div>
                         <div>
@@ -685,14 +685,14 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
                               placeholder="Start (e.g. 19/40)"
                               value={diaryForm.investigationStartTime}
                               onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, investigationStartTime: e.target.value }))}
-                              className="w-1/2 rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
+                              className="w-1/2 rounded-sm border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
                             />
                             <span className="text-xs text-text-secondary font-medium">to</span>
                             <input
                               placeholder="End (e.g. 23/00)"
                               value={diaryForm.investigationEndTime}
                               onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, investigationEndTime: e.target.value }))}
-                              className="w-1/2 rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
+                              className="w-1/2 rounded-sm border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
                             />
                           </div>
                         </div>
@@ -702,7 +702,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
                             placeholder="e.g. ----- or In Police Custody"
                             value={diaryForm.custodyStatus}
                             onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, custodyStatus: e.target.value }))}
-                            className="mt-1 w-full rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
+                            className="mt-1 w-full rounded-sm border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
                           />
                         </div>
                         <div>
@@ -711,7 +711,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
                             placeholder="e.g. -----"
                             value={diaryForm.magisterialCustodyDate}
                             onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, magisterialCustodyDate: e.target.value }))}
-                            className="mt-1 w-full rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
+                            className="mt-1 w-full rounded-sm border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
                           />
                         </div>
                         <div>
@@ -719,7 +719,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
                           <input
                             value={diaryForm.propertyStolen}
                             onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, propertyStolen: e.target.value }))}
-                            className="mt-1 w-full rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
+                            className="mt-1 w-full rounded-sm border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
                           />
                         </div>
                         <div>
@@ -727,26 +727,26 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
                           <input
                             value={diaryForm.propertyRecovered}
                             onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, propertyRecovered: e.target.value }))}
-                            className="mt-1 w-full rounded-xl border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
+                            className="mt-1 w-full rounded-sm border border-border bg-input-bg px-3 py-2 text-xs font-medium text-text-primary focus:border-brand-primary"
                           />
                         </div>
-                        <div className="lg:col-span-2 rounded-xl border border-border bg-surface-elevated/40 p-4 shadow-xs">
+                        <div className="lg:col-span-2 rounded-sm border border-border bg-surface-elevated/40 p-4 shadow-xs">
                           <label className="text-[11px] font-bold uppercase tracking-wide text-brand-primary">Record of Investigation (Gujarati-English Transliterated)</label>
                           <textarea
                             value={diaryForm.recordOfInvestigationGujEn}
                             onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, recordOfInvestigationGujEn: e.target.value }))}
                             rows={6}
-                            className="mt-2 w-full rounded-xl border border-border bg-input-bg p-3 text-xs text-text-primary font-mono leading-relaxed focus:border-brand-primary shadow-inner"
+                            className="mt-2 w-full rounded-sm border border-border bg-input-bg p-3 text-xs text-text-primary font-mono leading-relaxed focus:border-brand-primary shadow-inner"
                             placeholder="Enter the Gujarati-English narrative for the official diary."
                           />
                         </div>
-                        <div className="lg:col-span-2 rounded-xl border border-border bg-surface-elevated/40 p-4 shadow-xs">
+                        <div className="lg:col-span-2 rounded-sm border border-border bg-surface-elevated/40 p-4 shadow-xs">
                           <label className="text-[11px] font-bold uppercase tracking-wide text-brand-primary">Record of Investigation (English Version)</label>
                           <textarea
                             value={diaryForm.recordOfInvestigationEn}
                             onChange={(e) => setDiaryForm((prev: any) => ({ ...prev, recordOfInvestigationEn: e.target.value }))}
                             rows={6}
-                            className="mt-2 w-full rounded-xl border border-border bg-input-bg p-3 text-xs text-text-primary font-mono leading-relaxed focus:border-brand-primary shadow-inner"
+                            className="mt-2 w-full rounded-sm border border-border bg-input-bg p-3 text-xs text-text-primary font-mono leading-relaxed focus:border-brand-primary shadow-inner"
                             placeholder="Enter the English version for the final official record."
                           />
                         </div>
@@ -755,17 +755,17 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
                   </div>
                 )}
 
-                <div className="mt-4 rounded-2xl border border-border bg-surface p-5 shadow-sm space-y-4">
+                <div className="mt-4 rounded-sm border border-border bg-surface p-5 shadow-sm space-y-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-bold text-text-primary">Finalized Case Diary Records</p>
                       <p className="text-xs text-text-secondary">Preview or download official bilingual (Gujarati-English & English) PDF copies.</p>
                     </div>
-                    <span className="text-xs font-mono font-bold text-brand-primary bg-brand-primary/10 px-2.5 py-1 rounded-lg border border-brand-primary/20">{diaryHistory.length} items</span>
+                    <span className="text-xs font-mono font-bold text-brand-primary bg-brand-primary/10 px-2.5 py-1 rounded-sm border border-brand-primary/20">{diaryHistory.length} items</span>
                   </div>
 
                   {diaryHistory.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-border bg-surface-elevated/40 px-4 py-6 text-center text-sm text-text-muted">
+                    <div className="rounded-sm border border-dashed border-border bg-surface-elevated/40 px-4 py-6 text-center text-sm text-text-muted">
                       No finalized case diary PDFs generated yet. Finalize a draft above to render official PDFs.
                     </div>
                   ) : (
@@ -775,7 +775,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
                         const enUrl = record.pdf_url_en;
 
                         return (
-                          <div key={record.diary_id} className="flex flex-col gap-3 rounded-xl border border-border bg-surface-elevated/70 p-4 md:flex-row md:items-center md:justify-between shadow-xs">
+                          <div key={record.diary_id} className="flex flex-col gap-3 rounded-sm border border-border bg-surface-elevated/70 p-4 md:flex-row md:items-center md:justify-between shadow-xs">
                             <div>
                               <p className="font-bold text-text-primary">{record.title || `Case Diary No. ${record.diary_number}`}</p>
                               <p className="text-xs text-text-secondary">
@@ -787,7 +787,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
                             </div>
                             <div className="flex flex-wrap gap-2">
                               {gujEnUrl ? (
-                                <div className="flex items-center gap-1.5 bg-surface p-1.5 rounded-xl border border-border">
+                                <div className="flex items-center gap-1.5 bg-surface p-1.5 rounded-sm border border-border">
                                   <span className="text-[10px] font-extrabold text-text-secondary px-1 uppercase">Guj-Eng:</span>
                                   <button
                                     type="button"
@@ -795,7 +795,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
                                       setPreviewPdfUrl(gujEnUrl);
                                       setIsDiaryPreviewOpen(true);
                                     }}
-                                    className="rounded-lg px-2.5 py-1 text-xs font-bold text-brand-primary bg-brand-primary/10 hover:bg-brand-primary/20 border border-brand-primary/20"
+                                    className="rounded-sm px-2.5 py-1 text-xs font-bold text-brand-primary bg-brand-primary/10 hover:bg-brand-primary/20 border border-brand-primary/20"
                                   >
                                     Preview
                                   </button>
@@ -804,16 +804,16 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     download
-                                    className="rounded-lg px-2.5 py-1 text-xs font-bold text-semantic-success bg-semantic-success/10 hover:bg-semantic-success/20 border border-semantic-success/20">
+                                    className="rounded-sm px-2.5 py-1 text-xs font-bold text-semantic-success bg-semantic-success/10 hover:bg-semantic-success/20 border border-semantic-success/20">
                                     Download
                                   </a>
                                 </div>
                               ) : (
-                                <span className="rounded-xl bg-semantic-warning/10 border border-semantic-warning/30 px-3 py-1.5 text-xs font-bold text-semantic-warning">Guj-Eng PDF Pending</span>
+                                <span className="rounded-sm bg-semantic-warning/10 border border-semantic-warning/30 px-3 py-1.5 text-xs font-bold text-semantic-warning">Guj-Eng PDF Pending</span>
                               )}
 
                               {enUrl ? (
-                                <div className="flex items-center gap-1.5 bg-surface p-1.5 rounded-xl border border-border">
+                                <div className="flex items-center gap-1.5 bg-surface p-1.5 rounded-sm border border-border">
                                   <span className="text-[10px] font-extrabold text-text-secondary px-1 uppercase">English:</span>
                                   <button
                                     type="button"
@@ -821,7 +821,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
                                       setPreviewPdfUrl(enUrl);
                                       setIsDiaryPreviewOpen(true);
                                     }}
-                                    className="rounded-lg px-2.5 py-1 text-xs font-bold text-brand-primary bg-brand-primary/10 hover:bg-brand-primary/20 border border-brand-primary/20"
+                                    className="rounded-sm px-2.5 py-1 text-xs font-bold text-brand-primary bg-brand-primary/10 hover:bg-brand-primary/20 border border-brand-primary/20"
                                   >
                                     Preview
                                   </button>
@@ -830,12 +830,12 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     download
-                                    className="rounded-lg px-2.5 py-1 text-xs font-bold text-semantic-success bg-semantic-success/10 hover:bg-semantic-success/20 border border-semantic-success/20">
+                                    className="rounded-sm px-2.5 py-1 text-xs font-bold text-semantic-success bg-semantic-success/10 hover:bg-semantic-success/20 border border-semantic-success/20">
                                     Download
                                   </a>
                                 </div>
                               ) : (
-                                <span className="rounded-xl bg-semantic-warning/10 border border-semantic-warning/30 px-3 py-1.5 text-xs font-bold text-semantic-warning">English PDF Pending</span>
+                                <span className="rounded-sm bg-semantic-warning/10 border border-semantic-warning/30 px-3 py-1.5 text-xs font-bold text-semantic-warning">English PDF Pending</span>
                               )}
                             </div>
                           </div>
@@ -851,19 +851,19 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
 
           {activeTab === 'placesVisited' && (
             <div className="space-y-4">
-              <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm space-y-4">
+              <div className="rounded-sm border border-border bg-surface p-5 shadow-sm space-y-4">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div>
                     <h3 className="text-lg font-bold text-text-primary">Places Visited</h3>
                     <p className="text-sm text-text-secondary">Manually recorded locations visited by the investigation officer. These entries are tied to the case diary timeline.</p>
                   </div>
-                  <div className="rounded-xl bg-brand-primary/10 border border-brand-primary/20 px-3 py-1.5 text-xs font-mono font-bold text-brand-primary">
+                  <div className="rounded-sm bg-brand-primary/10 border border-brand-primary/20 px-3 py-1.5 text-xs font-mono font-bold text-brand-primary">
                     {placesVisited.length} recorded place{placesVisited.length === 1 ? '' : 's'}
                   </div>
                 </div>
 
                 <div className="mt-6 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-                  <div className="rounded-2xl border border-border bg-surface-elevated/70 p-5 shadow-xs">
+                  <div className="rounded-sm border border-border bg-surface-elevated/70 p-5 shadow-xs">
                     <div className="mb-4 text-xs font-bold uppercase tracking-wider text-text-secondary">Add New Place</div>
                     <div className="space-y-4">
                       <div>
@@ -872,7 +872,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
                           value={placeForm.address}
                           onChange={(e) => setPlaceForm((prev: any) => ({ ...prev, address: e.target.value }))}
                           placeholder="123 Main Street, Surat, Gujarat"
-                          className="mt-1.5 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:ring-2 focus:ring-brand-primary"
+                          className="mt-1.5 w-full rounded-sm border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:ring-2 focus:ring-brand-primary"
                         />
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -882,7 +882,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
                             type="date"
                             value={placeForm.visitDate}
                             onChange={(e) => setPlaceForm((prev: any) => ({ ...prev, visitDate: e.target.value }))}
-                            className="mt-1.5 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text-primary font-mono focus:ring-2 focus:ring-brand-primary"
+                            className="mt-1.5 w-full rounded-sm border border-border bg-surface px-3 py-2 text-sm text-text-primary font-mono focus:ring-2 focus:ring-brand-primary"
                           />
                         </div>
                         <div className="grid grid-cols-2 gap-2">
@@ -892,7 +892,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
                               type="time"
                               value={placeForm.startTime}
                               onChange={(e) => setPlaceForm((prev: any) => ({ ...prev, startTime: e.target.value }))}
-                              className="mt-1.5 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text-primary font-mono focus:ring-2 focus:ring-brand-primary"
+                              className="mt-1.5 w-full rounded-sm border border-border bg-surface px-3 py-2 text-sm text-text-primary font-mono focus:ring-2 focus:ring-brand-primary"
                             />
                           </div>
                           <div>
@@ -901,7 +901,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
                               type="time"
                               value={placeForm.endTime}
                               onChange={(e) => setPlaceForm((prev: any) => ({ ...prev, endTime: e.target.value }))}
-                              className="mt-1.5 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text-primary font-mono focus:ring-2 focus:ring-brand-primary"
+                              className="mt-1.5 w-full rounded-sm border border-border bg-surface px-3 py-2 text-sm text-text-primary font-mono focus:ring-2 focus:ring-brand-primary"
                             />
                           </div>
                         </div>
@@ -913,7 +913,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
                           onChange={(e) => setPlaceForm((prev: any) => ({ ...prev, whatWasDone: e.target.value }))}
                           rows={4}
                           placeholder="Search, meet witness, collect evidence, record statement..."
-                          className="mt-1.5 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:ring-2 focus:ring-brand-primary"
+                          className="mt-1.5 w-full rounded-sm border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:ring-2 focus:ring-brand-primary"
                         />
                       </div>
                       {placeFormError && <p className="text-sm font-bold text-semantic-critical">{placeFormError}</p>}
@@ -921,14 +921,14 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
                         type="button"
                         onClick={handleAddPlaceVisited}
                         disabled={placesVisitedLoading}
-                        className="inline-flex items-center justify-center rounded-xl bg-brand-primary px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-brand-primary/90 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
+                        className="inline-flex items-center justify-center rounded-sm bg-brand-primary px-5 py-2.5 text-xs font-bold text-text-primary shadow-xs hover:bg-brand-primary/90 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
                       >
-                        {placesVisitedLoading ? 'Saving…' : '+ Add Place Visited'}
+                        {placesVisitedLoading ? 'Savingâ€¦' : '+ Add Place Visited'}
                       </button>
                     </div>
                   </div>
 
-                  <div className="rounded-2xl border border-border bg-surface-elevated/70 p-5 shadow-xs">
+                  <div className="rounded-sm border border-border bg-surface-elevated/70 p-5 shadow-xs">
                     <div className="flex items-center justify-between gap-3 mb-4">
                       <div>
                         <p className="text-sm font-bold text-text-primary">Recent Visited Places</p>
@@ -938,13 +938,13 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
                     </div>
 
                     {placesVisited.length === 0 ? (
-                      <div className="rounded-2xl border border-dashed border-border bg-surface-elevated/40 p-6 text-center text-sm text-text-secondary">
+                      <div className="rounded-sm border border-dashed border-border bg-surface-elevated/40 p-6 text-center text-sm text-text-secondary">
                         No visited places have been recorded yet.
                       </div>
                     ) : (
                       <div className="space-y-3">
                         {placesVisited.map((place) => (
-                          <div key={place.place_id || place._id} className="rounded-2xl border border-border bg-surface-elevated/70 p-4 shadow-xs">
+                          <div key={place.place_id || place._id} className="rounded-sm border border-border bg-surface-elevated/70 p-4 shadow-xs">
                             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                               <div>
                                 <p className="font-bold text-text-primary">{place.address}</p>
@@ -1058,7 +1058,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
         >
           <div className="space-y-4">
             {previewPdfUrl ? (
-              <div className="h-[70vh] rounded-lg overflow-hidden border border-neutral-700">
+              <div className="h-[70vh] rounded-sm overflow-hidden border border-border">
                 <iframe
                   src={getDiaryPreviewUrl(previewPdfUrl)}
                   title="Diary PDF Preview"
@@ -1073,7 +1073,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
                 href={getDiaryPreviewUrl(previewPdfUrl)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm font-semibold text-text-secondary hover:bg-neutral-800"
+                className="inline-flex items-center rounded-sm border border-border bg-neutral-800 px-3 py-2 text-sm font-semibold text-text-secondary hover:bg-neutral-800"
               >
                 Open in browser
               </a>
@@ -1086,7 +1086,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
         <div className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end gap-3 pointer-events-none">
           {/* Animated Copilot Drawer Window */}
           <div
-            className={`transition-all duration-300 transform-gpu origin-bottom-right shadow-2xl rounded-2xl overflow-hidden border border-border w-96 max-w-[92vw] h-[560px] max-h-[calc(100vh-6.5rem)] bg-surface ${copilotOpen
+            className={`transition-all duration-300 transform-gpu origin-bottom-right shadow-2xl rounded-sm overflow-hidden border border-border w-96 max-w-[92vw] h-[560px] max-h-[calc(100vh-6.5rem)] bg-surface ${copilotOpen
               ? 'scale-100 opacity-100 translate-y-0 shadow-glow pointer-events-auto'
               : 'scale-0 opacity-0 pointer-events-none translate-y-8'
               }`}
@@ -1101,7 +1101,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
           {/* Floating Round Launcher Button */}
           <button
             onClick={() => setCopilotOpen((prev) => !prev)}
-            className={`h-14 w-14 rounded-full bg-brand-primary text-white shadow-xl hover:shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 flex items-center justify-center border-2 border-white/20 relative group pointer-events-auto ${copilotOpen ? 'rotate-90 bg-surface-elevated text-text-primary border-border' : 'animate-pulse'
+            className={`h-14 w-14 rounded-full bg-brand-primary text-text-primary shadow-xl hover:shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 flex items-center justify-center border-2 border-white/20 relative group pointer-events-auto ${copilotOpen ? 'rotate-90 bg-surface-elevated text-text-primary border-border' : 'animate-pulse'
               }`}
             title={copilotOpen ? 'Close Copilot' : 'Open Copilot'}
           >
@@ -1109,10 +1109,10 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
               <span className="text-2xl font-bold">&times;</span>
             ) : (
               <>
-                <Bot className="h-6 w-6 text-white group-hover:rotate-12 transition-transform duration-300" />
+                <Bot className="h-6 w-6 text-text-primary group-hover:rotate-12 transition-transform duration-300" />
                 <span className="absolute -top-1 -right-1 flex h-4 w-4">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-accent opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-4 w-4 bg-brand-accent border border-white text-[8px] font-extrabold text-white items-center justify-center">AI</span>
+                  <span className="relative inline-flex rounded-full h-4 w-4 bg-brand-accent border border-white text-[8px] font-extrabold text-text-primary items-center justify-center">AI</span>
                 </span>
               </>
             )}
@@ -1127,17 +1127,17 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
 }
 
 
-// ─── Evidence Panel ────────────────────────────────────────────────────────
+// â”€â”€â”€ Evidence Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const evidenceTypeIcon: Record<string, string> = {
-  bank_statement: '🏦',
-  cdr: '📞',
-  kyc_document: '🪪',
-  screenshot: '🖼️',
-  video: '🎥',
-  audio: '🔊',
-  transaction_log: '💳',
-  other: '📄',
+  bank_statement: 'ðŸ¦',
+  cdr: 'ðŸ“ž',
+  kyc_document: 'ðŸªª',
+  screenshot: 'ðŸ–¼ï¸',
+  video: 'ðŸŽ¥',
+  audio: 'ðŸ”Š',
+  transaction_log: 'ðŸ’³',
+  other: 'ðŸ“„',
 };
 
 function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstanding }: { evidence: any[]; caseId: string; onRefresh: () => void; snapshot?: any; caseUnderstanding?: import('@/components/case-understanding/CaseUnderstandingView').CaseUnderstandingData | null }) {
@@ -1150,12 +1150,12 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
       <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
         <FolderOpen className="h-10 w-10 text-neutral-300" />
         <p className="text-sm font-semibold text-text-secondary">No evidence attached yet</p>
-        <p className="text-xs text-neutral-400 max-w-xs">
+        <p className="text-xs text-text-secondary max-w-xs">
           Evidence items added via the investigation workflow appear here.
         </p>
         <button
           onClick={() => setAddModalOpen(true)}
-          className="mt-4 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+          className="mt-4 px-4 py-2 bg-blue-600 text-text-primary text-sm font-semibold rounded-sm hover:bg-blue-700 transition-colors"
         >
           + Add Evidence
         </button>
@@ -1170,18 +1170,18 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
         <h3 className="text-lg font-bold text-text-primary">Case Evidence File</h3>
         <button
           onClick={() => setAddModalOpen(true)}
-          className="px-3.5 py-1.5 bg-brand-primary text-white text-xs font-bold rounded-xl hover:bg-brand-primary/90 transition-all shadow-xs"
+          className="px-3.5 py-1.5 bg-brand-primary text-text-primary text-xs font-bold rounded-sm hover:bg-brand-primary/90 transition-all shadow-xs"
         >
           + Add Attachment
         </button>
       </div>
 
-      {/* ── Pending requested blocks ── */}
+      {/* â”€â”€ Pending requested blocks â”€â”€ */}
       {requestedEvidence.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           {requestedEvidence.map((req: string, idx: number) => (
-            <div key={`req-${idx}`} className="bg-surface-elevated/50 border border-dashed border-border rounded-2xl p-4 shadow-xs flex gap-3 opacity-60">
-              <div className="text-2xl">⏳</div>
+            <div key={`req-${idx}`} className="bg-surface-elevated/50 border border-dashed border-border rounded-sm p-4 shadow-xs flex gap-3 opacity-60">
+              <div className="text-2xl">â³</div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-text-primary truncate">Evidence Request - {idx + 1}</p>
                 <p className="text-xs text-text-secondary capitalize">Requested / Yet to upload</p>
@@ -1196,7 +1196,7 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
         </div>
       )}
 
-      {/* ── Evidence cards — from CI evidence_intelligence if available, else raw list ── */}
+      {/* â”€â”€ Evidence cards â€” from CI evidence_intelligence if available, else raw list â”€â”€ */}
       {(() => {
         const ciItems: any[] = caseUnderstanding?.evidence_intelligence || caseUnderstanding?.evidence_analysis || [];
 
@@ -1217,7 +1217,7 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
           }
         };
 
-        // ── Render from CI evidence_intelligence ──
+        // â”€â”€ Render from CI evidence_intelligence â”€â”€
         if (ciItems.length > 0) {
           // De-duplicate by filename/evidence_id
           const seen = new Set<string>();
@@ -1270,11 +1270,11 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
                   <div
                     key={ci.evidence_id || idx}
                     onClick={() => setSelectedEvidence(rawEv || ci)}
-                    className={`bg-surface border border-border border-l-4 ${importanceBorder(ci.importance)} rounded-2xl p-4 cursor-pointer hover:border-brand-primary/50 hover:shadow-md transition-all group flex flex-col gap-2.5 shadow-xs`}
+                    className={`bg-surface border border-border border-l-4 ${importanceBorder(ci.importance)} rounded-sm p-4 cursor-pointer hover:border-brand-primary/50 hover:shadow-md transition-all group flex flex-col gap-2.5 shadow-xs`}
                   >
                     {/* Header */}
                     <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center">
+                      <div className="flex-shrink-0 w-9 h-9 rounded-sm bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center">
                         {FileIcon(ci.filename || '')}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -1282,7 +1282,7 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
                           <p className="text-sm font-bold text-text-primary leading-snug line-clamp-2 group-hover:text-brand-primary transition-colors">
                             {caption}
                           </p>
-                          <span className={`flex-shrink-0 text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg border uppercase tracking-wide ${importanceBadge(ci.importance)}`}>
+                          <span className={`flex-shrink-0 text-[10px] font-mono font-bold px-2 py-0.5 rounded-sm border uppercase tracking-wide ${importanceBadge(ci.importance)}`}>
                             {ci.importance || 'medium'}
                           </span>
                         </div>
@@ -1342,16 +1342,16 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
           );
         }
 
-        // ── Fallback: raw evidence grid (original design) ──
+        // â”€â”€ Fallback: raw evidence grid (original design) â”€â”€
         return (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {evidence.map((ev: any) => (
               <div
                 key={ev.evidence_id || ev._id}
                 onClick={() => setSelectedEvidence(ev)}
-                className="bg-surface border border-border rounded-2xl p-4 shadow-xs flex gap-3.5 cursor-pointer hover:border-brand-primary/50 hover:shadow-md transition-all group"
+                className="bg-surface border border-border rounded-sm p-4 shadow-xs flex gap-3.5 cursor-pointer hover:border-brand-primary/50 hover:shadow-md transition-all group"
               >
-                <div className="text-2xl group-hover:scale-110 transition-transform">{evidenceTypeIcon[ev.type] ?? '📄'}</div>
+                <div className="text-2xl group-hover:scale-110 transition-transform">{evidenceTypeIcon[ev.type] ?? 'ðŸ“„'}</div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold text-text-primary truncate group-hover:text-brand-primary transition-colors">{ev.title || `Evidence Item ${ev.status === "processing" ? "(Processing)" : ""}`}</p>
                   <p className="text-xs text-text-secondary capitalize">{ev.type?.replace(/_/g, ' ')}</p>
@@ -1364,7 +1364,7 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
                   <div className="flex items-center gap-2 mt-2">
                     <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${ev.status === 'verified' ? 'bg-semantic-success/10 text-semantic-success border-semantic-success/30' : 'bg-semantic-warning/10 text-semantic-warning border-semantic-warning/30'
                       }`}>
-                      {ev.status === 'verified' ? '✓ Verified' : 'Unverified'}
+                      {ev.status === 'verified' ? 'âœ“ Verified' : 'Unverified'}
                     </span>
                     <span className="text-[10px] font-bold text-text-primary">
                       Confidence Score: {Math.round(Number(ev.confidence_score ?? 0))}%
@@ -1390,7 +1390,7 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
         onSuccess={onRefresh}
       />
 
-      {/* ── Missing Info & Evidence (from Case Intelligence) ── */}
+      {/* â”€â”€ Missing Info & Evidence (from Case Intelligence) â”€â”€ */}
       {(() => {
         const missingItems = caseUnderstanding?.missing_information_and_evidence || [
           ...(caseUnderstanding?.missing_information || []).map((m: any) => ({ title: m.item, description: m.reason, importance: m.importance })),
@@ -1415,7 +1415,7 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
         );
       })()}
 
-      {/* ── Contradictions (from Case Intelligence) ── */}
+      {/* â”€â”€ Contradictions (from Case Intelligence) â”€â”€ */}
       {(() => {
         const contradictions = caseUnderstanding?.contradictions;
         if (!contradictions || contradictions.length === 0) return (
@@ -1423,7 +1423,7 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
             <Card className="p-6">
               <CardHeader title="Contradictions & Discrepancies" />
               <div className="mt-4">
-                <p className="text-xs font-bold text-semantic-success bg-semantic-success/10 p-3.5 rounded-xl border border-semantic-success/30 flex items-center gap-2">
+                <p className="text-xs font-bold text-semantic-success bg-semantic-success/10 p-3.5 rounded-sm border border-semantic-success/30 flex items-center gap-2">
                   <CheckCircle2 size={16} className="text-semantic-success flex-shrink-0" />
                   No contradictions or conflicts detected across complaint and evidence.
                 </p>
@@ -1439,8 +1439,8 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
                 {contradictions.map((c: any, i: number) => {
                   const evIds = c.related_evidence_ids || c.involved_evidence_ids || [];
                   return (
-                    <div key={i} className="p-3.5 border border-semantic-critical/30 bg-semantic-critical/10 rounded-xl text-xs text-semantic-critical font-bold space-y-1">
-                      <p>• {c.description}</p>
+                    <div key={i} className="p-3.5 border border-semantic-critical/30 bg-semantic-critical/10 rounded-sm text-xs text-semantic-critical font-bold space-y-1">
+                      <p>â€¢ {c.description}</p>
                       {evIds.length > 0 && (
                         <p className="text-[11px] font-mono text-semantic-critical/80">Involved Evidence IDs: {evIds.join(', ')}</p>
                       )}
@@ -1456,7 +1456,7 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
   );
 }
 
-// ─── Missing Info Card (IO Evidence Panel) ────────────────────────────────────
+// â”€â”€â”€ Missing Info Card (IO Evidence Panel) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function MissingInfoCardIO({ item, caseId }: { item: { title: string; description: string; importance: string }; caseId: string }) {
   const [status, setStatus] = React.useState<'idle' | 'loading' | 'sent'>('idle');
 
@@ -1490,7 +1490,7 @@ function MissingInfoCardIO({ item, caseId }: { item: { title: string; descriptio
   };
 
   return (
-    <div className="p-4 border border-semantic-warning/30 bg-semantic-warning/10 rounded-xl text-xs space-y-2.5">
+    <div className="p-4 border border-semantic-warning/30 bg-semantic-warning/10 rounded-sm text-xs space-y-2.5">
       <div className="flex justify-between items-start gap-2">
         <span className="font-bold text-text-primary text-sm">{item.title}</span>
         <span className="uppercase text-[10px] font-extrabold bg-semantic-warning/20 text-semantic-warning border border-semantic-warning/30 px-2.5 py-0.5 rounded-md shrink-0">
@@ -1502,11 +1502,11 @@ function MissingInfoCardIO({ item, caseId }: { item: { title: string; descriptio
         <button
           onClick={handleRequest}
           disabled={status !== 'idle'}
-          className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl transition-all ${status === 'sent'
+          className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-sm transition-all ${status === 'sent'
             ? 'bg-semantic-success/20 text-semantic-success border border-semantic-success/30 cursor-default'
             : status === 'loading'
               ? 'bg-surface-elevated text-text-muted border border-border cursor-not-allowed'
-              : 'bg-brand-primary text-white hover:bg-brand-primary/90 shadow-xs cursor-pointer'
+              : 'bg-brand-primary text-text-primary hover:bg-brand-primary/90 shadow-xs cursor-pointer'
             }`}
         >
           {status === 'sent' ? (
@@ -1522,7 +1522,7 @@ function MissingInfoCardIO({ item, caseId }: { item: { title: string; descriptio
   );
 }
 
-// ─── Participants Panel ──────────────────────────────────────────────────────
+// â”€â”€â”€ Participants Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: any[]; caseId: string; onRefresh: () => void }) {
   const [roleFilter, setRoleFilter] = React.useState<string>('All');
@@ -1571,12 +1571,12 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
       <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
         <Users className="h-10 w-10 text-neutral-300" />
         <p className="text-sm font-semibold text-text-secondary">No participants found</p>
-        <p className="text-xs text-neutral-400 max-w-xs">
+        <p className="text-xs text-text-secondary max-w-xs">
           Participants approved via the AI analysis will appear here.
         </p>
         <button
           onClick={() => setIsAddModalOpen(true)}
-          className="mt-4 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+          className="mt-4 px-4 py-2 bg-blue-600 text-text-primary text-sm font-semibold rounded-sm hover:bg-blue-700 transition-colors"
         >
           + Add Participant
         </button>
@@ -1610,14 +1610,14 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
         <select
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value)}
-          className="text-xs font-bold border border-border rounded-xl px-3 py-2 bg-input-bg text-text-primary focus:border-brand-primary shadow-xs"
+          className="text-xs font-bold border border-border rounded-sm px-3 py-2 bg-input-bg text-text-primary focus:border-brand-primary shadow-xs"
         >
           <option value="All">All Roles</option>
           {uniqueRoles.map(r => <option key={r} value={r}>{r}</option>)}
         </select>
         <button
           onClick={() => setIsAddModalOpen(true)}
-          className="px-3.5 py-2 bg-brand-primary hover:bg-brand-primary/90 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+          className="px-3.5 py-2 bg-brand-primary hover:bg-brand-primary/90 text-text-primary text-xs font-bold rounded-sm shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
         >
           <Users size={14} /> + Add Participant
         </button>
@@ -1632,7 +1632,7 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
           return (
             <div
               key={p.participant_id || p._id}
-              className="bg-surface border border-border rounded-2xl p-4 shadow-xs hover:border-brand-primary/40 transition-all group relative space-y-3"
+              className="bg-surface border border-border rounded-sm p-4 shadow-xs hover:border-brand-primary/40 transition-all group relative space-y-3"
             >
               <div className="flex justify-between items-start gap-2">
                 <h4
@@ -1647,25 +1647,25 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
                       setEditingParticipant(p);
                       setIsEditModalOpen(true);
                     }}
-                    className="p-1.5 text-text-secondary hover:text-brand-primary hover:bg-surface-elevated rounded-lg transition-colors cursor-pointer"
+                    className="p-1.5 text-text-secondary hover:text-brand-primary hover:bg-surface-elevated rounded-sm transition-colors cursor-pointer"
                     title="Edit"
                   >
                     <Pencil size={13} />
                   </button>
                   {deleteConfirming === p.participant_id ? (
-                    <div className="absolute right-3 top-12 bg-surface border border-semantic-critical/30 rounded-xl p-3 shadow-xl z-20 whitespace-nowrap">
+                    <div className="absolute right-3 top-12 bg-surface border border-semantic-critical/30 rounded-sm p-3 shadow-xl z-20 whitespace-nowrap">
                       <p className="text-xs font-bold text-semantic-critical mb-2">Delete Participant?</p>
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleDelete(p.participant_id)}
                           disabled={loading}
-                          className="px-2.5 py-1 text-xs font-bold bg-semantic-critical text-white rounded-lg hover:bg-semantic-critical/90 disabled:opacity-50"
+                          className="px-2.5 py-1 text-xs font-bold bg-semantic-critical text-text-primary rounded-sm hover:bg-semantic-critical/90 disabled:opacity-50"
                         >
                           Yes
                         </button>
                         <button
                           onClick={() => setDeleteConfirming(null)}
-                          className="px-2.5 py-1 text-xs font-bold bg-surface-elevated text-text-primary rounded-lg border border-border"
+                          className="px-2.5 py-1 text-xs font-bold bg-surface-elevated text-text-primary rounded-sm border border-border"
                         >
                           No
                         </button>
@@ -1674,7 +1674,7 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
                   ) : (
                     <button
                       onClick={() => setDeleteConfirming(p.participant_id)}
-                      className="p-1.5 text-text-secondary hover:text-semantic-critical hover:bg-surface-elevated rounded-lg transition-colors cursor-pointer"
+                      className="p-1.5 text-text-secondary hover:text-semantic-critical hover:bg-surface-elevated rounded-sm transition-colors cursor-pointer"
                       title="Delete"
                     >
                       <Trash2 size={13} />
@@ -1685,7 +1685,7 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
 
               <div className="flex flex-wrap gap-1.5">
                 {(p.roles || []).map((role: string) => (
-                  <span key={role} className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-lg border ${roleBadgeColor(role)}`}>
+                  <span key={role} className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-sm border ${roleBadgeColor(role)}`}>
                     {role}
                   </span>
                 ))}
@@ -1694,7 +1694,7 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
               {(p.contact?.phone || p.contact?.email) && (
                 <p className="text-[11px] text-text-secondary font-medium">
                   {p.contact.phone && `Phone: ${p.contact.phone}`}
-                  {p.contact.phone && p.contact.email && ' · '}
+                  {p.contact.phone && p.contact.email && ' Â· '}
                   {p.contact.email && `Email: ${p.contact.email}`}
                 </p>
               )}
@@ -1706,7 +1706,7 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
                     handlePromote(e, p);
                   }}
                   disabled={promoting}
-                  className="w-full text-xs font-bold px-3 py-2 rounded-xl bg-semantic-critical hover:bg-semantic-critical/90 text-white disabled:opacity-60 transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="w-full text-xs font-bold px-3 py-2 rounded-sm bg-semantic-critical hover:bg-semantic-critical/90 text-text-primary disabled:opacity-60 transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Scale size={13} /> {promoting ? '...' : 'Promote to Accused'}
                 </button>
@@ -1777,7 +1777,7 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
   );
 }
 
-// ─── Participant Detail Modal ────────────────────────────────────────────────
+// â”€â”€â”€ Participant Detail Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function ParticipantDetailModal({
   participant: p,
@@ -1934,7 +1934,7 @@ function ParticipantDetailModal({
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-md p-4" onClick={onClose}>
       <div
-        className="bg-surface border border-border rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden my-auto"
+        className="bg-surface border border-border rounded-sm shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden my-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -1943,7 +1943,7 @@ function ParticipantDetailModal({
             <h2 className="text-base font-bold text-text-primary">{p.name}</h2>
             <div className="flex flex-wrap gap-1.5 mt-1.5">
               {(p.roles || []).map((role: string) => (
-                <span key={role} className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-lg border ${roleBadgeColor(role)}`}>
+                <span key={role} className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-sm border ${roleBadgeColor(role)}`}>
                   {role}
                 </span>
               ))}
@@ -1969,7 +1969,7 @@ function ParticipantDetailModal({
         <div className="p-5 space-y-4 overflow-y-auto flex-1 bg-surface-elevated/30">
           {/* Contact */}
           {(p.contact?.phone || p.contact?.email || p.contact?.address) && (
-            <section className="bg-surface border border-border rounded-xl p-3.5 space-y-1.5 shadow-xs">
+            <section className="bg-surface border border-border rounded-sm p-3.5 space-y-1.5 shadow-xs">
               <h3 className="text-[11px] font-bold uppercase text-brand-primary tracking-wider">Contact Information</h3>
               <div className="text-xs text-text-primary space-y-1 font-medium">
                 {p.contact.phone && <p>Phone: {p.contact.phone}</p>}
@@ -1985,7 +1985,7 @@ function ParticipantDetailModal({
               <h3 className="text-[11px] font-bold uppercase text-text-secondary tracking-wider">Identifiers</h3>
               <div className="flex flex-wrap gap-1.5">
                 {p.identifiers.map((id: any, i: number) => (
-                  <span key={i} className="text-xs bg-surface text-text-primary px-2.5 py-1 rounded-lg border border-border font-mono font-medium">
+                  <span key={i} className="text-xs bg-surface text-text-primary px-2.5 py-1 rounded-sm border border-border font-mono font-medium">
                     <span className="font-bold text-brand-primary">{id.type}:</span> {id.value}
                   </span>
                 ))}
@@ -1995,7 +1995,7 @@ function ParticipantDetailModal({
 
           {/* Victim Profile */}
           {p.victimProfile && (p.victimProfile.injuryDetails || p.victimProfile.lossDetails) && (
-            <section className="bg-semantic-success/10 border border-semantic-success/30 rounded-xl p-3.5 space-y-1 text-xs text-text-primary">
+            <section className="bg-semantic-success/10 border border-semantic-success/30 rounded-sm p-3.5 space-y-1 text-xs text-text-primary">
               <h3 className="text-[11px] font-bold uppercase text-semantic-success tracking-wider mb-1">Victim Profile</h3>
               {p.victimProfile.injuryDetails && <p><span className="font-bold">Injury:</span> {p.victimProfile.injuryDetails}</p>}
               {p.victimProfile.lossDetails && <p><span className="font-bold">Loss:</span> {p.victimProfile.lossDetails}</p>}
@@ -2004,7 +2004,7 @@ function ParticipantDetailModal({
 
           {/* Suspect Profile */}
           {p.suspectProfile && !(p.roles || []).includes('Accused') && (p.suspectProfile.motive || p.suspectProfile.alibi) && (
-            <section className="bg-semantic-warning/10 border border-semantic-warning/30 rounded-xl p-3.5 space-y-1 text-xs text-text-primary">
+            <section className="bg-semantic-warning/10 border border-semantic-warning/30 rounded-sm p-3.5 space-y-1 text-xs text-text-primary">
               <h3 className="text-[11px] font-bold uppercase text-semantic-warning tracking-wider mb-1">Suspect Profile</h3>
               {p.suspectProfile.motive && <p><span className="font-bold">Motive:</span> {p.suspectProfile.motive}</p>}
               {p.suspectProfile.alibi && <p><span className="font-bold">Alibi:</span> {p.suspectProfile.alibi}</p>}
@@ -2017,8 +2017,8 @@ function ParticipantDetailModal({
               <h3 className="text-[11px] font-bold uppercase text-brand-primary tracking-wider">Applied Legal Sections</h3>
               <div className="space-y-2">
                 {appliedSections.map((sec: any, i: number) => (
-                  <div key={i} className="bg-brand-primary/10 border border-brand-primary/30 rounded-xl p-3.5 text-xs">
-                    <p className="font-bold text-brand-primary">{sec.code} — {sec.title}</p>
+                  <div key={i} className="bg-brand-primary/10 border border-brand-primary/30 rounded-sm p-3.5 text-xs">
+                    <p className="font-bold text-brand-primary">{sec.code} â€” {sec.title}</p>
                     {sec.reason && <p className="text-text-primary mt-1 leading-relaxed">{sec.reason}</p>}
                   </div>
                 ))}
@@ -2028,13 +2028,13 @@ function ParticipantDetailModal({
 
           {/* Complainant Profile */}
           {p.complainantProfile?.relationshipToIncident && (
-            <section className="bg-surface border border-border rounded-xl p-3.5 text-xs text-text-primary">
+            <section className="bg-surface border border-border rounded-sm p-3.5 text-xs text-text-primary">
               <h3 className="text-[11px] font-bold uppercase text-text-secondary tracking-wider mb-1">Complainant</h3>
               <p className="font-medium">Relation to Incident: {p.complainantProfile.relationshipToIncident}</p>
             </section>
           )}
 
-          {/* ── Statements ──────────────────────────────────────────────── */}
+          {/* â”€â”€ Statements â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           <section className="space-y-2">
             <h3 className="text-[11px] font-bold uppercase text-brand-primary tracking-wider">Statements</h3>
 
@@ -2042,7 +2042,7 @@ function ParticipantDetailModal({
             {Array.isArray(p.statements) && p.statements.length > 0 ? (
               <div className="space-y-2">
                 {p.statements.map((stmt: any) => (
-                  <div key={stmt.id} className="bg-surface border border-border rounded-xl p-3 text-xs shadow-xs">
+                  <div key={stmt.id} className="bg-surface border border-border rounded-sm p-3 text-xs shadow-xs">
                     <div className="flex items-start justify-between gap-2">
                       <p className="text-text-primary font-medium flex-1 leading-relaxed">{stmt.content}</p>
                       <button
@@ -2064,14 +2064,14 @@ function ParticipantDetailModal({
             )}
 
             {/* Add statement form */}
-            <div className="border border-border rounded-xl p-3.5 bg-surface space-y-2 shadow-xs">
+            <div className="border border-border rounded-sm p-3.5 bg-surface space-y-2 shadow-xs">
               <p className="text-xs font-bold text-text-primary">Add New Statement</p>
               <textarea
                 value={stmtContent}
                 onChange={(e) => setStmtContent(e.target.value)}
                 placeholder="Enter statement content..."
                 rows={3}
-                className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-3 text-xs font-medium placeholder:text-text-muted resize-none"
+                className="w-full rounded-sm border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-3 text-xs font-medium placeholder:text-text-muted resize-none"
               />
 
               {/* Audio upload row */}
@@ -2087,9 +2087,9 @@ function ParticipantDetailModal({
                   type="button"
                   onClick={() => audioInputRef.current?.click()}
                   disabled={transcribing}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${transcribing
-                    ? 'bg-neutral-800 text-neutral-400 border-neutral-700 cursor-not-allowed'
-                    : 'bg-neutral-900/50 text-purple-700 border-purple-300 hover:bg-neutral-900/50 cursor-pointer'
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-sm border transition-colors ${transcribing
+                    ? 'bg-neutral-800 text-text-secondary border-border cursor-not-allowed'
+                    : 'bg-surface text-purple-700 border-purple-300 hover:bg-surface cursor-pointer'
                     }`}
                   title="Upload audio file to auto-fill transcript"
                 >
@@ -2102,10 +2102,10 @@ function ParticipantDetailModal({
                       Transcribing...
                     </>
                   ) : (
-                    <>🎙️ Upload Audio</>
+                    <>ðŸŽ™ï¸ Upload Audio</>
                   )}
                 </button>
-                <span className="text-[10px] text-neutral-400">MP3, WAV, OGG, M4A, FLAC, WEBM • max 50 MB</span>
+                <span className="text-[10px] text-text-secondary">MP3, WAV, OGG, M4A, FLAC, WEBM â€¢ max 50 MB</span>
               </div>
 
               {/* Transcription feedback */}
@@ -2125,13 +2125,13 @@ function ParticipantDetailModal({
                     type="datetime-local"
                     value={stmtDate}
                     onChange={(e) => setStmtDate(e.target.value)}
-                    className="w-full px-3 py-1.5 border border-border rounded-xl bg-input-bg text-text-primary text-xs font-medium focus:border-brand-primary"
+                    className="w-full px-3 py-1.5 border border-border rounded-sm bg-input-bg text-text-primary text-xs font-medium focus:border-brand-primary"
                   />
                 </div>
                 <button
                   onClick={handleAddStatement}
                   disabled={stmtLoading || !stmtContent.trim()}
-                  className="self-end px-3.5 py-2 bg-brand-primary text-white text-xs font-bold rounded-xl hover:bg-brand-primary/90 disabled:opacity-50 transition-all shadow-xs cursor-pointer"
+                  className="self-end px-3.5 py-2 bg-brand-primary text-text-primary text-xs font-bold rounded-sm hover:bg-brand-primary/90 disabled:opacity-50 transition-all shadow-xs cursor-pointer"
                 >
                   {stmtLoading ? '...' : '+ Add Statement'}
                 </button>
@@ -2139,7 +2139,7 @@ function ParticipantDetailModal({
             </div>
           </section>
 
-          {/* ── Reasoning ───────────────────────────────────────────────── */}
+          {/* â”€â”€ Reasoning â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           <section className="space-y-2">
             <h3 className="text-[11px] font-bold uppercase text-brand-primary tracking-wider">Reasoning</h3>
 
@@ -2147,26 +2147,26 @@ function ParticipantDetailModal({
             {Array.isArray(p.reasoning) && p.reasoning.length > 0 ? (
               <div className="space-y-2">
                 {p.reasoning.map((r: any) => (
-                  <div key={r.id} className="bg-surface border border-border rounded-xl p-3 text-xs shadow-xs">
+                  <div key={r.id} className="bg-surface border border-border rounded-sm p-3 text-xs shadow-xs">
                     {editingReasoningId === r.id ? (
                       <div className="space-y-2">
                         <textarea
                           value={editingReasoningContent}
                           onChange={(e) => setEditingReasoningContent(e.target.value)}
                           rows={3}
-                          className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary p-3 text-xs font-medium"
+                          className="w-full rounded-sm border border-border bg-input-bg text-text-primary focus:border-brand-primary p-3 text-xs font-medium"
                         />
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleUpdateReasoning(r.id)}
                             disabled={reasoningLoading}
-                            className="px-3 py-1.5 bg-brand-primary text-white text-xs font-bold rounded-lg hover:bg-brand-primary/90 disabled:opacity-50 cursor-pointer"
+                            className="px-3 py-1.5 bg-brand-primary text-text-primary text-xs font-bold rounded-sm hover:bg-brand-primary/90 disabled:opacity-50 cursor-pointer"
                           >
                             {reasoningLoading ? '...' : 'Save'}
                           </button>
                           <button
                             onClick={() => { setEditingReasoningId(null); setEditingReasoningContent(''); }}
-                            className="px-3 py-1.5 border border-border text-text-primary text-xs font-bold rounded-lg hover:bg-surface-elevated cursor-pointer">
+                            className="px-3 py-1.5 border border-border text-text-primary text-xs font-bold rounded-sm hover:bg-surface-elevated cursor-pointer">
                             Cancel
                           </button>
                         </div>
@@ -2175,7 +2175,7 @@ function ParticipantDetailModal({
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg border ${r.source === 'ai' ? 'bg-brand-primary/10 text-brand-primary border-brand-primary/20' : 'bg-semantic-success/10 text-semantic-success border-semantic-success/30'}`}>
+                            <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-sm border ${r.source === 'ai' ? 'bg-brand-primary/10 text-brand-primary border-brand-primary/20' : 'bg-semantic-success/10 text-semantic-success border-semantic-success/30'}`}>
                               {r.source === 'ai' ? 'AI Suggestion' : 'Officer Note'}
                             </span>
                             <span className="text-[10px] text-text-secondary font-mono">{new Date(r.createdAt).toLocaleString('en-IN')}</span>
@@ -2208,19 +2208,19 @@ function ParticipantDetailModal({
             )}
 
             {/* Add reasoning form */}
-            <div className="border border-border rounded-xl p-3.5 bg-surface space-y-2 shadow-xs">
+            <div className="border border-border rounded-sm p-3.5 bg-surface space-y-2 shadow-xs">
               <p className="text-xs font-bold text-text-primary">Add Reasoning Note</p>
               <textarea
                 value={reasoningContent}
                 onChange={(e) => setReasoningContent(e.target.value)}
                 placeholder="Add investigative reasoning or observation..."
                 rows={3}
-                className="w-full rounded-xl border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-3 text-xs font-medium placeholder:text-text-muted resize-none"
+                className="w-full rounded-sm border border-border bg-input-bg text-text-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary p-3 text-xs font-medium placeholder:text-text-muted resize-none"
               />
               <button
                 onClick={handleAddReasoning}
                 disabled={reasoningLoading || !reasoningContent.trim()}
-                className="px-3.5 py-2 bg-brand-primary text-white text-xs font-bold rounded-xl hover:bg-brand-primary/90 disabled:opacity-50 transition-all shadow-xs cursor-pointer"
+                className="px-3.5 py-2 bg-brand-primary text-text-primary text-xs font-bold rounded-sm hover:bg-brand-primary/90 disabled:opacity-50 transition-all shadow-xs cursor-pointer"
               >
                 {reasoningLoading ? '...' : '+ Add Reasoning'}
               </button>
@@ -2234,7 +2234,7 @@ function ParticipantDetailModal({
 }
 
 
-// ─── Original Complaint Panel ──────────────────────────────────────────────
+// â”€â”€â”€ Original Complaint Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function OriginalComplaintPanel({ complaint }: { complaint: any | null }) {
   if (!complaint) {
@@ -2249,7 +2249,7 @@ function OriginalComplaintPanel({ complaint }: { complaint: any | null }) {
   return (
     <div className="space-y-6 py-2">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-surface-elevated/70 rounded-xl border border-border p-4 shadow-xs">
+        <div className="bg-surface-elevated/70 rounded-sm border border-border p-4 shadow-xs">
           <p className="text-[10px] font-bold text-text-secondary uppercase tracking-wider flex items-center gap-1 mb-1.5">
             <Calendar size={12} className="text-brand-primary" /> Date &amp; Time
           </p>
@@ -2257,13 +2257,13 @@ function OriginalComplaintPanel({ complaint }: { complaint: any | null }) {
             {new Date(complaint.incidentDate).toLocaleDateString('en-IN')} {complaint.incidentTime || ''}
           </p>
         </div>
-        <div className="bg-surface-elevated/70 rounded-xl border border-border p-4 shadow-xs">
+        <div className="bg-surface-elevated/70 rounded-sm border border-border p-4 shadow-xs">
           <p className="text-[10px] font-bold text-text-secondary uppercase tracking-wider flex items-center gap-1 mb-1.5">
             <MapPin size={12} className="text-brand-primary" /> Place of Occurrence
           </p>
           <p className="text-sm font-bold text-text-primary">{complaint.incidentPlace}</p>
         </div>
-        <div className="bg-surface-elevated/70 rounded-xl border border-border p-4 shadow-xs">
+        <div className="bg-surface-elevated/70 rounded-sm border border-border p-4 shadow-xs">
           <p className="text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1.5">Category</p>
           <p className="text-sm font-bold text-brand-primary uppercase">
             {complaint.category?.replace('_', ' ') || 'Uncategorized'}
@@ -2272,7 +2272,7 @@ function OriginalComplaintPanel({ complaint }: { complaint: any | null }) {
       </div>
 
       {/* Complainant */}
-      <div className="bg-surface-elevated/70 rounded-xl border border-border p-5 shadow-xs space-y-1">
+      <div className="bg-surface-elevated/70 rounded-sm border border-border p-5 shadow-xs space-y-1">
         <p className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Complainant</p>
         <p className="text-sm font-bold text-text-primary">
           {complaint.citizen?.firstName} {complaint.citizen?.lastName}
@@ -2282,13 +2282,13 @@ function OriginalComplaintPanel({ complaint }: { complaint: any | null }) {
       </div>
 
       {/* Brief Summary */}
-      <div className="bg-surface-elevated/70 rounded-xl border border-border p-5 shadow-xs">
+      <div className="bg-surface-elevated/70 rounded-sm border border-border p-5 shadow-xs">
         <p className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Brief Summary</p>
         <p className="text-sm font-bold text-text-primary">{complaint.shortDescription}</p>
       </div>
 
       {/* Detailed Description */}
-      <div className="bg-surface-elevated/70 rounded-xl border border-border p-5 shadow-xs">
+      <div className="bg-surface-elevated/70 rounded-sm border border-border p-5 shadow-xs">
         <p className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Detailed Description</p>
         <p className="text-sm text-text-primary whitespace-pre-line leading-relaxed">
           {complaint.detailedDescription || <span className="text-text-muted italic">No detailed description provided.</span>}
@@ -2297,13 +2297,13 @@ function OriginalComplaintPanel({ complaint }: { complaint: any | null }) {
 
       {/* Evidence attachments */}
       {complaint.evidence?.length > 0 && (
-        <div className="bg-surface-elevated/70 rounded-xl border border-border p-5 shadow-xs">
+        <div className="bg-surface-elevated/70 rounded-sm border border-border p-5 shadow-xs">
           <p className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-3">
             Attached Evidence ({complaint.evidence.length})
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {complaint.evidence.map((file: any, index: number) => (
-              <div key={file.id || `evidence-${index}`} className="flex items-center justify-between gap-3 p-3.5 rounded-xl border border-border bg-surface hover:bg-surface-elevated transition-colors shadow-xs">
+              <div key={file.id || `evidence-${index}`} className="flex items-center justify-between gap-3 p-3.5 rounded-sm border border-border bg-surface hover:bg-surface-elevated transition-colors shadow-xs">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <FileText size={18} className="text-brand-primary flex-shrink-0" />
                   <div className="min-w-0">
@@ -2311,7 +2311,7 @@ function OriginalComplaintPanel({ complaint }: { complaint: any | null }) {
                     <p className="text-[10px] text-text-secondary font-mono">{(file.size / 1024 / 1024).toFixed(2)} MB &bull; {file.extension?.toUpperCase()}</p>
                   </div>
                 </div>
-                <a href={file.secureUrl} target="_blank" rel="noopener noreferrer" className="flex-shrink-0 p-2 rounded-lg bg-surface-elevated hover:bg-brand-primary/10 text-brand-primary transition-colors" title="Download">
+                <a href={file.secureUrl} target="_blank" rel="noopener noreferrer" className="flex-shrink-0 p-2 rounded-sm bg-surface-elevated hover:bg-brand-primary/10 text-brand-primary transition-colors" title="Download">
                   <Download size={15} />
                 </a>
               </div>
@@ -2324,13 +2324,13 @@ function OriginalComplaintPanel({ complaint }: { complaint: any | null }) {
 }
 
 
-// ─── Case Understanding Panel ──────────────────────────────────────────────
+// â”€â”€â”€ Case Understanding Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function CaseUnderstandingPanel({ caseUnderstanding, caseId }: { caseUnderstanding: CaseUnderstandingData | null; caseId?: string }) {
   if (!caseUnderstanding) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center space-y-4">
-        <div className="p-4 rounded-2xl bg-brand-primary/10 border border-brand-primary/20 text-brand-primary">
+        <div className="p-4 rounded-sm bg-brand-primary/10 border border-brand-primary/20 text-brand-primary">
           <Brain className="h-10 w-10 animate-pulse" />
         </div>
         <div className="space-y-1">
@@ -2351,13 +2351,13 @@ function CaseUnderstandingPanel({ caseUnderstanding, caseId }: { caseUnderstandi
 }
 
 
-// ─── Timeline Panel ────────────────────────────────────────────────────────
+// â”€â”€â”€ Timeline Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function TimelinePanel({ caseUnderstanding }: { caseUnderstanding: CaseUnderstandingData | null }) {
   if (!caseUnderstanding) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center space-y-4">
-        <div className="p-4 rounded-2xl bg-brand-primary/10 border border-brand-primary/20 text-brand-primary">
+        <div className="p-4 rounded-sm bg-brand-primary/10 border border-brand-primary/20 text-brand-primary">
           <Clock className="h-10 w-10 animate-pulse" />
         </div>
         <div className="space-y-1">
@@ -2381,7 +2381,7 @@ function TimelinePanel({ caseUnderstanding }: { caseUnderstanding: CaseUnderstan
             caseUnderstanding.timeline.map((event, idx) => (
               <div key={idx} className="flex gap-4 items-start border-l-2 border-brand-primary pl-4 py-2 bg-surface-elevated/40 rounded-r-xl p-3 border border-border/50">
                 <div className="space-y-1.5">
-                  <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-brand-primary/10 text-brand-primary border border-brand-primary/20 font-mono">
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-sm bg-brand-primary/10 text-brand-primary border border-brand-primary/20 font-mono">
                     {event.timestamp}
                   </span>
                   <p className="text-sm text-text-primary font-bold mt-1.5">{event.description}</p>
@@ -2400,7 +2400,7 @@ function TimelinePanel({ caseUnderstanding }: { caseUnderstanding: CaseUnderstan
   );
 }
 
-// ─── Add Participant Modal ─────────────────────────────────────────────────
+// â”€â”€â”€ Add Participant Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface ParticipantFormData {
   name: string;
@@ -2530,7 +2530,7 @@ function AddParticipantModal({
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center bg-black/70 backdrop-blur-md pt-20 pb-8 px-4 sm:px-6 overflow-y-auto" onClick={onClose}>
       <div
-        className="bg-surface border border-border rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-y-auto my-auto"
+        className="bg-surface border border-border rounded-sm shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-y-auto my-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -2550,7 +2550,7 @@ function AddParticipantModal({
               value={formData.name}
               onChange={handleNameChange}
               placeholder="Enter full name"
-              className={`w-full px-4 py-2.5 bg-surface border rounded-xl text-sm text-text-primary focus:outline-none focus:ring-2 ${errors.name
+              className={`w-full px-4 py-2.5 bg-surface border rounded-sm text-sm text-text-primary focus:outline-none focus:ring-2 ${errors.name
                 ? 'border-semantic-critical focus:ring-semantic-critical/20'
                 : 'border-border focus:ring-brand-primary'
                 }`}
@@ -2565,7 +2565,7 @@ function AddParticipantModal({
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {roleOptions.map(role => (
-                <label key={role} className="flex items-center gap-2 cursor-pointer p-2.5 rounded-xl border border-border bg-surface hover:bg-surface-elevated transition-colors">
+                <label key={role} className="flex items-center gap-2 cursor-pointer p-2.5 rounded-sm border border-border bg-surface hover:bg-surface-elevated transition-colors">
                   <input
                     type="checkbox"
                     checked={formData.roles.includes(role)}
@@ -2587,21 +2587,21 @@ function AddParticipantModal({
               value={formData.contact.phone || ''}
               onChange={(e) => handleContactChange('phone', e.target.value)}
               placeholder="Phone number"
-              className="w-full px-4 py-2.5 bg-surface border border-border rounded-xl text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary"
+              className="w-full px-4 py-2.5 bg-surface border border-border rounded-sm text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary"
             />
             <input
               type="email"
               value={formData.contact.email || ''}
               onChange={(e) => handleContactChange('email', e.target.value)}
               placeholder="Email address"
-              className="w-full px-4 py-2.5 bg-surface border border-border rounded-xl text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary"
+              className="w-full px-4 py-2.5 bg-surface border border-border rounded-sm text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary"
             />
             <input
               type="text"
               value={formData.contact.address || ''}
               onChange={(e) => handleContactChange('address', e.target.value)}
               placeholder="Address"
-              className="w-full px-4 py-2.5 bg-surface border border-border rounded-xl text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary"
+              className="w-full px-4 py-2.5 bg-surface border border-border rounded-sm text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary"
             />
           </div>
 
@@ -2625,21 +2625,21 @@ function AddParticipantModal({
                     value={id.type}
                     onChange={(e) => handleIdentifierChange(idx, 'type', e.target.value)}
                     placeholder="Type (e.g., Aadhar, PAN, License)"
-                    className="flex-1 px-3 py-2 bg-surface border border-border rounded-xl text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                    className="flex-1 px-3 py-2 bg-surface border border-border rounded-sm text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary"
                   />
                   <input
                     type="text"
                     value={id.value}
                     onChange={(e) => handleIdentifierChange(idx, 'value', e.target.value)}
                     placeholder="Value"
-                    className="flex-1 px-3 py-2 bg-surface border border-border rounded-xl text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                    className="flex-1 px-3 py-2 bg-surface border border-border rounded-sm text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary"
                   />
                   <button
                     type="button"
                     onClick={() => handleRemoveIdentifier(idx)}
-                    className="px-3 py-2 text-semantic-critical hover:bg-semantic-critical/10 rounded-xl transition-colors font-bold"
+                    className="px-3 py-2 text-semantic-critical hover:bg-semantic-critical/10 rounded-sm transition-colors font-bold"
                   >
-                    ✕
+                    âœ•
                   </button>
                 </div>
               ))}
@@ -2648,35 +2648,35 @@ function AddParticipantModal({
 
           {/* Victim Profile */}
           {formData.roles.includes('Victim') && (
-            <div className="bg-brand-primary/5 border border-brand-primary/20 rounded-2xl p-4 space-y-3">
+            <div className="bg-brand-primary/5 border border-brand-primary/20 rounded-sm p-4 space-y-3">
               <label className="text-xs font-bold uppercase tracking-wider text-brand-primary block">Victim Profile Details</label>
               <input
                 type="text"
                 value={formData.victimProfile?.injuryDetails || ''}
                 onChange={(e) => handleProfileChange('victimProfile', 'injuryDetails', e.target.value)}
                 placeholder="Injury details (optional)"
-                className="w-full px-4 py-2.5 bg-surface border border-border rounded-xl text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                className="w-full px-4 py-2.5 bg-surface border border-border rounded-sm text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary"
               />
               <textarea
                 value={formData.victimProfile?.lossDetails || ''}
                 onChange={(e) => handleProfileChange('victimProfile', 'lossDetails', e.target.value)}
                 placeholder="Loss details (optional)"
                 rows={3}
-                className="w-full px-4 py-2.5 bg-surface border border-border rounded-xl text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                className="w-full px-4 py-2.5 bg-surface border border-border rounded-sm text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary"
               />
             </div>
           )}
 
           {/* Complainant Profile */}
           {formData.roles.includes('Complainant') && (
-            <div className="bg-brand-primary/5 border border-brand-primary/20 rounded-2xl p-4 space-y-3">
+            <div className="bg-brand-primary/5 border border-brand-primary/20 rounded-sm p-4 space-y-3">
               <label className="text-xs font-bold uppercase tracking-wider text-brand-primary block">Complainant Profile Details</label>
               <input
                 type="text"
                 value={formData.complainantProfile?.relationshipToIncident || ''}
                 onChange={(e) => handleProfileChange('complainantProfile', 'relationshipToIncident', e.target.value)}
                 placeholder="Relationship to incident (optional)"
-                className="w-full px-4 py-2.5 bg-surface border border-border rounded-xl text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                className="w-full px-4 py-2.5 bg-surface border border-border rounded-sm text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary"
               />
             </div>
           )}
@@ -2688,14 +2688,14 @@ function AddParticipantModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 border border-border text-text-primary font-bold rounded-xl hover:bg-surface-elevated transition-colors"
+              className="flex-1 px-4 py-2.5 border border-border text-text-primary font-bold rounded-sm hover:bg-surface-elevated transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2.5 bg-brand-primary text-white font-bold rounded-xl hover:bg-brand-primary/90 disabled:opacity-50 transition-all shadow-xs"
+              className="flex-1 px-4 py-2.5 bg-brand-primary text-text-primary font-bold rounded-sm hover:bg-brand-primary/90 disabled:opacity-50 transition-all shadow-xs"
             >
               {loading ? 'Adding...' : 'Add Participant'}
             </button>
@@ -2706,7 +2706,7 @@ function AddParticipantModal({
   );
 }
 
-// // ─── Edit Participant Modal ────────────────────────────────────────────────
+// // â”€â”€â”€ Edit Participant Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 // function EditParticipantModal({
 //   isOpen,
@@ -2835,15 +2835,15 @@ function AddParticipantModal({
 //   if (!isOpen) return null;
 
 //   return (
-//     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={onClose}>
+//     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4" onClick={onClose}>
 //       <div
-//         className="bg-neutral-900/50 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+//         className="bg-surface rounded-sm shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
 //         onClick={(e) => e.stopPropagation()}
 //       >
 //         {/* Header */}
-//         <div className="sticky top-0 flex items-center justify-between p-6 border-b border-neutral-100 bg-neutral-900/50">
-//           <h2 className="text-xl font-bold text-white">Edit Participant</h2>
-//           <button onClick={onClose} className="p-1 text-neutral-400 hover:text-text-secondary transition-colors text-2xl leading-none">×</button>
+//         <div className="sticky top-0 flex items-center justify-between p-6 border-b border-neutral-100 bg-surface">
+//           <h2 className="text-xl font-bold text-text-primary">Edit Participant</h2>
+//           <button onClick={onClose} className="p-1 text-text-secondary hover:text-text-secondary transition-colors text-2xl leading-none">Ã—</button>
 //         </div>
 
 //         <form onSubmit={handleSubmit} className="p-6 space-y-5">
@@ -2857,10 +2857,10 @@ function AddParticipantModal({
 //               value={formData.name}
 //               onChange={handleNameChange}
 //               placeholder="Enter full name"
-//               className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 ${
+//               className={`w-full px-4 py-2.5 border rounded-sm text-sm focus:outline-none focus:ring-2 ${
 //                 errors.name
 //                   ? 'border-red-300 focus:ring-red-200'
-//                   : 'border-neutral-700 focus:ring-blue-200'
+//                   : 'border-border focus:ring-blue-200'
 //               }`}
 //             />
 //             {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
@@ -2895,21 +2895,21 @@ function AddParticipantModal({
 //               value={formData.contact.phone || ''}
 //               onChange={(e) => handleContactChange('phone', e.target.value)}
 //               placeholder="Phone number"
-//               className="w-full px-4 py-2.5 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+//               className="w-full px-4 py-2.5 border border-border rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
 //             />
 //             <input
 //               type="email"
 //               value={formData.contact.email || ''}
 //               onChange={(e) => handleContactChange('email', e.target.value)}
 //               placeholder="Email address"
-//               className="w-full px-4 py-2.5 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+//               className="w-full px-4 py-2.5 border border-border rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
 //             />
 //             <input
 //               type="text"
 //               value={formData.contact.address || ''}
 //               onChange={(e) => handleContactChange('address', e.target.value)}
 //               placeholder="Address"
-//               className="w-full px-4 py-2.5 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+//               className="w-full px-4 py-2.5 border border-border rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
 //             />
 //           </div>
 
@@ -2933,21 +2933,21 @@ function AddParticipantModal({
 //                     value={id.type}
 //                     onChange={(e) => handleIdentifierChange(idx, 'type', e.target.value)}
 //                     placeholder="Type (e.g., Aadhar, PAN, License)"
-//                     className="flex-1 px-3 py-2 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+//                     className="flex-1 px-3 py-2 border border-border rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
 //                   />
 //                   <input
 //                     type="text"
 //                     value={id.value}
 //                     onChange={(e) => handleIdentifierChange(idx, 'value', e.target.value)}
 //                     placeholder="Value"
-//                     className="flex-1 px-3 py-2 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+//                     className="flex-1 px-3 py-2 border border-border rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
 //                   />
 //                   <button
 //                     type="button"
 //                     onClick={() => handleRemoveIdentifier(idx)}
 //                     className="px-2 py-2 text-red-500 hover:bg-red-900/20 rounded transition-colors"
 //                   >
-//                     🗑️
+//                     ðŸ—‘ï¸
 //                   </button>
 //                 </div>
 //               ))}
@@ -2956,54 +2956,54 @@ function AddParticipantModal({
 
 //           {/* Victim Profile */}
 //           {formData.roles.includes('Victim') && (
-//             <div className="bg-green-900/20 border border-green-800/50 rounded-lg p-4 space-y-3">
+//             <div className="bg-green-900/20 border border-green-800/50 rounded-sm p-4 space-y-3">
 //               <label className="text-sm font-semibold text-green-800 block">Victim Profile Details</label>
 //               <input
 //                 type="text"
 //                 value={formData.victimProfile?.injuryDetails || ''}
 //                 onChange={(e) => handleProfileChange('victimProfile', 'injuryDetails', e.target.value)}
 //                 placeholder="Injury details (optional)"
-//                 className="w-full px-4 py-2.5 border border-green-800/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
+//                 className="w-full px-4 py-2.5 border border-green-800/50 rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
 //               />
 //               <textarea
 //                 value={formData.victimProfile?.lossDetails || ''}
 //                 onChange={(e) => handleProfileChange('victimProfile', 'lossDetails', e.target.value)}
 //                 placeholder="Loss details (optional)"
 //                 rows={3}
-//                 className="w-full px-4 py-2.5 border border-green-800/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
+//                 className="w-full px-4 py-2.5 border border-green-800/50 rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
 //               />
 //             </div>
 //           )}
 
 //           {/* Complainant Profile */}
 //           {formData.roles.includes('Complainant') && (
-//             <div className="bg-blue-900/20 border border-blue-800/50 rounded-lg p-4 space-y-3">
+//             <div className="bg-blue-900/20 border border-blue-800/50 rounded-sm p-4 space-y-3">
 //               <label className="text-sm font-semibold text-blue-800 block">Complainant Profile Details</label>
 //               <input
 //                 type="text"
 //                 value={formData.complainantProfile?.relationshipToIncident || ''}
 //                 onChange={(e) => handleProfileChange('complainantProfile', 'relationshipToIncident', e.target.value)}
 //                 placeholder="Relationship to incident (optional)"
-//                 className="w-full px-4 py-2.5 border border-blue-800/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+//                 className="w-full px-4 py-2.5 border border-blue-800/50 rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
 //               />
 //             </div>
 //           )}
 
-//           <p className="text-xs text-neutral-400 italic">Statements and reasoning are managed from the participant detail view.</p>
+//           <p className="text-xs text-text-secondary italic">Statements and reasoning are managed from the participant detail view.</p>
 
 //           {/* Actions */}
 //           <div className="flex gap-3 pt-4 border-t border-neutral-100">
 //             <button
 //               type="button"
 //               onClick={onClose}
-//               className="flex-1 px-4 py-2.5 border border-neutral-700 text-text-secondary font-semibold rounded-lg hover:bg-neutral-900/50 transition-colors"
+//               className="flex-1 px-4 py-2.5 border border-border text-text-secondary font-semibold rounded-sm hover:bg-surface transition-colors"
 //             >
 //               Cancel
 //             </button>
 //             <button
 //               type="submit"
 //               disabled={loading}
-//               className="flex-1 px-4 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-60 transition-colors"
+//               className="flex-1 px-4 py-2.5 bg-blue-600 text-text-primary font-semibold rounded-sm hover:bg-blue-700 disabled:opacity-60 transition-colors"
 //             >
 //               {loading ? 'Updating...' : 'Update Participant'}
 //             </button>
@@ -3016,7 +3016,7 @@ function AddParticipantModal({
 
 
 
-// ─── Edit / View Participant Modal (combined) ─────────────────────────────────
+// â”€â”€â”€ Edit / View Participant Modal (combined) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function EditParticipantModal({
   isOpen,
@@ -3031,11 +3031,11 @@ function EditParticipantModal({
   caseId: string;
   onSuccess: (updated?: any) => void;
 }) {
-  // ── Local participant state — updated optimistically on every mutation ────
+  // â”€â”€ Local participant state â€” updated optimistically on every mutation â”€â”€â”€â”€
   const [p, setP] = React.useState<any>(initialParticipant);
   React.useEffect(() => { setP(initialParticipant); }, [initialParticipant, isOpen]);
 
-  // ── Edit form state ──────────────────────────────────────────────────────
+  // â”€â”€ Edit form state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [formData, setFormData] = React.useState<ParticipantFormData>({ name: '', roles: [], contact: {}, identifiers: [] });
   const [formLoading, setFormLoading] = React.useState(false);
   const [formErrors, setFormErrors] = React.useState<Record<string, string>>({});
@@ -3054,7 +3054,7 @@ function EditParticipantModal({
     }
   }, [initialParticipant, isOpen]);
 
-  // ── Statement state ──────────────────────────────────────────────────────
+  // â”€â”€ Statement state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [stmtContent, setStmtContent] = React.useState('');
   const [stmtDate, setStmtDate] = React.useState(() => new Date().toISOString().slice(0, 16));
   const [stmtLoading, setStmtLoading] = React.useState(false);
@@ -3062,13 +3062,13 @@ function EditParticipantModal({
   const [transcribeError, setTranscribeError] = React.useState<string | null>(null);
   const audioInputRef = React.useRef<HTMLInputElement>(null);
 
-  // ── Reasoning state ──────────────────────────────────────────────────────
+  // â”€â”€ Reasoning state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [reasoningContent, setReasoningContent] = React.useState('');
   const [reasoningLoading, setReasoningLoading] = React.useState(false);
   const [editingReasoningId, setEditingReasoningId] = React.useState<string | null>(null);
   const [editingReasoningContent, setEditingReasoningContent] = React.useState('');
 
-  // ── Identifier upload state ───────────────────────────────────────────────
+  // â”€â”€ Identifier upload state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [identifierUploading, setIdentifierUploading] = React.useState<number | null>(null);
   const [viewingDocUrl, setViewingDocUrl] = React.useState<string | null>(null);
   const identifierFileRefs = React.useRef<(HTMLInputElement | null)[]>([]);
@@ -3094,7 +3094,7 @@ function EditParticipantModal({
     }));
   };
 
-  // Helper — after any mutation, get fresh participant from API and update local state instantly
+  // Helper â€” after any mutation, get fresh participant from API and update local state instantly
   const refreshParticipant = React.useCallback(async () => {
     try {
       const res = await apiClient.get(`/cases/${caseId}/participants`);
@@ -3104,7 +3104,7 @@ function EditParticipantModal({
     } catch { /* silently ignore */ }
   }, [caseId, p?.participant_id, onSuccess]);
 
-  // ── Form handlers ────────────────────────────────────────────────────────
+  // â”€â”€ Form handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleRoleToggle = (role: string) => {
     setFormData((prev) => ({ ...prev, roles: prev.roles.includes(role) ? prev.roles.filter(r => r !== role) : [...prev.roles, role] }));
   };
@@ -3125,7 +3125,7 @@ function EditParticipantModal({
     setFormData((prev) => ({ ...prev, identifiers: prev.identifiers.filter((_, i) => i !== idx) }));
   };
 
-  // ── Identifier file upload ────────────────────────────────────────────────
+  // â”€â”€ Identifier file upload â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleIdentifierFileChange = async (idx: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -3160,7 +3160,7 @@ function EditParticipantModal({
     }
   };
 
-  // ── Form submit ──────────────────────────────────────────────────────────
+  // â”€â”€ Form submit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errs: Record<string, string> = {};
@@ -3194,7 +3194,7 @@ function EditParticipantModal({
     }
   };
 
-  // ── Statement handlers ─────────────────────────────────────────────────
+  // â”€â”€ Statement handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleAddStatement = async () => {
     if (!stmtContent.trim() || !stmtDate) return;
     setStmtLoading(true);
@@ -3248,7 +3248,7 @@ function EditParticipantModal({
     }
   };
 
-  // ── Reasoning handlers ─────────────────────────────────────────────────
+  // â”€â”€ Reasoning handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleAddReasoning = async () => {
     if (!reasoningContent.trim()) return;
     setReasoningLoading(true);
@@ -3304,27 +3304,27 @@ function EditParticipantModal({
   if (!isOpen || !p) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={onClose}>
-      <div className="bg-neutral-900/50 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="bg-surface rounded-sm shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
 
         {/* Header */}
-        <div className="sticky top-0 flex items-start justify-between p-6 border-b border-neutral-700 bg-neutral-900/50 z-10">
+        <div className="sticky top-0 flex items-start justify-between p-6 border-b border-border bg-surface z-10">
           <div>
-            <h2 className="text-xl font-bold text-white">{p.name}</h2>
+            <h2 className="text-xl font-bold text-text-primary">{p.name}</h2>
             <div className="flex flex-wrap gap-1.5 mt-2">
               {(p.roles || []).map((role: string) => (
                 <span key={role} className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${roleBadgeColor(role)}`}>{role}</span>
               ))}
             </div>
           </div>
-          <button onClick={onClose} className="p-1 text-neutral-400 hover:text-text-secondary transition-colors text-2xl leading-none">×</button>
+          <button onClick={onClose} className="p-1 text-text-secondary hover:text-text-secondary transition-colors text-2xl leading-none">Ã—</button>
         </div>
 
         <div className="p-6 space-y-8">
 
           {/* Edit Form */}
           <form onSubmit={handleFormSubmit} className="space-y-5">
-            <h3 className="text-base font-bold text-text-secondary border-b border-neutral-700 pb-2">Edit Participant Details</h3>
+            <h3 className="text-base font-bold text-text-secondary border-b border-border pb-2">Edit Participant Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Name */}
               <div>
@@ -3334,16 +3334,16 @@ function EditParticipantModal({
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="Enter full name"
-                  className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 ${formErrors.name ? 'border-red-300 focus:ring-red-200' : 'border-neutral-700 focus:ring-blue-200'}`}
+                  className={`w-full px-4 py-2.5 border rounded-sm text-sm focus:outline-none focus:ring-2 ${formErrors.name ? 'border-red-300 focus:ring-red-200' : 'border-border focus:ring-blue-200'}`}
                 />
                 {formErrors.name && <p className="text-xs text-red-500 mt-1">{formErrors.name}</p>}
               </div>
               {/* Contact */}
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-text-secondary">Contact</label>
-                <input type="tel" value={formData.contact.phone || ''} onChange={(e) => handleContactChange('phone', e.target.value)} placeholder="Phone" className="w-full px-3 py-2 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
-                <input type="email" value={formData.contact.email || ''} onChange={(e) => handleContactChange('email', e.target.value)} placeholder="Email" className="w-full px-3 py-2 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
-                <input type="text" value={formData.contact.address || ''} onChange={(e) => handleContactChange('address', e.target.value)} placeholder="Address" className="w-full px-3 py-2 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
+                <input type="tel" value={formData.contact.phone || ''} onChange={(e) => handleContactChange('phone', e.target.value)} placeholder="Phone" className="w-full px-3 py-2 border border-border rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
+                <input type="email" value={formData.contact.email || ''} onChange={(e) => handleContactChange('email', e.target.value)} placeholder="Email" className="w-full px-3 py-2 border border-border rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
+                <input type="text" value={formData.contact.address || ''} onChange={(e) => handleContactChange('address', e.target.value)} placeholder="Address" className="w-full px-3 py-2 border border-border rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
               </div>
             </div>
 
@@ -3384,21 +3384,21 @@ function EditParticipantModal({
                       value={id.type}
                       onChange={(e) => handleIdentifierChange(idx, 'type', e.target.value)}
                       placeholder="Type (e.g., Aadhar, PAN, License)"
-                      className="flex-1 px-3 py-2 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                      className="flex-1 px-3 py-2 border border-border rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
                     />
                     <input
                       type="text"
                       value={id.value}
                       onChange={(e) => handleIdentifierChange(idx, 'value', e.target.value)}
                       placeholder="Value"
-                      className="flex-1 px-3 py-2 border border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                      className="flex-1 px-3 py-2 border border-border rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
                     />
                     <div className="flex gap-1">
                       {identifierUploading === idx ? (
                         <span className="px-2 py-2 text-blue-400"><Loader2 size={16} className="animate-spin" /></span>
                       ) : (
                         <label className="px-2 py-2 text-blue-400 hover:bg-blue-900/20 rounded transition-colors cursor-pointer" title="Attach document">
-                          📎
+                          ðŸ“Ž
                           <input
                             type="file"
                             accept=".pdf,.jpg,.jpeg,.png,.mp3,.wav,.mp4,.mov"
@@ -3414,11 +3414,11 @@ function EditParticipantModal({
                           className="px-2 py-2 text-green-400 hover:bg-green-900/20 rounded transition-colors"
                           title="View uploaded document"
                         >
-                          👁️
+                          ðŸ‘ï¸
                         </button>
                       )}
                       <button type="button" onClick={() => handleRemoveIdentifier(idx)} className="px-2 py-2 text-red-500 hover:bg-red-900/20 rounded transition-colors">
-                        🗑️
+                        ðŸ—‘ï¸
                       </button>
                     </div>
                   </div>
@@ -3428,20 +3428,20 @@ function EditParticipantModal({
 
             {/* Role-specific profiles */}
             {formData.roles.includes('Victim') && (
-              <div className="bg-green-900/20 border border-green-800/50 rounded-lg p-4 space-y-3">
+              <div className="bg-green-900/20 border border-green-800/50 rounded-sm p-4 space-y-3">
                 <label className="text-sm font-semibold text-green-800 block">Victim Profile Details</label>
-                <input type="text" value={formData.victimProfile?.injuryDetails || ''} onChange={(e) => handleProfileChange('victimProfile', 'injuryDetails', e.target.value)} placeholder="Injury details (optional)" className="w-full px-4 py-2.5 border border-green-800/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-200" />
-                <textarea value={formData.victimProfile?.lossDetails || ''} onChange={(e) => handleProfileChange('victimProfile', 'lossDetails', e.target.value)} placeholder="Loss details (optional)" rows={3} className="w-full px-4 py-2.5 border border-green-800/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-200" />
+                <input type="text" value={formData.victimProfile?.injuryDetails || ''} onChange={(e) => handleProfileChange('victimProfile', 'injuryDetails', e.target.value)} placeholder="Injury details (optional)" className="w-full px-4 py-2.5 border border-green-800/50 rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-green-200" />
+                <textarea value={formData.victimProfile?.lossDetails || ''} onChange={(e) => handleProfileChange('victimProfile', 'lossDetails', e.target.value)} placeholder="Loss details (optional)" rows={3} className="w-full px-4 py-2.5 border border-green-800/50 rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-green-200" />
               </div>
             )}
             {formData.roles.includes('Complainant') && (
-              <div className="bg-blue-900/20 border border-blue-800/50 rounded-lg p-4 space-y-3">
+              <div className="bg-blue-900/20 border border-blue-800/50 rounded-sm p-4 space-y-3">
                 <label className="text-sm font-semibold text-blue-800 block">Complainant Profile Details</label>
-                <input type="text" value={formData.complainantProfile?.relationshipToIncident || ''} onChange={(e) => handleProfileChange('complainantProfile', 'relationshipToIncident', e.target.value)} placeholder="Relationship to incident (optional)" className="w-full px-4 py-2.5 border border-blue-800/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
+                <input type="text" value={formData.complainantProfile?.relationshipToIncident || ''} onChange={(e) => handleProfileChange('complainantProfile', 'relationshipToIncident', e.target.value)} placeholder="Relationship to incident (optional)" className="w-full px-4 py-2.5 border border-blue-800/50 rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
               </div>
             )}
             {formData.roles.includes('Suspect') && (
-              <div className="bg-orange-900/20 border border-orange-800/50 rounded-lg p-4 space-y-3">
+              <div className="bg-orange-900/20 border border-orange-800/50 rounded-sm p-4 space-y-3">
                 <label className="text-sm font-semibold text-orange-800 block">Suspect Profile Details</label>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -3456,11 +3456,11 @@ function EditParticipantModal({
             )}
 
             {/* Form Actions */}
-            <div className="flex gap-3 pt-4 border-t border-neutral-700">
-              <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-neutral-700 text-text-secondary font-semibold rounded-lg hover:bg-neutral-900/50 transition-colors">
+            <div className="flex gap-3 pt-4 border-t border-border">
+              <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-border text-text-secondary font-semibold rounded-sm hover:bg-surface transition-colors">
                 Cancel
               </button>
-              <button type="submit" disabled={formLoading} className="flex-1 px-4 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-60 transition-colors">
+              <button type="submit" disabled={formLoading} className="flex-1 px-4 py-2.5 bg-blue-600 text-text-primary font-semibold rounded-sm hover:bg-blue-700 disabled:opacity-60 transition-colors">
                 {formLoading ? 'Updating...' : 'Update Participant'}
               </button>
             </div>

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import Link from 'next/link';
@@ -88,7 +88,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <ParticleBackground />
       <Watermark />
       {isPolice && <OfflineBanner />}
-      {/* ── Sidebar ────────────────────────────────────────────────────────────── */}
+      {/* â”€â”€ Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <CollapsibleSidebar
         navItems={navItems}
         caseNavList={activeCaseNavItems}
@@ -99,7 +99,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         isPolice={isPolice}
       />
 
-      {/* ── Main content ─────────────────────────────────────────────────── */}
+      {/* â”€â”€ Main content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="flex flex-1 flex-col min-w-0 bg-transparent text-text-primary relative z-10 overflow-y-auto">
         {/* Top bar */}
         <header className="sticky top-0 flex items-center justify-between border-b border-border bg-surface/85 backdrop-blur-xl px-6 py-4 shadow-sm z-30">
@@ -113,13 +113,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <LanguageToggle />
             <ThemeToggle />
             <div className="flex items-center gap-3 pl-3 border-l border-border">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-primary text-white text-xs font-bold shadow-xs">
+              <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-brand-primary text-white text-xs font-bold shadow-xs">
                 {displayName?.charAt(0).toUpperCase()}
               </div>
               <span className="text-sm font-bold text-text-primary hidden sm:inline">{displayName}</span>
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-text-primary bg-surface-elevated hover:bg-brand-primary/10 hover:text-brand-primary border border-border hover:border-brand-primary/30 rounded-xl transition-all shadow-xs ml-1"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-text-primary bg-surface-elevated hover:bg-brand-primary/10 hover:text-brand-primary border border-border hover:border-brand-primary/30 rounded-sm transition-all shadow-xs ml-1"
                 title="Sign Out"
               >
                 <LogOut size={14} className="text-text-secondary" />
@@ -141,7 +141,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   );
 }
 
-/* ── Collapsible Sidebar ─────────────────────────────────────────────── */
+/* â”€â”€ Collapsible Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 interface CollapsibleSidebarProps {
   navItems: NavItem[];
@@ -221,7 +221,7 @@ function CollapsibleSidebar({
           collapsed ? 'justify-center px-2' : 'gap-3 px-5',
         ].join(' ')}
       >
-        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-surface-elevated border border-border p-0.5">
+        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-sm bg-surface-elevated border border-border p-0.5">
           <img src="/logo.svg" alt="Gujarat Police Logo" className="w-full h-full object-contain" />
         </div>
         {!collapsed && (
@@ -244,7 +244,7 @@ function CollapsibleSidebar({
                 key={item.href}
                 href={item.href}
                 className={[
-                  'flex items-center rounded-xl py-3 text-sm font-bold transition-all duration-200 group relative',
+                  'flex items-center rounded-sm py-3 text-sm font-bold transition-all duration-200 group relative',
                   collapsed ? 'justify-center px-2' : 'gap-3 px-3.5',
                   isActive
                     ? 'bg-brand-primary/10 text-brand-primary border border-brand-primary/20 nav-active-bar shadow-xs'
@@ -257,7 +257,7 @@ function CollapsibleSidebar({
 
                 {/* Floating tooltip shown on hover when collapsed */}
                 {collapsed && (
-                  <span className="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-xl bg-surface-elevated px-2.5 py-1.5 text-xs text-text-primary shadow-elevated opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 border border-border">
+                  <span className="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-sm bg-surface-elevated px-2.5 py-1.5 text-xs text-text-primary shadow-elevated opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 border border-border">
                     {item.label}
                   </span>
                 )}
@@ -266,10 +266,11 @@ function CollapsibleSidebar({
           })}
         </div>
 
-        {/* Case-level navigation — shown when inside a complaint page */}
+        {/* Case-level navigation â€” shown when inside a complaint page */}
         {isPolice && caseId && !collapsed && (
           <div className="mt-4 pt-4 border-t border-border flex-1 flex flex-col">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-text-muted px-3.5 mb-2.5">Case Navigation</p>
+            
+            <p className="text-[10px] font-bold uppercase tracking-widest text-text-muted px-3.5 mb-2.5 border-b border-border pb-2">Case Navigation</p>
             <div className="space-y-1 flex-1">
               {activeCaseItems.map((tab) => {
                 const isTabActive = activeIoTab === tab.id;
@@ -278,7 +279,7 @@ function CollapsibleSidebar({
                     key={tab.id}
                     href={`${pathname}?tab=${tab.id}`}
                     className={[
-                      'flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-bold transition-all duration-200 group relative',
+                      'flex items-center gap-3 rounded-sm px-3.5 py-2.5 text-xs font-bold transition-all duration-200 group relative',
                       isTabActive
                         ? 'bg-brand-primary/10 text-brand-primary border border-brand-primary/20 nav-active-bar shadow-xs'
                         : 'text-text-secondary hover:bg-surface-elevated hover:text-text-primary',
@@ -294,7 +295,7 @@ function CollapsibleSidebar({
           </div>
         )}
 
-        {/* Collapsed case nav — icon only */}
+        {/* Collapsed case nav â€” icon only */}
         {isPolice && caseId && collapsed && (
           <div className="mt-4 pt-4 border-t border-border space-y-0.5">
             {activeCaseItems.map((tab) => {
@@ -304,14 +305,14 @@ function CollapsibleSidebar({
                   key={tab.id}
                   href={`${pathname}?tab=${tab.id}`}
                   className={[
-                    'flex items-center justify-center rounded-xl p-2 transition-all duration-200 group relative',
+                    'flex items-center justify-center rounded-sm p-2 transition-all duration-200 group relative',
                     isTabActive
                       ? 'bg-brand-primary/10 text-brand-primary border border-brand-primary/20'
                       : 'text-text-secondary hover:bg-surface-elevated hover:text-text-primary',
                   ].join(' ')}
                 >
                   <span className="flex-shrink-0 transition-transform duration-200 group-hover:scale-110">{tab.icon}</span>
-                  <span className="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-xl bg-surface-elevated px-2.5 py-1.5 text-xs text-text-primary shadow-elevated opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 border border-border">
+                  <span className="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-sm bg-surface-elevated px-2.5 py-1.5 text-xs text-text-primary shadow-elevated opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 border border-border">
                     {tab.label}
                   </span>
                 </Link>

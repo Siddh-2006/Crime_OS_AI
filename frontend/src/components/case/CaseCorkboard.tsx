@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import CytoscapeComponent from 'react-cytoscapejs';
@@ -7,7 +7,7 @@ import cytoscape from 'cytoscape';
 import coseBilkent from 'cytoscape-cose-bilkent';
 import { Loader } from '@/components/ui/Loader';
 import apiClient from '@/lib/axios';
-import { Maximize, RotateCcw, Shrink } from 'lucide-react';
+import { Maximize, RotateCcw, Shrink, Users, FileImage, Tag, Network } from 'lucide-react';
 
 cytoscape.use(coseBilkent);
 
@@ -16,61 +16,49 @@ interface CaseCorkboardProps {
   refreshTrigger?: number;
 }
 
-// Pushpin SVG base64 (Red pin)
-const pushpinSvg = `data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='%23ef4444' stroke='%23991b1b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='8' r='5'/%3E%3Cpath d='M12 13v8'/%3E%3C/svg%3E`;
+type GraphData = { nodes: any[]; edges: any[] };
 
 export const CaseCorkboard: React.FC<CaseCorkboardProps> = ({ caseId, refreshTrigger = 0 }) => {
-  const [fullGraph, setFullGraph] = useState<{ nodes: any[]; edges: any[] }>({ nodes: [], edges: [] });
+  const [fullGraph, setFullGraph] = useState<GraphData>({ nodes: [], edges: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+  const [expandedCount, setExpandedCount] = useState(0);
+  const [stats, setStats] = useState({ participants: 0, evidence: 0, entities: 0, edges: 0 });
+
   const cyRef = useRef<cytoscape.Core | null>(null);
-  const initialLoadDone = useRef(false);
   const expandedNodes = useRef<Set<string>>(new Set());
+  // Always-current graph ref — readable from stable callbacks without causing re-renders
+  const graphRef = useRef<GraphData>({ nodes: [], edges: [] });
+  // Track if we rendered at least once
+  const renderedOnce = useRef(false);
 
-  // Deterministic random rotation based on string ID
-  const getRotation = (id: string) => {
-    let hash = 0;
-    for (let i = 0; i < id.length; i++) {
-      hash = id.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    // Random between -4 and 4 degrees
-    return (Math.abs(hash) % 9) - 4;
-  };
+  // Keep graphRef in sync
+  useEffect(() => {
+    graphRef.current = fullGraph;
+  }, [fullGraph]);
 
-  const computeVisibleElements = (graph: { nodes: any[]; edges: any[] }, expanded: Set<string>) => {
-    // If no expanded nodes, we only want the "root" node.
-    // We'll define root as the first node in the graph (or a specific type).
-    let rootNodeId: string | null = null;
-    if (graph.nodes.length > 0) {
-       // Prefer the case itself or the highest degree participant, but for now just take the first participant or first node
-       const participant = graph.nodes.find(n => n.data.type === 'participant');
-       rootNodeId = participant ? participant.data.id : graph.nodes[0].data.id;
-    }
+  // ─── Helpers ────────────────────────────────────────────────────────────────
 
-    if (!rootNodeId) return [];
+  const computeVisible = useCallback((graph: GraphData, expanded: Set<string>) => {
+    if (graph.nodes.length === 0) return [];
 
-    // The set of nodes to render
-    const visibleNodeIds = new Set<string>();
-    const visibleEdgeIds = new Set<string>();
+    // Root = first participant node, or first node
+    const root = graph.nodes.find(n => n.data.type === 'participant') ?? graph.nodes[0];
+    const rootId: string = root.data.id;
 
-    // Root is always visible
-    visibleNodeIds.add(rootNodeId);
-    
-    // Add all nodes in `expanded` (just in case they are disconnected, though they shouldn't be)
+    const visibleNodeIds = new Set<string>([rootId]);
     expanded.forEach(id => visibleNodeIds.add(id));
 
-    // Now, for every expanded node, we make its direct neighbors visible
+    // Show neighbors of all expanded nodes
     graph.edges.forEach(edge => {
-      const { source, target, id } = edge.data;
+      const { source, target } = edge.data;
       if (expanded.has(source) || expanded.has(target)) {
         visibleNodeIds.add(source);
         visibleNodeIds.add(target);
-        visibleEdgeIds.add(id);
       }
     });
 
-    // Also include edges where BOTH source and target are visible (even if neither is 'expanded', to show interconnectivity)
+    const visibleEdgeIds = new Set<string>();
     graph.edges.forEach(edge => {
       const { source, target, id } = edge.data;
       if (visibleNodeIds.has(source) && visibleNodeIds.has(target)) {
@@ -78,175 +66,227 @@ export const CaseCorkboard: React.FC<CaseCorkboardProps> = ({ caseId, refreshTri
       }
     });
 
-    const finalNodes = graph.nodes.filter(n => visibleNodeIds.has(n.data.id));
-    const finalEdges = graph.edges.filter(e => visibleEdgeIds.has(e.data.id));
+    return [
+      ...graph.nodes.filter(n => visibleNodeIds.has(n.data.id)),
+      ...graph.edges.filter(e => visibleEdgeIds.has(e.data.id)),
+    ];
+  }, []);
 
-    return [...finalNodes, ...finalEdges];
-  };
+  const applyCy = useCallback((cy: cytoscape.Core, elements: any[]) => {
+    const incoming = new Set(elements.map(el => el.data.id));
+    const existing = new Set(cy.elements().map(el => el.id()));
 
-  const applyGraphToCy = (cy: cytoscape.Core, newElements: any[]) => {
-    const existingIds = new Set(cy.elements().map(el => el.id()));
-    const incomingIds = new Set(newElements.map(el => el.data.id));
-    
-    let changed = false;
+    cy.elements().forEach(el => { if (!incoming.has(el.id())) cy.remove(el); });
 
-    // Remove deleted
-    cy.elements().forEach(el => {
-      if (!incomingIds.has(el.id())) {
-        cy.remove(el);
-        changed = true;
-      }
-    });
-    
-    // Add new
-    const toAdd = newElements.filter(el => !existingIds.has(el.data.id));
-    if (toAdd.length > 0) {
-      cy.add(toAdd);
-      changed = true;
-    }
+    // Filter self-loops to prevent cose-bilkent RangeError
+    const safe = elements.filter(el => !el.data.source || el.data.source !== el.data.target);
+    const toAdd = safe.filter(el => !existing.has(el.data.id));
+    if (toAdd.length > 0) cy.add(toAdd);
 
-    if (changed) {
-      cy.layout({ name: 'cose-bilkent', animate: true, animationDuration: 600, randomize: false, idealEdgeLength: 120 } as any).run();
-    }
-  };
+    cy.layout({
+      name: 'cose-bilkent',
+      animate: true,
+      animationDuration: 600,
+      randomize: true,
+      idealEdgeLength: 140,
+      nodeRepulsion: 6000,
+      edgeElasticity: 0.45,
+      nestingFactor: 0.1,
+      gravity: 0.2,
+      numIter: 2500,
+      tile: false,
+    } as any).run();
+  }, []);
+
+  const renderGraph = useCallback((graph: GraphData) => {
+    const cy = cyRef.current;
+    if (!cy || graph.nodes.length === 0) return;
+    const visible = computeVisible(graph, expandedNodes.current);
+    applyCy(cy, visible);
+    renderedOnce.current = true;
+    setTimeout(() => {
+      const c = cyRef.current;
+      if (!c) return;
+      c.fit(undefined, 60);
+      if (c.zoom() > 1.2) c.zoom(1.2);
+    }, 600);
+  }, [computeVisible, applyCy]);
+
+  // ─── Fetch ──────────────────────────────────────────────────────────────────
 
   const fetchGraph = useCallback(async (isInitial: boolean) => {
     try {
       if (isInitial) setLoading(true);
-      const res = await apiClient.get(`/api/v1/cases/${caseId}/graph`);
-      
-      let newNodes: any[] = [];
-      let newEdges: any[] = [];
+      const res = await apiClient.get(`/cases/${caseId}/graph`);
+      const data = res.data?.data ?? {};
 
-      if (res.data?.data) {
-        const data = res.data.data;
-        newNodes = data.nodes?.map((n: any) => ({ data: { ...n, id: n.id || n._id } })) || [];
-        newEdges = data.edges?.map((e: any) => ({ data: { ...e, source: e.source, target: e.target, id: e.id || e._id } })) || [];
-      }
+      const nodes: any[] = (data.nodes ?? []).map((n: any) => ({
+        data: { ...n, id: String(n.id ?? n._id) },
+      }));
+      const edges: any[] = (data.edges ?? []).map((e: any) => ({
+        data: { ...e, id: String(e.id ?? `e-${Math.random()}`), source: String(e.source), target: String(e.target) },
+      }));
 
-      setFullGraph({ nodes: newNodes, edges: newEdges });
-      
-      if (!isInitial && cyRef.current) {
-        const visible = computeVisibleElements({ nodes: newNodes, edges: newEdges }, expandedNodes.current);
-        applyGraphToCy(cyRef.current, visible);
+      const newGraph = { nodes, edges };
+      graphRef.current = newGraph;
+      setFullGraph(newGraph);
+      setStats({
+        participants: nodes.filter(n => n.data.type === 'participant').length,
+        evidence: nodes.filter(n => n.data.type === 'evidence').length,
+        entities: nodes.filter(n => n.data.type === 'entity').length,
+        edges: edges.length,
+      });
+
+      // If cy already mounted, render immediately
+      if (cyRef.current) {
+        renderGraph(newGraph);
       }
     } catch (err: any) {
-      if (isInitial) {
-        setError(err?.response?.data?.message || 'Failed to load case graph');
-      }
+      if (isInitial) setError(err?.response?.data?.message ?? 'Failed to load case graph');
     } finally {
       if (isInitial) setLoading(false);
     }
-  }, [caseId]);
+  }, [caseId, renderGraph]);
 
-  // Initial load
-  useEffect(() => {
-    fetchGraph(true);
-  }, [fetchGraph]);
+  useEffect(() => { fetchGraph(true); }, [fetchGraph]);
+  useEffect(() => { if (refreshTrigger > 0) fetchGraph(false); }, [refreshTrigger, fetchGraph]);
 
-  // Polling refresh
-  useEffect(() => {
-    if (refreshTrigger > 0) {
-      fetchGraph(false);
+  // ─── Cytoscape Setup (stable — no fullGraph dependency) ─────────────────────
+
+  const setupCy = useCallback((cy: cytoscape.Core) => {
+    cyRef.current = cy;  // Set FIRST so renderGraph can use it
+    cy.maxZoom(2.0);
+    cy.minZoom(0.1);
+
+    // Always render if data already arrived before cy mounted
+    if (graphRef.current.nodes.length > 0) {
+      renderGraph(graphRef.current);
     }
-  }, [refreshTrigger, fetchGraph]);
 
-  // Initial Cytoscape setup when fullGraph is first loaded
-  useEffect(() => {
-    if (fullGraph.nodes.length > 0 && cyRef.current && !initialLoadDone.current) {
-      initialLoadDone.current = true;
-      // Clear expanded nodes on fresh load
-      expandedNodes.current.clear();
-      const visible = computeVisibleElements(fullGraph, expandedNodes.current);
-      applyGraphToCy(cyRef.current, visible);
-      // Fit to root
-      setTimeout(() => cyRef.current?.fit(undefined, 50), 700);
-    }
-  }, [fullGraph]);
+    cy.on('tap', 'node', evt => {
+      const id: string = evt.target.id();
+      if (expandedNodes.current.has(id)) {
+        expandedNodes.current.delete(id);
+      } else {
+        expandedNodes.current.add(id);
+      }
+      setExpandedCount(expandedNodes.current.size);
+      const visible = computeVisible(graphRef.current, expandedNodes.current);
+      applyCy(cy, visible);
+    });
+
+    cy.on('mouseover', 'node', evt => {
+      const node = evt.target;
+      cy.elements().addClass('dimmed');
+      node.removeClass('dimmed').addClass('highlighted');
+      node.connectedEdges().removeClass('dimmed').addClass('highlighted');
+      node.connectedEdges().connectedNodes().removeClass('dimmed').addClass('highlighted');
+    });
+
+    cy.on('mouseout', 'node', () => {
+      cy.elements().removeClass('dimmed highlighted');
+    });
+  }, [renderGraph, computeVisible, applyCy]); // no fullGraph dep
+
+  // ─── Stylesheet — dark theme aligned with app ────────────────────────────────
 
   const stylesheet: cytoscape.StylesheetStyle[] = useMemo(() => [
     {
       selector: 'node',
       style: {
-        'transition-property': 'opacity, background-color, line-color',
-        'transition-duration': 200 as any,
-        'shape': 'rectangle',
-        'background-color': '#fdf6e3', // Off-white sticky note color
-        'border-width': 1,
-        'border-color': '#d1d5db',
-        'color': '#1f2937',
-        'font-family': 'sans-serif',
+        'shape': 'round-rectangle',
+        'background-color': '#ffffff',
+        'border-width': 1.5,
+        'border-color': '#cbd5e1',
+        'color': '#1e293b',
+        'font-family': 'Inter, sans-serif',
         'text-valign': 'center',
         'text-halign': 'center',
         'text-wrap': 'wrap',
-        'text-max-width': '90px',
-        'background-image': pushpinSvg,
-        'background-width': '16px',
-        'background-height': '16px',
-        'background-position-x': '50%',
-        'background-position-y': '0%', // Top center
-        'background-clip': 'none',
-        'shadow-blur': 8,
+        'text-max-width': '100px',
+        'font-size': 10,
+        'shadow-blur': 12,
         'shadow-color': '#000',
-        'shadow-opacity': 0.15,
+        'shadow-opacity': 0.5,
         'shadow-offset-y': 4,
+        'transition-property': 'opacity, border-color, border-width',
+        'transition-duration': 200 as any,
       }
     },
     {
       selector: 'edge',
       style: {
-        'width': 2,
-        'line-color': '#8b7355', // Tan string color
+        'width': 1.5,
+        'line-color': '#94a3b8',
         'curve-style': 'bezier',
         'label': 'data(label)',
-        'font-size': 10,
+        'font-size': 9,
+        'font-family': 'Inter, sans-serif',
         'text-rotation': 'autorotate',
         'text-background-opacity': 1,
         'text-background-color': '#f8fafc',
-        'text-background-padding': '2px',
-        'color': '#475569',
-        // No arrows for standard threads
+        'text-background-padding': '3px',
+        'color': '#64748b',
       }
     },
+    // Participant nodes — blue accent
     {
       selector: 'node[type="participant"]',
       style: {
-        'width': 100,
-        'height': 50,
-        'font-weight': 'bold',
+        'width': 110,
+        'height': 48,
+        'background-color': '#eff6ff',
+        'border-color': '#1e3a8a',
+        'border-width': 2.5,
+        'label': 'data(label)',
         'font-size': 11,
-        'label': 'data(label)',
-      }
-    },
-    {
-      selector: 'node[type="evidence"]',
-      style: {
-        'width': 80,
-        'height': 60,
-        'background-color': '#f8fafc', // Photo style
-        'label': 'data(label)',
-        'font-size': 10,
-        'border-width': 4,
-        'border-color': '#fff', // Polaroid border
+        'font-weight': 'bold',
+        'color': '#1e3a8a',
+        'shadow-color': '#1e3a8a',
+        'shadow-opacity': 0.12,
         'shadow-blur': 10,
       }
     },
+    // Evidence nodes — orange accent
+    {
+      selector: 'node[type="evidence"]',
+      style: {
+        'width': 90,
+        'height': 44,
+        'background-color': '#fff7ed',
+        'border-color': '#ea580c',
+        'border-width': 2,
+        'label': 'data(label)',
+        'font-size': 10,
+        'color': '#9a3412',
+        'shadow-color': '#ea580c',
+        'shadow-opacity': 0.12,
+        'shadow-blur': 8,
+      }
+    },
+    // Entity nodes — green accent
     {
       selector: 'node[type="entity"]',
       style: {
-        'width': 70,
-        'height': 25,
-        'background-color': '#fef08a', // Yellow torn paper
+        'width': 80,
+        'height': 28,
+        'background-color': '#f0fdf4',
+        'border-color': '#16a34a',
+        'border-width': 1.5,
         'label': 'data(label)',
         'font-size': 9,
+        'color': '#15803d',
         'shape': 'round-rectangle',
       }
     },
+    // Edge variants
     {
       selector: 'edge[type="shared_identifier"]',
       style: {
-        'width': 4,
-        'line-color': '#ef4444', // Red string
+        'width': 3,
+        'line-color': '#ef4444',
+        'line-style': 'solid',
+        'color': '#fca5a5',
       }
     },
     {
@@ -255,163 +295,147 @@ export const CaseCorkboard: React.FC<CaseCorkboardProps> = ({ caseId, refreshTri
         'line-style': 'dashed',
         'width': 2,
         'line-color': '#3b82f6',
-      }
-    },
-    // Interactive states
-    {
-      selector: '.dimmed',
-      style: {
-        'opacity': 0.3
+        'color': '#93c5fd',
       }
     },
     {
-      selector: '.highlighted',
+      selector: 'edge[type="evidence_of"]',
       style: {
-        'opacity': 1,
-        'border-width': 2,
-        'border-color': '#3b82f6'
+        'line-style': 'dotted',
+        'width': 1.5,
+        'line-color': '#f97316',
+        'color': '#fdba74',
       }
-    }
+    },
+    {
+      selector: 'edge[type="participant_entity"]',
+      style: {
+        'line-style': 'dashed',
+        'width': 1.5,
+        'line-color': '#22c55e',
+        'color': '#86efac',
+      }
+    },
+    // Interaction states
+    { selector: '.dimmed',      style: { 'opacity': 0.15 } },
+    { selector: '.highlighted', style: { 'opacity': 1, 'border-width': 3, 'border-color': '#f97316' } },
   ], []);
 
-  const layout = useMemo(() => ({
-    name: 'cose-bilkent',
-    animate: false, // We handle animation manually on updates
-  }), []);
+  const layout = useMemo(() => ({ name: 'cose-bilkent', animate: false }), []);
 
-  // Set up cytoscape event listeners
-  const setupCy = useCallback((cy: cytoscape.Core) => {
-    cyRef.current = cy;
+  // ─── Toolbar handlers ────────────────────────────────────────────────────────
 
-    // Apply deterministic rotation right after nodes are added
-    cy.on('add', 'node', (evt) => {
-      const node = evt.target;
-      const rot = getRotation(node.id());
-      // We can't actually rotate the shape directly in Canvas Cytoscape, 
-      // but we can rotate the *text* and pretend it's rotated? No, wait. 
-      // cytoscape does not support native node rotation unless it's a specific shape. 
-      // However, we can use an SVG background image that is pre-rotated if we really want, 
-      // or we can just leave it unrotated if it's too complex.
-      // Wait, there IS a CSS property in cytoscape.js for node rotation? 
-      // No, only text-rotation.
-      // BUT for the visual aesthetic, we'll rely on the shadows and colors to sell the corkboard.
-    });
-
-    cy.on('tap', 'node', (evt) => {
-      const node = evt.target;
-      const id = node.id();
-
-      // Check if it's already expanded
-      if (expandedNodes.current.has(id)) {
-        // Collapse
-        expandedNodes.current.delete(id);
-      } else {
-        // Expand
-        expandedNodes.current.add(id);
-      }
-
-      // Recompute and apply
-      const visible = computeVisibleElements(fullGraph, expandedNodes.current);
-      applyGraphToCy(cy, visible);
-    });
-
-    cy.on('mouseover', 'node', (evt) => {
-      // Highlight on hover just to see edges clearly
-      const node = evt.target;
-      cy.elements().addClass('dimmed');
-      node.removeClass('dimmed').addClass('highlighted');
-      node.connectedEdges().removeClass('dimmed').addClass('highlighted');
-      node.connectedEdges().connectedNodes().removeClass('dimmed').addClass('highlighted');
-    });
-
-    cy.on('mouseout', 'node', (evt) => {
-      cy.elements().removeClass('dimmed highlighted');
-    });
-
-  }, [fullGraph]);
-
-  const handleFit = () => {
-    if (cyRef.current) cyRef.current.fit(undefined, 30);
-  };
-
-  const handleReset = () => {
-    if (cyRef.current) {
-      cyRef.current.elements().removeClass('dimmed highlighted');
-      cyRef.current.fit(undefined, 30);
-    }
-  };
-
+  const handleFit = () => cyRef.current?.fit(undefined, 30);
+  const handleReset = () => { cyRef.current?.elements().removeClass('dimmed highlighted'); cyRef.current?.fit(undefined, 30); };
   const handleCollapseAll = () => {
     expandedNodes.current.clear();
+    setExpandedCount(0);
     if (cyRef.current) {
-      const visible = computeVisibleElements(fullGraph, expandedNodes.current);
-      applyGraphToCy(cyRef.current, visible);
-      setTimeout(() => cyRef.current?.fit(undefined, 50), 700);
+      const visible = computeVisible(graphRef.current, expandedNodes.current);
+      applyCy(cyRef.current, visible);
+      setTimeout(() => cyRef.current?.fit(undefined, 50), 600);
     }
   };
 
-  if (loading && fullGraph.nodes.length === 0) {
+  // ─── Render states ───────────────────────────────────────────────────────────
+
+  if (loading) {
     return (
-      <div className="w-full h-[75vh] flex items-center justify-center bg-[#f5f1e8] rounded-xl border border-[#e5e0d8] shadow-inner">
+      <div className="w-full h-[75vh] flex items-center justify-center rounded-sm border border-border bg-surface">
         <div className="flex flex-col items-center gap-3">
           <Loader />
-          <p className="text-sm text-gray-500 animate-pulse">Pinning strings to the corkboard...</p>
+          <p className="text-sm text-text-secondary animate-pulse">Building knowledge graph...</p>
         </div>
       </div>
     );
   }
 
-  if (!loading && fullGraph.nodes.length === 0) {
+  if (error) {
     return (
-      <div className="w-full h-[75vh] flex items-center justify-center bg-[#f5f1e8] rounded-xl border border-[#e5e0d8] shadow-inner">
-        <p className="text-gray-500 font-medium">No entities pinned to the board yet</p>
+      <div className="w-full h-[75vh] flex items-center justify-center rounded-sm border border-border bg-surface">
+        <p className="text-semantic-critical font-medium">{error}</p>
+      </div>
+    );
+  }
+
+  if (fullGraph.nodes.length === 0) {
+    return (
+      <div className="w-full h-[75vh] flex flex-col items-center justify-center gap-3 rounded-sm border border-border bg-surface">
+        <Network size={40} className="text-text-muted" />
+        <p className="text-text-secondary font-medium">No graph data yet</p>
+        <p className="text-xs text-text-muted">Run an AI analysis to generate participants and entities</p>
       </div>
     );
   }
 
   return (
-    <div className="w-full h-[75vh] bg-[#f5f1e8] rounded-xl border border-[#e5e0d8] overflow-hidden relative shadow-inner corkboard-texture">
-      
-      {/* Floating Toolbar */}
-      <div className="absolute top-4 right-4 z-10 flex gap-2">
-        <button 
-          onClick={handleCollapseAll}
-          className="px-3 py-2 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-md shadow-sm hover:bg-white text-gray-700 text-xs font-bold transition-colors flex items-center gap-1.5"
-          title="Collapse All"
-        >
-          <Shrink size={14} />
-          Collapse All
-        </button>
-        <button 
-          onClick={handleFit}
-          className="p-2 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-md shadow-sm hover:bg-white text-gray-600 transition-colors"
-          title="Fit to Screen"
-        >
-          <Maximize size={16} />
-        </button>
-        <button 
-          onClick={handleReset}
-          className="p-2 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-md shadow-sm hover:bg-white text-gray-600 transition-colors"
-          title="Reset View"
-        >
-          <RotateCcw size={16} />
-        </button>
+    <div className="w-full space-y-3">
+      {/* Stats bar */}
+      <div className="flex flex-wrap gap-3">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-sm border border-blue-200 bg-blue-50">
+          <Users size={13} className="text-blue-700" />
+          <span className="text-xs font-bold text-blue-800">{stats.participants} Participants</span>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-sm border border-orange-200 bg-orange-50">
+          <FileImage size={13} className="text-orange-600" />
+          <span className="text-xs font-bold text-orange-800">{stats.evidence} Evidence</span>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-sm border border-green-200 bg-green-50">
+          <Tag size={13} className="text-green-600" />
+          <span className="text-xs font-bold text-green-800">{stats.entities} Entities</span>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-sm border border-border bg-surface-elevated">
+          <Network size={13} className="text-text-secondary" />
+          <span className="text-xs font-bold text-text-secondary">{stats.edges} Relationships</span>
+        </div>
       </div>
 
-      <div className="absolute top-4 left-4 z-10">
-        <span className="px-3 py-1.5 bg-black/5 rounded-md text-xs font-bold text-gray-600 tracking-wide uppercase shadow-sm border border-black/5">
-          {expandedNodes.current.size === 0 ? 'Click root node to expand' : `Exploring ${expandedNodes.current.size} pinned nodes`}
-        </span>
-      </div>
+      {/* Graph canvas */}
+      <div className="w-full h-[70vh] rounded-sm border border-slate-200 overflow-hidden relative"
+           style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)' }}>
 
-      <CytoscapeComponent
-        elements={[]} // We control elements manually via cy.add/remove
-        style={{ width: '100%', height: '100%' }}
-        stylesheet={stylesheet}
-        layout={layout}
-        wheelSensitivity={0.1}
-        cy={setupCy}
-      />
+        {/* Toolbar */}
+        <div className="absolute top-4 right-4 z-10 flex gap-2">
+          <button onClick={handleCollapseAll}
+            className="px-3 py-1.5 bg-white/90 backdrop-blur-sm border border-slate-200 rounded-sm text-xs font-bold text-slate-600 hover:text-slate-900 shadow-sm transition-all flex items-center gap-1.5">
+            <Shrink size={13} /> Collapse All
+          </button>
+          <button onClick={handleFit}
+            className="p-1.5 bg-white/90 backdrop-blur-sm border border-slate-200 rounded-sm text-slate-500 hover:text-slate-800 shadow-sm transition-all">
+            <Maximize size={15} />
+          </button>
+          <button onClick={handleReset}
+            className="p-1.5 bg-white/90 backdrop-blur-sm border border-slate-200 rounded-sm text-slate-500 hover:text-slate-800 shadow-sm transition-all">
+            <RotateCcw size={15} />
+          </button>
+        </div>
+
+        {/* Hint */}
+        <div className="absolute top-4 left-4 z-10">
+          <span className="px-3 py-1.5 bg-white/90 backdrop-blur-sm rounded-sm text-[11px] font-bold text-slate-500 tracking-wide uppercase border border-slate-200 shadow-sm">
+            {expandedCount === 0 ? '← Click root node to expand' : `Exploring ${expandedCount} node${expandedCount > 1 ? 's' : ''}`}
+          </span>
+        </div>
+
+        {/* Legend */}
+        <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-1.5 bg-white/90 backdrop-blur-sm p-3 rounded-sm border border-slate-200 shadow-sm">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Legend</p>
+          <div className="flex items-center gap-2"><span className="w-3 h-3 rounded border-2 border-blue-700 bg-blue-50" /><span className="text-[10px] text-slate-700">Participant</span></div>
+          <div className="flex items-center gap-2"><span className="w-3 h-3 rounded border-2 border-orange-600 bg-orange-50" /><span className="text-[10px] text-slate-700">Evidence</span></div>
+          <div className="flex items-center gap-2"><span className="w-3 h-3 rounded border-2 border-green-600 bg-green-50" /><span className="text-[10px] text-slate-700">Entity</span></div>
+          <div className="flex items-center gap-1.5"><span className="w-4 h-0.5 bg-red-500" /><span className="text-[10px] text-slate-600">Shared ID</span></div>
+          <div className="flex items-center gap-1.5"><span className="w-4 h-0.5 border-t-2 border-dashed border-blue-500" /><span className="text-[10px] text-slate-600">Corroborates</span></div>
+        </div>
+
+        <CytoscapeComponent
+          elements={[]}
+          style={{ width: '100%', height: '100%' }}
+          stylesheet={stylesheet}
+          layout={layout}
+          wheelSensitivity={0.1}
+          cy={setupCy}
+        />
+      </div>
     </div>
   );
 };
