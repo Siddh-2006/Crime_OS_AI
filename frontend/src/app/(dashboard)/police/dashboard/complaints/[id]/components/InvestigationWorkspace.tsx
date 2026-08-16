@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
@@ -557,17 +557,12 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
 
   return (
     <div className="w-full min-w-0" style={{ minHeight: '600px' }}>
-      {/* Main workspace - takes all available width */}
+      {/* Main workspace — takes all available width */}
       <div className="w-full min-w-0 space-y-4">
-      {/* Tab Content */}
-      <div className="min-h-[500px]">
-        {activeTab === 'graph' && (
-          <CaseCorkboard caseId={caseId} refreshTrigger={refreshTrigger} />
-        )}
-
-        {activeTab === 'room' && (
-          <CaseRoomChat caseId={caseId} />
-        )}
+        <div className="min-h-[500px]">
+          {activeTab === 'graph' && (
+            <CaseCorkboard caseId={caseId} refreshTrigger={refreshTrigger} />
+          )}
 
           {activeTab === 'room' && (
             <CaseRoomChat caseId={caseId} />

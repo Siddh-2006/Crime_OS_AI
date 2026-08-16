@@ -67,7 +67,7 @@ export default function PoliceProfilePage() {
         <p className="text-text-secondary">Update your operational expertise and past experience.</p>
       </div>
 
-      <Card className="p-8 bg-surface border-border">
+      <Card className="p-8 bg-surface shadow-sm border-border">
         <div className="flex items-start justify-between mb-8 pb-8 border-b border-border">
           <div>
             <h2 className="text-2xl font-medium text-text-primary">{officerData?.officerName}</h2>

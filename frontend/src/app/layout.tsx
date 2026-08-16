@@ -4,6 +4,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { TranslationProvider } from '@/context/TranslationContext';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { AppLoader } from '@/components/AppLoader';
+import { ChunkErrorRecovery } from '@/components/ChunkErrorRecovery';
 import { SyncInitializer } from '@/components/SyncInitializer';
 
 export const metadata: Metadata = {
@@ -47,6 +48,7 @@ export default function RootLayout({ children }: RootLayoutProps): React.ReactEl
       </head>
       <body className="min-h-screen font-sans antialiased relative">
         <AppLoader />
+        <ChunkErrorRecovery />
         <SyncInitializer />
         <AuthProvider>
           <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
