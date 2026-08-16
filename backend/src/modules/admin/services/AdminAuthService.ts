@@ -20,9 +20,11 @@ export class AdminAuthService {
 
   async login(username: string, password: string): Promise<AdminAuthResult> {
     const admin = await this.adminRepository.findByUsername(username, true);
+    console.log('Admin found in service:', admin ? admin.username : 'null', 'Has password:', !!(admin && admin.password));
     if (!admin) throw new AuthenticationError('Invalid credentials');
 
     const isPasswordValid = await comparePassword(password, admin.password);
+    console.log('Password valid in service:', isPasswordValid, 'Passed plain:', password);
     if (!isPasswordValid) throw new AuthenticationError('Invalid credentials');
 
     const { accessToken, refreshToken } = await this.tokenService.generateTokenPair({

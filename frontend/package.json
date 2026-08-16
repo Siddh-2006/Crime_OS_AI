@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@ducanh2912/next-pwa": "^10.2.9",
+    "@ducanh2912/next-pwa": "^10.2.6",
     "axios": "^1.18.1",
     "dexie": "^4.4.5",
     "framer-motion": "^13.0.0",

@@ -15,6 +15,8 @@ For a functional overview of the platform and user workflows, see [README.md](./
    - [Flow 2 — Copilot Query (ASK & AGENT mode)](#flow-2--copilot-query-ask--agent-mode)
    - [Flow 3 — Department Request → Email → Reply → Case Update](#flow-3--department-request--email--reply--case-update)
    - [Flow 4 — Case Closure → Vector Embedding → IO Recommendation](#flow-4--case-closure--vector-embedding--io-recommendation)
+   - [Flow 5 — Evidence Upload → Deepfake Detection → Confidence Score](#flow-5--evidence-upload--deepfake-detection--confidence-score)
+   - [Flow 6 — Offline Mutation Outbox → Auto-Sync (PWA)](#flow-6--offline-mutation-outbox--auto-sync-pwa)
 4. [Component Communication](#4-component-communication)
 5. [Security & Access Architecture](#5-security--access-architecture)
 6. [Deployment Architecture](#6-deployment-architecture)
@@ -36,16 +38,18 @@ flowchart TD
     classDef llm       fill:#3b1f1f,stroke:#ef5350,color:#ffebee,rx:6
     classDef queue     fill:#1a2a3a,stroke:#64b5f6,color:#e3f2fd,rx:6
     classDef external  fill:#2a2a2a,stroke:#aaaaaa,color:#f5f5f5,rx:6
+    classDef pwa       fill:#0d3b2e,stroke:#00bfa5,color:#e0f7fa,rx:6
 
     %% ══════════════════════════════════════════════════════════════════════════
     %% BROWSER LAYER
     %% ══════════════════════════════════════════════════════════════════════════
-    subgraph BROWSER["🖥️  Browser — Next.js 14 Frontend"]
+    subgraph BROWSER["🖥️  Browser — Next.js 14 Frontend (PWA)"]
         direction LR
         UI_SHO["SHO Portal"]:::ui
         UI_IO["IO Investigation\nWorkspace"]:::ui
         UI_ADMIN["Admin Panel"]:::ui
         UI_DEPT["Department\nPortal"]:::ui
+        PWA_CACHE["PWA / Service Worker\n@ducanh2912/next-pwa\nIndexedDB (Dexie.js)\nOutbox + LRU Case Cache"]:::pwa
     end
 
     %% ══════════════════════════════════════════════════════════════════════════
@@ -64,6 +68,10 @@ flowchart TD
         API_DIARY["Case Diary\nService"]:::api
         API_TRANSLATE["Translation\nService"]:::api
         API_IO_REC["IO Recommendation\nClient"]:::api
+        API_ROOM["Case Room\nService (Socket.io)"]:::api
+        API_ENCRYPT["AES-256-GCM\nEncryption Util"]:::api
+        API_DEEPFAKE["SightEngine\nDeepfake Client"]:::api
+        API_COMPRESS["Prompt Compression\nClient"]:::api
         SSE["SSE — Real-time\nAnalysis Progress"]:::api
     end
 
@@ -71,9 +79,9 @@ flowchart TD
     %% DATA LAYER
     %% ══════════════════════════════════════════════════════════════════════════
     subgraph DATA["🗄️  Data Layer"]
-        MONGO[("MongoDB\n— Complaints\n— Evidence\n— Participants\n— Diary\n— FIRs\n— Charge Sheets\n— Requests")]:::db
+        MONGO[("MongoDB\n— Complaints\n— Evidence (AES encrypted)\n— Participants\n— Diary\n— FIRs\n— Charge Sheets\n— Requests\n— CaseRoomMessages (AES)")]:::db
         REDIS[("Redis\n— Session Cache\n— Translation Cache\n— SSE Pub/Sub\n— Job State")]:::db
-        CLOUDINARY[("Cloudinary CDN\n— Evidence Files\n— FIR PDFs\n— Diary PDFs\n— Charge Sheet PDFs")]:::external
+        CLOUDINARY[("Cloudinary CDN\n— Evidence Files\n— FIR PDFs (watermarked)\n— Diary PDFs (watermarked)\n— Charge Sheet PDFs (watermarked)")]:::external
     end
 
     %% ══════════════════════════════════════════════════════════════════════════
@@ -110,6 +118,8 @@ flowchart TD
         end
 
         IOREC["IO Recommendation  :8003\nnomic-embed-text-v2-moe Q4_K_M\n(llama.cpp) + Qdrant\nWeighted Voting Algorithm"]:::pyservice
+
+        PROMPT_COMPRESS["Prompt Compression  :8005\nLLMLingua-2 (BERT-base)\nmicrosoft/llmlingua-2-bert-base\n-multilingual-cased-meetingbank\n~110 MB, CPU-efficient"]:::pyservice
     end
 
     %% ══════════════════════════════════════════════════════════════════════════
@@ -122,7 +132,7 @@ flowchart TD
     %% ══════════════════════════════════════════════════════════════════════════
     %% VECTOR DB
     %% ══════════════════════════════════════════════════════════════════════════
-    QDRANT[("Qdrant  :6333\n— Legal sections\n  BNS · BNSS · BSA\n  SOPs · Dept Registry\n— Closed case vectors\n  IO Recommendation")]:::db
+    QDRANT[("Qdrant  :6333\n— Legal sections\n  BNS · BNSS · BSA\n  SOPs · Dept Registry\n— Closed case vectors\n  IO Recommendation\n[Scalar Quantization optional]")]:::db
 
     %% ══════════════════════════════════════════════════════════════════════════
     %% EMBEDDING MODELS
@@ -137,11 +147,14 @@ flowchart TD
     %% ══════════════════════════════════════════════════════════════════════════
     GMAIL_POLL["Gmail API\n(OAuth2 Polling)\nDept reply ingestion"]:::external
     DEPT_EMAIL["External Departments\n(Forensic / Medical / Bank\n/ Telecom / Court …)"]:::external
+    SIGHTENGINE["SightEngine API\n(deepfake detection\nfor image/audio/video)"]:::external
 
     %% ══════════════════════════════════════════════════════════════════════════
     %% FLOWS — Browser → Backend
     %% ══════════════════════════════════════════════════════════════════════════
-    BROWSER -->|"HTTPS REST + SSE"| BACKEND
+    BROWSER -->|"HTTPS REST + SSE\n+ Socket.io (WS)"| BACKEND
+    PWA_CACHE -.->|"offline fallback\n(IndexedDB hit)"| UI_IO
+    PWA_CACHE -.->|"outbox replay\non reconnect"| BACKEND
     BACKEND --> API_AUTH
     API_AUTH --> API_COMPLAINT & API_INVEST & API_FIR & API_CHARGE & API_DEPT_REQ
 
@@ -163,6 +176,16 @@ flowchart TD
     API_ANALYSIS  -->|"POST /copilot"| LA
     API_TRANSLATE -->|"POST /translate\n(page text blocks)"| OLLAMA
     API_IO_REC    -->|"POST /recommend-officers"| IOREC
+    API_COMPRESS  -->|"POST /compress\n(before LLM calls)"| PROMPT_COMPRESS
+
+    %% Deepfake detection flow
+    Q_EVIDENCE    -->|"evidence processed\ntrigger deepfake check"| API_DEEPFAKE
+    API_DEEPFAKE  -->|"models=deepfake\nPOST check.json"| SIGHTENGINE
+    API_DEEPFAKE  -->|"confidence_score\nwritten back"| MONGO
+
+    %% Encryption flows
+    API_ENCRYPT   -->|"encrypt before save"| MONGO
+    API_ROOM      -->|"AES-encrypted\nmessages"| MONGO
 
     %% Orchestrator → LLM
     API_ANALYSIS  -->|"fast + deep\ngenerate calls"| OLLAMA
@@ -195,8 +218,8 @@ flowchart TD
     SSE     -->|"real-time stream"| UI_IO
 
     %% PDF upload → CDN
-    Q_DIARY  -->|"upload diary PDF"| CLOUDINARY
-    API_FIR  -->|"upload FIR PDFs\n(EN + GUJ-EN)"| CLOUDINARY
+    Q_DIARY  -->|"upload diary PDF\n(watermarked)"| CLOUDINARY
+    API_FIR  -->|"upload FIR PDFs\n(EN + GUJ-EN, watermarked)"| CLOUDINARY
     API_CHARGE -->|"stream charge\nsheet PDF"| BROWSER
 ```
 
@@ -206,14 +229,20 @@ flowchart TD
 
 A plain-language breakdown of what each layer in the architecture is responsible for.
 
-**Frontend (Next.js 14)**
-The browser-side application. Renders all four portals — SHO, IO Investigation Workspace, Admin, and Department — as a single Next.js app using the App Router. Communicates with the backend exclusively over HTTPS REST and Server-Sent Events (SSE). Handles language selection and caches translated page text in Redis via the backend translation service.
+**Frontend (Next.js 14 — PWA)**
+The browser-side application. Renders all four portals — SHO, IO Investigation Workspace, Admin, and Department — as a single Next.js app using the App Router. Communicates with the backend exclusively over HTTPS REST, Server-Sent Events (SSE), and Socket.io WebSocket (for the Private Case Room). Deployed as a **Progressive Web App (PWA)** using `@ducanh2912/next-pwa`, enabling installation on any device and full offline-first capability. The offline layer (`frontend/src/lib/offline/`) uses **Dexie.js** (IndexedDB) to cache up to 5 cases per officer (LRU eviction) and an **Outbox Manager** to queue mutations while disconnected. On reconnect, queued operations are replayed in dependency order with up to 3 retries and exponential backoff. Conflict resolution uses Last-Write-Wins at the field level.
 
 **Backend API (Node.js / Express, TypeScript)**
-The central coordination layer. All business logic lives here — complaint management, investigation orchestration, FIR generation, charge sheet assembly, case diary, department requests, and PDF generation. It is the only component that talks directly to MongoDB and Redis, and the only entry point for the frontend. It delegates all AI and ML work to the Python microservices over HTTP.
+The central coordination layer. All business logic lives here — complaint management, investigation orchestration, FIR generation, charge sheet assembly, case diary, department requests, PDF generation, and the Private Case Room. It is the only component that talks directly to MongoDB and Redis, and the only entry point for the frontend. Delegates all AI and ML work to the Python microservices over HTTP. PDF generation (FIR, diary, charge sheet) uses **PDFKit** with a centered SVG organization logo watermark (15% opacity, 65% of page width) on every page.
+
+**AES-256-GCM Encryption Utility (`encryption.util.ts`)**
+Shared backend utility that encrypts and decrypts arbitrary values using AES-256-GCM. Each call generates a unique random IV and returns the format `enc:<iv_hex>:<ciphertext_hex>:<authTag_hex>`. The key is loaded from the `ENCRYPTION_KEY` environment variable (32 bytes). Used in two places: (1) the **Evidence Encryption Plugin** that transparently encrypts 16 sensitive evidence fields at rest, and (2) the **CaseRoomService** that encrypts every chatroom message before MongoDB persistence.
+
+**Evidence Encryption Plugin (`evidenceEncryption.plugin.ts`)**
+A Mongoose schema plugin applied to the `Evidence` collection. Hooks into `pre('save')`, `pre('updateOne')`, `pre('findOneAndUpdate')`, and `pre('updateMany')` to encrypt sensitive fields before they reach MongoDB, and `post('find')`, `post('findOne')`, `post('save')` to decrypt them transparently before the data is returned to the application layer. No application code needs to be aware of the encryption — it is entirely transparent.
 
 **MongoDB**
-The primary data store. Holds every persistent entity: complaints, evidence records, case participants, analysis snapshots, diary entries, FIRs, charge sheets, department request threads, officer accounts, and station data. All relationships between entities are stored here.
+The primary data store. Holds every persistent entity: complaints, evidence records (with AES-encrypted sensitive fields), case participants, analysis snapshots, diary entries, FIRs, charge sheets, department request threads, private chatroom messages (AES-encrypted), officer accounts, and station data. All relationships between entities are stored here.
 
 **Redis**
 Used for two purposes: short-lived caching (sessions, translated page text, analysis job state) and real-time pub/sub messaging (publishing analysis progress events that are forwarded to the browser as SSE streams).
@@ -224,8 +253,14 @@ Three independent job queues handle work that must happen in the background with
 **Cloudinary CDN**
 Cloud storage for all binary files — uploaded evidence (images, audio, video, documents) and generated PDFs (FIR, case diary, charge sheet). The backend generates a signed upload URL and sends it to the client; the browser uploads directly to Cloudinary without the file ever touching the backend server.
 
+**SightEngine Deepfake Detection Service**
+External REST API (`https://api.sightengine.com/1.0/check.json`) called by the **SightEngineService** in the backend after evidence is processed. Accepts the Cloudinary URL of an uploaded file and returns a deepfake probability score. The backend normalizes this to a 0–100 `confidence_score` stored on the evidence document. Scores ≥ 70 trigger a warning badge in the Investigation Workspace. Enabled/disabled via `SIGHTENGINE_ENABLE_DEEPFAKE_CHECK`; fails silently with a score of 0 if unavailable.
+
+**Private Case Room (Socket.io)**
+Real-time bidirectional communication between IOs assigned to the same case. The backend attaches a Socket.io server to the Express HTTP server. The frontend connects via `socket.io-client`. JWT authentication is validated on every connection. The namespace `/case-room` is used; clients join a room keyed by `case_id`. All messages are AES-256-GCM encrypted by `CaseRoomService` before persistence. Room eligibility (minimum 2 assigned IOs) is enforced at both the REST eligibility endpoint and the Socket.io join handler.
+
 **Complaint Intelligence Service (Python FastAPI)**
-Processes every evidence file. Routes each file type to the appropriate worker: PDFs to PyMuPDF, images to Florence-2 + PaddleOCR, audio to Whisper, video to scenedetect + moviepy + Florence. After processing, it runs spaCy NER across all extracted text and writes the enriched metadata back to MongoDB via the backend.
+Processes every evidence file. Routes each file type to the appropriate worker: PDFs to PyMuPDF, images to Florence-2 + PaddleOCR, audio to Whisper, video to scenedetect + moviepy + Florence. After processing, it runs spaCy NER across all extracted text and writes the enriched metadata back to MongoDB via the backend. After the pipeline completes, the backend triggers the **SightEngine deepfake check** for image, audio, and video files.
 
 **Florence-2 Service (Python FastAPI)**
 A dedicated REST wrapper around `microsoft/Florence-2-base`. Kept resident in memory to avoid repeated cold-start costs. Called internally by the Complaint Intelligence service for image captioning and OCR on scanned documents.
@@ -236,11 +271,14 @@ The RAG retrieval engine for all legal lookups. Maintains a hybrid BM25 + vector
 **IO Recommendation Service (Python FastAPI)**
 Stores vector embeddings of every closed case in Qdrant. When a new case needs to be assigned, it finds the most similar historical cases and ranks the available IOs by how often they handled comparable work.
 
+**Prompt Compression Service (Python FastAPI, port 8005)**
+A standalone LLMLingua-2 compression service that reduces the token count of prompts before they are sent to the LLM. Uses `microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank` (~110 MB BERT model, CPU-efficient). The model is lazy-loaded on the first request and cached in-process via `lru_cache`. The backend's `promptCompressionClient.ts` calls this service before every major LLM interaction (case analysis, Copilot agent mode, department request drafts, charge sheet narratives). Graceful fallback: if the service is unavailable or times out (60s), the original uncompressed text is passed to the LLM with a warning log. Enabled/disabled via `PROMPT_COMPRESSION_ENABLED`.
+
 **Ollama (gemma4:e2b)**
 The local LLM server. All text generation — analysis narratives, department letters, charge sheet sections, Copilot responses, diary drafts, translations — is served from here. Runs on the same machine as the backend.
 
-**Qdrant**
-The vector database. Two collections in use: one for the Legal Agent (legal sections + SOPs + Department Registry embeddings) and one for the IO Recommendation service (closed case embeddings). Queried via cosine similarity search.
+**Qdrant (with optional Scalar Quantization)**
+The vector database. Two collections in use: one for the Legal Agent (legal sections + SOPs + Department Registry embeddings) and one for the IO Recommendation service (closed case embeddings). Queried via cosine similarity search. **Scalar Quantization** is optionally enabled per collection to reduce the memory footprint by ~75% (32-bit floats → 8-bit integers) with minimal impact on retrieval accuracy. Configured via `quantization_enabled` and `quantization_always_ram` flags.
 
 ---
 
@@ -354,27 +392,84 @@ IO closes the investigation
           └─► SHO sees ranked IO list → selects and assigns
 ```
 
+### Flow 5 — Evidence Upload → Deepfake Detection → Confidence Score
+
+```
+Evidence file uploaded by officer (image / audio / video)
+  │
+  ├─► Browser uploads directly to Cloudinary (signed URL)
+  ├─► Backend creates Evidence record (processingStatus: PENDING)
+  ├─► Backend enqueues evidence processing job → Evidence Queue
+  │
+  └─► Evidence Worker picks up job (Complaint Intelligence Service)
+        ├─► [Standard pipeline] OCR / transcription / captioning / NER
+        ├─► AI metadata written back to Evidence in MongoDB
+        │
+        └─► Backend calls SightEngineService.evaluateConfidence()
+              ├─► Checks SIGHTENGINE_ENABLE_DEEPFAKE_CHECK flag
+              ├─► POST https://api.sightengine.com/1.0/check.json
+              │     params: api_user, api_secret, models="deepfake", url=<cloudinary_url>
+              ├─► Receives deepfake probability (0.0–1.0)
+              ├─► Normalizes to 0–100 integer → confidence_score
+              │     0–30  = Likely Real
+              │     30–70 = Uncertain (manual review recommended)
+              │     70–100= Likely AI-Generated/Manipulated
+              ├─► Updates Evidence.confidence_score in MongoDB
+              └─► If score ≥ 70: warning badge shown in Investigation Workspace
+```
+
+### Flow 6 — Offline Mutation Outbox → Auto-Sync (PWA)
+
+```
+Officer loses internet connection while working on a case
+  │
+  ├─► UI detects network loss → shows Offline Banner
+  ├─► SyncStatus indicator in navbar turns red ("Pending")
+  │
+  ├─► [While offline] Officer continues working:
+  │     ├─► Updates participant statements, case notes, checklist steps
+  │     ├─► Each mutation call (PATCH/POST) fails on network layer
+  │     └─► offlineApiClient.ts intercepts the failure
+  │           ├─► Reads cached case data from IndexedDB (Dexie.js)
+  │           ├─► Returns optimistic response to the UI
+  │           └─► Queues mutation in OutboxManager (persisted in IndexedDB)
+  │
+  ├─► [Case data access] On any GET call:
+  │     └─► offlineApiClient.ts → network fails → returns CaseCacheManager.getCase()
+  │           (LRU cache of up to 5 cases per officer, keyed by case_id + role)
+  │
+  └─► [Reconnect] Browser's navigator.onLine fires
+        ├─► SyncManager detects reconnection
+        ├─► OutboxManager.getPendingOperations() → ordered by dependency chain
+        ├─► Operations replayed sequentially:
+        │     ├─► Success: removed from outbox, UI updated
+        │     └─► Failure: retry_count++ (max 3), exponential backoff
+        │           After 3 failures: status → "failed", manual retry available
+        ├─► CaseCacheManager updated with fresh server data
+        └─► SyncStatus indicator turns green ("Synced")
+```
+
 ---
 
 ## 4. Component Communication
 
 **Frontend ↔ Backend**
-All communication is over HTTPS. Standard REST calls (JSON request/response) handle all data reads, writes, and actions. Analysis progress is delivered as a **Server-Sent Events (SSE)** stream — the browser opens a persistent connection and the backend pushes stage updates as the orchestrator progresses through each step. No WebSockets are used.
+All communication is over HTTPS. Standard REST calls (JSON request/response) handle all data reads, writes, and actions. Analysis progress is delivered as a **Server-Sent Events (SSE)** stream — the browser opens a persistent connection and the backend pushes stage updates as the orchestrator progresses through each step. The **Private Case Room** uses **Socket.io** WebSocket connections for real-time bidirectional messaging between IOs. No polling is needed for chat — messages are pushed instantly. The **PWA offline layer** (`offlineApiClient.ts`) intercepts failed network calls and serves cached responses from IndexedDB, queuing mutations in the outbox for replay when connectivity returns.
 
 **Backend ↔ Python Services**
-Synchronous HTTP calls over the local network (all services run on the same host in development). The backend sends a JSON request and awaits the response before continuing. Evidence processing is the exception — it is triggered via the BullMQ queue, so the backend is never blocked waiting for file processing to finish.
+Synchronous HTTP calls over the local network (all services run on the same host in development). The backend sends a JSON request and awaits the response before continuing. Evidence processing is the exception — it is triggered via the BullMQ queue, so the backend is never blocked waiting for file processing to finish. **Prompt compression** calls are made synchronously just before each LLM prompt is constructed, with a 60-second timeout and automatic fallback to the uncompressed text if the service is slow or unavailable.
 
 **Backend ↔ MongoDB**
-All reads and writes go through Mongoose ODM. The backend is the sole writer to MongoDB — no Python service touches the database directly. Python services return their results to the backend over HTTP, and the backend persists them.
+All reads and writes go through Mongoose ODM. The backend is the sole writer to MongoDB — no Python service touches the database directly. Python services return their results to the backend over HTTP, and the backend persists them. Sensitive data (evidence fields, chatroom messages) is transparently encrypted before writes and decrypted after reads by Mongoose hooks.
 
 **Backend ↔ Redis**
 Two distinct uses: the BullMQ job queues (evidence, email, diary PDF) communicate through Redis as their broker, and the SSE pub/sub channel uses a Redis topic to relay orchestrator progress from the analysis worker to the SSE endpoint that the browser is connected to.
 
 **AI Services ↔ Qdrant**
-Both the Legal Agent and the IO Recommendation service communicate directly with Qdrant over HTTP (port 6333). The Legal Agent queries the legal corpus collection. The IO Recommendation service both writes (on case closure) and queries (on IO assignment) the closed-case collection. The backend never talks to Qdrant directly — all vector operations go through the Python services.
+Both the Legal Agent and the IO Recommendation service communicate directly with Qdrant over HTTP (port 6333). The Legal Agent queries the legal corpus collection. The IO Recommendation service both writes (on case closure) and queries (on IO assignment) the closed-case collection. The backend never talks to Qdrant directly — all vector operations go through the Python services. Qdrant's **Scalar Quantization** can be enabled per collection to reduce memory usage by ~75% at minimal search quality cost.
 
 **Backend ↔ External Services**
-Gmail OAuth2 is used bidirectionally: outbound emails are sent via the Gmail API (department request letters), and the backend polls the same Gmail inbox on a configurable interval (default 60 seconds) to ingest department replies. Cloudinary is used for file storage — the backend generates a short-lived signed upload URL, sends it to the browser, and the browser uploads directly. The backend later fetches file metadata and public URLs from Cloudinary as needed.
+Gmail OAuth2 is used bidirectionally: outbound emails are sent via the Gmail API (department request letters), and the backend polls the same Gmail inbox on a configurable interval (default 60 seconds) to ingest department replies. Cloudinary is used for file storage — the backend generates a short-lived signed upload URL, sends it to the browser, and the browser uploads directly. **SightEngine** is called synchronously (with a configurable timeout, default 30 seconds) after evidence is processed to retrieve the deepfake confidence score, which is written back to the Evidence record in MongoDB.
 
 ---
 
@@ -423,12 +518,13 @@ All components run as separate processes, co-located on a single host with each 
 
 | Component | Runtime | Port |
 |---|---|---|
-| Next.js Frontend | Node.js | 3000 |
+| Next.js Frontend (PWA) | Node.js | 3000 |
 | Node.js Backend API | Node.js / Express | 5001 |
 | Complaint Intelligence Service | Python / Uvicorn | 8000 |
 | Florence-2 Service | Python / Uvicorn | 8002 |
 | IO Recommendation Service | Python / Uvicorn | 8003 |
 | Legal Agent Service | Python / Uvicorn | 8004 |
+| **Prompt Compression Service** | **Python / Uvicorn** | **8005** |
 | Ollama (gemma4:e2b) | Ollama | 11434 |
 | llama.cpp server (nomic embeddings) | llama.cpp | 8080 |
 | MongoDB | MongoDB | 27017 |
@@ -471,7 +567,7 @@ CRIME_OS/
 ├── backend/                           # Node.js / Express API (TypeScript)
 │   └── src/
 │       ├── app.ts                     # Express app setup, middleware registration
-│       ├── server.ts                  # HTTP server entry point
+│       ├── server.ts                  # HTTP server entry point + Socket.io setup
 │       ├── assets/fonts/              # NotoSansGujarati.ttf (embedded in PDFs)
 │       ├── config/                    # env.ts, database, redis, bullmq, cloudinary, logger
 │       ├── common/
@@ -486,12 +582,22 @@ CRIME_OS/
 │       │   ├── complaint/             # Complaint filing, status, FIR, evidence
 │       │   ├── departmentPortal/      # Department login, inbox, reply endpoints
 │       │   ├── investigation/         # Analysis, checklist, diary, participants,
-│       │   │                          #   charge sheet, copilot, escalation, custody
+│       │   │   │                      #   charge sheet, copilot, escalation, custody
+│       │   │   ├── models/
+│       │   │   │   ├── CaseRoomMessage.model.ts   # NEW: Private chatroom messages (AES-encrypted)
+│       │   │   │   └── Evidence.model.ts          # Updated: deepfake confidence_score, isEncrypted
+│       │   │   ├── plugins/
+│       │   │   │   └── evidenceEncryption.plugin.ts  # NEW: Mongoose plugin for AES-256-GCM at-rest encryption
+│       │   │   ├── services/
+│       │   │   │   └── caseRoomService.ts         # NEW: Encrypt/decrypt + paginate chatroom messages
+│       │   │   └── routes/
+│       │   │       └── investigation.routes.ts    # Updated: /room/messages, /room/eligibility
 │       │   ├── police/                # Officer profiles, station data
 │       │   ├── translation/           # Translation endpoint (proxies to Ollama)
 │       │   └── user/                  # User model & repository
 │       └── shared/
-│           ├── clients/               # legalAgentClient.ts, ioRecommendationClient.ts
+│           ├── clients/               # legalAgentClient.ts, ioRecommendationClient.ts,
+│           │                          #   promptCompressionClient.ts (NEW)
 │           ├── constants/             # Queue names, Redis key prefixes
 │           ├── enums/                 # Roles, gender, ID proof types
 │           ├── interfaces/            # IJwtPayload
@@ -502,11 +608,14 @@ CRIME_OS/
 │           ├── services/
 │           │   ├── email/             # Nodemailer email templates & sender
 │           │   ├── gmail/             # Gmail OAuth2 poll service
+│           │   ├── sightengine/
+│           │   │   └── SightEngineService.ts      # NEW: Deepfake confidence score via SightEngine API
 │           │   └── complaintIntelligenceService.ts
 │           └── utils/                 # analysisProgress (SSE pub), chargeSheetPdfGenerator,
+│                                      #   encryption.util.ts (NEW: AES-256-GCM),
 │                                      #   hash, otp, response helpers
 │
-├── frontend/                          # Next.js 14 App Router (TypeScript)
+├── frontend/                          # Next.js 14 App Router (TypeScript, PWA)
 │   └── src/
 │       ├── app/
 │       │   ├── (auth)/                # login/, register/, forgot-password/,
@@ -553,12 +662,21 @@ CRIME_OS/
 │       ├── context/
 │       │   ├── AuthContext.tsx        # JWT session state
 │       │   └── TranslationContext.tsx # Active language + translated text cache
-│       ├── hooks/                     # useAuth, useToast
+│       ├── hooks/                     # useAuth, useToast, useCaseData
 │       └── lib/
 │           ├── apiClient.ts           # Typed API call wrappers
 │           ├── axios.ts               # Axios instance + interceptors
 │           ├── types.ts               # Shared TypeScript types
-│           └── i18n/                  # Language definitions, i18n helpers
+│           ├── i18n/                  # Language definitions, i18n helpers
+│           └── offline/               # NEW: PWA offline-first layer
+│               ├── db.ts              # Dexie.js IndexedDB schema (cases + outbox tables)
+│               ├── caseCache.ts       # LRU case cache (max 5 per officer)
+│               ├── outbox.ts          # Mutation outbox: queue, replay, retry (LWW)
+│               ├── sync.ts            # Reconnect detection + outbox flush orchestrator
+│               ├── offlineApiClient.ts# Intercepts failed API calls → serves from cache
+│               ├── offlineHelpers.ts  # Helpers for optimistic UI updates
+│               ├── toastNotifier.ts   # Sync status toast notifications
+│               └── index.ts           # Public exports
 │
 ├── services/                          # Python FastAPI microservices
 │   ├── complaint_intelligence/        # Evidence processing pipeline  (:8000)
@@ -589,14 +707,20 @@ CRIME_OS/
 │   │   ├── onnx_reranker/             # Exported ONNX cross-encoder weights
 │   │   └── scripts/                   # evaluate_retrieval.py, run_legal_copilot.py
 │   │
-│   └── io-recommendation/             # IO recommendation service  (:8003)
+│   ├── io-recommendation/             # IO recommendation service  (:8003)
+│   │   └── app/
+│   │       ├── api/routes/            # POST /embed-case, POST /recommend-officers
+│   │       ├── services/              # embed_service, recommendation_service
+│   │       ├── repositories/          # Qdrant upsert + search
+│   │       ├── vector/                # nomic embedder (llama.cpp), Qdrant client
+│   │       ├── schemas/               # Pydantic request/response models
+│   │       └── core/                  # Config, logging
+│   │
+│   └── prompt_compression/            # NEW: LLMLingua-2 compression service  (:8005)
 │       └── app/
-│           ├── api/routes/            # POST /embed-case, POST /recommend-officers
-│           ├── services/              # embed_service, recommendation_service
-│           ├── repositories/          # Qdrant upsert + search
-│           ├── vector/                # nomic embedder (llama.cpp), Qdrant client
-│           ├── schemas/               # Pydantic request/response models
-│           └── core/                  # Config, logging
+│           ├── main.py                # FastAPI app: GET /health, POST /compress
+│           ├── compressor.py          # LLMLingua-2 wrapper (lazy-load + lru_cache)
+│           └── schemas.py             # Pydantic CompressRequest / CompressResponse
 │
 └── models/
     └── indictrans2/                   # IndicTrans2 model weights (translation, optional)

@@ -1,6 +1,9 @@
 import mongoose from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
 import { buildFactsObject } from './factsAssemblyService';
+import { buildGraphContextSummary } from './caseGraphService';
+import { compressPrompt } from '../../../shared/clients/promptCompressionClient';
+import env from '../../../config/env';
 import { callLegalAgent } from '../../../shared/clients/legalAgentClient';
 // import { callIoRecommendation } from '../../../shared/clients/ioRecommendationClient';
 import { buildFastPrompt, buildDeepPrompt, buildCorrectionPrompt } from './analysisPromptBuilder';
@@ -216,8 +219,25 @@ export class InvestigationOrchestrator {
 
     // 1. Facts Assembly
     logger.info(`[Orchestrator] [1/7] Assembling facts from MongoDB for caseId: ${caseId}`);
-    const factsObject = await buildFactsObject(caseId);
-    logger.info(`[Orchestrator] [1/7] Facts assembled — checklist: ${factsObject.checklist.summary.total} steps, evidence: ${factsObject.evidence.summary.total} items, diary: ${factsObject.recent_diary.length} entries`);
+      const [factsObject, rawGraphContextSummary] = await Promise.all([
+        buildFactsObject(caseId),
+        buildGraphContextSummary(caseId)
+      ]);
+      
+      let graphContextSummary = process.env.DISABLE_GRAPH_CONTEXT === 'true' ? '' : rawGraphContextSummary;
+      if (env.PROMPT_COMPRESSION_ENABLED && graphContextSummary && graphContextSummary.length > 1200) {
+        try {
+          const forceTokens = factsObject.entities.raw.map((e: any) => e.value).filter(Boolean);
+          const compressed = await compressPrompt(graphContextSummary, forceTokens, 0.6);
+          if (compressed) {
+             graphContextSummary = compressed;
+          }
+        } catch (err: any) {
+          logger.warn(`[Orchestrator] Failed to compress graphContextSummary, using raw: ${err.message}`);
+        }
+      }
+
+      logger.info(`[Orchestrator] [1/7] Facts assembled — checklist: ${factsObject.checklist.summary.total} steps, evidence: ${factsObject.evidence.summary.total} items, diary: ${factsObject.recent_diary.length} entries`);
     await publishProgress(caseId, 'facts_assembled');
 
     // 2. Retrieval
@@ -256,7 +276,7 @@ export class InvestigationOrchestrator {
     const deptWhitelist = activeDepts.map((d: any) => `  ${d.entity_id} → ${d.entity_name}`).join('\n');
     logger.debug(`[Orchestrator] Dept whitelist: ${activeDepts.length} active departments`);
 
-    const deepPrompt = buildDeepPrompt(factsObject, legalAgentResult, confidenceBreakdown, deptWhitelist, language);
+    const deepPrompt = buildDeepPrompt(factsObject, legalAgentResult, confidenceBreakdown, deptWhitelist, language, graphContextSummary);
     // const deepPrompt = buildDeepPrompt(factsObject, legalAgentResult, recommendationResult, confidenceBreakdown, deptWhitelist);
     const deepResponse = await deepCall(deepPrompt.system, deepPrompt.user, { jsonMode: true }) as any;
 

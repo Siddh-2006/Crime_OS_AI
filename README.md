@@ -17,9 +17,16 @@ For the technical architecture, component design, data flows, security model, an
    - [IO Workflow](#io-workflow)
    - [Case Closure & Vector Embedding](#case-closure--vector-embedding)
    - [Multi-Language Support](#multi-language-support)
-4. [Tech Stack](#4-tech-stack)
-5. [Dependencies & Requirements](#5-dependencies--requirements)
-6. [Setup & Installation](#6-setup--installation)
+4. [Advanced Features](#4-advanced-features)
+   - [Progressive Web App & Offline-First Support](#progressive-web-app--offline-first-support)
+   - [Evidence Encryption & Watermarking](#evidence-encryption--watermarking)
+   - [Multiple IO Collaboration & Private Chatroom](#multiple-io-collaboration--private-chatroom)
+   - [AI Deepfake Detection for Media](#ai-deepfake-detection-for-media)
+   - [Prompt Compression for Efficient LLM Processing](#prompt-compression-for-efficient-llm-processing)
+   - [Vector Quantization for Scalability](#vector-quantization-for-scalability)
+5. [Tech Stack](#5-tech-stack)
+6. [Dependencies & Requirements](#6-dependencies--requirements)
+7. [Setup & Installation](#7-setup--installation)
 
 ---
 
@@ -286,7 +293,234 @@ Every interface element, label, AI-generated content, analysis narrative, draft 
 
 ---
 
-## 4. Tech Stack
+## 4. Advanced Features
+
+### Progressive Web App & Offline-First Support
+
+Crime OS is deployed as a **Progressive Web App (PWA)** with full offline-first capability, allowing officers to continue working on cases even without internet connectivity.
+
+**How it works:**
+
+1. **Installation** — The application can be installed on any device (desktop, tablet, smartphone) like a native app, with a dedicated home screen icon and app launcher integration.
+
+2. **Offline-First Architecture**
+   - **Automatic Caching** — When an officer opens a case online, the entire case workspace is automatically cached locally using **IndexedDB**
+   - **Cached Case Data** — Up to 5 most recently accessed cases are stored per officer (LRU eviction)
+   - **All Workspace Data** — Cached data includes: AI analysis snapshots, investigation checklists, case diary entries, evidence metadata, case participants, requests, and all other workspace tabs
+
+3. **Offline Mutations** — When offline, officers can continue to:
+   - Update case participants and statements
+   - Add diary entries and notes
+   - Mark checklist steps as complete
+   - Add evidence metadata
+   - All mutations are **automatically queued** in an outbox and persisted across browser refresh
+
+4. **Automatic Sync** — When internet is restored:
+   - The application automatically detects the reconnection
+   - All queued mutations are **replayed in order** to the server
+   - Failed operations are **retried up to 3 times** with exponential backoff
+   - Conflict resolution uses **Last-Write-Wins (LWW)** at the field level — independent field updates don't conflict
+   - Officers receive real-time sync status notifications
+
+5. **Evidence Management Offline** — Evidence file URLs are cached from Cloudinary, and officers have the option to manually download evidence files to their device for offline viewing during investigations.
+
+6. **UI Indicators** — The interface provides:
+   - Sync status in the navbar (green = synced, yellow = syncing, red = pending)
+   - Offline banner when disconnected
+   - Pending operation counter
+   - Manual sync button for immediate retry
+
+**Implementation Details:**
+- Uses `@ducanh2912/next-pwa` for service worker generation
+- Client-side database: `Dexie.js` (IndexedDB wrapper)
+- No existing API or backend code was modified
+- Transparent fallback — existing axios calls automatically use cached data on network errors
+
+---
+
+### Evidence Encryption & Watermarking
+
+Sensitive evidence and case documents are protected with encryption and watermarking to ensure document authenticity and prevent unauthorized access.
+
+**Encryption:**
+- **Algorithm** — AES-256-GCM (Advanced Encryption Standard, 256-bit key, Galois/Counter Mode)
+- **Application** — All sensitive case room messages and encrypted metadata fields
+- **Key Management** — Encryption key is loaded from the `ENCRYPTION_KEY` environment variable (32 bytes / 256 bits)
+- **Implementation** — Each encryption generates a random IV (Initialization Vector) and authentication tag, stored alongside the ciphertext for decryption. Format: `enc:<iv>:<ciphertext>:<authTag>`
+- **Transparent Decryption** — When encrypted data is retrieved from the database, it is automatically decrypted before being sent to the client
+
+**Watermarking:**
+- **Applied to** — All generated PDFs: charge sheets, FIRs, and case diary documents
+- **Watermark Format** — Organization logo (SVG, semi-transparent at 15% opacity) centered on every page
+- **Position** — Centered on the page, scaled to 65% of page width to avoid obscuring content
+- **Purpose** — Provides visual proof of document authenticity and prevents unauthorized duplication
+- **Implementation** — Using PDFKit with SVG-to-PDF conversion during PDF generation
+
+**Audit Trail** — All encrypted messages include:
+- Sender identification (officer name and ID)
+- Precise timestamp
+- Message ID for tracking
+
+---
+
+### Multiple IO Collaboration & Private Chatroom
+
+Cases can be assigned to **multiple Investigating Officers (IOs)** working collaboratively. The **Private Chatroom** provides secure, real-time communication between all IOs assigned to a case.
+
+**Multiple IO Assignment:**
+- Cases can have multiple IOs assigned simultaneously for complex or high-priority investigations
+- All assigned IOs have full access to the Investigation Workspace
+- Each IO's actions are logged and attributed to their profile
+
+**Private Chatroom Features:**
+
+1. **Real-Time Messaging** — Using **Socket.io**:
+   - Secure WebSocket connection with JWT authentication
+   - Real-time message delivery to all assigned IOs
+   - Typing indicators show when colleagues are composing messages
+   - Online/offline status tracking
+
+2. **Encrypted Messages**
+   - All chatroom messages are encrypted with AES-256-GCM (same as sensitive evidence)
+   - Messages are stored encrypted in the database
+   - Automatic decryption when retrieved for display
+   - Only officers assigned to the case can access the room
+
+3. **Message History**
+   - Complete message history is persisted and searchable
+   - Paginated message retrieval (50 messages per page)
+   - Messages timestamped to the second
+   - Includes sender identification (name, badge, role)
+
+4. **Access Control**
+   - Only officers assigned to the case can join the room
+   - SHOs can also access case rooms for oversight
+   - Room eligibility check: minimum 2 assigned IOs required
+   - Automatic cleanup of locks when officers disconnect
+
+5. **Case Diary Integration**
+   - The chatroom UI displays the Case Diary Timeline alongside messages
+   - Officers can reference diary events while chatting
+   - Resizable split view for simultaneous diary and message review
+
+**Use Cases:**
+- Joint investigation discussions
+- Coordinating evidence collection strategies
+- Reviewing AI analysis recommendations together
+- Escalating complex issues before finalizing decisions
+
+---
+
+### AI Deepfake Detection for Media
+
+Every uploaded piece of evidence (images, audio, and video) is automatically scanned for **deepfake indicators** using the **SightEngine API**, which employs state-of-the-art machine learning to detect AI-generated or manipulated media.
+
+**Detection Coverage:**
+- **Images** — Detects AI-generated images, morphed faces, swapped faces
+- **Audio** — Identifies synthetic or voice-cloned speech
+- **Video** — Analyzes video frames and audio track for deepfake indicators
+
+**Workflow:**
+
+1. **Automatic Scanning** — When evidence is uploaded and processed by the Complaint Intelligence service, the deepfake check is triggered automatically
+2. **Confidence Scoring** — Each media item receives a **Deepfake Confidence Score** (0–100):
+   - `0–30` = Likely Real
+   - `30–70` = Uncertain (manual review recommended)
+   - `70–100` = Likely AI-Generated/Manipulated
+3. **Metadata Attachment** — The score and detection details are attached to the evidence metadata
+4. **Officer Alert** — If a score > 70, the evidence is flagged in the Investigation Workspace with a warning badge
+5. **Contextual Logging** — Detection results are logged with evidence ID, case ID, and timestamp for audit trails
+
+**Integration with Investigation:**
+- Detections appear in the Evidence panel alongside all other AI analysis
+- Officers can note deepfake indicators when building the case against a suspect
+- Relevant legal sections (documentary evidence BSA sections) are suggested alongside deepfake warnings
+
+**Configuration:**
+- Deepfake detection can be enabled/disabled via the `SIGHTENGINE_ENABLE_DEEPFAKE_CHECK` environment variable
+- API credentials: `SIGHTENGINE_API_USER` and `SIGHTENGINE_API_KEY` (obtained from SightEngine)
+- Timeout: Configurable via `SIGHTENGINE_TIMEOUT_MS` (default 30 seconds)
+
+---
+
+### Prompt Compression for Efficient LLM Processing
+
+The platform integrates **LLMLingua-2**, a state-of-the-art prompt compression model, to optimize all LLM calls. This reduces token consumption, latency, and costs while maintaining response quality.
+
+**How It Works:**
+
+1. **Compression Algorithm** — **LLMLingua-2** (microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank):
+   - BERT-based model (~110 MB, CPU-efficient)
+   - Identifies and removes redundant or low-relevance tokens
+   - Preserves critical information and entities
+
+2. **Compression Service** — Runs as an independent Python FastAPI service (port 8005):
+   - Lazy-loads the model on first request
+   - Caches model in memory for fast compression (typical: <100ms)
+   - Supports configurable compression rates (0.1–0.99)
+
+3. **Automatic Integration** — Prompt compression is transparent to the application:
+   - Case analysis: Full investigation text compressed before being sent to Gemma
+   - Copilot queries: Legal context and case data compressed before RAG
+   - Department request letters: Long case summaries compressed
+   - Charge sheet narratives: Detailed evidence lists compressed
+
+4. **Compression Settings**:
+   - **Default rate**: 0.5 (keep 50% of tokens)
+   - **Force tokens**: Critical terms (dates, phone numbers, names) are never removed
+   - **Target token count**: Can specify exact output length instead of a ratio
+
+5. **Token Optimization**:
+   - Extracts and preserves dates (YYYY-MM-DD format)
+   - Preserves phone numbers (+91-XXX or 10 digits)
+   - Preserves key person/entity names
+   - Removes boilerplate and repetition
+
+**Benefits:**
+- **30–50% reduction** in tokens sent to the LLM
+- **Faster response times** — smaller prompts = faster inference
+- **Cost reduction** — fewer tokens used
+- **Maintained quality** — compression preserves semantic meaning
+
+**Implementation:**
+- Integrated into the Complaint Intelligence service's case understanding engine
+- Used in the PromptCompressionClient in the backend
+- Graceful fallback — if compression fails, uncompressed text is used
+
+---
+
+### Vector Quantization for Scalability
+
+The **Qdrant vector database** supports optional **Scalar Quantization** to reduce the memory footprint of stored embeddings while maintaining search quality.
+
+**How It Works:**
+
+1. **Quantization** — Instead of storing full 32-bit float vectors, quantization reduces vectors to lower-bit representations (e.g., 8-bit):
+   - **Memory reduction**: ~75% less space per vector
+   - **Search quality**: Minimal impact on retrieval accuracy (typically <2% degradation)
+   - **Trade-off**: Slight latency increase due to dequantization during search
+
+2. **Configuration**:
+   - `quantization_enabled`: Boolean flag to enable/disable
+   - `quantization_always_ram`: When true, quantized vectors are decompressed into RAM during search (default)
+   - Can be configured per Qdrant collection
+
+3. **Collections Affected**:
+   - **Legal sections** collection (BNS, BNSS, BSA, SOPs, Department Registry)
+   - **Closed case embeddings** collection (for IO Recommendation)
+
+4. **When to Use**:
+   - **Enabled**: When hosting large case databases with thousands of closed cases
+   - **Disabled**: In development or small-scale deployments where memory is not constrained
+
+**Benefits:**
+- Reduces Qdrant memory footprint significantly
+- Allows scaling to larger legal corpus without increased hardware costs
+- Minimal performance degradation in search quality
+
+---
+
+## 5. Tech Stack
 
 ### Application Layer
 
@@ -384,7 +618,7 @@ This gives the system a smooth, low-latency multilingual experience without the 
 
 ---
 
-## 5. Dependencies & Requirements
+## 6. Dependencies & Requirements
 
 ### System Prerequisites
 
@@ -440,6 +674,9 @@ This gives the system a smooth, low-latency multilingual experience without the 
 | `react-markdown` | ^10.1 | Renders AI markdown responses |
 | `lucide-react` | ^1.24 | Icon library |
 | `js-cookie` | ^3.0 | Cookie access in browser |
+| `@ducanh2912/next-pwa` | latest | PWA / service worker generation |
+| `dexie` | ^4 | IndexedDB wrapper for offline case caching |
+| `socket.io-client` | latest | WebSocket client for Private Chatroom |
 
 ---
 
@@ -499,6 +736,15 @@ This gives the system a smooth, low-latency multilingual experience without the 
 | `httpx` | ≥0.27 | Calls llama.cpp embedding server |
 | `pydantic-settings` | ≥2.2 | Config management |
 
+### Python — Prompt Compression Service
+
+| Package | Version | Purpose |
+|---|---|---|
+| `fastapi` | ≥0.111 | HTTP API framework |
+| `uvicorn[standard]` | ≥0.30 | ASGI server |
+| `llmlingua` | latest | LLMLingua-2 prompt compressor |
+| `torch` | ≥2.0 | Model inference backend |
+
 ---
 
 ### External Services Required
@@ -508,10 +754,11 @@ This gives the system a smooth, low-latency multilingual experience without the 
 | **MongoDB** | Primary database | Local install or MongoDB Atlas URI |
 | **Cloudinary** | File + PDF storage | Create a free account at cloudinary.com |
 | **Gmail account** | Department email dispatch + polling | Enable OAuth2 in Google Cloud Console |
+| **SightEngine** | AI deepfake detection for media evidence | Create account at sightengine.com (free tier available) |
 
 ---
 
-## 6. Setup & Installation
+## 7. Setup & Installation
 
 ### Step 1 — Clone & verify Python version
 
@@ -557,6 +804,7 @@ pip install -r services/complaint_intelligence/requirements.txt
 pip install -r services/florence_service/requirements.txt
 pip install -r services/legal_agent/requirements.txt
 pip install -r services/io-recommendation/requirements.txt
+pip install -r services/prompt_compression/requirements.txt
 
 # Download spaCy NER model (required by Complaint Intelligence)
 python -m spacy download en_core_web_sm
@@ -610,6 +858,11 @@ Required values to set in `backend/.env`:
 | `GMAIL_CLIENT_SECRET` | — |
 | `GMAIL_REFRESH_TOKEN` | Generate via Google OAuth Playground |
 | `GMAIL_POLICE_EMAIL` | Gmail address used for sending/receiving |
+| `ENCRYPTION_KEY` | 32-byte hex string for AES-256-GCM evidence encryption |
+| `SIGHTENGINE_API_USER` | SightEngine account user ID (deepfake detection) |
+| `SIGHTENGINE_API_KEY` | SightEngine API secret key |
+| `SIGHTENGINE_ENABLE_DEEPFAKE_CHECK` | `true` / `false` — enable or disable deepfake scanning (default: true) |
+| `SIGHTENGINE_TIMEOUT_MS` | Timeout in ms for SightEngine API calls (default: 30000) |
 
 All other values (ports, Ollama URL, service URLs) use sensible defaults and typically do not need to change for local development.
 
@@ -666,8 +919,9 @@ This opens separate terminal windows for each service in the correct startup ord
 3. IO Recommendation — port 8003
 4. Complaint Intelligence — port 8001
 5. Florence-2 Service — port 8002
-6. Backend (Node.js) — port 5001
-7. Frontend (Next.js) — port 3000
+6. Prompt Compression — port 8005
+7. Backend (Node.js) — port 5001
+8. Frontend (Next.js) — port 3000
 
 The platform is ready when all windows show their respective startup messages. Open `http://localhost:3000` to access the application.
 
@@ -683,6 +937,7 @@ The platform is ready when all windows show their respective startup messages. O
 | Florence-2 | 8002 |
 | IO Recommendation | 8003 |
 | Legal Agent | 8004 |
+| Prompt Compression | 8005 |
 | Ollama | 11434 |
 | llama.cpp (nomic embeddings) | 8080 |
 | MongoDB | 27017 |

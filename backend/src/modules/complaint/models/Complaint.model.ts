@@ -21,6 +21,7 @@ export interface IEvidenceMetadata {
   uploadedBy: Types.ObjectId;
   uploadedAt: Date;
   processingStatus: 'PENDING' | 'PROCESSED' | 'FAILED';
+  hasUnreadDepartmentResponse?: boolean;
   thumbnailUrl?: string;
   applicableSections?: Array<{ code: string; title: string; reason?: string }>;
   aiMetadata?: {
@@ -155,6 +156,7 @@ export interface IComplaint extends Document {
   investigationStartedAt?: Date;
 
   processingStatus: 'PENDING' | 'PROCESSED' | 'FAILED';
+  hasUnreadDepartmentResponse?: boolean;
   complaintIntelligence: IComplaintIntelligence;
   credibilityMetrics?: ICredibilityMetrics;
 
@@ -301,6 +303,7 @@ const ComplaintSchema = new Schema<IComplaint>(
       default: () => ({}),
     },
 
+    hasUnreadDepartmentResponse: { type: Boolean, default: false },
     isDeleted: { type: Boolean, default: false, required: true },
   },
   {

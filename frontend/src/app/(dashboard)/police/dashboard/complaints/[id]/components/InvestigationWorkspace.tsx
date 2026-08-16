@@ -1176,7 +1176,7 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
             <div key={`req-${idx}`} className="bg-surface-elevated/50 border border-dashed border-border rounded-2xl p-4 shadow-xs flex gap-3 opacity-60">
               <div className="text-2xl">⏳</div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-text-primary truncate">{req}</p>
+                <p className="text-sm font-bold text-text-primary truncate">Evidence Request - {idx + 1}</p>
                 <p className="text-xs text-text-secondary capitalize">Requested / Yet to upload</p>
                 <div className="mt-2">
                   <span className="text-[9px] font-mono font-bold px-2.5 py-0.5 rounded-full border bg-surface text-text-secondary border-border">
@@ -1346,7 +1346,7 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
               >
                 <div className="text-2xl group-hover:scale-110 transition-transform">{evidenceTypeIcon[ev.type] ?? '📄'}</div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-text-primary truncate group-hover:text-brand-primary transition-colors">{ev.title || ev.evidence_id}</p>
+                  <p className="text-sm font-bold text-text-primary truncate group-hover:text-brand-primary transition-colors">{ev.title || `Evidence Item ${ev.status === "processing" ? "(Processing)" : ""}`}</p>
                   <p className="text-xs text-text-secondary capitalize">{ev.type?.replace(/_/g, ' ')}</p>
                   <div className="mt-1">
                     <span className="text-[10px] font-mono font-medium text-text-secondary bg-surface-elevated px-2 py-0.5 rounded-md border border-border">
@@ -2295,8 +2295,8 @@ function OriginalComplaintPanel({ complaint }: { complaint: any | null }) {
             Attached Evidence ({complaint.evidence.length})
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {complaint.evidence.map((file: any) => (
-              <div key={file.publicId} className="flex items-center justify-between gap-3 p-3.5 rounded-xl border border-border bg-surface hover:bg-surface-elevated transition-colors shadow-xs">
+            {complaint.evidence.map((file: any, index: number) => (
+              <div key={file.id || `evidence-${index}`} className="flex items-center justify-between gap-3 p-3.5 rounded-xl border border-border bg-surface hover:bg-surface-elevated transition-colors shadow-xs">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <FileText size={18} className="text-brand-primary flex-shrink-0" />
                   <div className="min-w-0">

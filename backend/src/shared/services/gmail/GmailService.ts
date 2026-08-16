@@ -27,7 +27,6 @@ import { RequestThread } from '../../../modules/investigation/models/RequestThre
 import { CaseChecklist } from '../../../modules/investigation/models/CaseChecklist.model';
 import { Evidence } from '../../../modules/investigation/models/Evidence.model';
 import { DiaryEntry } from '../../../modules/investigation/models/DiaryEntry.model';
-import { Complaint } from '../../../modules/complaint/models/Complaint.model';
 import { ComplaintStatus } from '../../../modules/complaint/enums/complaintStatus.enum';
 import { InvestigationOrchestrator } from '../../../modules/investigation/services/investigationOrchestrator';
 
@@ -168,6 +167,10 @@ async function ingestResponse(opts: {
   request.response_ref = responseContent;
   request.response_at = new Date();
   await request.save();
+
+    const { Complaint } = require('../../../modules/complaint/models/Complaint.model');
+    await Complaint.findByIdAndUpdate(request.case_id, { hasUnreadDepartmentResponse: true });
+
 
   // 3. Generate upload token for Python AI Pipeline
   let uploadToken = '';

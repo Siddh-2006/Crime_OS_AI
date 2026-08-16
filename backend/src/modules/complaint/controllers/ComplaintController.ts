@@ -1,8 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { Blob } from 'buffer';
 import { ComplaintService } from '../services/ComplaintService';
+import { Complaint } from '../models/Complaint.model';
 import { sendSuccess } from '../../../shared/utils/response.util';
 import { HttpStatusCode } from '../../../common/enums/httpStatus.enum';
+import { NotFoundError } from '../../../common/errors/NotFoundError';
 import env from '../../../config/env';
 import logger from '../../../config/logger';
 
@@ -283,6 +285,32 @@ export class ComplaintController {
       const { id } = req.params;
       const complaint = await this.complaintService.rerunComplaintIntelligencePipeline(id);
       sendSuccess(res, HttpStatusCode.OK, 'Complaint Intelligence pipeline re-triggered successfully', complaint);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  markRead = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const complaint = await Complaint.findByIdAndUpdate(id, { hasUnreadDepartmentResponse: false }, { new: true });
+      if (!complaint) throw new NotFoundError('Complaint not found');
+      
+      const { DepartmentRequest } = require('../../investigation/models/DepartmentRequest.model');
+      await DepartmentRequest.updateMany({ case_id: id }, { isRead: true });
+
+      sendSuccess(res, HttpStatusCode.OK, 'Marked as read');
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  ingestClosedCase = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const officerId = req.user!.sub;
+      await this.complaintService.triggerAIEmbedding(id, officerId);
+      sendSuccess(res, HttpStatusCode.OK, 'Case ingestion triggered successfully');
     } catch (err) {
       next(err);
     }

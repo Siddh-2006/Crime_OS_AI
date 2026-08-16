@@ -84,7 +84,8 @@ export function buildDeepPrompt(
   // recommendationResult: any,
   confidenceBreakdown: ConfidenceBreakdown,
   deptEntityWhitelist: string = '(no departments available)',
-  language: string = 'en'
+  language: string = 'en',
+  graphContextSummary: string = ''
 ): PromptPayload {
   const system = `You are a Senior Investigative Officer AI. 
 Your job is to read case facts, SOPs (legal agent), similar historical cases (recommendations), and a computed algorithmic confidence breakdown, then generate a strict JSON response.
@@ -93,6 +94,7 @@ Applicable legal sections remain at the CASE level only. Do not attach them to s
 
 REQUIREMENTS:
 1. Output strictly valid JSON matching the exact schema provided below.
+  1a. Use the ENTITY RELATIONSHIP GRAPH section to identify non-obvious connections between participants — a shared identifier between two participants is strong investigative signal and should influence participant_recommendations and ranked_next_steps.
 2. ranked_next_steps MUST be highly detailed, case-specific, and actionable. You MUST invent custom, precise steps tailored to the Case Facts. For example, instead of a generic "Review Evidence", write "Cross-check WhatsApp screenshots and freeze HDFC bank account ending in 1234". If a phone number is present in the facts, add a step to "Request CDR for phone number X". DO NOT output generic, vague steps.
 3. narrative_summary MUST act as an intelligent investigative assistant. It must explain the current state of the investigation, explicitly mention the factors from the confidence breakdown (evidence coverage, checklist progress, corroboration, contradictions), and clearly outline potential risks or gaps in the investigation.
 4. suggested_legal_sections MUST provide the full case-level list of applicable legal sections supported by the provided legal context. Return an array of objects, not strings. Each object must contain:
@@ -193,6 +195,10 @@ ${JSON.stringify((sanitizeFacts(facts)?.evidence?.items || []).map((item: any) =
 
 === ALGORITHMIC CONFIDENCE BREAKDOWN ===
 ${JSON.stringify(confidenceBreakdown, null, 2)}
+
+
+  ${graphContextSummary ? `\n  === ENTITY RELATIONSHIP GRAPH ===\n  ${graphContextSummary}\n` : ''}
+
 
 === LEGAL / SOP CONTEXT ===
 ${JSON.stringify(legalAgentResult, null, 2)}

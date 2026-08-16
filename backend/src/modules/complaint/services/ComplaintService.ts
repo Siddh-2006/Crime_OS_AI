@@ -1255,6 +1255,163 @@ export class ComplaintService {
   }
 
   // ─── Close Complaint / Case (IO / SHO Flow) ─────────────────────────────────
+  
+  async triggerAIEmbedding(id: string, officerId: string): Promise<void> {
+    const complaint = await this.complaintRepository.findById(id);
+    if (!complaint) throw new NotFoundError('Complaint');
+    if (complaint.status !== ComplaintStatus.CLOSED) throw new ValidationError('Only closed cases can be embedded');
+
+    const officer = await Officer.findById(officerId);
+    if (!officer) {
+      throw new NotFoundError('Officer');
+    }
+
+    // Dynamically load models to avoid circular dependencies
+    const { DiaryEntry } = require('../../investigation/models/DiaryEntry.model');
+    const { DepartmentRequest } = require('../../investigation/models/DepartmentRequest.model');
+    const { CaseChecklist } = require('../../investigation/models/CaseChecklist.model');
+    const { CaseParticipant } = require('../../investigation/models/CaseParticipant.model');
+    const { CaseEntity } = require('../../investigation/models/CaseEntity.model');
+    const { AnalysisSnapshot } = require('../../investigation/models/AnalysisSnapshot.model');
+    const { ChargeSheet } = require('../../investigation/models/ChargeSheet.model');
+    const { ArrestWarrant } = require('../../investigation/models/ArrestWarrant.model');
+
+    const [
+      diaryEntries,
+      deptRequests,
+      checklists,
+      participants,
+      entities,
+      snapshots,
+      chargeSheets,
+      arrestWarrants
+    ] = await Promise.all([
+      DiaryEntry.find({ case_id: complaint._id }).sort({ timestamp: 1 }).lean(),
+      DepartmentRequest.find({ case_id: complaint._id }).lean(),
+      CaseChecklist.find({ case_id: complaint._id }).lean(),
+      CaseParticipant.find({ case_id: complaint._id }).lean(),
+      CaseEntity.find({ case_id: complaint._id }).lean(),
+      AnalysisSnapshot.find({ case_id: complaint._id }).sort({ created_at: -1 }).limit(3).lean(),
+      ChargeSheet.find({ case_id: complaint._id }).lean(),
+      ArrestWarrant.find({ case_id: complaint._id }).lean(),
+    ]);
+
+    const lastSummary = complaint.crimeSummaryHistory?.[complaint.crimeSummaryHistory.length - 1]?.content;
+    const lastNotes = complaint.investigationNotesHistory?.[complaint.investigationNotesHistory.length - 1]?.content;
+    const lastSections = complaint.legalSectionsHistory?.[complaint.legalSectionsHistory.length - 1]?.content;
+    let sectionsList: string[] = [];
+    try {
+      sectionsList = JSON.parse(lastSections || '[]');
+      if (!Array.isArray(sectionsList)) sectionsList = [lastSections!];
+    } catch {
+      if (lastSections) sectionsList = [lastSections];
+    }
+
+    const station = await PoliceStation.findById(complaint.policeStation);
+
+    const payload = {
+      firId: complaint._id.toString(),
+      complaintId: complaint._id.toString(),
+      officerId: officerId,
+      stationId: station?._id?.toString(),
+      district: station?.district || 'Unknown District',
+      firNumber: complaint.firNumber || 'N/A',
+      status: 'CLOSED',
+      closedDate: new Date().toISOString(),
+      createdAt: complaint.createdAt.toISOString(),
+      crimeCategory: complaint.category,
+      crimeSubCategory: complaint.crimeCategory || '',
+      incidentSummary: complaint.shortDescription,
+      modusOperandi: lastSummary || complaint.shortDescription,
+      evidenceSummary: complaint.evidence?.map((e: any) => `${e.originalFilename} (${e.mimeType})`).join(', ') || 'None',
+      investigationSummary: lastNotes || complaint.detailedDescription,
+      sections: sectionsList,
+      location: complaint.incidentPlace,
+
+      complaintIntelligence: complaint.complaintIntelligence ? {
+        crimeType: (complaint.complaintIntelligence as any).crimeType,
+        priority: (complaint.complaintIntelligence as any).priority,
+        confidence: (complaint.complaintIntelligence as any).confidence,
+        summary: (complaint.complaintIntelligence as any).summary,
+        missingInformation: (complaint.complaintIntelligence as any).missingInformation || [],
+        recommendedEvidence: (complaint.complaintIntelligence as any).recommendedEvidence || []
+      } : null,
+      
+      diaryEntries: (diaryEntries as any[]).map(d => ({
+        timestamp: d.timestamp?.toISOString?.() || '',
+        content: d.content,
+        activityType: d.activity_type,
+        sentiment: d.ai_analysis?.sentiment,
+        keyFindings: d.ai_analysis?.key_findings || []
+      })),
+
+      caseChecklist: (checklists as any[]).map(c => ({
+        category: c.category,
+        title: c.title,
+        status: c.status,
+        completedAt: c.completed_at?.toISOString?.() || ''
+      })),
+
+      caseEntities: (entities as any[]).map(e => ({
+        entityType: e.entity_type,
+        name: e.name,
+        aliases: e.aliases || [],
+        riskScore: e.risk_score,
+        notes: e.notes
+      })),
+
+      analysisSnapshots: (snapshots as any[]).map(s => ({
+        createdAt: s.created_at?.toISOString?.() || '',
+        triggerEvent: s.trigger_event,
+        overallProgressScore: s.insights?.overall_progress_score,
+        criticalGaps: s.insights?.critical_gaps || [],
+        nextSteps: s.insights?.next_steps_recommended || []
+      })),
+
+      departmentRequests: (deptRequests as any[]).map(r => ({
+        recipientType: r.recipient_type,
+        status: r.status,
+        sentAt: r.sent_at?.toISOString?.() || '',
+        responseAt: r.response_at?.toISOString?.() || '',
+        hasResponse: !!r.response_ref
+      })),
+
+      chargeSheet: (chargeSheets as any[]).map(c => ({
+        status: c.status,
+        filedAt: c.filed_at?.toISOString?.() || '',
+        accusedNames: (c.accused_details || []).map((a: any) => a.name),
+        sectionsApplied: (c.final_sections_applied || []).map((s: any) => s.code || s)
+      })),
+
+      participants: (participants as any[])
+        .filter(p => p.role !== 'IO' && p.role !== 'SHO' && p.role !== 'Citizen')
+        .map(p => ({
+          role: p.role,
+          involvementLevel: p.involvement_level,
+          statementSummary: p.statements?.[0]?.content?.slice(0, 200) || '',
+        })),
+
+      arrestWarrants: (arrestWarrants as any[]).map(w => ({
+        accusedName: w.accused_name,
+        status: w.status,
+        appliedSections: (w.applied_sections || []).map((s: any) => s.code || s),
+        magistrateApprovalStatus: w.magistrate_approval_status,
+        arrestedAt: w.arrested_at?.toISOString?.() || '',
+        producedBeforeCourtAt: w.produced_before_court_at?.toISOString?.() || '',
+      })),
+    };
+
+    try {
+      const aiUrl = `${env.IO_RECOMMENDATION_URL}/embed-case`;
+      logger.info('Sending manual closed FIR payload to AI service', { aiUrl, firId: payload.firId });
+      axios.post(aiUrl, payload).catch(err => {
+        logger.error('Background AI embedding request failed', { error: err.message });
+      });
+    } catch (err: any) {
+      logger.error('Failed to trigger AI embedding', { error: err.message });
+    }
+  }
+
   async closeComplaint(id: string, officerId: string, ip: string): Promise<IComplaint> {
     const officer = await Officer.findById(officerId);
     if (!officer || (officer.role !== 'IO' && officer.role !== 'SHO')) {

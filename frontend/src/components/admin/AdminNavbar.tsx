@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ShieldCheck, Building2, Users, LogOut } from 'lucide-react';
+import { ShieldCheck, Building2, Users, LogOut, Database } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { APP_ROUTES } from '@/lib/constants';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -20,6 +20,12 @@ const NAV_ITEMS = [
     href: APP_ROUTES.ADMIN_DEPARTMENTS,
     icon: <Building2 size={16} />,
     matchPrefix: '/admin/departments',
+  },
+  {
+    label: 'Knowledge Base (RAG)',
+    href: '/admin/rag-ingestion',
+    icon: <Database size={16} />,
+    matchPrefix: '/admin/rag-ingestion',
   },
 ];
 

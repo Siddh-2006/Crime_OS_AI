@@ -156,7 +156,7 @@ export default function AdminDepartmentsPage(): React.ReactElement {
   const visible = showInactive ? departments : departments.filter(d => d.isActive);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-surface flex flex-col">
       <ToastContainer toasts={toasts} onRemove={removeToast} />
       <AdminNavbar />
 
@@ -164,8 +164,8 @@ export default function AdminDepartmentsPage(): React.ReactElement {
         {/* Toolbar */}
         <div className="flex flex-wrap justify-between items-center mb-6 gap-3">
           <div className="flex items-center gap-4">
-            <h2 className="text-xl font-semibold text-gray-800">Department Registry</h2>
-            <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+            <h2 className="text-xl font-semibold text-text-primary">Department Registry</h2>
+            <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer">
               <input
                 type="checkbox"
                 checked={showInactive}
@@ -195,25 +195,25 @@ export default function AdminDepartmentsPage(): React.ReactElement {
                     <h3 className="font-bold text-base text-[#1a237e] truncate" title={dept.entity_name}>
                       {dept.entity_name}
                     </h3>
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded ${dept.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'}`}>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded ${dept.isActive ? 'bg-green-100 text-green-800' : 'bg-surface-elevated text-text-muted'}`}>
                       {dept.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-400 font-mono mb-3">{dept.entity_id}</p>
+                  <p className="text-xs text-text-secondary font-mono mb-3">{dept.entity_id}</p>
 
-                  <div className="text-sm text-gray-700 space-y-1">
+                  <div className="text-sm text-text-primary space-y-1">
                     <p><span className="font-medium">Category:</span> {dept.category}</p>
                     <p><span className="font-medium">Confidence:</span> {dept.confidence}</p>
-                    <p><span className="font-medium">Email:</span> {dept.contact_email || <span className="text-gray-400 italic">not set</span>}</p>
+                    <p><span className="font-medium">Email:</span> {dept.contact_email || <span className="text-text-secondary italic">not set</span>}</p>
                     {dept.qdrant_uuid && (
-                      <p className="text-xs text-gray-400 font-mono truncate" title={dept.qdrant_uuid}>
+                      <p className="text-xs text-text-secondary font-mono truncate" title={dept.qdrant_uuid}>
                         Vector: {dept.qdrant_uuid.slice(0, 16)}…
                       </p>
                     )}
                   </div>
                 </div>
 
-                <div className="flex space-x-2 mt-4 pt-4 border-t border-gray-100">
+                <div className="flex space-x-2 mt-4 pt-4 border-t border-input-border">
                   <Button variant="ghost" size="sm" onClick={() => openEditModal(dept)} className="flex-1">
                     <Edit2 size={14} className="mr-1" /> Edit
                   </Button>
@@ -241,8 +241,8 @@ export default function AdminDepartmentsPage(): React.ReactElement {
             ))}
 
             {visible.length === 0 && (
-              <div className="col-span-full py-12 text-center text-gray-500 bg-white rounded-lg border border-dashed border-gray-300">
-                <Building2 size={48} className="mx-auto mb-4 text-gray-300" />
+              <div className="col-span-full py-12 text-center text-text-muted bg-white rounded-lg border border-dashed border-border">
+                <Building2 size={48} className="mx-auto mb-4 text-text-muted" />
                 <p>{showInactive ? 'No departments found.' : 'No active departments. Enable "Show inactive" to see all.'}</p>
               </div>
             )}
@@ -291,12 +291,12 @@ export default function AdminDepartmentsPage(): React.ReactElement {
 
           {/* Confidence dropdown */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-text-primary mb-1">
               Confidence
             </label>
             <select
               {...register('confidence')}
-              className="w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 bg-white"
+              className="w-full rounded-md border border-border shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 bg-white"
             >
               {CONFIDENCE_OPTIONS.map(opt => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -306,12 +306,12 @@ export default function AdminDepartmentsPage(): React.ReactElement {
 
           {/* Arrays as textarea — one item per line */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              What They Can Provide* <span className="text-gray-400 font-normal">(one item per line)</span>
+            <label className="block text-sm font-medium text-text-primary mb-1">
+              What They Can Provide* <span className="text-text-secondary font-normal">(one item per line)</span>
             </label>
             <textarea
               {...register('what_they_can_provide', { required: 'Required' })}
-              className="w-full rounded-md border-gray-300 border shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
+              className="w-full rounded-md border-border border shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
               rows={4}
               placeholder="Account KYC details&#10;Transaction statements&#10;CDR logs"
             />
@@ -321,12 +321,12 @@ export default function AdminDepartmentsPage(): React.ReactElement {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Legal Basis <span className="text-gray-400 font-normal">(one item per line)</span>
+            <label className="block text-sm font-medium text-text-primary mb-1">
+              Legal Basis <span className="text-text-secondary font-normal">(one item per line)</span>
             </label>
             <textarea
               {...register('legal_basis_typically_cited')}
-              className="w-full rounded-md border-gray-300 border shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
+              className="w-full rounded-md border-border border shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
               rows={3}
               placeholder="BNSS Section 94&#10;IT Act Section 69"
             />
@@ -349,15 +349,15 @@ export default function AdminDepartmentsPage(): React.ReactElement {
           />
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Notes / Caveats</label>
+            <label className="block text-sm font-medium text-text-primary mb-1">Notes / Caveats</label>
             <textarea
               {...register('notes_or_caveats')}
-              className="w-full rounded-md border-gray-300 border shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
+              className="w-full rounded-md border-border border shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
               rows={2}
             />
           </div>
 
-          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-100">
+          <div className="flex justify-end space-x-3 pt-4 border-t border-input-border">
             <Button type="button" variant="ghost" onClick={() => setIsDeptModalOpen(false)}>
               Cancel
             </Button>

@@ -45,6 +45,9 @@ interface PoliceStation {
   phone: string;
   email?: string;
   isActive: boolean;
+  pastExperience?: string;
+  expertise?: string[];
+  photoUrl?: string;
 }
 
 interface Officer {
@@ -60,6 +63,9 @@ interface Officer {
     code: string;
   } | string;
   isActive: boolean;
+  pastExperience?: string;
+  expertise?: string[];
+  photoUrl?: string;
 }
 
 interface StationFormValues {

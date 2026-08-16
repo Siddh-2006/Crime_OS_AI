@@ -57,6 +57,20 @@ export class PoliceAuthService {
     return this.sanitizeOfficer(officer);
   }
 
+
+  async updateProfile(officerId: string, updateData: Partial<IOfficer>): Promise<Partial<IOfficer>> {
+    const officer = await this.officerRepository.findById(officerId);
+    if (!officer) throw new NotFoundError('Officer');
+    
+    // Prevent email/password/role changes here
+    if (updateData.pastExperience !== undefined) officer.pastExperience = updateData.pastExperience;
+    if (updateData.expertise !== undefined) officer.expertise = updateData.expertise;
+    if (updateData.photoUrl !== undefined) officer.photoUrl = updateData.photoUrl;
+
+    await officer.save();
+    return this.sanitizeOfficer(officer);
+  }
+
   private sanitizeOfficer(officer: IOfficer): Partial<IOfficer> {
     const { password, ...safe } = officer.toObject();
     void password;

@@ -52,7 +52,7 @@ export default function AdminLoginPage(): React.ReactElement {
     <div className="flex min-h-screen flex-col items-center justify-center bg-neutral-100 px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-md space-y-8">
         <div className="flex flex-col items-center text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-800 text-white shadow-lg">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-800 text-text-primary shadow-lg">
             <ShieldCheck size={28} />
           </div>
           <h2 className="mt-6 text-2xl font-bold tracking-tight text-neutral-900">

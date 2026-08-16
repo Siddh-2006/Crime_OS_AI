@@ -5,6 +5,8 @@ import { io, Socket } from 'socket.io-client';
 import Cookies from 'js-cookie';
 import { Lock, Send, User, MessageSquare, ShieldCheck, Loader2, BookOpen, X, RefreshCw, GripVertical } from 'lucide-react';
 import apiClient from '@/lib/axios';
+import { useToast } from '@/hooks/useToast';
+import { ToastContainer } from '@/components/ui/Toast';
 import { CaseDiaryFeed } from './CaseDiaryFeed';
 
 interface IMessage {
@@ -27,7 +29,8 @@ export const CaseRoomChat: React.FC<CaseRoomChatProps> = ({
   currentUserId,
   currentUserName,
 }) => {
-  const [messages, setMessages] = useState<IMessage[]>([]);
+    const { toasts, showToast, removeToast } = useToast();
+const [messages, setMessages] = useState<IMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(true);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
@@ -203,6 +206,12 @@ export const CaseRoomChat: React.FC<CaseRoomChatProps> = ({
       if (isMounted) {
         setMessages((prev) => {
           if (prev.some((m) => m.message_id === msg.message_id)) return prev;
+          
+          // Trigger toast if it's from another user
+          if (msg.sender_id !== currentUserId) {
+            showToast(`New message in Private Room from ${msg.sender_name}`, 'info');
+          }
+          
           return [...prev, msg];
         });
       }
@@ -473,7 +482,8 @@ export const CaseRoomChat: React.FC<CaseRoomChatProps> = ({
           </div>
         </div>
       </div>
+    
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );
 };
-
