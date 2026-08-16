@@ -27,7 +27,7 @@ import { RequestThread } from '../../../modules/investigation/models/RequestThre
 import { CaseChecklist } from '../../../modules/investigation/models/CaseChecklist.model';
 import { Evidence } from '../../../modules/investigation/models/Evidence.model';
 import { DiaryEntry } from '../../../modules/investigation/models/DiaryEntry.model';
-import { Complaint } from '../../../modules/complaint/models/Complaint.model';
+
 import { ComplaintStatus } from '../../../modules/complaint/enums/complaintStatus.enum';
 import { InvestigationOrchestrator } from '../../../modules/investigation/services/investigationOrchestrator';
 

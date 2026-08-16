@@ -187,6 +187,7 @@ interface IOOfficer {
 // import { CaseUnderstandingView, CaseUnderstandingData } from '@/components/case-understanding/CaseUnderstandingView';
 
 export default function PoliceComplaintDetailPage(): React.ReactElement {
+  const { toasts, removeToast } = useToast();
   const params = useParams();
   const router = useRouter();
   const { user } = useAuth(); // Logged in officer info

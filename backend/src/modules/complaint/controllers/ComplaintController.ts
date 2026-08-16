@@ -1,5 +1,7 @@
+import { NotFoundError } from '../../../common/errors/NotFoundError';
 import { Request, Response, NextFunction } from 'express';
 import { Blob } from 'buffer';
+import { Complaint } from '../models/Complaint.model';
 import { ComplaintService } from '../services/ComplaintService';
 import { sendSuccess } from '../../../shared/utils/response.util';
 import { HttpStatusCode } from '../../../common/enums/httpStatus.enum';

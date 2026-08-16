@@ -1,4 +1,3 @@
-import env from '../../../config/env';
 import axios from 'axios';
 import FormData from 'form-data';
 import { Request, Response, NextFunction } from 'express';
@@ -21,48 +20,7 @@ const cookieOptions = {
   sameSite: 'strict' as const,
   maxAge: env.JWT_REFRESH_EXPIRY_SECONDS * 1000,
   path: '/',
-  // RAG Ingestion Proxies
-  ingestRag = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      if (!req.file) {
-        res.status(400).json({ success: false, message: 'PDF file is required' });
-        return;
-      }
-      const { doc_type } = req.body;
-      
-      const form = new FormData();
-      form.append('file', req.file.buffer, { filename: req.file.originalname });
-      form.append('doc_type', doc_type || 'SOP');
-
-      const response = await axios.post(`${env.LEGAL_AGENT_URL}/ingest`, form, {
-        headers: { ...form.getHeaders() }
-      });
-      
-      sendSuccess(res, HttpStatusCode.OK, 'Ingestion started', response.data);
-    } catch (err: any) {
-      if (err.response) {
-        res.status(err.response.status).json(err.response.data);
-      } else {
-        next(err);
-      }
-    }
-  };
-
-  getRagStatus = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const { jobId } = req.params;
-      const response = await axios.get(`${env.LEGAL_AGENT_URL}/ingest/status/${jobId}`);
-      sendSuccess(res, HttpStatusCode.OK, 'Status retrieved', response.data);
-    } catch (err: any) {
-      if (err.response) {
-        res.status(err.response.status).json(err.response.data);
-      } else {
-        next(err);
-      }
-    }
-  };
 };
-
 export class AdminController {
   constructor(private readonly adminAuthService: AdminAuthService) {}
 

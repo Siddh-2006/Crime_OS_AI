@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { ShieldCheck, LayoutDashboard, LogOut, FileText, Bell, Plus, Bot, ClipboardList, BookOpen, MapPin, Send, FolderOpen, Users, Brain, Clock, ChevronRight, Shield, MessageSquare, QrCode } from 'lucide-react';
+import { Network, ShieldCheck, LayoutDashboard, LogOut, FileText, Bell, Plus, Bot, ClipboardList, BookOpen, MapPin, Send, FolderOpen, Users, Brain, Clock, ChevronRight, Shield, MessageSquare, QrCode } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { APP_ROUTES, ROLE } from '@/lib/constants';
 import { Loader } from '@/components/ui/Loader';
@@ -48,6 +48,7 @@ const caseNavItems = [
   { id: 'complaint', label: 'Original Complaint', icon: <FileText size={15} /> },
   { id: 'case_understanding', label: 'Case Understanding', icon: <Brain size={15} /> },
   { id: 'room', label: 'Private Room', icon: <MessageSquare size={15} /> },
+  { id: 'graph', label: 'Knowledge Graph', icon: <Network size={15} /> },
   { id: 'timeline', label: 'Timeline', icon: <Clock size={15} /> },
 ];
 

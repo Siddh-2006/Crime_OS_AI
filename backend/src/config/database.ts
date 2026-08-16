@@ -45,7 +45,9 @@ export async function connectDatabase(): Promise<void> {
     logger.info('Connected to Primary MongoDB successfully.', { uri: primaryUri });
     return;
   } catch (primaryErr: any) {
-    logger.warn(`Primary MongoDB connection failed (${primaryErr.message}). Switching to Local MongoDB fallback...`);
+    logger.error(`Primary MongoDB connection failed: ${primaryErr.message}`);
+    logger.error(`ABORTING: Atlas connection failed. Please check your IP Whitelist or network connection.`);
+    throw primaryErr; // Do not silently fallback!
   }
 
   // Step 2: Fallback to Local MongoDB if primary fails
