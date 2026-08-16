@@ -34,7 +34,10 @@ function shouldUseOfflineFallback(url?: string): boolean {
       url.includes('/evidence') ||
       url.includes('/participants') ||
       url.includes('/warrants') ||
-      url.includes('/threads'))
+      url.includes('/threads') ||
+      url.includes('/room') ||
+      url.includes('/graph') ||
+      url.includes('/departments'))
   ) || url.includes('/complaints/') || url.includes('/case-understanding/');
 }
 
@@ -118,6 +121,9 @@ apiClient.interceptors.response.use(
             else if (url.includes('/participants')) updates.participants = Array.isArray(data) ? data : [];
             else if (url.includes('/warrants')) updates.warrants = Array.isArray(data) ? data : [];
             else if (url.includes('/threads')) updates.threads = data || [];
+            else if (url.includes('/room')) updates.roomMessages = data || [];
+            else if (url.includes('/graph')) updates.graph = data || null;
+            else if (url.includes('/departments')) updates.departments = data || [];
             else if (complaintIdMatch) updates.complaintData = data;
             else if (caseUnderstandingMatch) updates.caseUnderstanding = data;
             // SHO-specific tabs
