@@ -1380,7 +1380,7 @@ export class InvestigationController {
 
         // Auto-trigger a new AI analysis now that new evidence/context has arrived.
         // Fire-and-forget — we don't block the HTTP response on this.
-        InvestigationOrchestrator.runAnalysis(thread.case_id, 'department_response').catch((err: Error) => {
+        InvestigationOrchestrator.runAnalysis(thread.case_id, 'auto_on_response').catch((err: Error) => {
           logger.error(`[AutoTrigger] AI analysis after department response failed for case ${thread.case_id}: ${err.message}`);
         });
       }

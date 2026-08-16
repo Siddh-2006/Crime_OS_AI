@@ -1,3 +1,4 @@
+import env from '../../../config/env';
 import axios from 'axios';
 import FormData from 'form-data';
 import { Request, Response, NextFunction } from 'express';
@@ -9,7 +10,6 @@ import { HttpStatusCode } from '../../../common/enums/httpStatus.enum';
 import { ConflictError } from '../../../common/errors/ConflictError';
 import { NotFoundError } from '../../../common/errors/NotFoundError';
 import { hashPassword } from '../../../shared/utils/hash.util';
-import env from '../../../config/env';
 import logger from '../../../config/logger';
 
 const REFRESH_TOKEN_COOKIE = 'refreshToken';

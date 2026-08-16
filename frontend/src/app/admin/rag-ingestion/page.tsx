@@ -73,7 +73,7 @@ export default function RagIngestionPage() {
       pollStatus(newJobId);
     } catch (err: any) {
       setIsUploading(false);
-      showToast('error', err.response?.data?.message || 'Failed to upload document.');
+      showToast(err.response?.data?.message || 'Failed to upload document.', 'error');
       setJobStatus(null);
     }
   };

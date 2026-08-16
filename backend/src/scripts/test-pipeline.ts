@@ -113,7 +113,7 @@ async function run() {
   console.log(`[Script] Got upload token: ${token}`);
 
   const formData = new FormData();
-  formData.append('uploader_type', 'department');
+  formData.append('uploader_type', 'police');
   formData.append('files', buffer, { filename: 'fraud_evidence.jpeg', contentType: 'image/jpeg' });
   
   const uploadRes = await axios.post(`${env.COMPLAINT_INTELLIGENCE_URL}/evidence/upload/${token}`, formData, {

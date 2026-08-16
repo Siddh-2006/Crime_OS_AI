@@ -39,7 +39,7 @@ export default function PoliceProfilePage() {
       }
     };
     fetchProfile();
-  }, [setValue]);
+  }, [setValue, showToast]);
 
   const onSubmit = async (data: ProfileForm) => {
     setSaving(true);

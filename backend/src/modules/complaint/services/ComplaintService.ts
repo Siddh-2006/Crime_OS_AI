@@ -1243,7 +1243,7 @@ export class ComplaintService {
         const { InvestigationOrchestrator } = require('../../investigation/services/investigationOrchestrator');
         // Do this asynchronously to not block the response
         setImmediate(() => {
-          InvestigationOrchestrator.runAnalysis(complaint._id.toString(), 'evidence_upload', 'en')
+          InvestigationOrchestrator.runAnalysis(complaint._id.toString(), 'auto_on_response', 'en')
             .catch((err: any) => logger.error('Failed to re-trigger analysis after addEvidence', { error: err }));
         });
       } catch (triggerErr: any) {
@@ -1261,10 +1261,11 @@ export class ComplaintService {
     if (!complaint) throw new NotFoundError('Complaint');
     if (complaint.status !== ComplaintStatus.CLOSED) throw new ValidationError('Only closed cases can be embedded');
 
-    // @ts-ignore
-    const _officer = await Officer.findById(officerId); // fixed unused
-    
-    
+    const officer = await Officer.findById(officerId);
+    if (!officer) {
+      throw new NotFoundError('Officer');
+    }
+
     // Dynamically load models to avoid circular dependencies
     const { DiaryEntry } = require('../../investigation/models/DiaryEntry.model');
     const { DepartmentRequest } = require('../../investigation/models/DepartmentRequest.model');

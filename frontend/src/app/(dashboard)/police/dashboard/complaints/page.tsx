@@ -62,6 +62,7 @@ export default function PoliceComplaintQueuePage(): React.ReactElement {
     }, 15000); // 15 seconds
     return () => clearInterval(interval);
   }, [search, status, page]);
+
   useEffect(() => {
     fetchStationComplaints();
   }, [status, page]);
