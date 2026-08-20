@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Bot, Send, Loader2, CheckCircle2, AlertCircle, Sparkles, X } from 'lucide-react';
+import { Send, Loader2, CheckCircle2, AlertCircle, Sparkles, X } from 'lucide-react';
 import apiClient from '@/lib/axios';
 import ReactMarkdown from 'react-markdown';
 import { useTranslation } from '@/context/TranslationContext';
@@ -97,7 +97,7 @@ export function CopilotSidebar({ caseId, onStateChangeApplied, onClose }: Copilo
     {
       role: 'assistant',
       content:
-        "Hi! I'm your **Investigation Copilot**. Ask me anything about this case — facts, next steps, what evidence to collect, or I can draft a department request for you.\n\nFor any changes to the case, I'll propose them first and wait for your approval.",
+        "Hi! I'm **Nyaya**, your investigation assistant. Ask me anything about this case — facts, next steps, what evidence to collect, or I can draft a department request for you.\n\nFor any changes to the case, I'll propose them first and wait for your approval.",
     },
   ]);
   const [input, setInput] = useState('');
@@ -185,10 +185,10 @@ export function CopilotSidebar({ caseId, onStateChangeApplied, onClose }: Copilo
       <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-brand-primary text-white flex-shrink-0">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center">
-            <Bot size={15} />
+            <img src="/avataar.png" alt="Nyaya" className="h-full w-full rounded-full object-cover" />
           </div>
           <div>
-            <p className="text-sm font-bold leading-none">Investigation Copilot</p>
+            <p className="text-sm font-bold leading-none">Nyaya</p>
             <p className="text-[10px] text-white/80 mt-0.5">RAG &bull; Case-aware &bull; Proposal-safe</p>
           </div>
         </div>

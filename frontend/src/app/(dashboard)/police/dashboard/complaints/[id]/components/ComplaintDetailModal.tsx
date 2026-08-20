@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { X, FileText, Calendar, MapPin, Tag } from 'lucide-react';
+import { Calendar, FileText, Image, MapPin, Tag, Video, Volume2, X } from 'lucide-react';
 
 interface ComplaintDetailModalProps {
   isOpen: boolean;
@@ -96,8 +96,8 @@ export default function ComplaintDetailModal({ isOpen, onClose, complaintData }:
                   <ul className="space-y-3">
                     {complaintData.evidence_list.map((ev: any, idx: number) => (
                       <li key={idx} className="flex items-center gap-3 text-sm text-neutral-700 p-2 hover:bg-neutral-50 rounded-lg transition-colors border border-transparent hover:border-neutral-100">
-                        <span className="text-xl">
-                          {ev.type === 'image' ? '🖼️' : ev.type === 'video' ? '🎥' : ev.type === 'audio' ? '🔊' : '📄'}
+                        <span className="text-neutral-500" aria-hidden="true">
+                          {ev.type === 'image' ? <Image size={20} /> : ev.type === 'video' ? <Video size={20} /> : ev.type === 'audio' ? <Volume2 size={20} /> : <FileText size={20} />}
                         </span>
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold truncate">{ev.filename}</p>

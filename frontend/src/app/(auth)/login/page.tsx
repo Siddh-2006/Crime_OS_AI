@@ -77,7 +77,7 @@ export default function LoginPage(): React.ReactElement {
           transition={{ delay: 0.1, duration: 0.4 }}
         >
           <label className="block text-xs font-heading font-extrabold text-text-primary uppercase tracking-wider mb-2" htmlFor="login_email">
-            Officer Email / Badge ID
+            Officer Email
           </label>
           <div className="relative group">
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-text-secondary group-focus-within:text-brand-primary transition-colors">

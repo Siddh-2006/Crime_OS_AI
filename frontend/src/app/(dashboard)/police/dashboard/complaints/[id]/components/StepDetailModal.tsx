@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { X, ShieldCheck } from 'lucide-react';
+import { FileText, Landmark, Phone, ShieldCheck, X } from 'lucide-react';
 import apiClient from '@/lib/axios';
 import { Loader } from '@/components/ui/Loader';
 
@@ -85,8 +85,8 @@ export default function StepDetailModal({ isOpen, onClose, caseId, stepId, evide
                       const ev = evidenceList.find(e => e.evidence_id === proofId);
                       return (
                         <div key={proofId} className="flex gap-3 items-center bg-neutral-50 p-2 rounded-lg border border-neutral-100">
-                          <div className="text-xl">
-                            {ev?.type === 'bank_statement' ? '🏦' : ev?.type === 'cdr' ? '📞' : '📄'}
+                          <div className="text-neutral-500" aria-hidden="true">
+                            {ev?.type === 'bank_statement' ? <Landmark size={20} /> : ev?.type === 'cdr' ? <Phone size={20} /> : <FileText size={20} />}
                           </div>
                           <div>
                             <p className="text-sm font-bold text-neutral-900">{ev ? ev.title : proofId}</p>

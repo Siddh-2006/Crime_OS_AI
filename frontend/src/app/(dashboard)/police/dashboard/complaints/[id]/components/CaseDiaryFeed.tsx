@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Card, CardHeader } from '@/components/ui/Card';
+import { CommonTimeline } from '@/components/ui/CommonTimeline';
 import { FileText, ShieldCheck, User, Activity, AlertTriangle, Send, Upload, Edit3, MessageSquare, Shield, Lock, CheckCircle2, XCircle, Clock, MapPin } from 'lucide-react';
 
 interface DiaryEntry {
@@ -96,7 +97,7 @@ export function CaseDiaryFeed({ entries = [], onEntryClick }: CaseDiaryFeedProps
       case 'warrant_approved': return `Warrant Approved by Magistrate — ${entry.payload?.participant_name || ''}`;
       case 'warrant_rejected': return `Warrant Rejected by Magistrate — ${entry.payload?.participant_name || ''}`;
       case 'suspect_taken_into_custody': return `${entry.payload?.participant_name || 'Accused'} Taken into Custody`;
-      case 'custody_deadline_reached': return `⚠ BNSS §57 Custody Deadline Reached — ${entry.payload?.participant_name || ''}`;
+      case 'custody_deadline_reached': return `BNSS §57 Custody Deadline Reached — ${entry.payload?.participant_name || ''}`;
       case 'accused_produced_before_court': return `${entry.payload?.participant_name || 'Accused'} Produced Before Court`;
       case 'suspect_released': return `${entry.payload?.participant_name || 'Accused'} Released from Custody`;
       default: return String(entry.event_type || 'Event').replace(/_/g, ' ').toUpperCase();
@@ -169,36 +170,26 @@ export function CaseDiaryFeed({ entries = [], onEntryClick }: CaseDiaryFeedProps
         {safeEntries.length === 0 ? (
           <p className="text-sm text-text-muted italic text-center py-8">No diary events recorded yet.</p>
         ) : (
-          <div className="relative pl-6 border-l-2 border-border space-y-6 pb-4 ml-2">
-            {safeEntries.map((entry, idx) => (
-              <div key={entry?.entry_id || entry?._id || idx} className="relative group">
-                <span className="absolute -left-[31px] top-1 flex h-6 w-6 items-center justify-center rounded-full bg-surface border border-border shadow-sm group-hover:scale-110 transition-transform">
-                  {getEventIcon(entry?.event_type)}
-                </span>
-                <div 
-                  className={`bg-surface-elevated/40 p-3.5 rounded-2xl border border-border/60 shadow-sm transition-all duration-200 ${onEntryClick ? 'cursor-pointer hover:border-brand-primary/40 hover:bg-surface-elevated/80' : ''}`}
-                  onClick={() => onEntryClick && entry && onEntryClick(entry)}
-                >
-                  <div className="flex justify-between items-start mb-1">
-                    <p className="text-xs font-bold text-text-primary">{getEventTitle(entry)}</p>
-                    <p className="text-[10px] text-text-muted font-mono font-medium whitespace-nowrap ml-2">
-                      {getFormattedTimestamp(entry?.timestamp)}
-                    </p>
-                  </div>
-                  <p className="text-xs text-text-muted mb-1 flex items-center gap-1">
-                    <span className="font-semibold capitalize text-text-secondary">
-                      {getActorName(entry?.actor)}
-                    </span> 
-                  </p>
+          <CommonTimeline
+            emptyMessage="No diary events recorded yet."
+            items={safeEntries.map((entry, idx) => ({
+              id: entry?.entry_id || entry?._id || idx,
+              time: getFormattedTimestamp(entry?.timestamp),
+              actor: getActorName(entry?.actor),
+              icon: getEventIcon(entry?.event_type),
+              onClick: onEntryClick && entry ? () => onEntryClick(entry) : undefined,
+              content: (
+                <>
+                  <p className="text-xs font-bold text-text-primary">{getEventTitle(entry)}</p>
                   {getEventDescription(entry) && (
-                    <div className="mt-2 p-2.5 bg-surface border border-border rounded-xl text-xs text-text-secondary italic">
+                    <div className="mt-2 rounded-xl border border-border bg-surface p-2.5 text-xs italic text-text-secondary">
                       {getEventDescription(entry)}
                     </div>
                   )}
-                </div>
-              </div>
-            ))}
-          </div>
+                </>
+              ),
+            }))}
+          />
         )}
       </div>
     </Card>

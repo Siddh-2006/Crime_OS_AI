@@ -1034,7 +1034,7 @@ export default function NewComplaintPage(): React.ReactElement {
       };
 
       await apiClient.post(API_ROUTES.COMPLAINTS.CREATE, payload);
-      router.push(APP_ROUTES.MY_COMPLAINTS);
+      router.push(APP_ROUTES.POLICE_COMPLAINTS);
     } catch (err: any) {
       setError(
         err.response?.data?.message ||

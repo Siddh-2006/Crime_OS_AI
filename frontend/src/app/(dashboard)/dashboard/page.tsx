@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Loader } from '@/components/ui/Loader';
-import { FileText, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { AlertTriangle, FileText, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import apiClient from '@/lib/axios';
 import { API_ROUTES, APP_ROUTES } from '@/lib/constants';
 
@@ -120,7 +120,7 @@ export default function CitizenDashboardPage(): React.ReactElement {
             {[
               { label: 'Full Name', value: `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim() },
               { label: 'Email', value: user?.email ?? '—' },
-              { label: 'Email Verified', value: user?.isEmailVerified ? '✓ Verified' : '✗ Not Verified' },
+              { label: 'Email Verified', value: user?.isEmailVerified ? 'Verified' : 'Not Verified' },
             ].map(({ label, value }) => (
               <div key={label} className="flex items-center justify-between border-b border-neutral-100 pb-3 last:border-0 last:pb-0">
                 <span className="text-sm text-neutral-500">{label}</span>
@@ -162,7 +162,7 @@ export default function CitizenDashboardPage(): React.ReactElement {
 
       {/* Notice */}
       <div className="rounded-lg border border-secondary-200 bg-secondary-50 p-4">
-        <p className="text-sm font-semibold text-secondary-800">⚠️ Important Notice</p>
+        <p className="flex items-center gap-2 text-sm font-semibold text-secondary-800"><AlertTriangle size={16} /> Important Notice</p>
         <p className="mt-1 text-xs text-secondary-700">
           For emergencies, please call <strong>100</strong> (Police Helpline) or <strong>112</strong> (Emergency Services).
           This portal is for non-emergency complaint filing only.

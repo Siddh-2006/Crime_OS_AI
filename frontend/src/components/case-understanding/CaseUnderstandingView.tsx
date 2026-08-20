@@ -8,6 +8,7 @@ import {
   CheckCircle2, Send, Loader2, CheckCheck 
 } from 'lucide-react';
 import apiClient from '@/lib/apiClient';
+import { CommonTimeline } from '@/components/ui/CommonTimeline';
 
 export interface CaseUnderstandingData {
   case_id: string;
@@ -91,6 +92,7 @@ interface Props {
 export function CaseUnderstandingView({ data, caseId }: Props): React.ReactElement {
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [previewEvidence, setPreviewEvidence] = useState<{id: string, name: string, summary: string, caption?: string} | null>(null);
+  const [previewImageError, setPreviewImageError] = useState(false);
   const [requestedItems, setRequestedItems] = useState<Record<string, 'loading' | 'sent'>>({});
 
   const rawOverview: any = data.case_understanding || data.overview || {};
@@ -213,26 +215,24 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
         {activeTab === 'timeline' && (
           <Card className="p-6">
             <CardHeader title="2. Chronological Case Timeline" />
-            <div className="mt-5 space-y-4">
-              {(!data.timeline || data.timeline.length === 0) ? (
-                <p className="text-sm text-text-muted italic">No timeline events extracted.</p>
-              ) : (
-                data.timeline.map((event, idx) => (
-                  <div key={idx} className="flex gap-4 items-start border-l-2 border-brand-primary pl-4 py-2 bg-surface-elevated/40 rounded-r-xl p-3 border border-border/50">
-                    <div className="space-y-1.5">
-                      <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-brand-primary/10 text-brand-primary border border-brand-primary/20 font-mono">
-                        {event.timestamp}
-                      </span>
-                      <p className="text-sm text-text-primary font-bold mt-1.5">{event.description}</p>
+            <div className="mt-5">
+              <CommonTimeline
+                emptyMessage="No timeline events extracted."
+                items={(data.timeline || []).map((event, idx) => ({
+                  id: idx,
+                  time: event.timestamp,
+                  content: (
+                    <>
+                      <p className="text-sm font-bold text-text-primary">{event.description}</p>
                       {event.supporting_evidence_ids && event.supporting_evidence_ids.length > 0 && (
-                        <p className="text-xs text-text-secondary">
+                        <p className="mt-2 text-xs text-text-secondary">
                           Evidence Ref: <span className="font-mono">{event.supporting_evidence_ids.join(', ')}</span>
                         </p>
                       )}
-                    </div>
-                  </div>
-                ))
-              )}
+                    </>
+                  ),
+                }))}
+              />
             </div>
           </Card>
         )}
@@ -267,12 +267,15 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
                       <div 
                         key={ev.evidence_id || idx} 
                         className="p-4 border border-border rounded-xl space-y-3 bg-surface-elevated/70 hover:bg-surface-elevated cursor-pointer transition-all shadow-xs"
-                        onClick={() => setPreviewEvidence({ 
-                          id: ev.evidence_id, 
-                          name: ev.filename,
-                          summary: summaryText,
-                          caption: captionText
-                        })}
+                        onClick={() => {
+                          setPreviewImageError(false);
+                          setPreviewEvidence({
+                            id: ev.evidence_id,
+                            name: ev.filename,
+                            summary: summaryText,
+                            caption: captionText,
+                          });
+                        }}
                       >
                         <div className="flex justify-between items-center gap-3">
                           <span className="font-bold text-sm text-text-primary">{captionText}</span>
@@ -398,7 +401,7 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
       >
         {previewEvidence && (
           <div className="flex flex-col gap-4">
-            <div className="flex justify-center items-center p-4 bg-neutral-900 rounded-lg overflow-hidden min-h-[300px]">
+            <div className="flex min-h-[300px] items-center justify-center overflow-hidden rounded-lg border border-border bg-surface-elevated p-4 text-text-primary">
               {previewEvidence.name.match(/\.(mp4|mov|webm)$/i) ? (
                 <video 
                   src={`https://res.cloudinary.com/q9ixw3zp/video/upload/${previewEvidence.id}`} 
@@ -412,27 +415,28 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
                   className="w-full"
                 />
               ) : (
-                <img 
-                  src={`https://res.cloudinary.com/q9ixw3zp/image/upload/${previewEvidence.id}`} 
-                  alt={previewEvidence.name}
-                  className="max-w-full max-h-[50vh] object-contain"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                    (e.target as HTMLImageElement).parentElement!.innerHTML = '<p class="text-white text-sm">Preview not available for this file type.</p>';
-                  }}
-                />
+                previewImageError ? (
+                  <p className="text-sm font-medium text-text-secondary">Preview not available for this file type.</p>
+                ) : (
+                  <img
+                    src={`https://res.cloudinary.com/q9ixw3zp/image/upload/${previewEvidence.id}`}
+                    alt={previewEvidence.name}
+                    className="max-h-[50vh] max-w-full object-contain"
+                    onError={() => setPreviewImageError(true)}
+                  />
+                )
               )}
             </div>
 
-            <div className="bg-neutral-900 p-4 rounded-lg border border-neutral-800 space-y-4">
+            <div className="space-y-4 rounded-lg border border-border bg-surface-elevated p-4 text-text-primary">
               <div>
-                <h3 className="text-sm font-bold text-neutral-400 mb-1">Evidence Title / Caption</h3>
+                <h3 className="mb-1 text-sm font-bold text-text-secondary">Evidence Title / Caption</h3>
                 <p className="text-sm font-semibold text-text-primary">{previewEvidence.caption || previewEvidence.name}</p>
               </div>
               
               <div>
-                <h3 className="text-sm font-bold text-neutral-400 mb-1">AI Summary &amp; Contribution</h3>
-                <div className="p-3 bg-neutral-800 border border-neutral-700 rounded text-xs text-text-secondary leading-relaxed">
+                <h3 className="mb-1 text-sm font-bold text-text-secondary">AI Summary &amp; Contribution</h3>
+                <div className="rounded border border-border bg-surface p-3 text-xs leading-relaxed text-text-secondary">
                   {previewEvidence.summary || 'No summary available.'}
                 </div>
               </div>

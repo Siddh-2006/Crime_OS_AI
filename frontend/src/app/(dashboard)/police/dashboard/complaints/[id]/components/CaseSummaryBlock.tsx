@@ -10,17 +10,6 @@ interface CaseSummaryBlockProps {
 }
 
 export function CaseSummaryBlock({ complaint, evidence }: CaseSummaryBlockProps) {
-  const getEvidenceIcon = (type: string) => {
-    switch (type) {
-      case 'bank_statement':
-      case 'transaction_log': return '🏦';
-      case 'kyc_document': return '🪪';
-      case 'cdr': return '📞';
-      case 'screenshot': return '🖼️';
-      default: return '📄';
-    }
-  };
-
   // Extracted entities
   const victims = [{ name: `${complaint.citizen?.firstName || ''} ${complaint.citizen?.lastName || ''}`, role: 'Complainant/Victim', detail: complaint.citizen?.phone || '' }];
   const suspects = [{ name: 'Unknown', role: 'Primary Suspect', detail: 'Pending Identification' }];

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Building2, LogOut, Inbox, Send, Loader2 } from 'lucide-react';
+import { Building2, FileText, Inbox, Loader2, LogOut, Send } from 'lucide-react';
 import apiClient from '@/lib/axios';
 import { Button } from '@/components/ui/Button';
 import { FileUpload, UploadedFile } from '@/components/ui/FileUpload';
@@ -174,11 +174,11 @@ export default function DepartmentDashboard() {
                                     rel="noreferrer"
                                     className={`text-xs px-2 py-1 rounded border flex items-center gap-1 ${isDept ? 'bg-blue-700 border-blue-500 hover:bg-blue-800' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'}`}
                                   >
-                                    📄 {name}
+                                    <FileText size={14} aria-hidden="true" /> {name}
                                   </a>
                                 ) : (
                                   <span key={aIdx} className="text-xs px-2 py-1 rounded border opacity-70">
-                                    📄 {name} (Processing)
+                                    <FileText size={14} aria-hidden="true" /> {name} (Processing)
                                   </span>
                                 );
                               })}

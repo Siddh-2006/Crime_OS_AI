@@ -16,6 +16,7 @@ import { ToastContainer } from '@/components/ui/Toast';
 import { InvestigationWorkspace, WorkspaceTab } from './components/InvestigationWorkspace';
 import ChargeSheetModal from './ChargeSheetModal';
 import { CaseUnderstandingView, CaseUnderstandingData } from '@/components/case-understanding/CaseUnderstandingView';
+import { CommonTimeline } from '@/components/ui/CommonTimeline';
 import {
   ArrowLeft,
   Calendar,
@@ -42,6 +43,8 @@ import {
   RefreshCw,
   Bot,
   Eye,
+  ChevronDown,
+  Star,
 } from 'lucide-react';
 
 interface HistoryEntry {
@@ -222,6 +225,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [selectedPdfUrl, setSelectedPdfUrl] = useState<string | null>(null);
   const [selectedPdfTitle, setSelectedPdfTitle] = useState<string>('FIR PDF Preview');
+  const [firActionsOpen, setFirActionsOpen] = useState(false);
 
   // IO Edit Fields
   const [editMode, setEditMode] = useState(false);
@@ -571,8 +575,10 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
         </div>
       )}
 
+      {/* Case summary and registered FIR */}
+      <div className="relative rounded-2xl border border-border bg-surface shadow-sm">
       {/* Main Info Header */}
-      <div className="bg-surface border border-border rounded-2xl p-5 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 overflow-hidden">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-5 overflow-hidden">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-base font-bold text-text-primary truncate">{complaint.complaintNumber}</h1>
@@ -651,39 +657,6 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
           </div>
         )}
 
-        {/* Action button in header if registered */}
-        {(isLocked || isClosed) && (complaint.firPdfUrlEn || complaint.firPdfUrlGujEn || complaint.firPdfUrl) && (
-          <div className="flex flex-wrap gap-2 self-end md:self-center">
-            {(complaint.firPdfUrlEn || complaint.firPdfUrl) && (
-              <Button
-                leftIcon={<Eye size={15} />}
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setSelectedPdfUrl(complaint.firPdfUrlEn || complaint.firPdfUrl || null);
-                  setSelectedPdfTitle(`FIR PDF (English) — ${complaint.firNumber || complaint.complaintNumber}`);
-                  setPreviewModalOpen(true);
-                }}
-              >
-                Preview FIR (English)
-              </Button>
-            )}
-            {complaint.firPdfUrlGujEn && (
-              <Button
-                leftIcon={<Eye size={15} />}
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setSelectedPdfUrl(complaint.firPdfUrlGujEn || null);
-                  setSelectedPdfTitle(`FIR PDF (ગુજરાતી) — ${complaint.firNumber || complaint.complaintNumber}`);
-                  setPreviewModalOpen(true);
-                }}
-              >
-                Preview FIR (ગુજ.)
-              </Button>
-            )}
-          </div>
-        )}
         {complaint.status === 'FIR_REGISTERED' && (isAssignedIO || isSHO) && (
           <Button
             variant="danger"
@@ -706,9 +679,9 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
         )}
       </div>
 
-      {/* ── REGISTERED FIR PDF DOCUMENTS BANNER (VISIBLE TO BOTH SHO AND IO) ── */}
+      {/* ── REGISTERED FIR PDF DOCUMENTS PANEL (VISIBLE TO BOTH SHO AND IO) ── */}
       {(isLocked || isClosed || complaint.firPdfUrl || complaint.firPdfUrlEn || complaint.firPdfUrlGujEn) && (
-        <div className="bg-surface border border-brand-primary/30 rounded-2xl p-5 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="border-t border-brand-primary/20 bg-brand-primary/[0.03] p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-brand-primary/10 text-brand-primary rounded-xl border border-brand-primary/20 shrink-0">
               <ShieldCheck className="h-7 w-7" />
@@ -729,68 +702,80 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end">
+          <div className="relative z-30 w-full md:w-auto">
             {(complaint.firPdfUrlEn || complaint.firPdfUrl) ? (
-              <>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  leftIcon={<Eye size={15} />}
-                  onClick={() => {
-                    setSelectedPdfUrl(complaint.firPdfUrlEn || complaint.firPdfUrl || null);
-                    setSelectedPdfTitle(`FIR PDF (English) — ${complaint.firNumber || complaint.complaintNumber}`);
-                    setPreviewModalOpen(true);
-                  }}
-                >
-                  Preview FIR (EN)
-                </Button>
-                <a
-                  href={(complaint.firPdfUrlEn || complaint.firPdfUrl || '').replace('/raw/upload/', '/raw/upload/fl_attachment/')}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  download
-                >
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    leftIcon={<FileDown size={15} />}
-                  >
-                    Download (EN)
-                  </Button>
-                </a>
-              </>
+              <Button
+                size="sm"
+                variant="outline"
+                rightIcon={<ChevronDown size={15} />}
+                onClick={() => setFirActionsOpen((open) => !open)}
+                aria-expanded={firActionsOpen}
+                aria-haspopup="menu"
+              >
+                FIR Documents
+              </Button>
             ) : null}
 
-            {complaint.firPdfUrlGujEn ? (
-              <>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  leftIcon={<Eye size={15} />}
-                  onClick={() => {
-                    setSelectedPdfUrl(complaint.firPdfUrlGujEn || null);
-                    setSelectedPdfTitle(`FIR PDF (ગુજરાતી) — ${complaint.firNumber || complaint.complaintNumber}`);
-                    setPreviewModalOpen(true);
-                  }}
-                >
-                  Preview FIR (ગુજ.)
-                </Button>
-                <a
-                  href={(complaint.firPdfUrlGujEn || '').replace('/raw/upload/', '/raw/upload/fl_attachment/')}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  download
-                >
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    leftIcon={<FileDown size={15} />}
-                  >
-                    Download (ગુજ.)
-                  </Button>
-                </a>
-              </>
-            ) : null}
+            {firActionsOpen && (complaint.firPdfUrlEn || complaint.firPdfUrlGujEn || complaint.firPdfUrl) && (
+              <div role="menu" className="absolute right-0 top-full z-50 mt-2 w-56 rounded-xl border border-border bg-surface p-1.5 shadow-elevated">
+                {(complaint.firPdfUrlEn || complaint.firPdfUrl) && (
+                  <>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-text-primary hover:bg-surface-elevated"
+                      onClick={() => {
+                        setSelectedPdfUrl(complaint.firPdfUrlEn || complaint.firPdfUrl || null);
+                        setSelectedPdfTitle(`FIR PDF (English) — ${complaint.firNumber || complaint.complaintNumber}`);
+                        setPreviewModalOpen(true);
+                        setFirActionsOpen(false);
+                      }}
+                    >
+                      <Eye size={15} /> Preview FIR (English)
+                    </button>
+                    <a
+                      role="menuitem"
+                      href={(complaint.firPdfUrlEn || complaint.firPdfUrl || '').replace('/raw/upload/', '/raw/upload/fl_attachment/')}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      download
+                      className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-text-primary hover:bg-surface-elevated"
+                      onClick={() => setFirActionsOpen(false)}
+                    >
+                      <FileDown size={15} /> Download FIR (English)
+                    </a>
+                  </>
+                )}
+                {complaint.firPdfUrlGujEn && (
+                  <>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-text-primary hover:bg-surface-elevated"
+                      onClick={() => {
+                        setSelectedPdfUrl(complaint.firPdfUrlGujEn || null);
+                        setSelectedPdfTitle(`FIR PDF (ગુજરાતી) — ${complaint.firNumber || complaint.complaintNumber}`);
+                        setPreviewModalOpen(true);
+                        setFirActionsOpen(false);
+                      }}
+                    >
+                      <Eye size={15} /> Preview FIR (Gujarati)
+                    </button>
+                    <a
+                      role="menuitem"
+                      href={(complaint.firPdfUrlGujEn || '').replace('/raw/upload/', '/raw/upload/fl_attachment/')}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      download
+                      className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-text-primary hover:bg-surface-elevated"
+                      onClick={() => setFirActionsOpen(false)}
+                    >
+                      <FileDown size={15} /> Download FIR (Gujarati)
+                    </a>
+                  </>
+                )}
+              </div>
+            )}
 
             {!(complaint.firPdfUrlEn || complaint.firPdfUrlGujEn || complaint.firPdfUrl) && (
               <div className="flex items-center gap-2 text-xs text-semantic-warning bg-semantic-warning/10 px-3 py-2 rounded-lg border border-semantic-warning/30 font-bold">
@@ -807,6 +792,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
           </div>
         </div>
       )}
+      </div>
 
       {(!isAssignedIO || complaint.status === 'SUBMITTED') ? (
         <div className="w-full flex-1 flex flex-col space-y-6">
@@ -878,12 +864,14 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                         </div>
                         {(complaint.status === 'ASSIGNED_TO_IO' || isLocked) && (
                           <>
-                            <div>
-                              <p className="text-xs text-text-secondary font-bold uppercase tracking-wider mb-1.5">Crime Summary (for FIR)</p>
-                              <p className="text-sm text-text-primary leading-relaxed whitespace-pre-line bg-surface-elevated/80 p-4 rounded-xl border border-border shadow-sm">
-                                {crimeSummary || <span className="text-text-muted italic">No summary entered yet.</span>}
-                              </p>
-                            </div>
+                            {!isSHO && (
+                              <div>
+                                <p className="text-xs text-text-secondary font-bold uppercase tracking-wider mb-1.5">Crime Summary (for FIR)</p>
+                                <p className="text-sm text-text-primary leading-relaxed whitespace-pre-line bg-surface-elevated/80 p-4 rounded-xl border border-border shadow-sm">
+                                  {crimeSummary || <span className="text-text-muted italic">No summary entered yet.</span>}
+                                </p>
+                              </div>
+                            )}
                             <div>
                               <p className="text-xs text-text-secondary font-bold uppercase tracking-wider mb-1.5">Legal Sections (Applicable IPC/BNS)</p>
                               {snapshotLegalSections.length > 0 ? (
@@ -901,12 +889,14 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                                 </p>
                               )}
                             </div>
-                            <div>
-                              <p className="text-xs text-text-secondary font-bold uppercase tracking-wider mb-1.5">Investigation Case Notes</p>
-                              <p className="text-sm text-text-secondary whitespace-pre-line bg-surface-elevated/80 p-4 rounded-xl border border-border">
-                                {investigationNotes || <span className="text-text-muted italic">No case notes recorded yet.</span>}
-                              </p>
-                            </div>
+                            {!isSHO && (
+                              <div>
+                                <p className="text-xs text-text-secondary font-bold uppercase tracking-wider mb-1.5">Investigation Case Notes</p>
+                                <p className="text-sm text-text-secondary whitespace-pre-line bg-surface-elevated/80 p-4 rounded-xl border border-border">
+                                  {investigationNotes || <span className="text-text-muted italic">No case notes recorded yet.</span>}
+                                </p>
+                              </div>
+                            )}
                           </>
                         )}
                       </div>
@@ -921,16 +911,18 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                             className="w-full px-3 py-2 text-sm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary bg-surface text-text-primary"
                           />
                         </div>
-                        <div>
-                          <label className="block text-xs font-bold text-text-secondary uppercase mb-1">Crime Summary (for FIR) *</label>
-                          <textarea
-                            value={crimeSummary}
-                            onChange={(e) => setCrimeSummary(e.target.value)}
-                            placeholder="Summarize the core offence details for the FIR registry..."
-                            rows={3}
-                            className="w-full px-3 py-2 text-sm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary bg-surface text-text-primary"
-                          />
-                        </div>
+                        {!isSHO && (
+                          <div>
+                            <label className="block text-xs font-bold text-text-secondary uppercase mb-1">Crime Summary (for FIR) *</label>
+                            <textarea
+                              value={crimeSummary}
+                              onChange={(e) => setCrimeSummary(e.target.value)}
+                              placeholder="Summarize the core offence details for the FIR registry..."
+                              rows={3}
+                              className="w-full px-3 py-2 text-sm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary bg-surface text-text-primary"
+                            />
+                          </div>
+                        )}
                         <div>
                           <label className="block text-xs font-bold text-text-secondary uppercase mb-1">Applicable Legal Sections *</label>
                           <input
@@ -941,16 +933,18 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                             className="w-full px-3 py-2 text-sm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary bg-surface text-text-primary"
                           />
                         </div>
-                        <div>
-                          <label className="block text-xs font-bold text-text-secondary uppercase mb-1">Investigation Case Notes</label>
-                          <textarea
-                            value={investigationNotes}
-                            onChange={(e) => setInvestigationNotes(e.target.value)}
-                            placeholder="Record details of evidence verified, witness statements, etc."
-                            rows={3}
-                            className="w-full px-3 py-2 text-sm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary bg-surface text-text-primary"
-                          />
-                        </div>
+                        {!isSHO && (
+                          <div>
+                            <label className="block text-xs font-bold text-text-secondary uppercase mb-1">Investigation Case Notes</label>
+                            <textarea
+                              value={investigationNotes}
+                              onChange={(e) => setInvestigationNotes(e.target.value)}
+                              placeholder="Record details of evidence verified, witness statements, etc."
+                              rows={3}
+                              className="w-full px-3 py-2 text-sm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary bg-surface text-text-primary"
+                            />
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -998,7 +992,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                                 backgroundColor: (file.confidence_score ?? 0) < 30 ? '#10b981' : (file.confidence_score ?? 0) < 70 ? '#f59e0b' : '#ef4444',
                                 color: 'white',
                               }}>
-                                {(file.confidence_score ?? 0) < 30 ? '✓ Likely Real' : (file.confidence_score ?? 0) < 70 ? '? Uncertain' : '⚠ Likely AI'}
+                                {(file.confidence_score ?? 0) < 30 ? 'Likely Real' : (file.confidence_score ?? 0) < 70 ? 'Uncertain' : 'Likely AI'}
                               </div>
                             </div>
 
@@ -1546,28 +1540,15 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                           {timelineEvents.length === 0 ? (
                             <p className="text-sm text-neutral-500 italic">No timeline events generated by the AI analysis yet.</p>
                           ) : (
-                            <div className="relative pl-6 border-l-2 border-indigo-100 space-y-4">
-                              {timelineEvents.map((ev, i) => (
-                                <div key={i} className="relative">
-                                  <span className={`absolute -left-[27px] top-1.5 flex h-3 w-3 items-center justify-center rounded-full border-2 ${ev.conflict ? 'border-red-500 bg-red-900/30' : 'border-indigo-600 bg-surface'
-                                    }`} />
-                                  <div className={`rounded-xl p-3 border text-sm ${ev.conflict ? 'bg-red-900/20 border-red-100' : 'bg-neutral-900/30 border-neutral-800'
-                                    }`}>
-                                    <div className="flex items-center justify-between flex-wrap gap-1 mb-1">
-                                      {ev.time && (
-                                        <p className="text-[11px] font-extrabold text-indigo-400">{ev.time}</p>
-                                      )}
-                                      {ev.source && (
-                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-900/20 text-indigo-400 border border-indigo-100">
-                                          {ev.source}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <p className="text-text-primary text-xs font-medium leading-relaxed">{ev.what ?? ev.description}</p>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
+                            <CommonTimeline
+                              items={timelineEvents.map((ev, i) => ({
+                                id: i,
+                                time: ev.time,
+                                actor: ev.source,
+                                tone: ev.conflict ? 'danger' : 'default',
+                                content: <p className="text-xs font-medium leading-relaxed text-text-primary">{ev.what ?? ev.description}</p>,
+                              }))}
+                            />
                           )}
                         </Card>
                       )}
@@ -1582,38 +1563,23 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
               <div className="w-full">
                 <Card>
                   <CardHeader title="Case Status & Chronological Audit Timeline" subtitle="Official immutable audit trail of actions taken by citizens, SHO, and IOs" />
-                  <div className="mt-8 relative pl-8 space-y-8 before:absolute before:left-3 before:top-3 before:bottom-3 before:w-1 before:bg-gradient-to-b before:from-brand-primary before:via-brand-primary/50 before:to-semantic-success before:rounded-full">
-                    {complaint.timeline.map((event, idx) => (
-                      <div key={idx} className="relative group">
-                        {/* Pulsing Node Dot */}
-                        <div className="absolute -left-[30px] top-1 flex h-5 w-5 items-center justify-center rounded-full bg-surface border-2 border-brand-primary group-hover:scale-125 group-hover:border-semantic-success transition-all duration-300 shadow-sm">
-                          <div className="h-2 w-2 rounded-full bg-brand-primary group-hover:bg-semantic-success transition-colors" />
-                        </div>
-
-                        {/* Event Card */}
-                        <div className="bg-surface-elevated/80 border border-border p-4 rounded-2xl shadow-sm hover:border-brand-primary/40 transition-all duration-300 space-y-2">
-                          <div className="flex flex-wrap justify-between items-center gap-2">
-                            <span className="text-xs font-bold font-mono px-2.5 py-1 rounded-lg bg-brand-primary/10 text-brand-primary border border-brand-primary/20">
-                              {new Date(event.timestamp).toLocaleString('en-IN', {
-                                day: '2-digit',
-                                month: 'short',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                second: '2-digit',
-                                hour12: true,
-                              })}
-                            </span>
-                            <span className="text-xs font-extrabold px-3 py-1 rounded-full bg-surface border border-border text-text-primary uppercase tracking-wide">
-                              {event.user}
-                            </span>
-                          </div>
-                          <p className="text-sm font-semibold text-text-primary leading-relaxed pt-1">
-                            {event.description}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="mt-8">
+                    <CommonTimeline
+                      items={complaint.timeline.map((event, idx) => ({
+                        id: idx,
+                        time: new Date(event.timestamp).toLocaleString('en-IN', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit',
+                          hour12: true,
+                        }),
+                        actor: event.user,
+                        content: <p className="text-sm font-semibold leading-relaxed text-text-primary">{event.description}</p>,
+                      }))}
+                    />
                   </div>
                 </Card>
               </div>
@@ -1812,7 +1778,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                           </span>
                           {io.aiRecommendation && (
                             <span className="text-xs font-bold text-semantic-warning bg-semantic-warning/10 border border-semantic-warning/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                              ⭐ {io.aiRecommendation.score.toFixed(0)}% Match
+                              <Star size={12} aria-hidden="true" /> {io.aiRecommendation.score.toFixed(0)}% Match
                             </span>
                           )}
                         </div>

@@ -133,7 +133,7 @@ apiClient.interceptors.response.use(
             if (Object.keys(updates).length > 0) {
               if (existingCache) {
                 await CaseCacheManager.updateCaseFields(case_id, officer_id, role, updates);
-                console.log(`[apiClient] ✓ Auto-cached (${role}): ${url.split('/').pop()}`);
+                console.log(`[apiClient] Auto-cached (${role}): ${url.split('/').pop()}`);
               } else {
                 const newCache = {
                   snapshot: null, checklist: null,
@@ -145,7 +145,7 @@ apiClient.interceptors.response.use(
                   ...updates,
                 };
                 await CaseCacheManager.saveCase(case_id, officer_id, role, newCache);
-                console.log(`[apiClient] ✓ Created cache (${role}): ${url.split('/').pop()}`);
+                console.log(`[apiClient] Created cache (${role}): ${url.split('/').pop()}`);
               }
             }
           }
@@ -221,7 +221,7 @@ apiClient.interceptors.response.use(
       (error.code === 'ERR_NETWORK' || !navigator.onLine) &&
       !isPublicAuthRoute
     ) {
-      console.log(`[apiClient] ⚠️ Network error for ${originalRequest.method} ${originalRequest.url}`);
+      console.log(`[apiClient] Network error for ${originalRequest.method} ${originalRequest.url}`);
       console.log('[apiClient] Navigator online status:', navigator.onLine);
       console.log('[apiClient] Error code:', error.code);
       
@@ -229,30 +229,30 @@ apiClient.interceptors.response.use(
       
       // For GET requests, try cache
       if (method === 'GET' && shouldUseOfflineFallback(originalRequest.url)) {
-        console.log('[apiClient] 📦 Attempting cache retrieval...');
+        console.log('[apiClient] Attempting cache retrieval...');
         originalRequest._offlineRetry = true;
         const { OfflineApiClient } = await import('./offline/offlineApiClient');
         try {
           const result = await OfflineApiClient.request(originalRequest);
-          console.log('[apiClient] ✓ Cache hit!');
+          console.log('[apiClient] Cache hit.');
           return result;
         } catch (offlineError) {
-          console.error('[apiClient] ✗ Cache miss:', offlineError);
+          console.error('[apiClient] Cache miss:', offlineError);
         }
       }
       
       // For mutations (POST/PUT/PATCH/DELETE), queue them
       if (method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
-        console.log('[apiClient] 📝 Queueing mutation for sync...');
+        console.log('[apiClient] Queueing mutation for sync...');
         originalRequest._offlineRetry = true;
         const { OfflineApiClient } = await import('./offline/offlineApiClient');
         try {
           const result = await OfflineApiClient.request(originalRequest);
-          console.log('[apiClient] ✓ Mutation queued');
+          console.log('[apiClient] Mutation queued.');
           // Return success response indicating queued
           return result;
         } catch (offlineError) {
-          console.error('[apiClient] ✗ Failed to queue mutation:', offlineError);
+          console.error('[apiClient] Failed to queue mutation:', offlineError);
         }
       }
     }

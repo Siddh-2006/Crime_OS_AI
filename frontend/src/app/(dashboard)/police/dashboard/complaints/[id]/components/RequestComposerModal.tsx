@@ -101,7 +101,7 @@ export function RequestComposerModal({ isOpen, onClose, caseId, stepId, departme
         status: 'reviewed'
       });
       await apiClient.post(`/cases/${caseId}/requests/${draft.request_id}/send`);
-      showToast?.('✅ Request sent successfully! Check the Requests tab for status.', 'success');
+      showToast?.('Request sent successfully. Check the Requests tab for status.', 'success');
       onSuccess();
     } catch (error: any) {
       const msg = error?.response?.data?.message || 'Failed to send request. Please try again.';

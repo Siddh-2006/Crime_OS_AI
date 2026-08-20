@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Loader } from '@/components/ui/Loader';
-import { Users, FileText, Clock, ShieldCheck, ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight, FileText, Clock, Shield, ShieldCheck, Sparkles, Users } from 'lucide-react';
 import apiClient from '@/lib/axios';
 import { API_ROUTES, APP_ROUTES } from '@/lib/constants';
 
@@ -197,7 +197,7 @@ export default function PoliceDashboardPage(): React.ReactElement {
       {/* Duty Reminder */}
       <div className="rounded-2xl border border-brand-primary/20 bg-brand-primary/5 p-5 glass animate-slide-up stagger-7">
         <div className="flex items-center gap-2">
-          <span className="text-base">🛡️</span>
+          <Shield size={16} aria-hidden="true" />
           <p className="text-sm font-bold text-brand-primary font-heading uppercase tracking-wide">Duty & Compliance Protocol</p>
         </div>
         <p className="mt-2 text-xs text-text-secondary leading-relaxed">

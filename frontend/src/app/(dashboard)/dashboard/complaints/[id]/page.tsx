@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/Button';
 import { Loader } from '@/components/ui/Loader';
 import apiClient from '@/lib/axios';
 import { API_ROUTES, APP_ROUTES } from '@/lib/constants';
-import { ArrowLeft, Calendar, MapPin, FileText, CheckCircle, Clock, AlertTriangle, FileDown, Download, ExternalLink } from 'lucide-react';
+import { CommonTimeline } from '@/components/ui/CommonTimeline';
+import { AlertTriangle, ArrowLeft, BarChart3, Ban, Calendar, CheckCircle, Clock, Download, ExternalLink, FileDown, FileText, MapPin, Search, Tag } from 'lucide-react';
 
 interface TimelineEvent {
   user: string;
@@ -318,12 +319,12 @@ export default function CitizenComplaintDetailPage(): React.ReactElement {
                         <div className="flex flex-wrap items-center gap-1.5">
                           {file.aiMetadata.classification && file.aiMetadata.classification !== 'Unknown' && (
                             <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
-                              📊 {file.aiMetadata.classification} ({Math.round((file.aiMetadata.classificationConfidence || 0) * 100)}%)
+                              <BarChart3 size={12} aria-hidden="true" /> {file.aiMetadata.classification} ({Math.round((file.aiMetadata.classificationConfidence || 0) * 100)}%)
                             </span>
                           )}
                           {file.aiMetadata.imageTags?.map((tag: string) => (
                             <span key={tag} className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-50/80 text-emerald-700 border border-emerald-100/50">
-                              🏷️ {tag}
+                              <Tag size={12} aria-hidden="true" /> {tag}
                             </span>
                           ))}
                         </div>
@@ -331,7 +332,7 @@ export default function CitizenComplaintDetailPage(): React.ReactElement {
                         {file.aiMetadata.ocrText && (
                           <details className="text-[11px] text-neutral-600 bg-neutral-50 p-2 rounded-lg border border-neutral-100 cursor-pointer">
                             <summary className="font-semibold text-neutral-700 hover:text-neutral-900 select-none">
-                              🔍 Extracted OCR Text
+                              <span className="inline-flex items-center gap-1"><Search size={12} aria-hidden="true" /> Extracted OCR Text</span>
                             </summary>
                             <p className="mt-1.5 whitespace-pre-wrap font-mono text-[10px] bg-white p-2 rounded border border-neutral-100 max-h-32 overflow-y-auto leading-relaxed">
                               {file.aiMetadata.ocrText}
@@ -349,7 +350,7 @@ export default function CitizenComplaintDetailPage(): React.ReactElement {
           {/* Rejection Alert */}
           {complaint.status === 'REJECTED' && (
             <div className="p-4 border border-red-200 bg-red-50 text-red-900 rounded-xl space-y-2">
-              <p className="font-bold text-sm">🚫 Complaint Rejection Notice</p>
+              <p className="flex items-center gap-2 font-bold text-sm"><Ban size={16} aria-hidden="true" /> Complaint Rejection Notice</p>
               <p className="text-sm">{complaint.rejectionReason}</p>
             </div>
           )}
@@ -359,22 +360,15 @@ export default function CitizenComplaintDetailPage(): React.ReactElement {
         <div className="space-y-6">
           <Card>
             <CardHeader title="Application Status Timeline" />
-            <div className="mt-6 relative pl-6 border-l-2 border-neutral-200 space-y-6">
-              {complaint.timeline.map((event, idx) => (
-                <div key={idx} className="relative">
-                  {/* Dot */}
-                  <span className="absolute -left-[31px] top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-white border-2 border-primary-700">
-                    <span className="h-1.5 w-1.5 rounded-full bg-primary-700" />
-                  </span>
-                  <div className="space-y-1">
-                    <p className="text-xs text-neutral-400 font-semibold">
-                      {new Date(event.timestamp).toLocaleString('en-IN')}
-                    </p>
-                    <p className="text-sm font-bold text-neutral-800">{event.user}</p>
-                    <p className="text-xs text-neutral-600 leading-relaxed">{event.description}</p>
-                  </div>
-                </div>
-              ))}
+            <div className="mt-6">
+              <CommonTimeline
+                items={complaint.timeline.map((event, idx) => ({
+                  id: idx,
+                  time: new Date(event.timestamp).toLocaleString('en-IN'),
+                  actor: event.user,
+                  content: <p className="text-xs leading-relaxed text-neutral-600">{event.description}</p>,
+                }))}
+              />
             </div>
           </Card>
         </div>

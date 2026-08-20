@@ -157,7 +157,7 @@ function openSSE(
     } catch { /* ignore malformed frames */ }
   };
 
-  es.onerror = () => onError('SSE connection lost. Retryingâ€¦');
+  es.onerror = () => onError('SSE connection lost. Retrying...');
 
   return () => es.close();
 }
@@ -223,7 +223,7 @@ export function AnalysisPanel({
   }, [caseId]);
 
   const handleTriggerAnalysis = async () => {
-    setProgress({ stage: 'queued', label: 'Analysis request received â€” job is in queue', pct: 5 });
+    setProgress({ stage: 'queued', label: 'Analysis request received - job is in queue', pct: 5 });
     setSseError(null);
     sseErrorCountRef.current = 0;
     startSSE();
@@ -322,7 +322,7 @@ export function AnalysisPanel({
             {progress?.error ?? 'The AI analysis encountered an error. This is usually a model timeout.'}
           </p>
           <p className="text-xs text-neutral-400 mt-2">
-            Try again â€” it often succeeds on retry.
+            Try again - it often succeeds on retry.
           </p>
         </div>
         <Button
@@ -344,8 +344,8 @@ export function AnalysisPanel({
         <div className="space-y-1">
           <h3 className="text-base font-bold text-neutral-800">Analysis in Progress</h3>
           <p className="text-sm text-neutral-500 max-w-xs">
-            The AI is working through this case. Typically takes 1â€“4 minutes.
-            You can switch to other tabs â€” this view will update automatically when done.
+            The AI is working through this case. Typically takes 1-4 minutes.
+            You can switch to other tabs - this view will update automatically when done.
           </p>
         </div>
         <div className="w-full max-w-sm space-y-2">
@@ -434,7 +434,7 @@ export function AnalysisPanel({
             </div>
           </div>
 
-          {/* Legal Sections â€” case-level AI suggestions */}
+          {/* Legal Sections - case-level AI suggestions */}
           {snapshot.suggested_legal_sections && snapshot.suggested_legal_sections.length > 0 && (
             <div className="border border-brand-primary/20 rounded-sm overflow-hidden shadow-sm">
               <div className="bg-brand-primary/10 px-4 py-2.5 flex items-center gap-2 border-b border-brand-primary/20">
@@ -446,7 +446,7 @@ export function AnalysisPanel({
               <ul className="p-4 bg-surface-elevated space-y-2">
                 {snapshot.suggested_legal_sections.map((section: any, idx) => (
                   <li key={idx} className="flex items-start gap-2 text-sm text-text-secondary bg-surface p-2.5 rounded-sm border border-border">
-                    <span className="text-brand-primary mt-0.5">â€¢</span>
+                            <span className="text-brand-primary mt-0.5">&#8226;</span>
                     <div className="min-w-0">
                       <p className="font-semibold text-text-primary">{formatLegalSectionLabel(section)}</p>
                       {section && typeof section === 'object' && section.reason ? (
@@ -572,7 +572,7 @@ export function AnalysisPanel({
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-bold text-text-primary">{safeText(recommendation.name)}</p>
                           <p className="text-xs text-text-secondary font-medium mt-0.5">
-                            {safeArray(recommendation.roles).join(', ')} â€¢ {(Number(recommendation.confidence) * 100).toFixed(0)}% confidence
+                            {safeArray(recommendation.roles).join(', ')} &#8226; {(Number(recommendation.confidence) * 100).toFixed(0)}% confidence
                           </p>
                           <p className="text-xs text-text-secondary mt-1 leading-relaxed">{safeText(recommendation.reason)}</p>
                           {recommendation.suggested_reasoning && (
@@ -598,9 +598,9 @@ export function AnalysisPanel({
                             </Button>
                           )}
                           {isApproved && (
-                            <span className="text-[11px] font-bold text-semantic-success bg-semantic-success/10 border border-semantic-success/30 px-2.5 py-0.5 rounded-md">Added âœ“</span>
+                            <span className="text-[11px] font-bold text-semantic-success bg-semantic-success/10 border border-semantic-success/30 px-2.5 py-0.5 rounded-md">Added &#10003;</span>
                           )}
-                          {/* Attach Reasoning button â€” shown when AI suggests a major observation */}
+                          {/* Attach Reasoning button - shown when AI suggests a major observation */}
                           {recommendation.suggested_reasoning && onAttachReasoning && (() => {
                             const reasoningKey = `reasoning:${safeText(recommendation.name)}`;
                             const participantObj = participants.find(
@@ -611,7 +611,7 @@ export function AnalysisPanel({
                               (r) => r.content.trim() === recommendation.suggested_reasoning!.trim()
                             );
                             return alreadyAttached ? (
-                              <span className="text-[11px] font-bold text-brand-primary bg-brand-primary/10 border border-brand-primary/20 px-2 py-0.5 rounded-md">Reasoning Attached âœ“</span>
+                              <span className="text-[11px] font-bold text-brand-primary bg-brand-primary/10 border border-brand-primary/20 px-2 py-0.5 rounded-md">Reasoning Attached &#10003;</span>
                             ) : (
                               <Button
                                 size="sm"
@@ -656,7 +656,7 @@ export function AnalysisPanel({
                                 <div className="flex items-center gap-2 flex-shrink-0">
                                   {isSectionAccepted ? (
                                     <span className="text-[10px] font-bold text-green-400 bg-green-900/30 px-2 py-1 rounded border border-green-700">
-                                      Attached âœ“
+                                      Attached (verified)
                                     </span>
                                   ) : (
                                     <>
@@ -731,7 +731,7 @@ export function AnalysisPanel({
                 <div className="space-y-1.5">
                   <p className="text-text-secondary font-bold">Contradictions Found</p>
                   <p className={`font-mono font-extrabold text-base ${snapshot.confidence_breakdown.contradiction_penalty > 0 ? 'text-semantic-critical' : 'text-text-secondary'}`}>
-                    {snapshot.confidence_breakdown.contradiction_penalty > 0 ? `Penalty: ${snapshot.confidence_breakdown.contradiction_penalty}` : 'âœ“ None'}
+                    {snapshot.confidence_breakdown.contradiction_penalty > 0 ? `Penalty: ${snapshot.confidence_breakdown.contradiction_penalty}` : 'None'}
                   </p>
                   <p className="text-[10px] text-text-secondary leading-tight">Conflicting statements or evidence weakening the case</p>
                 </div>
@@ -741,7 +741,7 @@ export function AnalysisPanel({
         </div>
       </Card>
 
-      {/* Suspect Candidates â€” full width */}
+      {/* Suspect Candidates - full width */}
       <Card>
         <CardHeader title="Suspect Candidates" />
         <div className="mt-3 space-y-3 overflow-y-auto max-h-[300px] pr-2">
@@ -781,7 +781,7 @@ export function AnalysisPanel({
             type="text"
             value={correctionMsg}
             onChange={(e) => setCorrectionMsg(e.target.value)}
-            placeholder="Tell the AI to correct an assumption, ignore a suspect, or prioritise a stepâ€¦"
+            placeholder="Tell the AI to correct an assumption, ignore a suspect, or prioritise a step..."
             className="flex-1 px-4 py-2.5 text-sm bg-surface border border-border text-text-primary rounded-sm focus:outline-none focus:ring-2 focus:ring-brand-primary placeholder:text-text-muted transition-all"
             onKeyDown={(e) => e.key === 'Enter' && handleCorrect()}
             disabled={actionLoading}

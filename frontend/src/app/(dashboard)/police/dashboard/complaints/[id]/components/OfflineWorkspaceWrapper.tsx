@@ -88,7 +88,7 @@ export function OfflineWorkspaceWrapper({
         try {
           await apiClient.get(endpoint.url);
           cachedCount++;
-          console.log(`[OfflineWorkspace] ✓ Prefetched (${cachedCount}/${endpoints.length}): ${endpoint.name}`);
+          console.log(`[OfflineWorkspace] Prefetched (${cachedCount}/${endpoints.length}): ${endpoint.name}`);
           // Small delay between requests to avoid overwhelming the server
           await new Promise(resolve => setTimeout(resolve, 300));
         } catch (error: any) {
@@ -99,12 +99,12 @@ export function OfflineWorkspaceWrapper({
             const reason = error.response?.status === 403 ? 'access denied' : 'not available for this case';
             console.log(`[OfflineWorkspace] ⊘ Skipped (${skippedCount}): ${endpoint.name} (${reason})`);
           } else {
-            console.error(`[OfflineWorkspace] ✗ Error prefetching ${endpoint.name}:`, error.message);
+            console.error(`[OfflineWorkspace] Error prefetching ${endpoint.name}:`, error.message);
           }
         }
       }
       
-      console.log(`[OfflineWorkspace] ✓ Prefetch complete: ${cachedCount}/${endpoints.length} cached, ${skippedCount} skipped`);
+      console.log(`[OfflineWorkspace] Prefetch complete: ${cachedCount}/${endpoints.length} cached, ${skippedCount} skipped`);
       setIsCached(cachedCount > 0);
     };
     

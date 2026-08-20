@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { ShieldCheck, ShieldAlert, CheckCircle2, Clock, MapPin, UserCheck, Lock, FileText, Printer, Camera, Upload, ArrowRight, Shield, AlertCircle, Send } from 'lucide-react';
+import { AlertCircle, ArrowRight, Camera, CheckCircle2, Clock, Download, FileText, Lock, MapPin, Printer, Send, Shield, ShieldAlert, ShieldCheck, Upload, UserCheck } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api/v1';
@@ -271,7 +271,7 @@ export default function VerifyCustodyPublicPage() {
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            📤 Return Parcel to Police (Outward)
+            <Upload size={14} aria-hidden="true" /> Return Parcel to Police (Outward)
           </button>
           <button
             type="button"
@@ -285,7 +285,7 @@ export default function VerifyCustodyPublicPage() {
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            📥 Acknowledge Inward Receipt
+            <Download size={14} aria-hidden="true" /> Acknowledge Inward Receipt
           </button>
         </div>
 

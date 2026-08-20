@@ -77,13 +77,6 @@ export default function PoliceProfilePage() {
             </div>
             <p className="text-text-secondary mt-2 font-mono text-sm">Badge: {officerData?.badgeNumber}</p>
           </div>
-          <div className="w-24 h-24 rounded-sm bg-surface-elevated border border-border flex shrink-0 items-center justify-center overflow-hidden">
-            {officerData?.photoUrl ? (
-              <img src={officerData.photoUrl} alt="Profile" className="w-full h-full object-cover" />
-            ) : (
-              <User size={40} className="text-text-secondary" />
-            )}
-          </div>
           <div className="w-24 h-24 rounded-full bg-surface-elevated border border-border flex shrink-0 items-center justify-center overflow-hidden">
             {officerData?.photoUrl ? (
               <img src={officerData.photoUrl} alt="Profile" className="w-full h-full object-cover" />

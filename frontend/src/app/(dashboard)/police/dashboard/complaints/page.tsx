@@ -120,7 +120,7 @@ export default function PoliceComplaintQueuePage(): React.ReactElement {
       case 'REJECTED':
         return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-red-500/10 text-red-500 dark:text-red-400 border border-red-500/20">Rejected</span>;
       case 'FIR_REGISTERED':
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border border-emerald-500/20">FIR Registered</span>;
+        return <span className="inline-flex whitespace-nowrap px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border border-emerald-500/20">FIR Registered</span>;
       default:
         return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-badge-bg text-text-secondary border border-border">{status}</span>;
     }
@@ -201,16 +201,25 @@ export default function PoliceComplaintQueuePage(): React.ReactElement {
         <div className="space-y-4">
           <div className="bg-surface border border-border rounded-2xl overflow-hidden shadow-card glass">
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full min-w-[1120px] table-fixed text-left border-collapse">
+                <colgroup>
+                  <col className="w-[28%]" />
+                  <col className="w-[14%]" />
+                  <col className="w-[11%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[13%]" />
+                  <col className="w-[16%]" />
+                  <col className="w-[150px]" />
+                </colgroup>
                 <thead>
                   <tr className="bg-surface-elevated/60 border-b border-border text-xs font-bold text-text-secondary uppercase tracking-wider">
-                    <th className="p-4 w-1/3">Description</th>
+                    <th className="p-4">Description</th>
                     <th className="p-4">Complainant</th>
-                    <th className="p-4">Incident Date</th>
-                    <th className="p-4">Category</th>
-                    <th className="p-4">Status</th>
-                    <th className="p-4">Assigned IO</th>
-                    <th className="p-4 text-right">Action</th>
+                    <th className="p-4 whitespace-nowrap">Incident Date</th>
+                    <th className="p-4 whitespace-nowrap">Category</th>
+                    <th className="p-4 whitespace-nowrap">Status</th>
+                    <th className="p-4 whitespace-nowrap">Assigned IO</th>
+                    <th className="p-4 text-right whitespace-nowrap">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border text-sm">
@@ -228,30 +237,30 @@ export default function PoliceComplaintQueuePage(): React.ReactElement {
                       <td className="p-4 text-text-secondary font-medium">
                         {new Date(c.incidentDate).toLocaleDateString('en-IN')}
                       </td>
-                      <td className="p-4 uppercase text-xs font-bold text-text-secondary tracking-wide">
+                      <td className="p-4 uppercase text-xs font-bold text-text-secondary tracking-wide whitespace-nowrap">
                         {c.category ? c.category.replace('_', ' ') : 'UNCATEGORIZED'}
                       </td>
-                      <td className="p-4">{getStatusBadge(c.status)}</td>
-                      <td className="p-4">
+                      <td className="p-4 whitespace-nowrap">{getStatusBadge(c.status)}</td>
+                      <td className="p-4 whitespace-nowrap">
                         {c.assignedIOs && c.assignedIOs.length > 0 ? (
                           <div className="flex flex-col gap-1">
                             {c.assignedIOs.map((io, idx) => (
-                              <div key={idx} className="flex items-center gap-1.5">
-                                <span className="text-text-primary font-semibold text-xs">{io.officerName}</span>
-                                <span className="text-[10px] text-text-secondary font-mono">({io.badgeNumber})</span>
+                              <div key={idx} className="flex min-w-0 items-center gap-1.5 whitespace-nowrap">
+                                <span className="min-w-0 max-w-[150px] truncate text-text-primary font-semibold text-xs" title={io.officerName}>{io.officerName}</span>
+                                <span className="text-[10px] text-text-secondary font-mono whitespace-nowrap">({io.badgeNumber})</span>
                               </div>
                             ))}
                           </div>
                         ) : c.assignedIO ? (
-                          <div className="flex flex-col">
-                            <span className="text-text-primary font-semibold">{c.assignedIO.officerName}</span>
-                            <span className="text-xs text-text-secondary font-mono">{c.assignedIO.badgeNumber}</span>
+                          <div className="flex min-w-0 items-center gap-1.5 whitespace-nowrap">
+                            <span className="min-w-0 max-w-[150px] truncate text-text-primary font-semibold" title={c.assignedIO.officerName}>{c.assignedIO.officerName}</span>
+                            <span className="text-xs text-text-secondary font-mono whitespace-nowrap">({c.assignedIO.badgeNumber})</span>
                           </div>
                         ) : (
                           <span className="text-xs text-text-muted italic">Unassigned</span>
                         )}
                       </td>
-                      <td className="p-4 text-right">
+                      <td className="p-4 text-right whitespace-nowrap">
                         <Link href={APP_ROUTES.POLICE_COMPLAINT_DETAIL(c._id)}>
                           <div className="relative inline-block">
                             {c.hasUnreadDepartmentResponse && (
@@ -260,7 +269,7 @@ export default function PoliceComplaintQueuePage(): React.ReactElement {
                                 <span className="relative inline-flex rounded-full h-3 w-3 bg-semantic-info border-2 border-surface"></span>
                               </span>
                             )}
-                            <Button variant="secondary" size="sm" leftIcon={<Eye size={14} />}>
+                            <Button variant="secondary" size="sm" leftIcon={<Eye size={14} />} className="w-[132px] whitespace-nowrap">
                               Review Case
                             </Button>
                           </div>

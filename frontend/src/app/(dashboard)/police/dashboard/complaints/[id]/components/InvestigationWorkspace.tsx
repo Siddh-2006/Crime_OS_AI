@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { motion } from 'framer-motion';
 import apiClient from '@/lib/axios';
 import { AnalysisPanel } from './AnalysisPanel';
 import { ChecklistPanel } from './ChecklistPanel';
@@ -18,6 +19,7 @@ import { CaseCorkboard } from '@/components/case/CaseCorkboard';
 import { CaseRoomChat } from './CaseRoomChat';
 import { Bot, BookOpen, ClipboardList, Send, FolderOpen, Sparkles, Users, FileText, Brain, Calendar, MapPin, Download, CheckCheck, Loader2, Clock, FileImage, FileVideo, FileAudio, File, ChevronRight, CheckCircle2, AlertCircle, Shield, Pencil, Trash2, Scale, X, MessageSquare, Network } from 'lucide-react';
 import { Card, CardHeader } from '@/components/ui/Card';
+import { CommonTimeline } from '@/components/ui/CommonTimeline';
 import ThreadViewerModal from './ThreadViewerModal';
 import SnapshotDetailModal from './SnapshotDetailModal';
 import StepDetailModal from './StepDetailModal';
@@ -204,12 +206,12 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
       const res = await apiClient.post(`/cases/${caseId}/diary/draft`, {
         diary_date: diaryDate,
         language,
-        title: `Daily Diary â€” ${diaryDate}`,
+        title: `Daily Diary - ${diaryDate}`,
       });
       const draft = res.data.data;
       setDiaryDraft(draft);
       setDiaryForm({
-        title: draft?.title || `Daily Diary â€” ${diaryDate}`,
+        title: draft?.title || `Daily Diary - ${diaryDate}`,
         officialOfficerId: draft?.official_officer_id || '',
         crimeRegisterNumber: draft?.crime_register_number || '',
         propertyStolen: draft?.property_stolen || '',
@@ -393,7 +395,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
     setActionLoading(true);
     try {
       await apiClient.post(`/cases/${caseId}/analyze`, { language });
-      // SSE in AnalysisPanel handles progress â€” no polling loop needed here
+      // SSE in AnalysisPanel handles progress - no polling loop needed here
     } catch (error) {
       console.error('Failed to trigger analysis', error);
       alert('Failed to trigger analysis.');
@@ -555,7 +557,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
 
   return (
     <div className="w-full min-w-0" style={{ minHeight: '600px' }}>
-      {/* Main workspace â€” takes all available width */}
+      {/* Main workspace - takes all available width */}
       <div className="w-full min-w-0 space-y-4">
       {/* Tab Content */}
       <div className="min-h-[500px]">
@@ -620,7 +622,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
                       disabled={diaryDraftLoading}
                       className="rounded-sm bg-brand-primary px-4 py-2 text-sm font-bold text-text-primary shadow-xs hover:bg-brand-primary/90 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
                     >
-                      {diaryDraftLoading ? 'Workingâ€¦' : 'Generate Draft'}
+                      {diaryDraftLoading ? 'Working...' : 'Generate Draft'}
                     </button>
                     {diaryDraft && (
                       <button
@@ -628,7 +630,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
                         disabled={diaryDraftLoading}
                         className="rounded-sm border border-border bg-surface px-3 py-2 text-sm font-bold text-text-primary hover:bg-surface-elevated disabled:cursor-not-allowed transition-all"
                       >
-                        {diaryDraftLoading ? 'Savingâ€¦' : 'Save Draft'}
+                        {diaryDraftLoading ? 'Saving...' : 'Save Draft'}
                       </button>
                     )}
                   </div>
@@ -648,7 +650,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
                         disabled={diaryDraftLoading}
                         className="rounded-sm border border-semantic-success/30 bg-semantic-success/10 px-3.5 py-2 text-sm font-bold text-semantic-success hover:bg-semantic-success/20 disabled:cursor-not-allowed transition-all"
                       >
-                        {diaryDraftLoading ? 'Savingâ€¦' : 'Finalize'}
+                        {diaryDraftLoading ? 'Saving...' : 'Finalize'}
                       </button>
                     </div>
                     <div className="mt-4 rounded-sm border border-border bg-surface p-4 shadow-xs">
@@ -928,7 +930,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
                         disabled={placesVisitedLoading}
                         className="inline-flex items-center justify-center rounded-sm bg-brand-primary px-5 py-2.5 text-xs font-bold text-text-primary shadow-xs hover:bg-brand-primary/90 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
                       >
-                        {placesVisitedLoading ? 'Savingâ€¦' : '+ Add Place Visited'}
+                        {placesVisitedLoading ? 'Saving...' : '+ Add Place Visited'}
                       </button>
                     </div>
                   </div>
@@ -1100,10 +1102,16 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
           </div>
         </Modal>
       </div>
-      {/* Floating Copilot AI Widget with Smooth Expand/Collapse Animation */}
+      {/* Floating Nyaya assistant with draggable panel and launcher */}
       {typeof window !== 'undefined' && createPortal(
-        <div className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end gap-3 pointer-events-none">
-          {/* Animated Copilot Drawer Window */}
+        <motion.div
+          drag
+          dragMomentum={false}
+          dragElastic={0.08}
+          className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end gap-3 pointer-events-auto touch-none"
+          title="Drag Nyaya to reposition"
+        >
+          {/* Nyaya drawer window */}
           <div
             className={`transition-all duration-300 transform-gpu origin-bottom-right shadow-2xl rounded-sm overflow-hidden border border-border w-96 max-w-[92vw] h-[560px] max-h-[calc(100vh-6.5rem)] bg-surface ${copilotOpen
               ? 'scale-100 opacity-100 translate-y-0 shadow-glow pointer-events-auto'
@@ -1120,23 +1128,17 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
           {/* Floating Round Launcher Button */}
           <button
             onClick={() => setCopilotOpen((prev) => !prev)}
-            className={`h-14 w-14 rounded-full bg-brand-primary text-text-primary shadow-xl hover:shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 flex items-center justify-center border-2 border-white/20 relative group pointer-events-auto ${copilotOpen ? 'rotate-90 bg-surface-elevated text-text-primary border-border' : 'animate-pulse'
+            className={`h-14 w-14 rounded-full flex items-center justify-center border-2 border-white/20 relative pointer-events-auto overflow-hidden ${copilotOpen ? 'bg-surface-elevated border-border' : 'bg-brand-primary'
               }`}
-            title={copilotOpen ? 'Close Copilot' : 'Open Copilot'}
+            title={copilotOpen ? 'Close Nyaya' : 'Open Nyaya'}
           >
             {copilotOpen ? (
               <span className="text-2xl font-bold">&times;</span>
             ) : (
-              <>
-                <Bot className="h-6 w-6 text-text-primary group-hover:rotate-12 transition-transform duration-300" />
-                <span className="absolute -top-1 -right-1 flex h-4 w-4">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-accent opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-4 w-4 bg-brand-accent border border-white text-[8px] font-extrabold text-text-primary items-center justify-center">AI</span>
-                </span>
-              </>
+              <img src="/avataar.png" alt="Nyaya" className="h-full w-full object-cover" />
             )}
           </button>
-        </div>,
+        </motion.div>,
         document.body
       )}
 
@@ -1200,7 +1202,13 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           {requestedEvidence.map((req: string, idx: number) => (
             <div key={`req-${idx}`} className="bg-surface-elevated/50 border border-dashed border-border rounded-sm p-4 shadow-xs flex gap-3 opacity-60">
-              <div className="text-2xl">â³</div>
+              <div
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border text-text-secondary"
+                title="Evidence pending from complainant"
+                aria-label="Evidence pending from complainant"
+              >
+                <Clock size={15} aria-hidden="true" />
+              </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-text-primary truncate">Evidence Request - {idx + 1}</p>
                 <p className="text-xs text-text-secondary capitalize">Requested / Yet to upload</p>
@@ -1215,7 +1223,7 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
         </div>
       )}
 
-      {/* â”€â”€ Evidence cards â€” from CI evidence_intelligence if available, else raw list â”€â”€ */}
+      {/* Evidence cards - from CI evidence_intelligence if available, else raw list */}
       {(() => {
         const ciItems: any[] = caseUnderstanding?.evidence_intelligence || caseUnderstanding?.evidence_analysis || [];
 
@@ -1383,7 +1391,7 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
                   <div className="flex items-center gap-2 mt-2">
                     <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${ev.status === 'verified' ? 'bg-semantic-success/10 text-semantic-success border-semantic-success/30' : 'bg-semantic-warning/10 text-semantic-warning border-semantic-warning/30'
                       }`}>
-                      {ev.status === 'verified' ? 'âœ“ Verified' : 'Unverified'}
+                      {ev.status === 'verified' ? 'Verified' : 'Unverified'}
                     </span>
                     <span className="text-[10px] font-bold text-text-primary">
                       Confidence Score: {Math.round(Number(ev.confidence_score ?? 0))}%
@@ -1459,7 +1467,7 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
                   const evIds = c.related_evidence_ids || c.involved_evidence_ids || [];
                   return (
                     <div key={i} className="p-3.5 border border-semantic-critical/30 bg-semantic-critical/10 rounded-sm text-xs text-semantic-critical font-bold space-y-1">
-                      <p>â€¢ {c.description}</p>
+                      <p>&#8226; {c.description}</p>
                       {evIds.length > 0 && (
                         <p className="text-[11px] font-mono text-semantic-critical/80">Involved Evidence IDs: {evIds.join(', ')}</p>
                       )}
@@ -1713,7 +1721,7 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
               {(p.contact?.phone || p.contact?.email) && (
                 <p className="text-[11px] text-text-secondary font-medium">
                   {p.contact.phone && `Phone: ${p.contact.phone}`}
-                  {p.contact.phone && p.contact.email && ' Â· '}
+                  {p.contact.phone && p.contact.email && ' / '}
                   {p.contact.email && `Email: ${p.contact.email}`}
                 </p>
               )}
@@ -2037,7 +2045,7 @@ function ParticipantDetailModal({
               <div className="space-y-2">
                 {appliedSections.map((sec: any, i: number) => (
                   <div key={i} className="bg-brand-primary/10 border border-brand-primary/30 rounded-sm p-3.5 text-xs">
-                    <p className="font-bold text-brand-primary">{sec.code} â€” {sec.title}</p>
+                    <p className="font-bold text-brand-primary">{sec.code} - {sec.title}</p>
                     {sec.reason && <p className="text-text-primary mt-1 leading-relaxed">{sec.reason}</p>}
                   </div>
                 ))}
@@ -2124,7 +2132,7 @@ function ParticipantDetailModal({
                     <>ðŸŽ™ï¸ Upload Audio</>
                   )}
                 </button>
-                <span className="text-[10px] text-text-secondary">MP3, WAV, OGG, M4A, FLAC, WEBM â€¢ max 50 MB</span>
+                <span className="text-[10px] text-text-secondary">MP3, WAV, OGG, M4A, FLAC, WEBM - max 50 MB</span>
               </div>
 
               {/* Transcription feedback */}
@@ -2393,26 +2401,24 @@ function TimelinePanel({ caseUnderstanding }: { caseUnderstanding: CaseUnderstan
     <div className="py-2">
       <Card className="p-6">
         <CardHeader title="Chronological Case Timeline" />
-        <div className="mt-5 space-y-5">
-          {(!caseUnderstanding.timeline || caseUnderstanding.timeline.length === 0) ? (
-            <p className="text-sm text-text-muted italic">No timeline events extracted.</p>
-          ) : (
-            caseUnderstanding.timeline.map((event, idx) => (
-              <div key={idx} className="flex gap-4 items-start border-l-2 border-brand-primary pl-4 py-2 bg-surface-elevated/40 rounded-r-xl p-3 border border-border/50">
-                <div className="space-y-1.5">
-                  <span className="text-xs font-bold px-2.5 py-1 rounded-sm bg-brand-primary/10 text-brand-primary border border-brand-primary/20 font-mono">
-                    {event.timestamp}
-                  </span>
-                  <p className="text-sm text-text-primary font-bold mt-1.5">{event.description}</p>
+        <div className="mt-5">
+          <CommonTimeline
+            emptyMessage="No timeline events extracted."
+            items={(caseUnderstanding.timeline || []).map((event, idx) => ({
+              id: idx,
+              time: event.timestamp,
+              content: (
+                <>
+                  <p className="text-sm font-bold text-text-primary">{event.description}</p>
                   {event.supporting_evidence_ids && event.supporting_evidence_ids.length > 0 && (
-                    <p className="text-xs text-text-secondary">
+                    <p className="mt-2 text-xs text-text-secondary">
                       Evidence Ref: <span className="font-mono">{event.supporting_evidence_ids.join(', ')}</span>
                     </p>
                   )}
-                </div>
-              </div>
-            ))
-          )}
+                </>
+              ),
+            }))}
+          />
         </div>
       </Card>
     </div>
@@ -2658,7 +2664,7 @@ function AddParticipantModal({
                     onClick={() => handleRemoveIdentifier(idx)}
                     className="px-3 py-2 text-semantic-critical hover:bg-semantic-critical/10 rounded-sm transition-colors font-bold"
                   >
-                    âœ•
+                    &#10003;
                   </button>
                 </div>
               ))}
@@ -3050,7 +3056,7 @@ function EditParticipantModal({
   caseId: string;
   onSuccess: (updated?: any) => void;
 }) {
-  // â”€â”€ Local participant state â€” updated optimistically on every mutation â”€â”€â”€â”€
+  // Local participant state - updated optimistically on every mutation
   const [p, setP] = React.useState<any>(initialParticipant);
   React.useEffect(() => { setP(initialParticipant); }, [initialParticipant, isOpen]);
 
@@ -3116,7 +3122,7 @@ function EditParticipantModal({
     }));
   };
 
-  // Helper â€” after any mutation, get fresh participant from API and update local state instantly
+  // Helper - after any mutation, get fresh participant from API and update local state instantly
   const refreshParticipant = React.useCallback(async () => {
     try {
       const res = await apiClient.get(`/cases/${caseId}/participants`);

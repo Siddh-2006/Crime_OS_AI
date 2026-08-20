@@ -164,7 +164,7 @@ function CollapsibleSidebar({
 }: CollapsibleSidebarProps): React.ReactElement {
   const searchParams = useSearchParams();
   // Detect if we're inside a complaint detail page
-  const caseMatch = pathname.match(/\/police\/dashboard\/complaints\/([^/]+)$/);
+  const caseMatch = pathname.match(/\/police\/dashboard\/complaints\/(?!new$)([^/]+)$/);
   const caseId = caseMatch ? caseMatch[1] : null;
   const activeIoTab = searchParams.get('tab') || (caseNavList && caseNavList[0]?.id ? caseNavList[0].id : 'analysis');
   const activeCaseItems = caseNavList || caseNavItems;
@@ -266,7 +266,7 @@ function CollapsibleSidebar({
           })}
         </div>
 
-        {/* Case-level navigation â€” shown when inside a complaint page */}
+        {/* Case-level navigation - shown when inside a complaint page */}
         {isPolice && caseId && !collapsed && (
           <div className="mt-4 pt-4 border-t border-border flex-1 flex flex-col">
             
@@ -295,7 +295,7 @@ function CollapsibleSidebar({
           </div>
         )}
 
-        {/* Collapsed case nav â€” icon only */}
+        {/* Collapsed case nav - icon only */}
         {isPolice && caseId && collapsed && (
           <div className="mt-4 pt-4 border-t border-border space-y-0.5">
             {activeCaseItems.map((tab) => {

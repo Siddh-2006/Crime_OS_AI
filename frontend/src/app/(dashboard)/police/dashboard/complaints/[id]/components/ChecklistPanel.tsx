@@ -254,7 +254,7 @@ function StepRow({
                 }}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-semantic-success/15 text-semantic-success border border-semantic-success/30 hover:bg-semantic-success/20 transition-all cursor-pointer"
               >
-                <CheckCircle2 size={13} /> Completed ✓
+                <CheckCircle2 size={13} /> Completed
               </button>
             )}
 

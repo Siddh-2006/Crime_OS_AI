@@ -4,6 +4,40 @@
 @tailwind components;
 @tailwind utilities;
 
+.loader {
+  width: 50px;
+  aspect-ratio: 1;
+  display: grid;
+  border: 4px solid #0000;
+  border-radius: 50%;
+  border-color: currentColor #0000;
+  animation: loader-spin 1s infinite linear;
+}
+
+.loader::before,
+.loader::after {
+  content: '';
+  grid-area: 1 / 1;
+  margin: 2px;
+  border: inherit;
+  border-radius: 50%;
+}
+
+.loader::before {
+  border-color: currentColor #0000;
+  animation: loader-spin 0.5s infinite linear reverse;
+}
+
+.loader::after {
+  margin: 8px;
+}
+
+@keyframes loader-spin {
+  100% {
+    transform: rotate(1turn);
+  }
+}
+
 @layer base {
   /* ── Light Theme (Official Gujarat Police Navy Blue & White) ─────────── */
   :root {
