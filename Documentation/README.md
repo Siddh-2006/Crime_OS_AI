@@ -8,6 +8,15 @@
 Experience the deployed Crime OS platform:
 
  **[Open Crime OS Live Demo](https://crimeos-lemon.vercel.app/login)**
+
+ ### Credentials
+
+Use the following credentials to explore the platform:
+
+| Role | Email | Password |
+|---|---|---|
+| **IO (Investigating Officer)** | `io@police.gov.in` | `password123` |
+| **SHO (Station House Officer)** | `sho@police.gov.in` | `password123` |
  
 
 For the technical architecture, component design, data flows, security model, and deployment topology, see [SYSTEM_ARCHITECTURE.md](./SYSTEM_ARCHITECTURE.md).
