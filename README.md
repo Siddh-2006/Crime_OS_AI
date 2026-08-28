@@ -17,7 +17,7 @@ Use the following credentials to explore the platform:
 | **IO (Investigating Officer)** | `io@police.gov.in` | `password123` |
 | **SHO (Station House Officer)** | `sho@police.gov.in` | `password123` |
  
-For the technical architecture, component design, data flows, security model, and deployment topology, see [SYSTEM_ARCHITECTURE.md](./SYSTEM_ARCHITECTURE.md).
+For the technical architecture, component design, data flows, security model, and deployment topology, see [SYSTEM_ARCHITECTURE.md](./Documentation/SYSTEM_ARCHITECTURE.md).
 
 ---
 
