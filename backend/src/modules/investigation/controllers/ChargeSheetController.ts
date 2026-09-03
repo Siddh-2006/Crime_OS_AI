@@ -4,6 +4,7 @@ import { sendError, sendSuccess } from '../../../shared/utils/response.util';
 import { ChargeSheetService } from '../services/chargeSheetService';
 import { ChargeSheetGenerator } from '../services/ChargeSheetGenerator';
 import { generateChargeSheetPdfStream } from '../../../shared/utils/chargeSheetPdfGenerator';
+import logger from '../../../config/logger';
 
 export class ChargeSheetController {
   static async getChargeSheet(req: Request, res: Response): Promise<void> {
@@ -44,11 +45,13 @@ export class ChargeSheetController {
   }
 
   static async downloadChargeSheetPdf(req: Request, res: Response): Promise<void> {
+    const { id } = req.params;
+    logger.info('Charge sheet PDF download requested', { caseId: id });
     try {
-      const { id } = req.params;
       const chargeSheetData = await ChargeSheetService.getByCaseId(id);
 
       if (!chargeSheetData) {
+        logger.warn('Charge sheet PDF download failed: charge sheet not found', { caseId: id });
         sendError(res, HttpStatusCode.NOT_FOUND, {
           code: 'NOT_FOUND',
           message: 'No charge sheet found for this case',
@@ -57,7 +60,16 @@ export class ChargeSheetController {
       }
 
       await generateChargeSheetPdfStream(chargeSheetData, res);
+      logger.info('Charge sheet PDF download generated', {
+        caseId: id,
+        firNumber: chargeSheetData.section1_filingInformation?.firNumber,
+      });
     } catch (error) {
+      logger.error('Charge sheet PDF download failed', {
+        caseId: id,
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined,
+      });
       if (!res.headersSent) {
         sendError(res, HttpStatusCode.INTERNAL_SERVER_ERROR, {
           code: 'CHARGESHEET_PDF_FAILED',

@@ -569,10 +569,6 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
           <CaseRoomChat caseId={caseId} />
         )}
 
-          {activeTab === 'room' && (
-            <CaseRoomChat caseId={caseId} />
-          )}
-
           {activeTab === 'analysis' && (
             <AnalysisPanel
               caseId={caseId}
@@ -607,6 +603,47 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
               <div className="rounded-sm border border-border bg-surface p-5 shadow-sm space-y-4">
                 <div className="flex flex-col gap-3 rounded-sm border border-border bg-surface-elevated/80 p-5 text-text-primary md:flex-row md:items-end md:justify-between shadow-xs">
                   <div>
+                  {/* Floating Nyaya assistant with draggable panel and launcher */}
+                  {typeof window !== 'undefined' && createPortal(
+                    <motion.div
+                      drag
+                      dragMomentum={false}
+                      dragElastic={0.08}
+                      className={`fixed bottom-6 right-6 z-[9999] flex flex-col items-end gap-3 touch-none ${
+                        copilotOpen ? 'pointer-events-auto' : 'pointer-events-none'
+                      }`}
+                      title="Drag Nyaya to reposition"
+                    >
+                      {/* Nyaya drawer window */}
+                      <div
+                        className={`transition-all duration-300 transform-gpu origin-bottom-right shadow-2xl rounded-sm overflow-hidden border border-border w-96 max-w-[92vw] h-[560px] max-h-[calc(100vh-6.5rem)] bg-surface ${copilotOpen
+                          ? 'scale-100 opacity-100 translate-y-0 shadow-glow pointer-events-auto'
+                          : 'scale-0 opacity-0 pointer-events-none translate-y-8'
+                          }`}
+                      >
+                        <CopilotSidebar
+                          caseId={caseId}
+                          onStateChangeApplied={fetchWorkspaceData}
+                          onClose={() => setCopilotOpen(false)}
+                        />
+                      </div>
+
+                      {/* Floating Round Launcher Button */}
+                      <button
+                        onClick={() => setCopilotOpen((prev) => !prev)}
+                        className={`h-14 w-14 rounded-full flex items-center justify-center border-2 border-white/20 relative pointer-events-auto overflow-hidden ${copilotOpen ? 'bg-surface-elevated border-border' : 'bg-brand-primary'
+                          }`}
+                        title={copilotOpen ? 'Close Nyaya' : 'Open Nyaya'}
+                      >
+                        {copilotOpen ? (
+                          <span className="text-2xl font-bold">&times;</span>
+                        ) : (
+                          <img src="/avataar.png" alt="Nyaya" className="h-full w-full object-cover" />
+                        )}
+                      </button>
+                    </motion.div>,
+                    document.body
+                  )}
                     <h3 className="text-lg font-bold text-text-primary">Official Daily Diary</h3>
                     <p className="mt-1 text-sm text-text-secondary">Generate a formal draft from the latest case context and finalize it for the record.</p>
                   </div>
@@ -1102,46 +1139,6 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
           </div>
         </Modal>
       </div>
-      {/* Floating Nyaya assistant with draggable panel and launcher */}
-      {typeof window !== 'undefined' && createPortal(
-        <motion.div
-          drag
-          dragMomentum={false}
-          dragElastic={0.08}
-          className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end gap-3 pointer-events-auto touch-none"
-          title="Drag Nyaya to reposition"
-        >
-          {/* Nyaya drawer window */}
-          <div
-            className={`transition-all duration-300 transform-gpu origin-bottom-right shadow-2xl rounded-sm overflow-hidden border border-border w-96 max-w-[92vw] h-[560px] max-h-[calc(100vh-6.5rem)] bg-surface ${copilotOpen
-              ? 'scale-100 opacity-100 translate-y-0 shadow-glow pointer-events-auto'
-              : 'scale-0 opacity-0 pointer-events-none translate-y-8'
-              }`}
-          >
-            <CopilotSidebar
-              caseId={caseId}
-              onStateChangeApplied={fetchWorkspaceData}
-              onClose={() => setCopilotOpen(false)}
-            />
-          </div>
-
-          {/* Floating Round Launcher Button */}
-          <button
-            onClick={() => setCopilotOpen((prev) => !prev)}
-            className={`h-14 w-14 rounded-full flex items-center justify-center border-2 border-white/20 relative pointer-events-auto overflow-hidden ${copilotOpen ? 'bg-surface-elevated border-border' : 'bg-brand-primary'
-              }`}
-            title={copilotOpen ? 'Close Nyaya' : 'Open Nyaya'}
-          >
-            {copilotOpen ? (
-              <span className="text-2xl font-bold">&times;</span>
-            ) : (
-              <img src="/avataar.png" alt="Nyaya" className="h-full w-full object-cover" />
-            )}
-          </button>
-        </motion.div>,
-        document.body
-      )}
-
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );

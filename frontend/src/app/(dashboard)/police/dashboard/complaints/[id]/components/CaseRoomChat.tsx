@@ -438,7 +438,9 @@ const [messages, setMessages] = useState<IMessage[]>([]);
           } ${
             sidebarOpen
               ? 'opacity-100'
-              : 'w-0 opacity-0 overflow-hidden border-none'
+              : 'w-0 opacity-0 overflow-hidden border-none pointer-events-none'
+          } ${
+            sidebarOpen ? 'pointer-events-auto' : ''
           } ${
             // Responsive mobile overlay drawer
             'max-lg:absolute max-lg:inset-y-0 max-lg:right-0 max-lg:z-30 max-lg:w-full max-lg:sm:w-80 max-lg:shadow-2xl max-lg:!w-80'

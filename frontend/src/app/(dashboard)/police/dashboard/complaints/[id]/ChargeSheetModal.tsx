@@ -146,8 +146,10 @@ export default function ChargeSheetModal({ isOpen, onClose, caseId }: ChargeShee
 const handleDownload = async () => {
     setError('');
     try {
-      const blobUrl = previewPdfUrl ?? (await handlePreviewPdf());
-      if (!blobUrl) return; // TypeScript narrows `blobUrl` to `string` after this line
+      const res = await apiClient.get(`/cases/${caseId}/chargesheet/pdf`, {
+        responseType: 'blob',
+      });
+      const blobUrl = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
 
       const link = document.createElement('a');
       link.href = blobUrl;
@@ -155,7 +157,9 @@ const handleDownload = async () => {
       document.body.appendChild(link);
       link.click();
       link.remove();
+      window.URL.revokeObjectURL(blobUrl);
     } catch (err: any) {
+      console.error('[ChargeSheet] PDF download failed', { caseId, error: err });
       setError(err.response?.data?.message || 'Failed to download charge sheet PDF.');
     }
   };
