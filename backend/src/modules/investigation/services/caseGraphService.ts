@@ -1,4 +1,4 @@
-﻿import mongoose from "mongoose";
+import mongoose from "mongoose";
 import { CaseParticipant }   from "../models/CaseParticipant.model";
 import { CaseEntity }        from "../models/CaseEntity.model";
 import { Evidence }          from "../models/Evidence.model";
@@ -33,11 +33,16 @@ function dedup(edges: GraphEdge[]): GraphEdge[] {
 
 export async function buildGraph(caseId: string): Promise<CaseGraph> {
   const oid = new mongoose.Types.ObjectId(caseId);
-  const [participants, entities, evidenceDocs, latestSnapshot] = await Promise.all([
+
+  // Pull complaint to get complaintIntelligence entities (ground truth from Python NLP)
+  const Complaint = mongoose.model('Complaint');
+
+  const [participants, entities, evidenceDocs, latestSnapshot, complaintDoc] = await Promise.all([
     CaseParticipant.find({ case_id: oid }).lean().exec(),
     CaseEntity.find({ case_id: oid }).lean().exec(),
     Evidence.find({ case_id: oid }).lean().exec(),
     AnalysisSnapshot.findOne({ case_id: oid }).sort({ timestamp: -1 }).lean().exec(),
+    Complaint.findById(oid).select('complaintIntelligence').lean().exec(),
   ]);
 
   const nodes: GraphNode[] = [];
@@ -67,6 +72,71 @@ export async function buildGraph(caseId: string): Promise<CaseGraph> {
       meta: { entity_type: e.entity_type, value: e.value } });
     for (const ref of e.corroborating_evidence_ids ?? []) {
       const t = evIdMap.get(ref); if (t) edges.push(mkEdge(e._id.toString(), t, "corroborates"));
+    }
+  }
+
+  // 2b. Ground truth entities from complaintIntelligence.people_and_entities
+  const ci = (complaintDoc as any)?.complaintIntelligence;
+  const pae = ci?.people_and_entities;
+  if (pae) {
+    // Map of field -> entity_type label
+    const entityFieldMap: Record<string, string> = {
+      victims: "Victim", suspects: "Suspect", witnesses: "Witness",
+      other_persons: "Person", organizations: "Organization",
+      locations: "Location", vehicles: "Vehicle",
+      phone_numbers: "Phone", emails: "Email",
+      upi_ids: "UPI_ID", bank_accounts: "Bank Account",
+      documents: "Document", money: "Money",
+      digital_assets: "Digital Asset", physical_assets: "Physical Asset",
+    };
+    for (const [field, label] of Object.entries(entityFieldMap)) {
+      const items: any[] = Array.isArray(pae[field]) ? pae[field] : [];
+      for (const item of items) {
+        const val: string = typeof item === "string" ? item : (item?.value || item?.name || "");
+        if (!val || val.length < 2) continue;
+        const nodeId = `ci-${label}-${val}`.replace(/\s+/g, "_").toLowerCase();
+        addNode({ id: nodeId, label: val, nodeType: "entity", meta: { entity_type: label, value: val, source: "complaintIntelligence" } });
+
+        let hasEdge = false;
+        // Link to source evidence if IDs provided
+        for (const evRef of (item?.source_evidence_ids ?? [])) {
+          const evId = evIdMap.get(evRef);
+          if (evId) { edges.push(mkEdge(nodeId, evId, "corroborates")); hasEdge = true; }
+        }
+        // Fallback: link to any evidence whose OCR/tags contain this value
+        if (!hasEdge) {
+          const valNorm = val.toLowerCase().replace(/\s+/g, "");
+          for (const ev of evidenceDocs) {
+            const ocrText = ((ev as any).aiMetadata?.ocrText || (ev as any).aiMetadata?.pdfText || "").toLowerCase().replace(/\s+/g, "");
+            const tags = ((ev as any).ai_tags || []).join(" ").toLowerCase();
+            if ((valNorm.length >= 4 && ocrText.includes(valNorm)) || tags.includes(valNorm)) {
+              edges.push(mkEdge(nodeId, ev._id.toString(), "found_in"));
+              hasEdge = true;
+            }
+          }
+        }
+        // If still no edge, link to participant by name match
+        if (!hasEdge && ["Victim", "Suspect", "Witness", "Person"].includes(label)) {
+          const pId = pNameMap.get(val.toLowerCase().trim());
+          if (pId) { edges.push(mkEdge(pId, nodeId, "has_identifier")); hasEdge = true; }
+        }
+        // Only link suspect/victim/witness to matching participants
+        if (["Victim", "Suspect", "Witness", "Person"].includes(label)) {
+          const pId = pNameMap.get(val.toLowerCase().trim());
+          if (pId) edges.push(mkEdge(pId, nodeId, "has_identifier"));
+        }
+        // For identifiers (phone, UPI, bank) — link to ALL participants if no specific evidence link
+        if (!hasEdge && ["Phone", "Email", "UPI_ID", "Bank Account"].includes(label)) {
+          const valNorm2 = val.toLowerCase().replace(/\s+/g, "");
+          for (const p of participants) {
+            const pIdents = (p.identifiers ?? []).map((id: any) => (id.value || "").toLowerCase().replace(/\s+/g, ""));
+            if (pIdents.includes(valNorm2)) {
+              edges.push(mkEdge(p._id.toString(), nodeId, "has_identifier"));
+              hasEdge = true;
+            }
+          }
+        }
+      }
     }
   }
 

@@ -142,13 +142,13 @@ function collectAttachmentParts(
 
 // ─── Core ingestion — mirrors DepartmentPortalController.respondToRequest ────
 
-async function ingestResponse(opts: {
+export async function ingestResponse(opts: {
   caseId: string;
   requestId: string;
   departmentEntityId: string;
   responseContent: string;
   attachments: Array<{ filename: string; mimeType: string; buffer?: Buffer; evidenceId?: string }>;
-  sender: 'department' | 'citizen';
+  sender: 'department' | 'citizen' | 'other';
 }): Promise<void> {
   const { caseId, requestId, departmentEntityId, responseContent, attachments, sender } = opts;
 
@@ -158,8 +158,8 @@ async function ingestResponse(opts: {
     logger.warn(`[GmailService] DepartmentRequest not found for request_id: ${requestId}`);
     return;
   }
-  if (request.status !== 'sent') {
-    logger.warn(`[GmailService] Request ${requestId} is already in status: ${request.status} — skipping`);
+  if (!['sent', 'acknowledged', 'response_received'].includes(request.status)) {
+    logger.warn(`[GmailService] Request ${requestId} is in invalid status: ${request.status} — skipping`);
     return;
   }
 
@@ -209,8 +209,52 @@ async function ingestResponse(opts: {
       });
       
       if (pyRes.data && pyRes.data.items) {
-        for (const item of pyRes.data.items) {
+        const cloudinary = require('../../../config/cloudinary').default;
+        const { Evidence } = require('../../../modules/investigation/models/Evidence.model');
+        const { Types } = require('mongoose');
+
+        for (let i = 0; i < pyRes.data.items.length; i++) {
+          const item = pyRes.data.items[i];
+          const att = attachments[i];
           evidenceIds.push(item.evidence_id);
+
+          try {
+            // Upload to Cloudinary immediately for UI availability
+            const resourceType = att.mimeType.startsWith('image') ? 'image' : att.mimeType.startsWith('video') ? 'video' : 'raw';
+            const cloudinaryResult = await new Promise((resolve, reject) => {
+              const stream = cloudinary.uploader.upload_stream(
+                { resource_type: resourceType, folder: `crime_os/evidence/${request.case_id}` },
+                (error: any, result: any) => {
+                  if (error || !result) reject(error || new Error('Cloudinary failed'));
+                  else resolve(result);
+                }
+              );
+              if (att.buffer) {
+                stream.end(att.buffer);
+              } else {
+                reject(new Error('No buffer'));
+              }
+            });
+
+            // Insert PENDING evidence into DB so it shows up on UI immediately
+            await Evidence.create({
+              case_id: request.case_id,
+              evidence_id: item.evidence_id,
+              type: resourceType === 'raw' ? 'document' : resourceType,
+              storage_ref: (cloudinaryResult as any).secure_url || (cloudinaryResult as any).url,
+              uploader_id: new Types.ObjectId(),
+              uploader_name: 'Department Reply',
+              status: 'pending',
+              source: 'department',
+              linked_request_id: requestId,
+              originalFilename: att.filename,
+              mimeType: att.mimeType,
+              size: att.buffer?.length || 0,
+              processingStatus: 'PENDING'
+            });
+          } catch (uploadErr: any) {
+            logger.error(`[GmailService] Cloudinary direct upload failed for attachment`, { error: uploadErr.message });
+          }
         }
       }
       logger.info(`[GmailService] Forwarded ${attachments.length} attachments. Received ${evidenceIds.length} IDs from Python AI.`);
@@ -288,6 +332,7 @@ async function ingestResponse(opts: {
         for (let i = 0; i < MAX_RETRIES; i++) {
           const currentEvidences = await Evidence.find({ case_id: caseId, evidence_id: { $in: evidenceIds } }).lean();
           const pendingCount = currentEvidences.filter((e: any) => e.processingStatus === 'PENDING').length;
+          const missingCount = evidenceIds.length - currentEvidences.length;
 
           for (const evidence of currentEvidences) {
             const url = (evidence as any)?.storage_ref || (evidence as any)?.secureUrl || (evidence as any)?.cloudinary_url || '';
@@ -327,7 +372,7 @@ async function ingestResponse(opts: {
             }
           }
           
-          if (pendingCount === 0) {
+          if (pendingCount === 0 && missingCount <= 0) {
             allProcessed = true;
             logger.info(`[GmailService] All attachments processed! Building summary prompt...`);
             
@@ -526,7 +571,7 @@ export class GmailService {
 
     let request = null as any;
     if (requestId) {
-      const requestFilter: Record<string, unknown> = { request_id: requestId, status: 'sent' };
+      const requestFilter: Record<string, unknown> = { request_id: requestId, status: { $in: ['sent', 'acknowledged', 'response_received'] } };
       if (isDepartmentReply) {
         requestFilter.request_type = { $in: ['external_department', 'inter_station_assignment'] };
         requestFilter.recipient_type = { $ne: 'citizen' };
@@ -540,7 +585,7 @@ export class GmailService {
       if (!responseOrigin) {
         logger.warn(`[GmailService] Reply origin is missing for case-only match on case ${caseId}; requestId is required.`);
       } else {
-        const requestFilter: Record<string, unknown> = { case_id: caseId, status: 'sent' };
+        const requestFilter: Record<string, unknown> = { case_id: caseId, status: { $in: ['sent', 'acknowledged', 'response_received'] } };
         if (isDepartmentReply) {
           requestFilter.request_type = { $in: ['external_department', 'inter_station_assignment'] };
           requestFilter.recipient_type = { $ne: 'citizen' };
@@ -560,7 +605,7 @@ export class GmailService {
 
     if (!request) {
       logger.warn(
-        `[GmailService] No matching 'sent' DepartmentRequest found for case ${caseId ?? '<unknown>'}` +
+        `[GmailService] No matching open DepartmentRequest found for case ${caseId ?? '<unknown>'}` +
         `${requestId ? ` and request ${requestId}` : ''} — skipping ingestion.`,
       );
       await GmailService._markAsRead(gmail, messageId);
@@ -585,7 +630,7 @@ export class GmailService {
       return;
     }
 
-    const senderType = isCitizenReply ? 'citizen' : 'department';
+    const senderType = isCitizenReply ? 'citizen' : 'other';
 
     // Download and process all attachments
     const uploadedAttachments: Array<{
@@ -617,43 +662,7 @@ export class GmailService {
       }
     }
 
-    // --- Forward to Python AI Engine ---
-    if (uploadedAttachments.length > 0) {
-      try {
-        const FormData = require('form-data');
-        const axios = require('axios');
-        const env = require('../../../config/env').default;
-        
-        // 1. Generate token
-        const tokenRes = await axios.post(`${env.COMPLAINT_INTELLIGENCE_URL}/evidence/upload-token/generate`, {
-          case_id: resolvedCaseId 
-        });
-        const token = tokenRes.data.token;
-
-        // 2. Upload files
-        const formData = new FormData();
-        formData.append('uploader_type', senderType);
-        for (const att of uploadedAttachments) {
-          formData.append('files', att.buffer, {
-            filename: att.filename,
-            contentType: att.mimeType,
-          });
-        }
-        
-        const uploadRes = await axios.post(`${env.COMPLAINT_INTELLIGENCE_URL}/evidence/upload/${token}`, formData, {
-          headers: formData.getHeaders(),
-          timeout: 30000,
-        });
-        
-        // Attach evidenceIds back to attachments for ingestResponse
-        uploadRes.data.items.forEach((item: any, idx: number) => {
-           uploadedAttachments[idx].evidenceId = item.evidence_id;
-        });
-      } catch (err: any) {
-        logger.error(`[GmailService] Python AI upload failed: ${err.message}`, { error: err.response?.data || err.message });
-      }
-    }
-
+    // --- Forward to Python AI Engine is handled inside ingestResponse ---
     // Strip original quoted email (e.g. "On Tue, Aug 4, 2026 at 7:29 PM Crime OS Gujarat Police <...> wrote:")
     let cleanBody = body.split(/On\s+(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun),\s+.*?wrote:/i)[0];
     cleanBody = cleanBody.split(/On\s+\d{1,2}\s+[A-Z][a-z]{2}\s+\d{4}.*?wrote:/i)[0]; // Fallback date format

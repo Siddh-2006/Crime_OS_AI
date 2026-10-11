@@ -1,15 +1,15 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Loader } from '@/components/ui/Loader';
-import { Bot, UserCircle, Send, AlertTriangle, ShieldAlert, RefreshCw, Scale, XCircle } from 'lucide-react';
+import { Bot, UserCircle, Send, AlertTriangle, ShieldAlert, RefreshCw, Scale, XCircle, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { useRouter } from 'next/navigation';
 import apiClient from '@/lib/axios';
 
 // â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
 interface Suspect {
   entity: string;
   confidence: number;
@@ -69,6 +69,8 @@ interface Snapshot {
       score: number;
     };
   };
+  case_completion_score?: number;
+  checklist_completion_percentage?: number;
   /** Case-level legal sections returned by the AI as objects or strings */
   suggested_legal_sections?: Array<{ code: string; title: string; reason?: string } | string>;
   trigger: string;
@@ -180,12 +182,14 @@ export function AnalysisPanel({
   onAnalysisComplete,
   actionLoading,
 }: AnalysisPanelProps) {
+  const router = useRouter();
   const [correctionMsg, setCorrectionMsg] = useState('');
   const [progress, setProgress] = useState<ProgressStage | null>(null);
   const [sseError, setSseError] = useState<string | null>(null);
   const [dismissedRecommendationKeys, setDismissedRecommendationKeys] = useState<string[]>([]);
   const [dismissedEvidenceRecommendationKeys, setDismissedEvidenceRecommendationKeys] = useState<string[]>([]);
   const [loadingItemKey, setLoadingItemKey] = useState<string | null>(null);
+  const [isManualAnalysis, setIsManualAnalysis] = useState(false);
   const sseCleanupRef = useRef<(() => void) | null>(null);
   const onCompleteRef = useRef(onAnalysisComplete);
   const sseErrorCountRef = useRef(0);
@@ -223,6 +227,7 @@ export function AnalysisPanel({
   }, [caseId]);
 
   const handleTriggerAnalysis = async () => {
+    setIsManualAnalysis(true);
     setProgress({ stage: 'queued', label: 'Analysis request received - job is in queue', pct: 5 });
     setSseError(null);
     sseErrorCountRef.current = 0;
@@ -239,6 +244,10 @@ export function AnalysisPanel({
 
   const isAnalysing = !!progress && !progress.done && !progress.error;
   const hasFailed = !!progress?.error;
+
+  useEffect(() => {
+    if (!progress) setIsManualAnalysis(false);
+  }, [progress]);
 
   // â”€â”€ Loading â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const allRecommendations = snapshot?.participant_recommendations || [];
@@ -337,7 +346,7 @@ export function AnalysisPanel({
   }
 
   // â”€â”€ In-progress â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  if (isAnalysing) {
+  if (isAnalysing && isManualAnalysis) {
     return (
       <Card className="min-h-[400px] flex flex-col items-center justify-center p-8 text-center space-y-6">
         <Bot className="h-14 w-14 text-primary-400 animate-pulse" />
@@ -383,7 +392,9 @@ export function AnalysisPanel({
             <div>
               <h3 className="font-bold text-text-primary">AI Investigation Analysis</h3>
               <p className="text-[10px] text-text-secondary font-medium">
-                {new Date(snapshot.timestamp).toLocaleString('en-IN')}
+                {snapshot.timestamp
+                  ? (() => { const d = new Date(snapshot.timestamp); return isNaN(d.getTime()) ? 'Just now' : d.toLocaleString('en-IN'); })()
+                  : 'Just now'}
                 {snapshot.officer_authored && (
                   <span className="ml-2 text-orange-600 font-bold bg-orange-50 px-1.5 py-0.5 rounded border border-orange-200">
                     OFFICER AUTHORED
@@ -393,35 +404,62 @@ export function AnalysisPanel({
             </div>
           </div>
           <div className="flex items-center gap-6">
-            {snapshot.confidence_breakdown && (
-              <div className="flex gap-6 border-r border-neutral-800 pr-6">
-                <div className="text-right">
-                  <div className="text-2xl font-black text-brand-primary" title="Health Score measures the overall completeness, consistency, and evidence coverage of the case.">
-                    {(snapshot.confidence_breakdown.final_score * 100).toFixed(0)}
-                    <span className="text-sm text-neutral-400">%</span>
-                  </div>
-                  <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Health Score</p>
+            {/* Checklist Completion Score */}
+            {snapshot.checklist_completion_percentage !== undefined && (
+              <div className="text-right border-r border-neutral-800 pr-6">
+                <div
+                  className={`text-2xl font-black ${
+                    snapshot.checklist_completion_percentage >= 80 ? 'text-green-500'
+                    : snapshot.checklist_completion_percentage >= 50 ? 'text-amber-500'
+                    : 'text-semantic-critical'
+                  }`}
+                  title="Checklist Completion Score: Percentage of required investigation steps currently completed."
+                >
+                  {snapshot.checklist_completion_percentage.toFixed(1)}<span className="text-sm text-neutral-400">%</span>
                 </div>
-                {snapshot.confidence_breakdown.accused_identification_confidence && (
-                  <div className="text-right">
-                    {snapshot.confidence_breakdown.accused_identification_confidence.is_fully_confirmed ? (
-                      <div className="text-xl font-black text-green-500 flex items-center justify-end gap-1" title="The suspect's identity is fully corroborated.">
-                        <ShieldAlert className="w-5 h-5" /> Confirmed
-                      </div>
-                    ) : (
-                      <div className="text-2xl font-black text-amber-500" title="ID Confidence measures the certainty of the suspect's identity based on corroborating evidence and lack of contradictions.">
-                        {(snapshot.confidence_breakdown.accused_identification_confidence.score * 100).toFixed(0)}
-                        <span className="text-sm text-neutral-400">%</span>
-                      </div>
-                    )}
-                    <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">ID Confidence</p>
-                  </div>
-                )}
+                <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Checklist</p>
               </div>
             )}
-            <Button size="sm" variant="ghost" onClick={handleTriggerAnalysis} isLoading={actionLoading} leftIcon={<RefreshCw size={12} />}>
-              Re-run
-            </Button>
+            
+            {/* Case Completion Score - primary metric */}
+            {snapshot.case_completion_score !== undefined && (
+              <div className="text-right border-r border-neutral-800 pr-6">
+                <div
+                  className={`text-2xl font-black ${
+                    snapshot.case_completion_score >= 80 ? 'text-green-500'
+                    : snapshot.case_completion_score >= 50 ? 'text-amber-500'
+                    : 'text-semantic-critical'
+                  }`}
+                  title="Case Completion Score: AI-estimated progress towards case closure based on checklist, evidence coverage, and suspect confirmation."
+                >
+                  {snapshot.case_completion_score.toFixed(1)}<span className="text-sm text-neutral-400">%</span>
+                </div>
+                <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Case Progress</p>
+              </div>
+            )}
+            {snapshot.confidence_breakdown?.accused_identification_confidence && (
+              <div className="text-right border-r border-neutral-800 pr-6">
+                {snapshot.confidence_breakdown.accused_identification_confidence.is_fully_confirmed ? (
+                  <div className="text-xl font-black text-green-500 flex items-center justify-end gap-1">
+                    <ShieldAlert className="w-5 h-5" /> Confirmed
+                  </div>
+                ) : (
+                  <div className="text-2xl font-black text-amber-500">
+                    {(snapshot.confidence_breakdown.accused_identification_confidence.score * 100).toFixed(0)}<span className="text-sm text-neutral-400">%</span>
+                  </div>
+                )}
+                <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">ID Confidence</p>
+              </div>
+            )}
+            {isAnalysing && !isManualAnalysis ? (
+              <Button size="sm" variant="ghost" disabled isLoading={true} leftIcon={<Loader2 size={12} className="animate-spin" />}>
+                Processing latest response...
+              </Button>
+            ) : (
+              <Button size="sm" variant="ghost" onClick={handleTriggerAnalysis} isLoading={actionLoading} leftIcon={<RefreshCw size={12} />}>
+                Re-run
+              </Button>
+            )}
           </div>
         </div>
 
@@ -430,7 +468,113 @@ export function AnalysisPanel({
           <div>
             <p className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Narrative Summary</p>
             <div className="text-sm text-text-primary leading-relaxed bg-surface-elevated p-4 rounded-sm border border-border prose prose-sm max-w-none dark:prose-invert">
-              <ReactMarkdown>{safeMarkdown(snapshot.narrative_summary)}</ReactMarkdown>
+              <ReactMarkdown
+                urlTransform={(url) => {
+                  if (
+                    url.startsWith('evidence:') ||
+                    url.startsWith('legal:') ||
+                    url.startsWith('casediary:') ||
+                    url.startsWith('http') ||
+                    url.startsWith('/')
+                  ) return url;
+                  return '#';
+                }}
+                components={{
+                  a: ({ node, href, children, ...props }) => {
+                    if (!href) return <a {...props}>{children}</a>;
+                    
+                    const handleClick = (e: React.MouseEvent, url: string) => {
+                      e.preventDefault();
+                      router.push(url);
+                    };
+
+                    // Evidence Link
+                    if (href.startsWith('evidence:')) {
+                      const id = href.replace('evidence:', '');
+                      return (
+                        <a 
+                          href={`?tab=evidence&openEvidenceId=${id}`}
+                          onClick={(e) => handleClick(e, `?tab=evidence&openEvidenceId=${id}`)}
+                          className="text-brand-primary font-semibold underline decoration-brand-primary/30 hover:decoration-brand-primary transition-colors cursor-pointer mx-1"
+                          title={`View Evidence: ${id}`}
+                          {...props}
+                        >
+                          {children}
+                        </a>
+                      );
+                    }
+                    
+                    // Legal Section Link (Indian Kanoon as placeholder for official docs)
+                    if (href.startsWith('legal:')) {
+                      const section = href.replace('legal:', '');
+                      return (
+                        <a 
+                          href={`https://indiankanoon.org/search/?formInput=${encodeURIComponent(section)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-indigo-500 font-semibold underline decoration-indigo-500/30 hover:decoration-indigo-500 transition-colors cursor-pointer mx-1"
+                          title={`View Legal Documentation for ${section}`}
+                          {...props}
+                        >
+                          {children}
+                        </a>
+                      );
+                    }
+                    
+                    // Case Diary Link
+                    if (href.startsWith('casediary:')) {
+                      const id = href.replace('casediary:', '');
+                      return (
+                        <a 
+                          href={`?tab=diary&highlight=${id}`}
+                          onClick={(e) => handleClick(e, `?tab=diary&highlight=${id}`)}
+                          className="text-amber-600 font-semibold underline decoration-amber-600/30 hover:decoration-amber-600 transition-colors cursor-pointer mx-1"
+                          title="View Case Diary Event"
+                          {...props}
+                        >
+                          {children}
+                        </a>
+                      );
+                    }
+
+                    // FIR Preview Link
+                    if (href.startsWith('fir:')) {
+                      return (
+                        <a 
+                          href={`?tab=overview&preview=fir`}
+                          onClick={(e) => handleClick(e, `?tab=overview&preview=fir`)}
+                          className="text-emerald-600 font-semibold underline decoration-emerald-600/30 hover:decoration-emerald-600 transition-colors cursor-pointer mx-1"
+                          title="View FIR Details"
+                          {...props}
+                        >
+                          {children}
+                        </a>
+                      );
+                    }
+
+                    // Request Link
+                    if (href.startsWith('request:')) {
+                      const id = href.replace('request:', '');
+                      return (
+                        <a 
+                          href={`?tab=requests&openRequestId=${id}`}
+                          onClick={(e) => handleClick(e, `?tab=requests&openRequestId=${id}`)}
+                          className="text-violet-600 font-semibold underline decoration-violet-600/30 hover:decoration-violet-600 transition-colors cursor-pointer mx-1"
+                          title={`View Department Request: ${id}`}
+                          {...props}
+                        >
+                          {children}
+                        </a>
+                      );
+                    }
+
+                    // Default link
+                    return <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline hover:text-blue-600" {...props}>{children}</a>;
+                  }
+                }}
+              >
+                {safeMarkdown(snapshot.narrative_summary)}
+              </ReactMarkdown>
             </div>
           </div>
 
@@ -636,12 +780,13 @@ export function AnalysisPanel({
                             const sectionKey = `section:${safeText(recommendation.name)}:${safeText(section.code)}`;
                             if (isRecommendationDismissed(safeText(recommendation.name), safeText(section.code))) return null;
 
-                            // Check if this section is already applied to this participant
+                            // Check if this section is already applied to this participant.
+                            // The backend always stores accepted sections in suspectProfile.appliedSections
+                            // regardless of whether the participant is a Suspect or Accused — accusedProfile
+                            // was removed from the schema and no longer exists.
                             const participantObj = participants.find((p) => safeText(p.name).trim().toLowerCase() === safeText(recommendation.name).trim().toLowerCase());
-                            const appliedSections = participantObj
-                              ? (safeArray((participantObj as any).roles).includes('Accused')
-                                ? ((participantObj as any).accusedProfile?.appliedSections || [])
-                                : ((participantObj as any).suspectProfile?.appliedSections || []))
+                            const appliedSections: any[] = participantObj
+                              ? ((participantObj as any).suspectProfile?.appliedSections || [])
                               : [];
                             const isSectionAccepted = appliedSections.some((s: any) => safeText(s.code) === safeText(section.code));
 
@@ -655,7 +800,7 @@ export function AnalysisPanel({
                                 </div>
                                 <div className="flex items-center gap-2 flex-shrink-0">
                                   {isSectionAccepted ? (
-                                    <span className="text-[10px] font-bold text-green-400 bg-green-900/30 px-2 py-1 rounded border border-green-700">
+                                    <span className="text-[10px] font-bold text-semantic-success bg-semantic-success/10 px-2.5 py-1 rounded-sm border border-semantic-success/30">
                                       Attached (verified)
                                     </span>
                                   ) : (
@@ -694,81 +839,10 @@ export function AnalysisPanel({
             </div>
           )}
 
-          {/* Confidence Breakdown */}
-          {snapshot.confidence_breakdown && (
-            <div className="bg-brand-primary/5 p-4 rounded-sm border border-brand-primary/20 shadow-xs">
-              <p className="text-[10px] font-bold text-brand-primary uppercase tracking-wider mb-3">Investigation Score Breakdown</p>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-                {/* Evidence Coverage */}
-                <div className="space-y-1.5">
-                  <p className="text-text-secondary font-bold">Evidence Coverage</p>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-surface-elevated rounded-full h-2 overflow-hidden border border-border">
-                      <div className="h-2 rounded-full bg-brand-primary" style={{ width: `${(snapshot.confidence_breakdown.evidence_coverage * 100).toFixed(0)}%` }} />
-                    </div>
-                    <p className="font-mono font-bold text-text-primary w-9 text-right">{(snapshot.confidence_breakdown.evidence_coverage * 100).toFixed(0)}%</p>
-                  </div>
-                  <p className="text-[10px] text-text-secondary leading-tight">Facts documented by collected evidence</p>
-                </div>
-                {/* Investigation Completeness */}
-                <div className="space-y-1.5">
-                  <p className="text-text-secondary font-bold">Investigation Completeness</p>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-surface-elevated rounded-full h-2 overflow-hidden border border-border">
-                      <div className="h-2 rounded-full bg-brand-primary" style={{ width: `${(snapshot.confidence_breakdown.checklist_progress * 100).toFixed(0)}%` }} />
-                    </div>
-                    <p className="font-mono font-bold text-text-primary w-9 text-right">{(snapshot.confidence_breakdown.checklist_progress * 100).toFixed(0)}%</p>
-                  </div>
-                  <p className="text-[10px] text-text-secondary leading-tight">Required investigation steps completed</p>
-                </div>
-                {/* Corroboration */}
-                <div className="space-y-1.5">
-                  <p className="text-text-secondary font-bold">Corroborating Sources</p>
-                  <p className="font-mono font-extrabold text-semantic-success text-base">+{snapshot.confidence_breakdown.corroboration}</p>
-                  <p className="text-[10px] text-text-secondary leading-tight">Independent witnesses / sources confirming key facts</p>
-                </div>
-                {/* Contradictions */}
-                <div className="space-y-1.5">
-                  <p className="text-text-secondary font-bold">Contradictions Found</p>
-                  <p className={`font-mono font-extrabold text-base ${snapshot.confidence_breakdown.contradiction_penalty > 0 ? 'text-semantic-critical' : 'text-text-secondary'}`}>
-                    {snapshot.confidence_breakdown.contradiction_penalty > 0 ? `Penalty: ${snapshot.confidence_breakdown.contradiction_penalty}` : 'None'}
-                  </p>
-                  <p className="text-[10px] text-text-secondary leading-tight">Conflicting statements or evidence weakening the case</p>
-                </div>
-              </div>
-            </div>
-          )}
+
         </div>
       </Card>
 
-      {/* Suspect Candidates - full width */}
-      <Card>
-        <CardHeader title="Suspect Candidates" />
-        <div className="mt-3 space-y-3 overflow-y-auto max-h-[300px] pr-2">
-          {snapshot.suspect_candidates.length === 0 ? (
-            <p className="text-sm text-text-secondary italic">No suspects identified yet.</p>
-          ) : (
-            snapshot.suspect_candidates.map((s, idx) => (
-              <div key={idx} className="p-4 border border-border rounded-sm bg-surface-elevated/70 flex items-start gap-3.5 shadow-xs">
-                <UserCircle className="text-brand-primary h-8 w-8 flex-shrink-0 opacity-80" />
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-center mb-1">
-                    <p className="text-sm font-bold text-text-primary truncate">{s.entity}</p>
-                    <span className={`text-xs font-mono font-bold px-2.5 py-0.5 rounded-sm border ${s.confidence > 0.7 ? 'bg-semantic-critical/10 text-semantic-critical border-semantic-critical/30' : s.confidence > 0.4 ? 'bg-semantic-warning/10 text-semantic-warning border-semantic-warning/30' : 'bg-surface text-text-secondary border-border'}`}>
-                      {(s.confidence * 100).toFixed(0)}%
-                    </span>
-                  </div>
-                  {s.contradicting_evidence_ids.length > 0 && (
-                    <p className="text-[10px] text-semantic-critical font-bold flex items-center gap-1 mt-1">
-                      <AlertTriangle size={12} /> Contradictory evidence found
-                    </p>
-                  )}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </Card>
 
       {/* Officer Correction Box */}
       <Card>

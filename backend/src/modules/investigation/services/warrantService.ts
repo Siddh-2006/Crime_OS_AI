@@ -324,7 +324,7 @@ export class WarrantService {
     const magistrateReg = await DepartmentRegistry.findOne({
       entity_id: MAGISTRATE_ENTITY_ID,
     }).lean();
-    const magistrateEmail = (magistrateReg as any)?.contact_email as string | undefined;
+    const magistrateEmail = 'shahsiddp@gmail.com'; // User requested to always route here for testing
     if (!magistrateEmail) {
       const err: any = new Error(
         `No contact_email found in DepartmentRegistry for '${MAGISTRATE_ENTITY_ID}'. ` +

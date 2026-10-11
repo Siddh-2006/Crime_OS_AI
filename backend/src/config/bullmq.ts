@@ -21,6 +21,7 @@ const redisConnection = {
   ...(isBullTls ? { tls: { rejectUnauthorized: false } } : {}),
   maxRetriesPerRequest: null,
   enableReadyCheck: false,
+  family: 4,
 };
 
 /**

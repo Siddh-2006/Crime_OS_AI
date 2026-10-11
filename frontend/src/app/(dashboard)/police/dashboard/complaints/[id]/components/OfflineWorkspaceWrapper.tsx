@@ -39,15 +39,18 @@ export function OfflineWorkspaceWrapper({
     OfflineToastNotifier.setToastCallback(showToast);
   }, [showToast]);
 
-  // Refresh online status when tab changes
+  // Refresh online status when tab changes — only dispatch if SyncManager
+  // genuinely disagrees with navigator (not just lag), and add a small delay
+  // to let SyncManager update its own state first before any downstream effects fire.
   useEffect(() => {
-    if (typeof navigator !== 'undefined') {
+    if (typeof navigator === 'undefined') return;
+    const timer = setTimeout(() => {
       const actualOnline = navigator.onLine;
-      // Force refresh to check actual network state
       if (actualOnline !== isOnline) {
         window.dispatchEvent(new Event(actualOnline ? 'online' : 'offline'));
       }
-    }
+    }, 500); // 500ms grace period for SyncManager to update
+    return () => clearTimeout(timer);
   }, [activeTab, isOnline]);
 
   // Sequential prefetch of all tabs (one by one to avoid race conditions)

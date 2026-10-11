@@ -62,19 +62,19 @@ def is_fallback_description(desc: Optional[str]) -> bool:
 
 async def main():
     print(f"\n{'='*75}")
-    print(f"  FETCH REAL COMPLAINT FROM MONGODB ATLAS & RUN CASE UNDERSTANDING PIPELINE")
+    print(f"  FETCH REAL COMPLAINT FROM MONGODB & RUN CASE UNDERSTANDING PIPELINE")
     print(f"{'='*75}\n")
 
-    print(f"  Connecting to MongoDB Atlas...")
+    print(f"  Connecting to MongoDB...")
     print(f"  URI : {settings.MONGODB_URI[:45]}...")
     print(f"  DB  : {settings.MONGODB_DB}\n")
 
     from app.core.mongo import get_mongo_db
     db = await get_mongo_db()
     if db is None:
-        print("  [Error] MongoDB Atlas connection failed.")
+        print("  [Error] MongoDB connection failed.")
         sys.exit(1)
-    print("  ✓ Connected to MongoDB Atlas cluster successfully!\n")
+    print("  ✓ Connected to MongoDB cluster successfully!\n")
 
     # Auto-start Florence-2 captioning service if not already running
     await ensure_florence_running(florence_base_url=settings.FLORENCE_BASE_URL)
@@ -107,7 +107,7 @@ async def main():
                 await asyncio.sleep(1.0)
 
     if not target_complaint:
-        print(f"  [Error] Complaint [{TARGET_ID}] not found in Atlas database after retries.")
+        print(f"  [Error] Complaint [{TARGET_ID}] not found in MongoDB after retries.")
         sys.exit(1)
 
     case_id = str(target_complaint.get("_id"))
@@ -471,6 +471,30 @@ async def main():
     print(f"\n{'='*75}")
     print(f"  [OK] FETCH FROM MONGODB ATLAS & SINGLE PIPELINE EXECUTION SUCCESSFUL")
     print(f"{'='*75}\n")
+
+    print(f"  [6] PEOPLE & ENTITIES (SECTORS OF INFO)")
+    pe = case_understanding.people_and_entities
+    if pe.victims:
+        print(f"      • Victims       : {', '.join([v.value for v in pe.victims])}")
+    if pe.suspects:
+        print(f"      • Suspects      : {', '.join([s.value for s in pe.suspects])}")
+    if pe.bank_accounts:
+        print(f"      • Bank Accounts : {', '.join([b.value for b in pe.bank_accounts])}")
+    if pe.upi_ids:
+        print(f"      • UPI IDs       : {', '.join([u.value for u in pe.upi_ids])}")
+    if pe.phone_numbers:
+        print(f"      • Phone Numbers : {', '.join([p.value for p in pe.phone_numbers])}")
+    if pe.emails:
+        print(f"      • Emails        : {', '.join([e.value for e in pe.emails])}")
+    if pe.organizations:
+        print(f"      • Organizations : {', '.join([o.value for o in pe.organizations])}")
+    if pe.locations:
+        print(f"      • Locations     : {', '.join([l.value for l in pe.locations])}")
+    if pe.digital_assets:
+        print(f"      • Digital Assets: {', '.join([da.value for da in pe.digital_assets])}")
+    if pe.money:
+        print(f"      • Money         : {', '.join([m.value for m in pe.money])}")
+    print(f"\n{'='*75}")
 
 
 if __name__ == "__main__":

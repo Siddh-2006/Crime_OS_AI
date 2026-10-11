@@ -9,6 +9,7 @@ import { cleanEnv, str, num, bool, port } from 'envalid';
 const env = cleanEnv(process.env, {
   NODE_ENV: str({ choices: ['development', 'test', 'production'] }),
   PORT: port({ default: 5001 }),
+  SHARED_API_KEY: str({ default: 'crime-os-internal-secret-key' }),
 
   MONGODB_URI: str(),
 
@@ -58,13 +59,14 @@ const env = cleanEnv(process.env, {
   PROMPT_COMPRESSION_URL: str({ default: 'http://localhost:8005' }),
 
   // ── LLM — Ollama (primary, local) ────────────────────────────────────────────
+  LLM_BACKEND:            str({ default: 'ollama' }), // 'ollama' or 'gemini'
   OLLAMA_BASE_URL:        str({ default: 'http://localhost:11434' }),
   OLLAMA_NUM_CTX:         num({ default: 32768 }),
   OLLAMA_REQUIRED_MODELS: str({ default: 'gemma4:e2b' }),
 
   // ── LLM — Gemini (cloud fallback when Ollama is unavailable) ─────────────────
   GEMINI_API_KEY:   str({ default: '' }),   // set to enable Gemini fallback
-  GEMINI_MODEL:     str({ default: 'gemini-3.5-flash-lite' }),
+  GEMINI_MODEL:     str({ default: 'gemini-2.0-flash-lite' }),
 
   // ── AI deepfake detection (SightEngine) ─────────────────────────────────────
   SIGHTENGINE_API_USER: str({ default: '' }),
@@ -72,11 +74,7 @@ const env = cleanEnv(process.env, {
   SIGHTENGINE_TIMEOUT_MS: num({ default: 30000 }),
   SIGHTENGINE_ENABLE_DEEPFAKE_CHECK: bool({ default: true }),
 
-  // ── LLM — Sarvam-1 via llama.cpp (DISABLED — kept for reference) ─────────────
-  SARVAM_BASE_URL:   str({ default: 'http://localhost:8005' }),
-  SARVAM_MODEL:      str({ default: 'sarvam-1' }),
-  SARVAM_MAX_CTX:    num({ default: 8192 }),
-  SARVAM_TIMEOUT_MS: num({ default: 600000 }),
+
 
   // ── Gmail OAuth2 (for sending department request emails + polling responses) ──
   GMAIL_CLIENT_ID: str({ default: '' }),

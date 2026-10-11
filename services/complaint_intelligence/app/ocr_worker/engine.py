@@ -3,7 +3,8 @@
 Implements IOCREngine. Runs PaddleOCR on image bytes and converts the output
 to strongly-typed OCRResult. No PaddleOCR types ever leave this module.
 
-Compatible with PaddleOCR 2.7.3 + PaddlePaddle 2.6.2 (stable Windows build).
+Compatible with PaddleOCR 3.x (new predict() API).
+Falls back to GeminiOCREngine if PaddleOCR fails.
 """
 from __future__ import annotations
 
@@ -24,14 +25,12 @@ def _get_ocr():
     logger.info("[paddle_ocr] Loading PaddleOCR model...")
     try:
         from paddleocr import PaddleOCR
+        # PaddleOCR v3 constructor — no use_angle_cls, use_gpu params
         try:
-            ocr = PaddleOCR(
-                use_angle_cls=True,
-                lang=_PADDLE_LANG,
-                use_gpu=False,
-            )
-        except Exception:
             ocr = PaddleOCR(lang=_PADDLE_LANG)
+        except Exception as e:
+            logger.warning(f"[paddle_ocr] PaddleOCR init failed: {e}")
+            return None
         logger.info("[paddle_ocr] PaddleOCR model loaded")
         return ocr
     except Exception as exc:
@@ -40,25 +39,62 @@ def _get_ocr():
 
 
 def _run_paddle(image_bytes: bytes) -> list:
-    """Run PaddleOCR and return raw result list."""
+    """Run PaddleOCR v3 and return raw result list."""
     ocr = _get_ocr()
     if ocr is None:
         return []
     import numpy as np
     from PIL import Image
     img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-    result = ocr.ocr(np.array(img), cls=True)
-    if not result:
+    img_array = np.array(img)
+
+    # PaddleOCR v3 uses predict() instead of ocr()
+    try:
+        results = ocr.predict(img_array)
+    except TypeError:
+        # If predict() is not available, fall back to ocr() without cls kwarg
+        results = ocr.ocr(img_array)
+
+    if not results:
         return []
-    page = result[0]
-    return page if page else []
+
+    # v3 returns a list of dicts per page: [{'rec_texts': [...], 'rec_scores': [...], 'rec_polys': [...]}]
+    # v2 returns: [[ [[box], (text, score)], ... ]]
+    page = results[0] if results else {}
+
+    # Detect v3 format (dict with rec_texts)
+    if isinstance(page, dict) and 'rec_texts' in page:
+        return _normalize_v3_result(page)
+
+    # v2 format — list of [box, (text, score)]
+    if isinstance(page, list):
+        return page
+
+    return []
+
+
+def _normalize_v3_result(page: dict) -> list:
+    """Convert PaddleOCR v3 dict format to the v2-compatible list format."""
+    texts  = page.get('rec_texts', [])
+    scores = page.get('rec_scores', [])
+    polys  = page.get('rec_polys', [])
+
+    result = []
+    for i, text in enumerate(texts):
+        score = scores[i] if i < len(scores) else 0.9
+        poly  = polys[i]  if i < len(polys)  else [[0,0],[1,0],[1,1],[0,1]]
+        # Convert poly to the 4-point format PaddleOCR v2 used
+        points = [[int(p[0]), int(p[1])] for p in poly[:4]]
+        result.append([points, (text, float(score))])
+    return result
 
 
 def _parse_paddle_result(raw: list, duration_ms: float) -> OCRResult:
-    """Convert raw PaddleOCR 2.x output → OCRResult.
+    """Convert raw PaddleOCR output → OCRResult.
 
-    PaddleOCR 2.x output per line:
+    Supports both v2 format:
         [[[x1,y1],[x2,y1],[x2,y2],[x1,y2]], (text, confidence)]
+    and the normalized v3 format (already converted by _normalize_v3_result).
     """
     lines: list[OCRLine] = []
     for item in raw:
@@ -90,7 +126,7 @@ def _parse_paddle_result(raw: list, duration_ms: float) -> OCRResult:
 
 
 class PaddleOCREngine(IOCREngine):
-    """Real PaddleOCR 2.7.3 engine — lazy-loaded, cached per process."""
+    """PaddleOCR engine — supports both v2 and v3, lazy-loaded and cached per process."""
 
     async def run(self, image_bytes: bytes) -> OCRResult:
         logger.info("[paddle_ocr] Starting OCR inference")
@@ -118,9 +154,10 @@ class GeminiOCREngine(IOCREngine):
 
     def __init__(self) -> None:
         import os
-        self._api_key = os.environ.get("GEMINI_API_KEY", "").strip()
-        self._model   = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite").strip()
-        if not self._api_key:
+        api_keys_str = os.environ.get("GEMINI_API_KEY", "").strip()
+        self._api_keys = [k.strip() for k in api_keys_str.split(",") if k.strip()]
+        self._model   = os.environ.get("GEMINI_MODEL", "gemini-3.1-flash-lite").strip()
+        if not self._api_keys:
             logger.warning("[gemini_ocr] GEMINI_API_KEY not set — OCR calls will return empty results")
 
     async def run(self, image_bytes: bytes) -> OCRResult:
@@ -130,7 +167,7 @@ class GeminiOCREngine(IOCREngine):
         logger.info("[gemini_ocr] Starting OCR inference")
         t0 = time.monotonic()
 
-        if not self._api_key:
+        if not self._api_keys:
             return OCRResult(raw_text="", lines=[], word_count=0,
                              line_count=0, average_confidence=0.0,
                              processing_duration_ms=0.0)
@@ -143,8 +180,7 @@ class GeminiOCREngine(IOCREngine):
             mime = "image/webp"
 
         b64 = base64.b64encode(image_bytes).decode()
-        url  = (f"https://generativelanguage.googleapis.com/v1beta/models/"
-                f"{self._model}:generateContent?key={self._api_key}")
+        
         payload = {
             "contents": [{
                 "role": "user",
@@ -162,21 +198,50 @@ class GeminiOCREngine(IOCREngine):
             "generationConfig": {"temperature": 0.0, "maxOutputTokens": 1024},
         }
 
-        try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                resp = await client.post(url, json=payload)
-                resp.raise_for_status()
-                data = resp.json()
-                raw_text = (
-                    data.get("candidates", [{}])[0]
-                        .get("content", {})
-                        .get("parts", [{}])[0]
-                        .get("text", "")
-                        .strip()
-                )
-        except Exception as exc:
-            logger.warning("[gemini_ocr] API call failed", extra={"error": str(exc)})
-            raw_text = ""
+        import asyncio
+        raw_text = ""
+        last_exc = None
+        for api_key in self._api_keys:
+            _hdrs = {}
+            if api_key.startswith("AQ."):
+                _hdrs["Authorization"] = f"Bearer {api_key}"
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{self._model}:generateContent"
+            else:
+                url = (f"https://generativelanguage.googleapis.com/v1beta/models/"
+                       f"{self._model}:generateContent?key={api_key}")
+            for attempt in range(3):
+                try:
+                    async with httpx.AsyncClient(timeout=30.0) as client:
+                        resp = await client.post(url, json=payload, headers=_hdrs)
+                        resp.raise_for_status()
+                        data = resp.json()
+                        raw_text = (
+                            data.get("candidates", [{}])[0]
+                                .get("content", {})
+                                .get("parts", [{}])[0]
+                                .get("text", "")
+                                .strip()
+                        )
+                        break # Success
+                except httpx.HTTPStatusError as exc:
+                    last_exc = exc
+                    if exc.response.status_code in (429, 503):
+                        await asyncio.sleep(4 + (attempt * 2))
+                        continue
+                    if exc.response.status_code in (403, 500):
+                        break # try next key
+                    break # unrecoverable
+                except Exception as exc:
+                    last_exc = exc
+                    if attempt < 2:
+                        await asyncio.sleep(4 + (attempt * 2))
+                        continue
+                    break
+            if raw_text:
+                break
+
+        if not raw_text and last_exc is not None:
+            logger.warning("[gemini_ocr] API call failed on all keys", extra={"error": str(last_exc)})
 
         duration_ms = (time.monotonic() - t0) * 1000
 

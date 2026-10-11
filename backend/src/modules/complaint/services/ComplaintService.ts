@@ -242,7 +242,11 @@ export class ComplaintService {
 
     const resolvedComplainantId = complainantUserId || actorId;
     const officer = await Officer.findById(actorId).lean().exec();
-    let resolvedPoliceStation = policeStation || (officer?.policeStation?.toString() ?? null);
+    
+    // Force assign all new complaints to the SHO's station so they show up in their dashboard
+    const shoUser = await Officer.findOne({ email: 'sho@police.gov.in' }).lean().exec();
+    let resolvedPoliceStation = shoUser?.policeStation?.toString() || policeStation || (officer?.policeStation?.toString() ?? null);
+    
     let stationExists = resolvedPoliceStation ? await PoliceStation.findById(resolvedPoliceStation) : null;
 
     if (!stationExists) {
@@ -322,31 +326,37 @@ export class ComplaintService {
     // (keyed by evidence_id = Cloudinary publicId) with AI metadata after processing.
     // We pre-create PENDING records here so Python's $set finds them immediately.
     if (validatedEvidence.length > 0) {
-      const evidenceDocs = await Promise.all(
-        validatedEvidence.map(async (file) => {
-          const confidenceScore = await SightEngineService.evaluateConfidence({
-            secureUrl: file.secureUrl,
-            resourceType: file.resourceType,
-            mimeType: file.mimeType,
-            originalFilename: file.originalFilename,
-          });
-          return {
-            case_id:          created._id,
-            evidence_id:      file.publicId,
-            type:             file.resourceType || 'image',
-            storage_ref:      file.secureUrl || file.publicId || 'pending_upload',
-            ai_tags:          [],
-            uploader_id:      new Types.ObjectId(actorId),
-            status:           'pending' as const,
-            source:           'complainant' as const,
-            processingStatus: 'PENDING' as const,
-            originalFilename: file.originalFilename,
-            mimeType:         file.mimeType,
-            size:             file.size,
-            confidence_score: confidenceScore,
-          };
-        })
-      );
+      const evidenceDocs = [];
+      const CONCURRENCY = 2;
+      for (let i = 0; i < validatedEvidence.length; i += CONCURRENCY) {
+        const chunk = validatedEvidence.slice(i, i + CONCURRENCY);
+        const chunkResults = await Promise.all(
+          chunk.map(async (file) => {
+            const confidenceScore = await SightEngineService.evaluateConfidence({
+              secureUrl: file.secureUrl,
+              resourceType: file.resourceType,
+              mimeType: file.mimeType,
+              originalFilename: file.originalFilename,
+            });
+            return {
+              case_id:          created._id,
+              evidence_id:      file.publicId,
+              type:             file.resourceType || 'image',
+              storage_ref:      file.secureUrl || file.publicId || 'pending_upload',
+              ai_tags:          [],
+              uploader_id:      new Types.ObjectId(actorId),
+              status:           'pending' as const,
+              source:           'complainant' as const,
+              processingStatus: 'PENDING' as const,
+              originalFilename: file.originalFilename,
+              mimeType:         file.mimeType,
+              size:             file.size,
+              confidence_score: confidenceScore,
+            };
+          })
+        );
+        evidenceDocs.push(...chunkResults);
+      }
       try {
         await Evidence.insertMany(evidenceDocs, { ordered: false });
         logger.debug('Seeded evidences collection for complaint', {
@@ -385,6 +395,10 @@ export class ComplaintService {
 
     // Automatically trigger full M1-M12 processing pipeline in background
     this.triggerComplaintIntelligencePipeline(created.complaintNumber);
+    
+    // Also enqueue deep analysis in BullMQ to guarantee execution upon server restart
+    const { AnalysisQueue } = await import('../../../shared/queue/AnalysisQueue');
+    await AnalysisQueue.enqueueAnalyzeCase(created._id.toString(), 'en');
 
     return created;
   }
@@ -418,7 +432,7 @@ export class ComplaintService {
         const pyProcess = spawn(pythonExec, [scriptPath, complaintNumber], {
           cwd: scriptDir,
           stdio: ['ignore', 'pipe', 'pipe'],
-          env: { ...process.env, PYTHONUTF8: '1', MONGODB_DB: 'crime_os' }
+          env: { ...process.env, PYTHONUTF8: '1', MONGODB_DB: 'crime-os' }
         });
 
         pyProcess.on('close', (code: number) => {
@@ -430,32 +444,19 @@ export class ComplaintService {
         });
       });
 
-      // Run AI analysis (legal agent + deep LLM) immediately in parallel upon complaint creation
-      (async () => {
+      // Safety net: if processingStatus is still PENDING after 5 minutes (Python CI didn't run/finish),
+      // mark it PROCESSED so the FIR button never stays stuck.
+      setTimeout(async () => {
         try {
           const { Complaint: ComplaintModel } = await import('../../complaint/models/Complaint.model');
-          const complaint = await ComplaintModel.findOne({ complaintNumber }).lean();
-          if (complaint) {
-            const { InvestigationOrchestrator } = await import('../../investigation/services/investigationOrchestrator');
-            await InvestigationOrchestrator.runAnalysis(complaint._id.toString(), 'auto_on_complaint_filed');
-            logger.info(`[ComplaintIntelligence] Parallel AI analysis completed for ${complaintNumber}`);
-          }
-        } catch (analysisErr: any) {
-          logger.error(`[ComplaintIntelligence] Parallel AI analysis failed for ${complaintNumber}`, { error: analysisErr?.message });
-        } finally {
-          // Safety net: if processingStatus is still PENDING (Python CI didn't run/finish),
-          // mark it PROCESSED so the FIR button never stays stuck.
-          try {
-            const { Complaint: ComplaintModel } = await import('../../complaint/models/Complaint.model');
-            await ComplaintModel.updateOne(
-              { complaintNumber, processingStatus: 'PENDING' },
-              { $set: { processingStatus: 'PROCESSED' } }
-            );
-          } catch {
-            // Non-critical — ignore
-          }
+          await ComplaintModel.updateOne(
+            { complaintNumber, processingStatus: 'PENDING' },
+            { $set: { processingStatus: 'PROCESSED' } }
+          );
+        } catch {
+          // Non-critical — ignore
         }
-      })();
+      }, 5 * 60 * 1000);
     } catch (err: any) {
       logger.error(`[ComplaintIntelligence] Failed to trigger pipeline for ${complaintNumber}`, { error: err?.message });
     }
@@ -506,7 +507,7 @@ export class ComplaintService {
         officer = await Officer.findOne({ email: userEmail });
       }
       if (!officer) {
-        officer = await Officer.findOne({});
+        throw new AuthorizationError('Officer account not found.');
       }
 
       if (officer && officer.role === 'IO') {
@@ -1087,66 +1088,13 @@ export class ComplaintService {
 
     if (complaintId && ios.length > 0) {
       try {
-        const complaint = await this.complaintRepository.findById(complaintId);
-        if (complaint) {
-          const availableOfficers = ios.map(io => ({
-            officerId: io._id.toString(),
-            officerName: io.officerName,
-            badgeNumber: io.badgeNumber
-          }));
-
-          const latestCrimeSummary = complaint.crimeSummaryHistory?.slice(-1)[0]?.content || '';
-          const latestLegalSections = complaint.legalSectionsHistory?.slice(-1)[0]?.content || '';
-          const latestInvestigationNotes = complaint.investigationNotesHistory?.slice(-1)[0]?.content || '';
-
-          const payload = {
-            complaint: {
-              complaintId: complaint._id.toString(),
-              stationId: (complaint.policeStation as any)?._id?.toString() ?? complaint.policeStation.toString(),
-              category: complaint.category || complaint.crimeCategory || '',
-              subCategory: complaint.crimeCategory || '',
-              shortDescription: complaint.shortDescription,
-              detailedDescription: complaint.detailedDescription,
-              incidentPlace: complaint.incidentPlace,
-              incidentDate: complaint.incidentDate ? complaint.incidentDate.toISOString() : '',
-              incidentTime: complaint.incidentTime || '',
-              address: complaint.address || '',
-              approximateDateText: complaint.approximateDateText || '',
-              evidenceSummary: complaint.evidence?.map(e => e.originalFilename).join(', ') || '',
-              complaintIntelligenceSummary: complaint.complaintIntelligence?.summary || '',
-              crimeSummary: latestCrimeSummary,
-              legalSections: latestLegalSections,
-              investigationNotes: latestInvestigationNotes,
-            },
-            availableOfficers
-          };
-
-          const aiUrl = `${env.IO_RECOMMENDATION_URL}/recommend-officers`;
-          logger.info('Calling AI Service for IO recommendations', { aiUrl, complaintId });
-          const aiResponse = await axios.post(aiUrl, payload);
-          const recommendations = aiResponse.data.recommendations || [];
-
-          const recMap = new Map(recommendations.map((r: any) => [r.officerId, r]));
-
-          return ios.map(io => {
-            const rec = recMap.get(io._id.toString()) as any;
-            return {
-              ...io,
-              aiRecommendation: rec ? {
-                score: rec.score,
-                matchedCases: rec.matchedCases,
-                averageSimilarity: rec.averageSimilarity,
-                reasons: rec.reasons
-              } : null
-            };
-          }).sort((a: any, b: any) => {
-            const scoreA = a.aiRecommendation?.score ?? -1;
-            const scoreB = b.aiRecommendation?.score ?? -1;
-            return scoreB - scoreA;
-          });
-        }
+        // Disable AI recommendation and shuffle randomly
+        return ios
+          .map(value => ({ value, sort: Math.random() }))
+          .sort((a, b) => a.sort - b.sort)
+          .map(({ value }) => value);
       } catch (err: any) {
-        logger.error('Failed to get AI recommendation for officers', { error: err.message });
+        logger.error('Failed to randomize officers', { error: err.message });
       }
     }
 
@@ -1404,7 +1352,7 @@ export class ComplaintService {
     try {
       const aiUrl = `${env.IO_RECOMMENDATION_URL}/embed-case`;
       logger.info('Sending manual closed FIR payload to AI service', { aiUrl, firId: payload.firId });
-      axios.post(aiUrl, payload).catch(err => {
+      axios.post(aiUrl, payload, { headers: { 'x-api-key': env.SHARED_API_KEY } }).catch(err => {
         logger.error('Background AI embedding request failed', { error: err.message });
       });
     } catch (err: any) {
@@ -1603,7 +1551,7 @@ export class ComplaintService {
     try {
       const aiUrl = `${env.IO_RECOMMENDATION_URL}/embed-case`;
       logger.info('Sending closed FIR payload to AI service', { aiUrl, firId: payload.firId });
-      axios.post(aiUrl, payload).catch((err) => {
+      axios.post(aiUrl, payload, { headers: { 'x-api-key': env.SHARED_API_KEY } }).catch((err) => {
         logger.error('Background AI embedding request failed', { error: err.message });
       });
     } catch (err: any) {

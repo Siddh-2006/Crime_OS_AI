@@ -36,11 +36,12 @@ class GeminiAsyncEmbedder:
     """
 
     def __init__(self) -> None:
-        self._api_key = settings.GEMINI_API_KEY or ""
+        api_keys_str = settings.GEMINI_API_KEY or ""
+        self._api_keys = [k.strip() for k in api_keys_str.split(",") if k.strip()]
         self._model   = settings.GEMINI_EMBEDDING_MODEL
         self._client  = httpx.AsyncClient(timeout=30.0)
 
-        if not self._api_key:
+        if not self._api_keys:
             logger.warning(
                 "GeminiAsyncEmbedder: GEMINI_API_KEY is not set — "
                 "all embedding calls will return mock vectors."
@@ -53,7 +54,7 @@ class GeminiAsyncEmbedder:
 
     async def _call_api(self, text: str, task_type: str) -> list[float]:
         """Call the Gemini embedding REST endpoint. Returns mock on failure."""
-        if not self._api_key:
+        if not self._api_keys:
             return self._mock_vector(text)
 
         url = GEMINI_EMBED_URL.format(model=self._model)
@@ -62,31 +63,42 @@ class GeminiAsyncEmbedder:
             "content": {"parts": [{"text": text}]},
             "taskType": task_type,
         }
-        t0 = time.perf_counter()
-        try:
-            resp = await self._client.post(
-                url,
-                json=payload,
-                params={"key": self._api_key},
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            vector: list[float] = data["embedding"]["values"]
-            logger.info(
-                "Gemini embedding generated",
-                extra={
-                    "type": task_type,
-                    "dim": len(vector),
-                    "latency_ms": round((time.perf_counter() - t0) * 1000, 2),
-                },
-            )
-            return vector
-        except Exception as exc:
-            logger.warning(
-                f"GeminiAsyncEmbedder: API call failed ({exc}). "
-                f"Falling back to mock vector of dim {GEMINI_EMBEDDING_DIM}."
-            )
-            return self._mock_vector(text)
+        
+        last_exc = None
+        for api_key in self._api_keys:
+            t0 = time.perf_counter()
+            try:
+                resp = await self._client.post(
+                    url,
+                    json=payload,
+                    params={"key": api_key},
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                vector: list[float] = data["embedding"]["values"]
+                logger.info(
+                    "Gemini embedding generated",
+                    extra={
+                        "type": task_type,
+                        "dim": len(vector),
+                        "latency_ms": round((time.perf_counter() - t0) * 1000, 2),
+                    },
+                )
+                return vector
+            except httpx.HTTPStatusError as exc:
+                last_exc = exc
+                if exc.response.status_code in (429, 403, 503, 500):
+                    continue
+                break
+            except Exception as exc:
+                last_exc = exc
+                continue
+
+        logger.warning(
+            f"GeminiAsyncEmbedder: API call failed on all keys (last error: {last_exc}). "
+            f"Falling back to mock vector of dim {GEMINI_EMBEDDING_DIM}."
+        )
+        return self._mock_vector(text)
 
     @staticmethod
     def _mock_vector(text: str) -> list[float]:

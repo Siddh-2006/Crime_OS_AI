@@ -157,7 +157,13 @@ class RecommendationService:
         for officer_id, avg_score in officer_avg_scores.items():
             sims = officer_case_sims[officer_id]
             max_sim = max(sims)
-            normalised = round((avg_score / max_avg) * 100.0, 2)
+            normalised = 0.0
+            if max_avg > 0:
+                normalised = round((avg_score / max_avg) * 100.0, 2)
+            else:
+                normalised = 0.0
+            
+            # Format reasons...
 
             reasons = [
                 f"Handled {len(sims)} semantically similar closed case(s) at this station.",

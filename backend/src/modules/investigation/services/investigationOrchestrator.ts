@@ -15,7 +15,6 @@ import { Escalation } from '../models/Escalation.model';
 import { CaseChecklist } from '../models/CaseChecklist.model';
 import { EmailQueue } from '../../../shared/queue/EmailQueue';
 import { publishProgress } from '../../../shared/utils/analysisProgress';
-import { triggerComplaintIntelligencePipelineByCaseId } from '../../../shared/services/complaintIntelligenceService';
 import { ILegalSectionSuggestion } from '../models/LegalSection.schema';
 
 import logger from '../../../config/logger';
@@ -177,7 +176,7 @@ function legalSectionsToLegacyText(sections: ILegalSectionSuggestion[]): string 
 }
 
 export class InvestigationOrchestrator {
-  private static buildSnapshotPayload(deepResponse: any, fastResponse?: string): any {
+  private static buildSnapshotPayload(deepResponse: any, fastResponse?: string, facts?: any, confidenceBreakdown?: any): any {
     const normalizeConfidence = (c: number) => c > 1 ? c / 100 : c;
     const ranked_next_steps = (deepResponse.ranked_next_steps || []).map((step: any) => ({
       ...step,
@@ -196,6 +195,38 @@ export class InvestigationOrchestrator {
     const evidence_section_recommendations = normalizeEvidenceSectionRecommendations(deepResponse.evidence_section_recommendations);
     const suggested_legal_sections = normalizeSuggestedLegalSections(deepResponse.suggested_legal_sections);
 
+    // ── Case Completion Score ──────────────────────────────────────────────────
+    // Use LLM's score if meaningful (> 5), otherwise compute from actual data
+    let case_completion_score: number;
+    const llmScore = typeof deepResponse.case_completion_score === 'number' ? deepResponse.case_completion_score : 0;
+
+    if (llmScore > 5) {
+      case_completion_score = Math.min(99.9, llmScore);
+    } else if (confidenceBreakdown && facts) {
+      // Deterministic score: built from what we actually know about the case
+      const checklistPct   = (confidenceBreakdown.checklist_progress || 0) * 30;   // max 30
+      const evidencePct    = (confidenceBreakdown.evidence_coverage  || 0) * 25;   // max 25
+      const corrobPts      = Math.min(1.0, (confidenceBreakdown.corroboration || 0) / 5) * 20; // max 20
+      const hasParticipant = normalizedParticipantRecommendations.length > 0 ? 10 : 0; // max 10
+      const hasSections    = suggested_legal_sections.length > 0 ? 10 : 0;            // max 10
+      const hasEvidence    = ((facts?.evidence?.summary?.total || 0) > 0) ? 5 : 0;   // bonus 5
+      
+      const raw = checklistPct + evidencePct + corrobPts + hasParticipant + hasSections + hasEvidence;
+      // Floor at 5 if ANY evidence exists, never let a real case show 0
+      const floor = (facts?.evidence?.summary?.total || 0) > 0 ? 5 : 0;
+      case_completion_score = Math.min(99.9, Math.max(floor, parseFloat(raw.toFixed(1))));
+    } else {
+      case_completion_score = 0;
+    }
+
+    // ── Checklist Completion Percentage ────────────────────────────────────────
+    let checklist_completion_percentage: number;
+    if (typeof deepResponse.checklist_completion_percentage === 'number') {
+      checklist_completion_percentage = Math.min(100.0, Math.max(0.0, deepResponse.checklist_completion_percentage));
+    } else {
+      checklist_completion_percentage = 0.0;
+    }
+
     return {
       ranked_next_steps,
       suspect_candidates: normalizedSuspectCandidates,
@@ -203,6 +234,8 @@ export class InvestigationOrchestrator {
       evidence_section_recommendations,
       narrative_summary: deepResponse.narrative_summary || fastResponse || '',
       suggested_legal_sections,
+      case_completion_score,
+      checklist_completion_percentage,
     };
   }
 
@@ -212,12 +245,11 @@ export class InvestigationOrchestrator {
   static async runAnalysis(caseId: string, trigger: string = 'manual', language: string = 'en'): Promise<any> {
     logger.info(`[Orchestrator] ▶ Starting analysis for caseId: ${caseId}, trigger: ${trigger}`);
 
-    // Trigger Complaint Intelligence pipeline rerun in background
-    triggerComplaintIntelligencePipelineByCaseId(caseId).catch((err) => {
-      logger.error('[Orchestrator] Error triggering complaint intelligence pipeline rerun:', err);
-    });
+    // We no longer trigger the Python pipeline here to avoid redundant dual-execution.
+    // The Python CI pipeline handles the extraction. This method handles deep orchestration.
 
     // 1. Facts Assembly
+    const tAssemble = Date.now();
     logger.info(`[Orchestrator] [1/7] Assembling facts from MongoDB for caseId: ${caseId}`);
       const [factsObject, rawGraphContextSummary] = await Promise.all([
         buildFactsObject(caseId),
@@ -237,10 +269,11 @@ export class InvestigationOrchestrator {
         }
       }
 
-      logger.info(`[Orchestrator] [1/7] Facts assembled — checklist: ${factsObject.checklist.summary.total} steps, evidence: ${factsObject.evidence.summary.total} items, diary: ${factsObject.recent_diary.length} entries`);
+      logger.info(`[Orchestrator] [1/7] Facts assembled — checklist: ${factsObject.checklist.summary.total} steps, evidence: ${factsObject.evidence.summary.total} items, diary: ${factsObject.recent_diary.length} entries`, { durationMs: Date.now() - tAssemble });
     await publishProgress(caseId, 'facts_assembled');
 
     // 2. Retrieval
+    const tRetrieve = Date.now();
     const queryStr = `Blocked Steps: ${factsObject.checklist.summary.blocked}. Pending High Criticality: ${factsObject.checklist.summary.high_criticality_pending}.`;
     logger.info(`[Orchestrator] [2/7] Dispatching concurrent retrieval calls — legal agent + IO recommendation`);
 
@@ -250,7 +283,7 @@ export class InvestigationOrchestrator {
     ]);
     const legalFallback = (legalAgentResult as any)._fallback_used;
     // const ioFallback    = (recommendationResult as any)._fallback_used;
-    logger.info(`[Orchestrator] [2/7] Retrieval done — legal agent: ${legalFallback ? 'FALLBACK' : `${(legalAgentResult as any).retrieved_chunks?.length ?? 0} chunks`}`);
+    logger.info(`[Orchestrator] [2/7] Retrieval done — legal agent: ${legalFallback ? 'FALLBACK' : `${(legalAgentResult as any).retrieved_chunks?.length ?? 0} chunks`}`, { durationMs: Date.now() - tRetrieve });
     // logger.info(`[Orchestrator] [2/7] Retrieval done — legal agent: ${legalFallback ? 'FALLBACK' : `${(legalAgentResult as any).retrieved_chunks?.length ?? 0} chunks`}, IO recommendation: ${ioFallback ? 'FALLBACK' : 'OK'}`);
     await publishProgress(caseId, 'legal_retrieved');
 
@@ -261,13 +294,15 @@ export class InvestigationOrchestrator {
     await publishProgress(caseId, 'confidence_scored');
 
     // 4. Fast LLM pass
+    const tFast = Date.now();
     logger.info(`[Orchestrator] [4/7] Running fast model pass (temp=0.3, max_tokens=512)`);
     const fastPrompt = buildFastPrompt(factsObject, legalAgentResult, language);
     const fastResponse = await fastCall(fastPrompt.system, fastPrompt.user) as string;
-    logger.info(`[Orchestrator] [4/7] Fast pass complete — response length: ${fastResponse?.length ?? 0} chars`);
+    logger.info(`[Orchestrator] [4/7] Fast pass complete — response length: ${fastResponse?.length ?? 0} chars`, { durationMs: Date.now() - tFast });
     await publishProgress(caseId, 'fast_pass_done');
 
     // 5. Deep LLM pass
+    const tDeep = Date.now();
     logger.info(`[Orchestrator] [5/7] Running deep model pass (temp=0.1, max_tokens=1024, jsonMode=true)`);
 
     // Fetch active department entity IDs to ground the LLM — prevents hallucinated entity IDs
@@ -285,14 +320,14 @@ export class InvestigationOrchestrator {
       logger.error(`[Orchestrator] [5/7] Deep model returned invalid/empty JSON. Response: ${JSON.stringify(deepResponse)?.slice(0, 200)}`);
       throw new Error(`[Orchestrator] Deep model failed to return valid JSON structure.`);
     }
-    logger.info(`[Orchestrator] [5/7] Deep pass complete — ${deepResponse.ranked_next_steps?.length ?? 0} steps, ${deepResponse.suspect_candidates?.length ?? 0} suspects`);
+    logger.info(`[Orchestrator] [5/7] Deep pass complete — ${deepResponse.ranked_next_steps?.length ?? 0} steps, ${deepResponse.suspect_candidates?.length ?? 0} suspects`, { durationMs: Date.now() - tDeep });
     await publishProgress(caseId, 'deep_pass_done');
 
     // 6. Persist
     logger.info(`[Orchestrator] [6/7] Persisting AnalysisSnapshot to MongoDB`);
     const previousSnapshot = await AnalysisSnapshot.findOne({ case_id: caseId }).sort({ timestamp: -1 });
 
-    const payload = this.buildSnapshotPayload(deepResponse, fastResponse);
+    const payload = this.buildSnapshotPayload(deepResponse, fastResponse, factsObject, confidenceBreakdown);
 
     const newSnapshot = new AnalysisSnapshot({
       case_id: caseId,
@@ -306,6 +341,8 @@ export class InvestigationOrchestrator {
       narrative_summary: payload.narrative_summary,
       suggested_legal_sections: payload.suggested_legal_sections,
       confidence_breakdown: confidenceBreakdown,
+      case_completion_score: payload.case_completion_score,
+      checklist_completion_percentage: payload.checklist_completion_percentage,
       officer_authored: false,
       parent_snapshot_id: previousSnapshot?._id || undefined,
     });
@@ -335,16 +372,46 @@ export class InvestigationOrchestrator {
         }], sessionOption);
 
         // Update case_checklist statuses
+        const queryExisting = CaseChecklist.find({ case_id: caseId });
+        const existingList = optsSession ? await queryExisting.session(optsSession) : await queryExisting;
+        
         for (const step of payload.ranked_next_steps) {
-          const query = CaseChecklist.findOne({ case_id: caseId, step_id: step.step_id });
-          const existingStep = optsSession ? await query.session(optsSession) : await query;
+          const proposedTitle = (step.reason || 'AI Suggested Step').trim();
+          const proposedWords = new Set<string>(proposedTitle.toLowerCase().split(/\W+/).filter((w: string) => w.length > 3));
 
+          // Check if it already exists by step_id first (rare if LLM hallucinates new IDs, but just in case)
+          let existingStep = existingList.find((s: any) => s.step_id === step.step_id);
+
+          // If not found by ID, do fuzzy duplication check against all existing titles
+          let isDuplicate = false;
           if (!existingStep) {
-            await CaseChecklist.create([{
+            for (const ex of existingList) {
+               const exTitle = ex.title.trim();
+               if (exTitle.toLowerCase() === proposedTitle.toLowerCase()) {
+                 isDuplicate = true;
+                 existingStep = ex;
+                 break;
+               }
+               // Word overlap check (Jaccard-like or subset)
+               const exWords = new Set<string>(exTitle.toLowerCase().split(/\W+/).filter((w: string) => w.length > 3));
+               if (exWords.size > 0 && proposedWords.size > 0) {
+                 const intersection = new Set<string>([...proposedWords].filter((x: string) => exWords.has(x)));
+                 const overlapRatio = intersection.size / Math.min(proposedWords.size, exWords.size);
+                 if (overlapRatio > 0.75) { // 75% of words match
+                   isDuplicate = true;
+                   existingStep = ex;
+                   break;
+                 }
+               }
+            }
+          }
+
+          if (!existingStep && !isDuplicate) {
+            const newStep = await CaseChecklist.create([{
               case_id: caseId,
               sop_id: 'AI_GEN',
               step_id: step.step_id,
-              title: step.reason || 'AI Suggested Step',
+              title: proposedTitle,
               status: 'pending',
               criticality: step.confidence > 0.8 ? 'high' : (step.confidence > 0.5 ? 'medium' : 'low'),
               required_evidence: step.evidence_needed || [],
@@ -352,8 +419,8 @@ export class InvestigationOrchestrator {
               target: step.target,
               department_entity_id: step.department_entity_id,
             }], sessionOption);
-          } else if (existingStep.status !== 'completed' && existingStep.status !== 'blocked') {
-            existingStep.title = step.reason || existingStep.title;
+            existingList.push(newStep[0]);
+          } else if (existingStep && existingStep.status !== 'completed' && existingStep.status !== 'blocked') {
             existingStep.criticality = step.confidence > 0.8 ? 'high' : (step.confidence > 0.5 ? 'medium' : 'low');
             existingStep.target = step.target || existingStep.target;
             existingStep.department_entity_id = step.department_entity_id || existingStep.department_entity_id;
@@ -532,7 +599,7 @@ export class InvestigationOrchestrator {
       throw new Error(`[Orchestrator] Deep model failed to return valid JSON structure for correction.`);
     }
 
-    const payload = this.buildSnapshotPayload(deepResponse);
+    const payload = this.buildSnapshotPayload(deepResponse, undefined, originalSnapshot.facts_used, originalSnapshot.confidence_breakdown);
 
     const newSnapshot = new AnalysisSnapshot({
       case_id: caseId,

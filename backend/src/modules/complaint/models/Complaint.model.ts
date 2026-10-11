@@ -318,5 +318,7 @@ ComplaintSchema.index({ citizen: 1 });
 ComplaintSchema.index({ policeStation: 1 });
 ComplaintSchema.index({ assignedIO: 1 });
 ComplaintSchema.index({ assignedIOs: 1 });
+ComplaintSchema.index({ firNumber: 1 }, { sparse: true });
+ComplaintSchema.index({ processingStatus: 1 });
 
 export const Complaint = model<IComplaint>('Complaint', ComplaintSchema);

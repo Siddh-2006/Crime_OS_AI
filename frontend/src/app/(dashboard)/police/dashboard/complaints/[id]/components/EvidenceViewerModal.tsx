@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, FileText, FileAudio, FileVideo, FileImage, ExternalLink } from 'lucide-react';
 import apiClient from '@/lib/axios';
+import { PdfViewer } from '@/components/ui/PdfViewer';
 
 interface EvidenceViewerModalProps {
   isOpen: boolean;
@@ -20,7 +21,7 @@ function fmtDate(value: string | undefined | null): string {
 
 /** Determine a display-friendly title for the evidence item */
 function evidenceTitle(ev: any): string {
-  return ev.title || ev.originalFilename || ev.evidence_id || 'Evidence';
+  return ev.originalFilename || ev.title || ev.filename || ev.evidence_id || 'Evidence';
 }
 
 export default function EvidenceViewerModal({ isOpen, onClose, evidence }: EvidenceViewerModalProps) {
@@ -38,7 +39,10 @@ export default function EvidenceViewerModal({ isOpen, onClose, evidence }: Evide
     evidence.file_url ||
     evidence.fileUrl ||
     evidence.url ||
-    evidence.storage_ref ||
+    // storage_ref can be a Cloudinary public_id — only use it if it looks like a full URL
+    (evidence.storage_ref && evidence.storage_ref.startsWith('http') ? evidence.storage_ref : '') ||
+    evidence.cloudinaryUrl ||
+    evidence.secure_url ||
     '';
 
   let url = rawUrl;
@@ -51,17 +55,15 @@ export default function EvidenceViewerModal({ isOpen, onClose, evidence }: Evide
   const renderContent = () => {
     if (!isMockUrl && url) {
       const lowerUrl = url.toLowerCase();
-      const isPdf = evidence.type === 'pdf' || evidence.type === 'document' || lowerUrl.endsWith('.pdf') || lowerUrl.includes('/pdf/');
+      const isPdf = evidence.type === 'pdf' || evidence.type === 'document' || lowerUrl.endsWith('.pdf') || lowerUrl.includes('.pdf') || lowerUrl.includes('/pdf/') || (evidence.originalFilename && /\.pdf$/i.test(evidence.originalFilename));
 
       if (isPdf) {
         return (
-          <div className="flex flex-col w-full h-[420px] bg-surface rounded-xl overflow-hidden border border-border">
-            <iframe
-              src={url}
-              title={evidenceTitle(evidence)}
-              className="w-full h-full border-0 rounded-xl"
-            />
-          </div>
+          <PdfViewer
+            url={url}
+            title={evidenceTitle(evidence)}
+            className="w-full h-[450px]"
+          />
         );
       }
       const isImage =
@@ -139,22 +141,49 @@ export default function EvidenceViewerModal({ isOpen, onClose, evidence }: Evide
     // Fallback for mock/local seed files without live URL
     const IconMap: Record<string, React.ReactNode> = {
       image: <FileImage className="w-12 h-12 text-brand-primary" />,
+      screenshot: <FileImage className="w-12 h-12 text-brand-primary" />,
+      chat_screenshot: <FileImage className="w-12 h-12 text-brand-primary" />,
       video: <FileVideo className="w-12 h-12 text-brand-primary" />,
       audio: <FileAudio className="w-12 h-12 text-brand-primary" />,
     };
+
+    const isProcessing = evidence.processingStatus === 'PENDING' || evidence.processingStatus === 'pending';
+    const isEncrypted = evidence.isEncrypted === true;
+
     return (
       <div className="flex flex-col justify-center items-center h-full bg-surface-elevated/40 rounded-xl gap-3 p-6 text-center border border-border">
         {IconMap[evidence.type] ?? <FileText className="w-12 h-12 text-brand-primary" />}
         <div className="space-y-1 max-w-xs">
           <p className="text-xs font-bold text-text-primary">
-            {isMockUrl ? 'Local Demo Asset' : 'Preview Unavailable'}
+            {isProcessing
+              ? 'Still Processing…'
+              : isEncrypted
+              ? 'File Encrypted at Rest'
+              : isMockUrl
+              ? 'Local Demo Asset'
+              : 'Preview Unavailable'}
           </p>
           <p className="text-[11px] text-text-secondary leading-relaxed">
-            {isMockUrl
-              ? 'This is a sample case document stored in local demo seeds. The AI pipeline has extracted all facts, OCR text, and summaries below.'
-              : `Preview not supported for file type: ${evidence.type}`}
+            {isProcessing
+              ? 'This file is still being processed by the evidence pipeline. Check back in a moment.'
+              : isEncrypted
+              ? 'Evidence is stored encrypted. Open the file link to view it securely.'
+              : isMockUrl
+              ? 'This is a sample case document. The AI pipeline has extracted all facts, OCR text, and summaries below.'
+              : `Preview not supported for this file type (${evidence.type || 'unknown'}).`}
           </p>
         </div>
+        {/* Show external link if storage_ref looks like a public_id we can construct a URL from */}
+        {!rawUrl && evidence.storage_ref && !evidence.storage_ref.startsWith('http') && (
+          <a
+            href={`https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'your_cloud'}/raw/upload/${evidence.storage_ref}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-xs font-bold text-brand-primary border border-brand-primary/30 rounded-xl px-4 py-2 bg-brand-primary/10 hover:bg-brand-primary/20 transition-colors"
+          >
+            <ExternalLink size={13} /> Try Opening File
+          </a>
+        )}
       </div>
     );
   };

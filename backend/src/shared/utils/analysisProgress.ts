@@ -139,6 +139,7 @@ export function subscribeProgress(
     lazyConnect: false,
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
+    family: 4,
   }) as import('ioredis').Redis;
 
   const channel = channelKey(caseId);

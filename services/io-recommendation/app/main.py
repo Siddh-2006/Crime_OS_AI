@@ -79,16 +79,13 @@ app.add_middleware(
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     start_time = time.time()
-    try:
-        body_bytes = await request.body()
-        async def receive():
-            return {"type": "http.request", "body": body_bytes}
-        request._receive = receive
-        body_str = body_bytes.decode('utf-8')
-    except Exception:
-        body_str = "<could not read body>"
-
-    logger.info(f"Incoming Request: {request.method} {request.url.path} | Body: {body_str[:500]}")
+    logger.info(f"Incoming Request: {request.method} {request.url.path}")
+    
+    # Simple API Key check
+    if request.url.path not in ["/health", "/docs", "/openapi.json", "/redoc"]:
+        api_key = request.headers.get("x-api-key")
+        if api_key != settings.SHARED_API_KEY:
+            return JSONResponse(status_code=401, content={"detail": "Unauthorized: Invalid or missing API key"})
     
     response = await call_next(request)
     process_time = time.time() - start_time

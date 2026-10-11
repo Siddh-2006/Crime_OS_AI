@@ -1,4 +1,4 @@
-﻿import axios from 'axios';
+import axios from 'axios';
 import env from '../../config/env';
 import logger from '../../config/logger';
 
@@ -37,11 +37,13 @@ export async function compressPrompt(
       force_tokens: forceTokens
     };
 
+    const t0 = Date.now();
     const response = await axios.post<PromptCompressionResponse>(
       `${env.PROMPT_COMPRESSION_URL}/compress`,
       payload,
       { timeout: TIMEOUT_MS }
     );
+    logger.debug('[promptCompression] call complete', { durationMs: Date.now() - t0 });
     
     return response.data.compressed_text;
   } catch (error) {

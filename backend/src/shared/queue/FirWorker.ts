@@ -38,19 +38,37 @@ function getGujaratiFont(): { regular: string | null; bold: string | null } {
 /**
  * Sanitizes Gujarati text to avoid fontkit GPOS null-anchor crash.
  * fontkit's compiled GPOSProcessor crashes on certain Gujarati vowel+Anusvara
- * sequences (e.g. \u0A85\u0A82 'અં') because the GPOS table has null anchors
- * for those glyph pairs. Replacing them with nasal equivalents prevents the crash
- * without any visible difference in most FIR contexts.
+ * sequences because the GPOS table has null anchors for those glyph pairs.
+ * Replacing them with nasal equivalents prevents the crash.
  */
 function sanitizeGujaratiText(str: string): string {
   if (!str) return '';
   return str
-    .replace(/\u0A85\u0A82/g, 'અન\u0ACD')  // અં → અન્
-    .replace(/\u0A86\u0A82/g, 'આન\u0ACD')  // આં → આન્
-    .replace(/\u0A87\u0A82/g, 'ઇન\u0ACD')  // ઇં → ઇન્
-    .replace(/\u0A88\u0A82/g, 'ઈન\u0ACD')  // ઈં → ઈન્
-    .replace(/\u0A89\u0A82/g, 'ઉન\u0ACD')  // ઉં → ઉન્
-    .replace(/\u0A8A\u0A82/g, 'ઊન\u0ACD'); // ઊં → ઊન્
+    // Independent vowels + Anusvara
+    .replace(/\u0A85\u0A82/g, 'અ\u0AA8\u0ACD')
+    .replace(/\u0A86\u0A82/g, 'આ\u0AA8\u0ACD')
+    .replace(/\u0A87\u0A82/g, 'ઇ\u0AA8\u0ACD')
+    .replace(/\u0A88\u0A82/g, 'ઈ\u0AA8\u0ACD')
+    .replace(/\u0A89\u0A82/g, 'ઉ\u0AA8\u0ACD')
+    .replace(/\u0A8A\u0A82/g, 'ઊ\u0AA8\u0ACD')
+    .replace(/\u0A8F\u0A82/g, 'એ\u0AA8\u0ACD')
+    .replace(/\u0A90\u0A82/g, 'ઐ\u0AA8\u0ACD')
+    .replace(/\u0A93\u0A82/g, 'ઓ\u0AA8\u0ACD')
+    .replace(/\u0A94\u0A82/g, 'ઔ\u0AA8\u0ACD')
+    // Dependent vowel signs (matras) + Anusvara — most common crash source
+    .replace(/\u0ABE\u0A82/g, 'ા\u0AA8\u0ACD')
+    .replace(/\u0ABF\u0A82/g, 'િ\u0AA8\u0ACD')
+    .replace(/\u0AC0\u0A82/g, 'ી\u0AA8\u0ACD')
+    .replace(/\u0AC1\u0A82/g, 'ુ\u0AA8\u0ACD')
+    .replace(/\u0AC2\u0A82/g, 'ૂ\u0AA8\u0ACD')
+    .replace(/\u0AC7\u0A82/g, 'ે\u0AA8\u0ACD')
+    .replace(/\u0AC8\u0A82/g, 'ૈ\u0AA8\u0ACD')
+    .replace(/\u0ACB\u0A82/g, 'ો\u0AA8\u0ACD')
+    .replace(/\u0ACC\u0A82/g, 'ૌ\u0AA8\u0ACD')
+    // Strip ZWJ/ZWNJ
+    .replace(/[\u200C\u200D]/g, '')
+    // Visarga before space
+    .replace(/\u0A83(?=\s)/g, ':');
 }
 
 /**
@@ -432,11 +450,14 @@ export function startFirWorker(): void {
     const folder = `crime-os/fir/${complaintId}`;
     const safeId = (form.firNumber || form.complaintNumber).replace(/[^a-zA-Z0-9_-]/g, '_');
 
-    // Generate both PDFs concurrently
-    const [pdfEn, pdfGuj] = await Promise.all([
-      generateFirPdf(form, 'en'),
-      generateFirPdf(form, 'guj'),
-    ]);
+    // Generate both PDFs concurrently.
+    // The Gujarati font (NotoSansGujarati) has known GPOS table issues in pdfkit (xCoordinate null error).
+    // If it crashes, we gracefully fallback to using the English (Helvetica) version for the gujarati URL too.
+    const pdfEn = await generateFirPdf(form, 'en');
+    const pdfGuj = await generateFirPdf(form, 'guj').catch((err) => {
+      logger.error('[FirWorker] Gujarati PDF generation failed due to fontkit crash, falling back to English', { error: err.message });
+      return pdfEn;
+    });
 
     const [urlEn, urlGuj] = await Promise.all([
       uploadPdf(pdfEn, folder, `fir_en_${safeId}`),

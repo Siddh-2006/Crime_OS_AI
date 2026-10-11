@@ -171,7 +171,8 @@ export class ChargeSheetService {
         firNumber: complaint.firNumber || 'N/A',
         policeStation: (complaint.policeStation as any)?.name || 'N/A',
         district: (complaint.policeStation as any)?.district || 'N/A',
-        court: chargeSheet.filingMetadata?.courtName || 'N/A',
+        magistrate: (chargeSheet.filingMetadata as any)?.magistrate || 'Chief Judicial Magistrate',
+        court: chargeSheet.filingMetadata?.courtName || `District Court, ${(complaint.policeStation as any)?.district || 'N/A'}`,
         filingDate: chargeSheet.filingMetadata?.filedAt || 'N/A',
         investigatingOfficer: Array.isArray((complaint as any).assignedIOs) && (complaint as any).assignedIOs.length > 0
           ? (complaint as any).assignedIOs.map((io: any) => io.officerName || 'N/A').join(', ')

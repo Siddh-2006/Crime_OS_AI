@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     # ── HTTP Server ───────────────────────────────────────────────────────────
     HOST: str = "0.0.0.0"
     PORT: int = Field(default=8001, ge=1, le=65535)
+    FRONTEND_URL: str = "http://localhost:3000"
 
     # ── Redis ─────────────────────────────────────────────────────────────────
     REDIS_HOST: str = "localhost"
@@ -42,14 +43,15 @@ class Settings(BaseSettings):
     REDIS_DB: int = Field(default=0, ge=0, le=15)
 
     # ── MongoDB ───────────────────────────────────────────────────────────────
-    MONGODB_URI: str = "mongodb://localhost:27017/crime_os"
-    MONGODB_DB: str = "crime_os"
+    MONGODB_URI: str = "mongodb://127.0.0.1:27017/crime-os"
+    MONGODB_DB: str = "crime-os"
 
     # ── Logging ───────────────────────────────────────────────────────────────
     LOG_LEVEL: str = Field(default="INFO", pattern="^(DEBUG|INFO|WARNING|ERROR|CRITICAL)$")
     LOG_FORMAT: str = "json"  # "json" | "text"
 
     # ── LLM (Ollama primary, Gemini fallback) ───────────────────────────────
+    LLM_BACKEND: str = "ollama"
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "gemma4:e2b"
     CASE_UNDERSTANDING_MODEL: str = "gemma4:e2b"
@@ -58,7 +60,8 @@ class Settings(BaseSettings):
     LLM_MAX_RETRIES: int = 3
 
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-3.5-flash-lite"
+    GEMINI_MODEL: str = "gemini-2.0-flash-lite"
+    OCR_ENGINE: str = "paddle"  # "paddle" | "gemini" | "auto"
 
     # ── Queue ─────────────────────────────────────────────────────────────────
     QUEUE_MAX_JOBS: int = 10          # arq worker concurrency

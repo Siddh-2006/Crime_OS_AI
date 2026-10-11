@@ -12,34 +12,64 @@ import { Complaint } from '../../modules/complaint/models/Complaint.model';
 import { CaseParticipant } from '../../modules/investigation/models/CaseParticipant.model';
 import { applyWatermarkAllPages } from '../utils/pdfWatermark';
 
-function getFontPath(): string | null {
-  const possiblePaths = [
-    path.resolve(process.cwd(), 'src/assets/fonts/NotoSansGujarati.ttf'),
-    path.resolve(process.cwd(), 'dist/assets/fonts/NotoSansGujarati.ttf'),
-    path.join(__dirname, '../../assets/fonts/NotoSansGujarati.ttf'),
+function getGujaratiFont(): { regular: string | null; bold: string | null } {
+  const bases = [
+    path.resolve(process.cwd(), 'src/assets/fonts'),
+    path.resolve(process.cwd(), 'dist/assets/fonts'),
+    path.join(__dirname, '../../assets/fonts'),
   ];
-  for (const p of possiblePaths) {
-    if (fs.existsSync(p)) {
-      return p;
+  const names = ['NotoSansGujarati', 'Nirmala'];
+  for (const base of bases) {
+    for (const name of names) {
+      const reg = path.join(base, `${name}.ttf`);
+      const bold = path.join(base, `${name}Bold.ttf`);
+      if (fs.existsSync(reg)) {
+        return { regular: reg, bold: fs.existsSync(bold) ? bold : reg };
+      }
     }
   }
-  return null;
+  return { regular: null, bold: null };
 }
 
 /**
  * Sanitizes Gujarati text to avoid fontkit GPOS null-anchor crash.
- * fontkit's compiled GPOSProcessor crashes on certain Gujarati vowel+Anusvara
- * sequences (e.g. \u0A85\u0A82 'અં') because the GPOS table has null anchors.
+ * fontkit's compiled GPOSProcessor crashes on certain Gujarati glyph sequences
+ * where the GPOS table contains null anchors. The safest approach is to:
+ * 1. Replace all Anusvara (anunaasika) \u0A82 combinations with virama equivalents
+ * 2. Strip zero-width joiners / non-joiners that trigger complex GPOS lookups
+ * 3. Decompose any remaining multi-codepoint sequences the font can't handle
  */
 function sanitizeGujaratiText(str: string): string {
   if (!str) return '';
   return str
-    .replace(/\u0A85\u0A82/g, 'અન\u0ACD')  // અં → અન્
-    .replace(/\u0A86\u0A82/g, 'આન\u0ACD')  // આં → આન્
-    .replace(/\u0A87\u0A82/g, 'ઇન\u0ACD')  // ઇં → ઇન્
-    .replace(/\u0A88\u0A82/g, 'ઈન\u0ACD')  // ઈં → ઈન્
-    .replace(/\u0A89\u0A82/g, 'ઉન\u0ACD')  // ઉં → ઉન્
-    .replace(/\u0A8A\u0A82/g, 'ઊન\u0ACD'); // ઊં → ઊન્
+    // All independent vowel + Anusvara → vowel + n + virama (avoids null GPOS anchor)
+    .replace(/\u0A85\u0A82/g, 'અ\u0AA8\u0ACD')   // અં → અન્
+    .replace(/\u0A86\u0A82/g, 'આ\u0AA8\u0ACD')    // આં → આન્
+    .replace(/\u0A87\u0A82/g, 'ઇ\u0AA8\u0ACD')    // ઇં → ઇન્
+    .replace(/\u0A88\u0A82/g, 'ઈ\u0AA8\u0ACD')    // ઈં → ઈન્
+    .replace(/\u0A89\u0A82/g, 'ઉ\u0AA8\u0ACD')    // ઉં → ઉન્
+    .replace(/\u0A8A\u0A82/g, 'ઊ\u0AA8\u0ACD')    // ઊં → ઊન્
+    .replace(/\u0A8F\u0A82/g, 'એ\u0AA8\u0ACD')    // એં → એન્
+    .replace(/\u0A90\u0A82/g, 'ઐ\u0AA8\u0ACD')    // ઐં → ઐન્
+    .replace(/\u0A93\u0A82/g, 'ઓ\u0AA8\u0ACD')    // ઓં → ઓન્
+    .replace(/\u0A94\u0A82/g, 'ઔ\u0AA8\u0ACD')    // ઔં → ઔન્
+    // Dependent vowel signs + Anusvara (matras + anusvara — very common crash source)
+    .replace(/\u0ABE\u0A82/g, 'ા\u0AA8\u0ACD')    // ાં → ાન્
+    .replace(/\u0ABF\u0A82/g, 'િ\u0AA8\u0ACD')    // િં → િન્
+    .replace(/\u0AC0\u0A82/g, 'ી\u0AA8\u0ACD')    // ીં → ીન્
+    .replace(/\u0AC1\u0A82/g, 'ુ\u0AA8\u0ACD')    // ું → ુન્
+    .replace(/\u0AC2\u0A82/g, 'ૂ\u0AA8\u0ACD')    // ૂં → ૂન્
+    .replace(/\u0AC7\u0A82/g, 'ે\u0AA8\u0ACD')    // ેં → ેન્
+    .replace(/\u0AC8\u0A82/g, 'ૈ\u0AA8\u0ACD')    // ૈં → ૈન્
+    .replace(/\u0ACB\u0A82/g, 'ો\u0AA8\u0ACD')    // ોં → ોન્
+    .replace(/\u0ACC\u0A82/g, 'ૌ\u0AA8\u0ACD')    // ૌં → ૌન્
+    // Consonant + Anusvara clusters that crash GPOS (common: |-ાં, |-ેં, |-ોં patterns)
+    // Generic: any consonant/vowel sign followed immediately by Anusvara → insert nasal approximant
+    .replace(/(\u0A80-\u0AFF)\u0A82/g, '$1\u0AA8\u0ACD')  // Catch-all for remaining Gujarati + anusvara
+    // Strip ZWJ/ZWNJ that trigger complex shaping lookups
+    .replace(/[\u200C\u200D]/g, '')
+    // Strip Visarga if followed by space (rare crash trigger)
+    .replace(/\u0A83(?=\s)/g, ':');
 }
 
 interface CaseDiaryField {
@@ -154,6 +184,19 @@ async function build16Fields(diary: any, complaint: any, participants: any[]): P
 }
 
 async function generateSinglePdfBuffer(diary: any, complaint: any, participants: any[], narrativeText: string, _lang: 'guj_en' | 'en'): Promise<Buffer> {
+  try {
+    return await _generateSinglePdfBufferImpl(diary, complaint, participants, narrativeText, _lang);
+  } catch (err: any) {
+    // GPOS null-anchor crash from Gujarati font — fall back to English-only
+    if (_lang === 'guj_en' && (err?.message?.includes('xCoordinate') || err?.message?.includes('null'))) {
+      logger.warn('[CaseDiary] Gujarati font GPOS crash — falling back to English-only PDF', { error: err.message });
+      return _generateSinglePdfBufferImpl(diary, complaint, participants, narrativeText, 'en');
+    }
+    throw err;
+  }
+}
+
+async function _generateSinglePdfBufferImpl(diary: any, complaint: any, participants: any[], narrativeText: string, _lang: 'guj_en' | 'en'): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 40, autoFirstPage: true });
     applyWatermarkAllPages(doc, { text: 'CASE DIARY EXPORT — CONFIDENTIAL' });
@@ -163,21 +206,24 @@ async function generateSinglePdfBuffer(diary: any, complaint: any, participants:
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
 
-    const gujFontPath = getFontPath();
-    if (gujFontPath) {
-      doc.registerFont('GujaratiFont', gujFontPath);
+    const gujaratiFont = getGujaratiFont();
+    const hasGuj = _lang === 'guj_en' && gujaratiFont.regular !== null;
+
+    if (hasGuj && gujaratiFont.regular) {
+      doc.registerFont('Guj', gujaratiFont.regular);
+      doc.registerFont('GujBold', gujaratiFont.bold || gujaratiFont.regular);
     }
 
     // Sanitize all text to prevent fontkit GPOS null-anchor crash on Gujarati
-    const clean = (t: string): string => gujFontPath ? sanitizeGujaratiText(t) : t;
+    const clean = (t: string): string => hasGuj ? sanitizeGujaratiText(t) : t;
 
     const setFontBold = (size: number) => {
-      if (gujFontPath) doc.font('GujaratiFont').fontSize(size);
+      if (hasGuj) doc.font('GujBold').fontSize(size);
       else doc.font('Helvetica-Bold').fontSize(size);
     };
 
     const setFontRegular = (size: number) => {
-      if (gujFontPath) doc.font('GujaratiFont').fontSize(size);
+      if (hasGuj) doc.font('Guj').fontSize(size);
       else doc.font('Helvetica').fontSize(size);
     };
 
@@ -411,6 +457,11 @@ export function startCaseDiaryWorker(): void {
       if (!diary) {
         throw new Error(`Case diary ${diaryId} not found`);
       }
+
+      await import('../../modules/user/models/User.model');
+      await import('../../modules/police/models/PoliceStation.model');
+      await import('../../modules/police/models/Officer.model');
+
 
     const complaint = await Complaint.findById(caseId)
       .populate('citizen', 'firstName lastName email phone address')

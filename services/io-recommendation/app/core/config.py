@@ -19,12 +19,13 @@ class Settings(BaseSettings):
     APP_NAME: str = "Crime OS AI Recommendation Service"
     APP_VERSION: str = "1.0.0"
     LOG_LEVEL: str = "INFO"
+    SHARED_API_KEY: str = "crime-os-internal-secret-key"
 
     # ── Qdrant Vector Database ──────────────────────────────────────────────────
     QDRANT_URL: str = "http://localhost:6333"
     QDRANT_API_KEY: Optional[str] = None        # Set for Qdrant Cloud; leave empty for local
     QDRANT_COLLECTION: str = "crime_fir_embeddings"
-    EMBEDDING_DIM: int = 768          # nomic-embed-text-v2-moe output dimension
+    EMBEDDING_DIM: int = 3072          # Gemini text-embedding-004 output dimension
 
     # ── llama.cpp Embedding Server ──────────────────────────────────────────────
     LLAMA_CPP_URL: str = "http://localhost:8080"    # llama-server endpoint

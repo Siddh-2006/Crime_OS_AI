@@ -93,3 +93,30 @@ services/legal_agent/embedded/
 *.sqlite
 *.db
 .kiro
+
+# Scratch / debug / test scripts (local dev only)
+backend/scratch_*.ts
+backend/simulate_*.ts
+backend/run_orchestrator.ts
+backend/list_users.js
+services/complaint_intelligence/scratch_*.py
+services/complaint_intelligence/output.txt
+services/io-recommendation/debug_*.txt
+test_*.py
+start_all_servers.ps1
+start_all.bat
+
+# Stray upload/test files in root
+*.pdf
+*.docx
+*.jpg
+*.png
+*.mp4
+
+# Model weights / large binary assets (downloaded at runtime)
+*.onnx
+*.gguf
+*.safetensors
+models/
+*.paddlex/
+.paddlex/

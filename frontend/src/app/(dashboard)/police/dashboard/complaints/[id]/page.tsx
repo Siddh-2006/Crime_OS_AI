@@ -317,15 +317,16 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
       // Populate IO edit fields
       setDetailedDescription(c.detailedDescription);
       setCrimeSummary(c.crimeSummaryHistory?.[c.crimeSummaryHistory.length - 1]?.content || '');
-      // Fetch Case Understanding JSON
-      try {
-        const cuRes = await apiClient.get(API_ROUTES.CASE_UNDERSTANDING.DETAIL(id));
-        if (cuRes.data?.data) {
-          setCaseUnderstanding(cuRes.data.data);
-        }
-      } catch {
-        // Non-blocking if case understanding not yet processed
-      }
+      // Fetch Case Understanding JSON non-blocking
+      apiClient.get(API_ROUTES.CASE_UNDERSTANDING.DETAIL(id))
+        .then((cuRes) => {
+          if (cuRes.data?.data) {
+            setCaseUnderstanding(cuRes.data.data);
+          }
+        })
+        .catch(() => {
+          // Non-blocking if case understanding not yet processed
+        });
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch complaint details.');
     } finally {
@@ -340,7 +341,10 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
       const res = await apiClient.get(`/cases/${id}/analysis/latest`);
       setSnapshot(res.data?.data ?? null);
     } catch {
-      setSnapshot(null);
+      // Only clear snapshot on non-silent fetch (initial load).
+      // On silent re-fetches (e.g. after reconnect) keep existing snapshot
+      // so the UI doesn't blank out while waiting for the server.
+      if (!isSilent) setSnapshot(null);
     } finally {
       if (!isSilent) setSnapshotLoading(false);
     }
@@ -401,11 +405,9 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
     (snapData && Object.keys(snapData).length > 0) ||
     hasNonEmptyCI
   );
-  const isAIReady = hasAIDataInMongo || (complaint?.processingStatus?.toUpperCase() === 'PROCESSED' && (complaint?.evidence?.length === 0 || hasAIDataInMongo));
+  const isAIReady = complaint?.processingStatus?.toUpperCase() !== 'PENDING' && (hasAIDataInMongo || (complaint?.processingStatus?.toUpperCase() === 'PROCESSED' && (complaint?.evidence?.length === 0 || hasAIDataInMongo)));
 
   useEffect(() => {
-    let timer: NodeJS.Timeout | null = null;
-
     const initData = async () => {
       await fetchComplaint();
       await fetchSnapshot();
@@ -416,6 +418,23 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
     if (user?.role === 'SHO') {
       fetchIOs();
     }
+
+    // Re-fetch when connection is restored after being offline.
+    // Small delay to let the network stabilise and SyncManager update first.
+    let onlineTimer: ReturnType<typeof setTimeout>;
+    const handleOnline = () => {
+      clearTimeout(onlineTimer);
+      onlineTimer = setTimeout(() => {
+        console.log('[page] Network restored — refreshing complaint and snapshot');
+        fetchComplaint();
+        fetchSnapshot(true);
+      }, 800);
+    };
+    window.addEventListener('online', handleOnline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      clearTimeout(onlineTimer);
+    };
   }, [params.id, user]);
 
   // Dedicated polling effect for AI Pipeline Processing — polls silently every 3s until ready
@@ -1138,7 +1157,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
 
               // If we have structured Case Understanding data, use the dedicated component
               if (cuData && (cuData.case_understanding || cuData.overview || cuData.timeline)) {
-                return <CaseUnderstandingView data={cuData as CaseUnderstandingData} caseId={params.id as string} />;
+                return <CaseUnderstandingView data={cuData as CaseUnderstandingData} caseId={params.id as string} complaintEvidence={complaint.evidence} />;
               }
 
               // Calculations for fallback view
@@ -1226,7 +1245,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
                   </div>
 
                   {cuData ? (
-                    <CaseUnderstandingView data={cuData} caseId={params.id as string} />
+                    <CaseUnderstandingView data={cuData} caseId={params.id as string} complaintEvidence={complaint.evidence} />
                   ) : (
                     <div>
                       {/* AI Sub-Tabs */}
@@ -1587,7 +1606,7 @@ export default function PoliceComplaintDetailPage(): React.ReactElement {
           </div>
         </div>
       ) : (
-        <InvestigationWorkspace caseId={complaint._id} activeTab={ioTab} setActiveTab={setIoTab} />
+        <InvestigationWorkspace caseId={complaint._id} activeTab={ioTab} setActiveTab={setIoTab} caseUnderstanding={caseUnderstanding} />
       )}
 
       {/* SHO REJECTION REASON MODAL */}

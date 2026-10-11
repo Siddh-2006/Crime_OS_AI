@@ -36,11 +36,12 @@ interface InvestigationWorkspaceProps {
   caseId: string;
   activeTab: WorkspaceTab;
   setActiveTab: (tab: WorkspaceTab) => void;
+  caseUnderstanding: CaseUnderstandingData | null;
 }
 
 export type WorkspaceTab = 'analysis' | 'diary' | 'checklist' | 'requests' | 'evidence' | 'physical_evidence' | 'participants' | 'complaint' | 'case_understanding' | 'timeline' | 'placesVisited' | 'custody' | 'room' | 'graph';
 
-export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: InvestigationWorkspaceProps) {
+export function InvestigationWorkspace({ caseId, activeTab, setActiveTab, caseUnderstanding }: InvestigationWorkspaceProps) {
   const { toasts, showToast, removeToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -106,7 +107,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
 
   // Complaint preview & Case Understanding
   const [complaintData, setComplaintData] = useState<any | null>(null);
-  const [caseUnderstanding, setCaseUnderstanding] = useState<CaseUnderstandingData | null>(null);
+
 
   // Diary Modals State
   const [viewingEvidence, setViewingEvidence] = useState<any | null>(null);
@@ -179,13 +180,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
         console.error('Failed to fetch complaint data:', err);
       }
 
-      // Fetch Case Understanding
-      try {
-        const cuRes = await apiClient.get(API_ROUTES.CASE_UNDERSTANDING.DETAIL(caseId));
-        if (cuRes.data?.data) setCaseUnderstanding(cuRes.data.data);
-      } catch {
-        /* case understanding may not be ready yet */
-      }
+
     } catch (error) {
       console.error('Failed to load workspace data', error);
     } finally {
@@ -195,8 +190,22 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
 
   useEffect(() => {
     fetchWorkspaceData();
-    const interval = setInterval(fetchWorkspaceData, 15000);
-    return () => clearInterval(interval);
+
+    // Re-fetch all workspace data when connection is restored after being offline.
+    // Small delay so the network is stable and SyncManager has updated before we fetch.
+    let onlineTimer: ReturnType<typeof setTimeout>;
+    const handleOnline = () => {
+      clearTimeout(onlineTimer);
+      onlineTimer = setTimeout(() => {
+        console.log('[InvestigationWorkspace] Network restored — refreshing workspace data');
+        fetchWorkspaceData();
+      }, 1000);
+    };
+    window.addEventListener('online', handleOnline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      clearTimeout(onlineTimer);
+    };
   }, [fetchWorkspaceData]);
 
   const handleGenerateDiaryDraft = async () => {
@@ -346,32 +355,109 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
 
   const handleDiaryEntryClick = (entry: any) => {
     if (!entry) return;
-    // For rich diary entries (analysis, requests, complaint), we open the DiaryDetailModal
-    if (['analysis_run', 'request_sent', 'response_received', 'complaint_filed'].includes(entry.event_type)) {
+
+    // Entries that open the DiaryDetailModal (rich content viewer)
+    if (['request_sent', 'response_received', 'complaint_filed'].includes(entry.event_type)) {
       setSelectedDiaryEntry(entry);
       return;
     }
 
     switch (entry.event_type) {
+
+      // ── Evidence ───────────────────────────────────────────────────────────
       case 'evidence_added':
-        if (entry.ref_ids?.evidence_id) {
-          const found = evidence.find((e: any) => e.evidence_id === entry.ref_ids.evidence_id || e._id === entry.ref_ids.evidence_id);
-          if (found) setViewingEvidence(found);
+      case 'evidence_updated': {
+        const evId = entry.ref_ids?.evidence_id || entry.payload?.evidence_id;
+        if (evId) {
+          const found = evidence.find((e: any) => e.evidence_id === evId || e._id === evId);
+          if (found) {
+            setViewingEvidence(found);
+          } else {
+            // Switch to evidence tab so user can see it
+            setActiveTab('evidence');
+          }
         }
         break;
-      case 'request_drafted':
-        if (entry.ref_ids?.request_id) setViewingThreadId(entry.ref_ids.request_id);
-        break;
+      }
+
+      // ── Analysis Snapshot ──────────────────────────────────────────────────
       case 'analysis_run':
       case 'suggestion_generated':
-        if (entry.ref_ids?.snapshot_id) setViewingSnapshotId(entry.ref_ids.snapshot_id);
+      case 'override_correction': {
+        const snapId = entry.ref_ids?.snapshot_id || entry.payload?.snapshot_id;
+        if (snapId) {
+          setViewingSnapshotId(snapId);
+        } else {
+          // No specific snapshot, switch to analysis tab
+          setActiveTab('analysis');
+        }
         break;
+      }
+
+      // ── Requests / Threads ─────────────────────────────────────────────────
+      case 'request_drafted': {
+        const reqId = entry.ref_ids?.request_id || entry.payload?.request_id;
+        if (reqId) {
+          setViewingThreadId(reqId);
+        } else {
+          setActiveTab('requests');
+        }
+        break;
+      }
+
+      // ── Participants (statement, witness, warrant, custody) ────────────────
+      case 'witness_added':
+      case 'participant_statement_added':
+      case 'participant_statement_updated':
+      case 'participant_statement_deleted':
+      case 'warrant_drafted':
+      case 'warrant_sent_to_magistrate':
+      case 'warrant_approved':
+      case 'warrant_rejected':
+      case 'suspect_taken_into_custody':
+      case 'accused_produced_before_court':
+      case 'suspect_released':
+      case 'custody_deadline_reached': {
+        // Navigate to participants tab — the participant name is in the title
+        setActiveTab('analysis'); // participants panel is in analysis workspace
+        break;
+      }
+
+      // ── Checklist ──────────────────────────────────────────────────────────
       case 'checklist_step_completed':
-        if (entry.ref_ids?.step_id) setViewingStepId(entry.ref_ids.step_id);
+      case 'checklist_step_updated': {
+        const stepId = entry.ref_ids?.step_id || entry.payload?.step_id;
+        if (stepId) {
+          setViewingStepId(stepId);
+        } else {
+          setActiveTab('checklist');
+        }
         break;
+      }
+
+      // ── Escalation ─────────────────────────────────────────────────────────
       case 'escalation_raised':
-        // assuming we might have an escalation object to view in the future
+        setSelectedDiaryEntry(entry);
         break;
+
+      // ── Diary/Place ────────────────────────────────────────────────────────
+      case 'diary_draft_generated':
+      case 'diary_finalized':
+        setSelectedDiaryEntry(entry);
+        break;
+
+      // ── Fallback: try ref_ids then show DiaryDetailModal ───────────────────
+      default: {
+        if (entry.ref_ids?.evidence_id) {
+          const found = evidence.find((e: any) => e.evidence_id === entry.ref_ids.evidence_id || e._id === entry.ref_ids.evidence_id);
+          if (found) { setViewingEvidence(found); break; }
+        }
+        if (entry.ref_ids?.snapshot_id) { setViewingSnapshotId(entry.ref_ids.snapshot_id); break; }
+        if (entry.ref_ids?.request_id) { setViewingThreadId(entry.ref_ids.request_id); break; }
+        if (entry.ref_ids?.step_id) { setViewingStepId(entry.ref_ids.step_id); break; }
+        setSelectedDiaryEntry(entry);
+        break;
+      }
     }
   };
 
@@ -615,7 +701,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
                     <button
                       onClick={handleGenerateDiaryDraft}
                       disabled={diaryDraftLoading}
-                      className="rounded-sm bg-brand-primary px-4 py-2 text-sm font-bold text-text-primary shadow-xs hover:bg-brand-primary/90 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
+                      className="rounded-sm bg-brand-primary px-4 py-2 text-sm font-bold text-white shadow-xs hover:bg-brand-primary/90 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
                     >
                       {diaryDraftLoading ? 'Working...' : 'Generate Draft'}
                     </button>
@@ -1089,7 +1175,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
                 href={getDiaryPreviewUrl(previewPdfUrl)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center rounded-sm border border-border bg-neutral-800 px-3 py-2 text-sm font-semibold text-text-secondary hover:bg-neutral-800"
+                className="inline-flex items-center rounded-sm bg-brand-primary px-4 py-2 text-sm font-bold text-white shadow-xs hover:bg-brand-primary/90"
               >
                 Open in browser
               </a>
@@ -1103,14 +1189,14 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
           drag
           dragMomentum={false}
           dragElastic={0.08}
-          className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end gap-3 pointer-events-auto touch-none"
+          className={`fixed bottom-6 right-6 z-[9999] touch-none ${copilotOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}
           title="Drag Nyaya to reposition"
         >
           {/* Nyaya drawer window */}
           <div
-            className={`transition-all duration-300 transform-gpu origin-bottom-right shadow-2xl rounded-sm overflow-hidden border border-border w-96 max-w-[92vw] h-[560px] max-h-[calc(100vh-6.5rem)] bg-surface ${copilotOpen
+            className={`absolute bottom-[68px] right-0 transition-all duration-300 transform-gpu origin-bottom-right shadow-2xl rounded-sm overflow-hidden border border-border w-96 max-w-[92vw] h-[560px] max-h-[calc(100vh-6.5rem)] bg-surface ${copilotOpen
               ? 'scale-100 opacity-100 translate-y-0 shadow-glow pointer-events-auto'
-              : 'scale-0 opacity-0 pointer-events-none translate-y-8'
+              : 'scale-0 opacity-0 pointer-events-none translate-y-8 border-none'
               }`}
           >
             <CopilotSidebar
@@ -1123,7 +1209,7 @@ export function InvestigationWorkspace({ caseId, activeTab, setActiveTab }: Inve
           {/* Floating Round Launcher Button */}
           <button
             onClick={() => setCopilotOpen((prev) => !prev)}
-            className={`h-14 w-14 rounded-full flex items-center justify-center border-2 border-white/20 relative pointer-events-auto overflow-hidden ${copilotOpen ? 'bg-surface-elevated border-border' : 'bg-brand-primary'
+            className={`h-14 w-14 rounded-full flex items-center justify-center border-2 border-white/20 relative overflow-hidden pointer-events-auto ${copilotOpen ? 'bg-surface-elevated border-border' : 'bg-brand-primary'
               }`}
             title={copilotOpen ? 'Close Nyaya' : 'Open Nyaya'}
           >
@@ -1159,6 +1245,20 @@ const evidenceTypeIcon: Record<string, string> = {
 function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstanding }: { evidence: any[]; caseId: string; onRefresh: () => void; snapshot?: any; caseUnderstanding?: import('@/components/case-understanding/CaseUnderstandingView').CaseUnderstandingData | null }) {
   const [selectedEvidence, setSelectedEvidence] = React.useState<any | null>(null);
   const [addModalOpen, setAddModalOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const openId = params.get('openEvidenceId');
+    if (openId && evidence.length > 0) {
+      const ev = evidence.find((e: any) => e.evidence_id === openId || e._id === openId);
+      if (ev) {
+        setSelectedEvidence(ev);
+        // Remove param from URL so it doesn't re-open on page refresh
+        const newUrl = window.location.pathname + '?tab=evidence';
+        window.history.replaceState({}, '', newUrl);
+      }
+    }
+  }, [evidence]);
   const requestedEvidence = snapshot?.missing_information || [];
 
   if (evidence.length === 0 && requestedEvidence.length === 0) {
@@ -1171,7 +1271,7 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
         </p>
         <button
           onClick={() => setAddModalOpen(true)}
-          className="mt-4 px-4 py-2 bg-blue-600 text-text-primary text-sm font-semibold rounded-sm hover:bg-blue-700 transition-colors"
+          className="mt-4 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-sm hover:bg-blue-700 transition-colors"
         >
           + Add Evidence
         </button>
@@ -1186,7 +1286,7 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
         <h3 className="text-lg font-bold text-text-primary">Case Evidence File</h3>
         <button
           onClick={() => setAddModalOpen(true)}
-          className="px-3.5 py-1.5 bg-brand-primary text-text-primary text-xs font-bold rounded-sm hover:bg-brand-primary/90 transition-all shadow-xs"
+          className="px-3.5 py-1.5 bg-brand-primary text-white text-xs font-bold rounded-sm hover:bg-brand-primary/90 transition-all shadow-xs"
         >
           + Add Attachment
         </button>
@@ -1220,15 +1320,48 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
 
       {/* Evidence cards - from CI evidence_intelligence if available, else raw list */}
       {(() => {
-        const ciItems: any[] = caseUnderstanding?.evidence_intelligence || caseUnderstanding?.evidence_analysis || [];
+        const ciItems: any[] = caseUnderstanding?.evidence_intelligence || caseUnderstanding?.evidence_analysis || (snapshot?.evidence_section_recommendations || []).map((er: any) => ({
+          filename: er.evidence_title,
+          evidence_id: er.evidence_id,
+          summary: (er.applicable_sections || []).map((s: any) => s.reason).join(' | '),
+          supports: (er.applicable_sections || []).map((s: any) => s.code),
+          importance: 'high',
+          confidence: 0.95
+        })) || [];
 
         // Helper: find matching raw evidence by evidence_id or filename
-        const findRaw = (ciItem: any): any | null =>
-          evidence.find((e: any) =>
-            (e.evidence_id && ciItem.evidence_id && e.evidence_id === ciItem.evidence_id) ||
+        const findRaw = (ciItem: any): any | null => {
+          if (!evidence || evidence.length === 0) return null;
+
+          // 1. Exact evidence_id match
+          const byId = evidence.find((e: any) =>
+            e.evidence_id && ciItem.evidence_id && e.evidence_id === ciItem.evidence_id
+          );
+          if (byId) return byId;
+
+          // 2. Exact filename match
+          const byFilename = evidence.find((e: any) =>
             (e.originalFilename && ciItem.filename && e.originalFilename === ciItem.filename) ||
             (e.title && ciItem.filename && e.title === ciItem.filename)
-          ) || null;
+          );
+          if (byFilename) return byFilename;
+
+          // 3. Loose filename match (handles path differences or partial matches)
+          const eName = (ciItem.filename || '').toLowerCase().replace(/\s+/g, '');
+          if (eName.length > 3) {
+            const byLoose = evidence.find((e: any) => {
+              const rName = (e.originalFilename || e.title || '').toLowerCase().replace(/\s+/g, '');
+              return rName && (rName.includes(eName) || eName.includes(rName));
+            });
+            if (byLoose) return byLoose;
+          }
+
+          // 4. Index-based fallback — if only one evidence item matches type (last resort)
+          const ciIdx = (caseUnderstanding?.evidence_intelligence || []).indexOf(ciItem);
+          if (ciIdx >= 0 && ciIdx < evidence.length) return evidence[ciIdx];
+
+          return null;
+        };
 
         const importanceBadgeClass = (imp: string) => {
           switch (imp?.toLowerCase()) {
@@ -1283,10 +1416,24 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
           return (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
               {unique.map((ci: any, idx: number) => {
-                const caption = ci.caption || ci.filename || `Evidence ${idx + 1}`;
-                const summary = (ci.summary || '').trim();
-                const supports: string[] = ci.supports || ci.allegations_supported || [];
                 const rawEv = findRaw(ci);
+
+                // Caption: prefer the actual filename from raw evidence, fall back to ci.caption
+                const caption = rawEv?.originalFilename
+                  || rawEv?.title
+                  || (ci.filename && ci.filename !== ci.caption ? ci.filename : null)
+                  || ci.caption
+                  || `Evidence ${idx + 1}`;
+
+                // Summary: prefer real AI summary from raw evidence over generic LLM text
+                const summary = (
+                  rawEv?.aiMetadata?.aiSummary
+                  || rawEv?.ai_description
+                  || ci.summary
+                  || ''
+                ).trim();
+
+                const supports: string[] = ci.supports || ci.allegations_supported || [];
 
                 return (
                   <div
@@ -1296,9 +1443,27 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
                   >
                     {/* Header */}
                     <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 w-9 h-9 rounded-sm bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center">
-                        {FileIcon(ci.filename || '')}
-                      </div>
+                      {/* Thumbnail for images, icon for everything else */}
+                      {(() => {
+                        const imgUrl = rawEv?.secureUrl || rawEv?.storage_ref || rawEv?.file_url || '';
+                        const isImg = rawEv?.type === 'image' || rawEv?.type === 'screenshot' || rawEv?.type === 'chat_screenshot' || /\.(jpg|jpeg|png|webp|gif)$/i.test(imgUrl) || /\.(jpg|jpeg|png|webp|gif)$/i.test(rawEv?.originalFilename || '');
+                        if (imgUrl && isImg) {
+                          return (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={imgUrl}
+                              alt={caption}
+                              className="flex-shrink-0 w-12 h-12 rounded-sm object-cover border border-border bg-surface-elevated"
+                              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                            />
+                          );
+                        }
+                        return (
+                          <div className="flex-shrink-0 w-9 h-9 rounded-sm bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center">
+                            {FileIcon(rawEv?.originalFilename || ci.filename || '')}
+                          </div>
+                        );
+                      })()}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <p className="text-sm font-bold text-text-primary leading-snug line-clamp-2 group-hover:text-brand-primary transition-colors">
@@ -1308,8 +1473,15 @@ function EvidencePanel({ evidence, caseId, onRefresh, snapshot, caseUnderstandin
                             {ci.importance || 'medium'}
                           </span>
                         </div>
-                        {ci.filename && ci.filename !== caption && (
-                          <p className="text-[10px] text-text-secondary mt-0.5 truncate font-mono">{ci.filename}</p>
+                        {/* Show file type + size from raw evidence if available */}
+                        {rawEv?.originalFilename && rawEv.originalFilename !== caption && (
+                          <p className="text-[10px] text-text-secondary mt-0.5 truncate font-mono">{rawEv.originalFilename}</p>
+                        )}
+                        {rawEv?.mimeType && (
+                          <p className="text-[10px] text-text-secondary font-mono">
+                            {rawEv.mimeType.split('/')[1]?.toUpperCase() || rawEv.mimeType}
+                            {rawEv.size ? ` · ${(rawEv.size / 1024 / 1024).toFixed(2)} MB` : ''}
+                          </p>
                         )}
                       </div>
                     </div>
@@ -1528,7 +1700,7 @@ function MissingInfoCardIO({ item, caseId }: { item: { title: string; descriptio
             ? 'bg-semantic-success/20 text-semantic-success border border-semantic-success/30 cursor-default'
             : status === 'loading'
               ? 'bg-surface-elevated text-text-muted border border-border cursor-not-allowed'
-              : 'bg-brand-primary text-text-primary hover:bg-brand-primary/90 shadow-xs cursor-pointer'
+              : 'bg-brand-primary text-white hover:bg-brand-primary/90 shadow-xs cursor-pointer'
             }`}
         >
           {status === 'sent' ? (
@@ -1706,7 +1878,7 @@ function ParticipantsPanel({ participants, caseId, onRefresh }: { participants: 
               </div>
 
               <div className="flex flex-wrap gap-1.5">
-                {(p.roles || []).map((role: string) => (
+                {(p.roles || []).filter((r: string) => !(r === 'Suspect' && (p.roles || []).includes('Accused'))).map((role: string) => (
                   <span key={role} className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-sm border ${roleBadgeColor(role)}`}>
                     {role}
                   </span>
@@ -1841,10 +2013,8 @@ function ParticipantDetailModal({
     }
   };
 
-  const appliedSections: any[] = [
-    ...(p.accusedProfile?.appliedSections || []),
-    ...(p.suspectProfile?.appliedSections || []),
-  ];
+  // accusedProfile was removed from the backend model — sections are always stored in suspectProfile
+  const appliedSections: any[] = p.suspectProfile?.appliedSections || [];
 
   const handleAddStatement = async () => {
     if (!stmtContent.trim() || !stmtDate) return;
@@ -2324,27 +2494,66 @@ function OriginalComplaintPanel({ complaint }: { complaint: any | null }) {
             Attached Evidence ({complaint.evidence.length})
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {complaint.evidence.map((file: any, index: number) => (
-              <div key={file.id || `evidence-${index}`} className="flex items-center justify-between gap-3 p-3.5 rounded-sm border border-border bg-surface hover:bg-surface-elevated transition-colors shadow-xs">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <FileText size={18} className="text-brand-primary flex-shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-text-primary truncate">{file.originalFilename}</p>
-                    <p className="text-[10px] text-text-secondary font-mono">{(file.size / 1024 / 1024).toFixed(2)} MB &bull; {file.extension?.toUpperCase()}</p>
+            {complaint.evidence.map((file: any, index: number) => {
+              const ext = (file.originalFilename || '').split('.').pop()?.toLowerCase() || '';
+              const isImg = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'].includes(ext);
+              const isPdf = ext === 'pdf';
+              const isAudio = ['mp3', 'wav', 'ogg', 'm4a', 'aac'].includes(ext);
+              const isVideo = ['mp4', 'mov', 'avi', 'webm', 'mkv'].includes(ext);
+              const fileUrl = file.secureUrl || file.file_url || file.url || '';
+
+              return (
+                <div key={file.id || `evidence-${index}`}
+                  className="rounded-sm border border-border bg-surface hover:bg-surface-elevated transition-colors shadow-xs overflow-hidden group"
+                >
+                  {/* Image thumbnail strip */}
+                  {isImg && fileUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={fileUrl}
+                      alt={file.originalFilename}
+                      className="w-full h-24 object-cover border-b border-border bg-surface-elevated"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  )}
+                  <div className="flex items-center justify-between gap-3 p-3.5">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {isImg ? <FileImage size={18} className="text-brand-primary flex-shrink-0" />
+                        : isPdf ? <FileText size={18} className="text-semantic-critical flex-shrink-0" />
+                        : isAudio ? <FileAudio size={18} className="text-semantic-warning flex-shrink-0" />
+                        : isVideo ? <FileVideo size={18} className="text-brand-primary flex-shrink-0" />
+                        : <FileText size={18} className="text-brand-primary flex-shrink-0" />}
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-text-primary truncate">{file.originalFilename || `Evidence ${index + 1}`}</p>
+                        <p className="text-[10px] text-text-secondary font-mono">
+                          {ext.toUpperCase() || 'FILE'}
+                          {file.size ? ` · ${(file.size / 1024 / 1024).toFixed(2)} MB` : ''}
+                          {file.processingStatus && (
+                            <span className={`ml-1.5 font-bold ${file.processingStatus === 'PROCESSED' ? 'text-semantic-success' : file.processingStatus === 'FAILED' ? 'text-semantic-critical' : 'text-semantic-warning'}`}>
+                              · {file.processingStatus.charAt(0) + file.processingStatus.slice(1).toLowerCase()}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    {fileUrl && (
+                      <a href={fileUrl} target="_blank" rel="noopener noreferrer"
+                        className="flex-shrink-0 p-2 rounded-sm bg-surface-elevated hover:bg-brand-primary/10 text-brand-primary transition-colors"
+                        title="Open file"
+                      >
+                        <Download size={15} />
+                      </a>
+                    )}
                   </div>
                 </div>
-                <a href={file.secureUrl} target="_blank" rel="noopener noreferrer" className="flex-shrink-0 p-2 rounded-sm bg-surface-elevated hover:bg-brand-primary/10 text-brand-primary transition-colors" title="Download">
-                  <Download size={15} />
-                </a>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
     </div>
   );
 }
-
 
 // â”€â”€â”€ Case Understanding Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -3062,14 +3271,18 @@ function EditParticipantModal({
 
   React.useEffect(() => {
     if (initialParticipant) {
+      const roles = initialParticipant.roles || [];
       setFormData({
         name: initialParticipant.name || '',
-        roles: initialParticipant.roles || [],
+        roles: roles,
         contact: initialParticipant.contact || {},
         identifiers: (initialParticipant.identifiers || []).map((id: any) => ({ ...id })),
         victimProfile: initialParticipant.victimProfile || {},
         complainantProfile: initialParticipant.complainantProfile || {},
-        suspectProfile: initialParticipant.suspectProfile || {},
+        suspectProfile: {
+          ...(initialParticipant.suspectProfile || {}),
+          isAccused: (initialParticipant.suspectProfile?.isAccused) || roles.includes('Accused'),
+        },
       });
     }
   }, [initialParticipant, isOpen]);
@@ -3194,17 +3407,28 @@ function EditParticipantModal({
 
     setFormLoading(true);
     try {
+      // Auto-sync: if suspectProfile.isAccused is true, ensure 'Accused' is in roles
+      let finalRoles = [...formData.roles];
+      if (formData.suspectProfile?.isAccused) {
+        if (!finalRoles.includes('Accused')) finalRoles.push('Accused');
+      } else {
+        finalRoles = finalRoles.filter(r => r !== 'Accused');
+      }
+
       const payload: any = {
         name: formData.name.trim(),
-        roles: formData.roles,
+        roles: finalRoles,
         contact: formData.contact,
         identifiers: formData.identifiers.filter(id => id.type && id.value),
       };
-      if (formData.roles.includes('Victim') && (formData.victimProfile?.injuryDetails || formData.victimProfile?.lossDetails)) {
+      if (finalRoles.includes('Victim') && (formData.victimProfile?.injuryDetails || formData.victimProfile?.lossDetails)) {
         payload.victimProfile = formData.victimProfile;
       }
-      if (formData.roles.includes('Complainant') && formData.complainantProfile?.relationshipToIncident) {
+      if (finalRoles.includes('Complainant') && formData.complainantProfile?.relationshipToIncident) {
         payload.complainantProfile = formData.complainantProfile;
+      }
+      if (finalRoles.includes('Suspect') || finalRoles.includes('Accused')) {
+        payload.suspectProfile = formData.suspectProfile || {};
       }
       const res = await apiClient.patch(`/cases/${caseId}/participants/${p.participant_id}`, payload);
       const updated = res.data.data;

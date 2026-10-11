@@ -28,6 +28,7 @@ export function getRedisClient(): Redis {
       },
       maxRetriesPerRequest: null,
       enableReadyCheck: false,
+      family: 4,
     });
 
     redisClient.on('connect', () => logger.info('Redis connection established'));

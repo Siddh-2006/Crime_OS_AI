@@ -21,13 +21,21 @@ export function errorHandler(
   const requestId = req.requestId;
 
   if (err instanceof BaseError) {
-    logger.warn('Operational error', {
-      requestId,
-      code: err.code,
-      statusCode: err.statusCode,
-      message: err.message,
-      ...(err instanceof ValidationError && { details: err.details }),
-    });
+    if (err.statusCode === HttpStatusCode.UNAUTHORIZED || err.statusCode === HttpStatusCode.FORBIDDEN) {
+      logger.debug('Authentication/Authorization error', {
+        requestId,
+        code: err.code,
+        message: err.message,
+      });
+    } else {
+      logger.warn('Operational error', {
+        requestId,
+        code: err.code,
+        statusCode: err.statusCode,
+        message: err.message,
+        ...(err instanceof ValidationError && { details: err.details }),
+      });
+    }
 
     const responsePayload: Record<string, unknown> = {
       code: err.code,

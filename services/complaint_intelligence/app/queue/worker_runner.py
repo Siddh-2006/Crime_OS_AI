@@ -199,6 +199,7 @@ class AnalysisWorker:
                     if ev_profile.metadata and "size_bytes" in ev_profile.metadata:
                         ai_meta["size"] = ev_profile.metadata["size_bytes"]
 
+                    from datetime import datetime, timezone
                     await db["evidences"].update_one(
                         {"evidence_id": evidence_id},
                         {
@@ -206,8 +207,17 @@ class AnalysisWorker:
                                 "aiMetadata": ai_meta,
                                 "processingStatus": "PROCESSED",
                                 "storage_ref": ev_profile.url,
+                                "originalFilename": filename,
+                                "mimeType": content_type,
+                                "type": ev_profile.media_type,
+                            },
+                            "$setOnInsert": {
+                                "case_id": case_id,
+                                "uploaded_at": datetime.now(timezone.utc),
+                                "source": "email_attachment",
                             }
-                        }
+                        },
+                        upsert=True
                     )
             except Exception as sync_exc:
                 logger.warning(
@@ -252,6 +262,18 @@ class AnalysisWorker:
                 await evidence_record_repo.update_status(
                     evidence_id, EvidenceProcessingStatus.FAILED, error=str(exc)
                 )
+                from app.core.mongo import get_mongo_db
+                db = await get_mongo_db()
+                if db is not None:
+                    await db["evidences"].update_one(
+                        {"evidence_id": evidence_id},
+                        {
+                            "$set": {
+                                "processingStatus": "FAILED",
+                                "processingError": str(exc),
+                            }
+                        }
+                    )
             except Exception:
                 pass
 

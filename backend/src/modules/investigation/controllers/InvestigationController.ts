@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import { AnalysisQueue } from '../../../shared/queue/AnalysisQueue';
 import { subscribeProgress, publishProgress } from '../../../shared/utils/analysisProgress';
-import { triggerComplaintIntelligencePipelineByCaseId } from '../../../shared/services/complaintIntelligenceService';
 import { getRedisClient } from '../../../config/redis';
 import { RequestComposerService } from '../services/requestComposerService';
 import { InvestigationOrchestrator } from '../services/investigationOrchestrator';
@@ -71,10 +70,8 @@ export class InvestigationController {
       // lockDuration on the worker is set to 25 min so the lock survives long LLM calls.
       await AnalysisQueue.enqueueAnalyzeCase(id, language);
 
-      // Trigger Complaint Intelligence pipeline in background as well on rerun
-      triggerComplaintIntelligencePipelineByCaseId(id).catch((err) => {
-        logger.error('[InvestigationController] Error triggering complaint intelligence pipeline rerun:', err);
-      });
+      // We no longer trigger the Python CI pipeline here because evidence is processed
+      // on-the-fly upon upload. We only need to enqueue the Node analysis orchestrator.
 
       sendSuccess(res, HttpStatusCode.OK, 'Analysis job enqueued. Connect to /analysis/progress for live updates.');
     } catch (error) {
@@ -913,6 +910,12 @@ export class InvestigationController {
         });
 
         evidenceDoc.applicableSections = Array.from(mergedSections.values());
+        
+        // Fix for old/legacy evidence documents that have empty storage_ref which causes validation error on save
+        if (!evidenceDoc.storage_ref) {
+          evidenceDoc.storage_ref = evidenceDoc.evidence_id || 'pending_upload';
+        }
+        
         await evidenceDoc.save();
       }
 
@@ -949,9 +952,10 @@ export class InvestigationController {
       const { id } = req.params;
       
       // 1. Structured Evidence documents (added by IO/dept)
-      const evidenceDocs = await Evidence.find({ case_id: id }).sort({ createdAt: -1 }).lean() as any[];
+      const evidenceDocs = await Evidence.find({ case_id: id }).sort({ createdAt: -1 }).exec();
 
-      const formattedEvidenceDocs = evidenceDocs.map((ev: any) => {
+      const formattedEvidenceDocs = evidenceDocs.map((doc: any) => {
+        const ev = doc.toObject();
         const summary = ev.aiMetadata?.aiSummary || ev.florence_description || ev.ai_description || ev.originalFilename || 'No description available.';
         const tags = ev.aiMetadata?.imageTags || ev.ai_tags || ev.tags || [];
         const ocr = ev.aiMetadata?.ocrText || ev.ocrText || ev.ocr_text || '';
@@ -978,8 +982,9 @@ export class InvestigationController {
         const summary = ev.aiMetadata?.aiSummary || ev.florence_description || ev.ai_description || ev.originalFilename || 'Complainant uploaded file';
         const tags = ev.aiMetadata?.imageTags || ev.ai_tags || ev.tags || [];
         const ocr = ev.aiMetadata?.ocrText || ev.ocrText || ev.ocr_text || '';
+        const fallbackId = ev._id?.toString() || ev.secureUrl || ev.originalFilename || uuidv4();
         return {
-          evidence_id: ev.publicId || uuidv4(),
+          evidence_id: ev.publicId || fallbackId,
           type: ev.resourceType || 'document',
           storage_ref: ev.secureUrl || ev.publicId,
           secureUrl: ev.secureUrl,

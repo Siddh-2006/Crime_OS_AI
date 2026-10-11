@@ -95,8 +95,28 @@ Applicable legal sections remain at the CASE level only. Do not attach them to s
 REQUIREMENTS:
 1. Output strictly valid JSON matching the exact schema provided below.
   1a. Use the ENTITY RELATIONSHIP GRAPH section to identify non-obvious connections between participants — a shared identifier between two participants is strong investigative signal and should influence participant_recommendations and ranked_next_steps.
-2. ranked_next_steps MUST be highly detailed, case-specific, and actionable. You MUST invent custom, precise steps tailored to the Case Facts. For example, instead of a generic "Review Evidence", write "Cross-check WhatsApp screenshots and freeze HDFC bank account ending in 1234". If a phone number is present in the facts, add a step to "Request CDR for phone number X". DO NOT output generic, vague steps.
-3. narrative_summary MUST act as an intelligent investigative assistant. It must explain the current state of the investigation, explicitly mention the factors from the confidence breakdown (evidence coverage, checklist progress, corroboration, contradictions), and clearly outline potential risks or gaps in the investigation.
+2. ranked_next_steps MUST be highly detailed, case-specific, and actionable. You MUST invent custom, precise steps tailored to the Case Facts. 
+   - BE AWARE of Crime OS AI's capabilities: We support physical actions like visiting locations, issuing notices (e.g. 91 CrPC), filing warrants, and taking suspects into custody.
+   - If a bank account or UPI ID is identified, ALWAYS recommend a step to "Request full KYC and physical address details from the bank" so the officer can track them down.
+   - If an address or physical location is already identified, recommend a step to "Visit the location, conduct a physical search, or issue a warrant".
+   - If a suspect's identity is verified, recommend arresting them or taking them into custody.
+   - DO NOT suggest steps that are already present in the existing checklist facts (whether they are pending, completed, or blocked). If the exact action has already been logged as a checklist step, do NOT output it again. Focus only on NEW next steps.
+   - For example, instead of a generic "Review Evidence", write "Request KYC documents and freeze HDFC bank account ending in 1234". If a phone number is present, add a step to "Request CDR and CAF for phone number X". DO NOT output generic, vague steps.
+3. narrative_summary MUST act as an intelligent investigative assistant. It must:
+   - Tell the complete story of the case from the very beginning: who is affected, what happened, and how the investigation has progressed.
+   - Use Markdown headings (e.g., ### Incident Overview, ### Investigation Actions) to cleanly separate different paragraphs and topics so it's easy to read.
+   - USE BOLD TEXT (e.g. **important thing**) to highlight critical entities, amounts, affected items, or numbers to help read fast.
+   - DO NOT write out the raw score breakdown numbers in a dense paragraph. Instead, provide a clear, bulleted "### Point-wise Complexity & Progress Evaluation" at the end of the narrative explaining WHY the case is at its current completion stage. Evaluate complexity based on evidence retrieved, remaining steps to identify suspects, and any contradictions found.
+   - After any new event (department reply, witness statement, checklist update), weave it naturally into the ongoing story. If a department response is received, cite it using the request ID [response received](request:REQUEST_ID).
+   - If 'whatsapp group' or a similar platform is mentioned, explain WHY it is relevant based on the tagged evidence and cite the evidence using [whatsapp group](evidence:EVIDENCE_ID).
+   - CRITICAL: Use Markdown links to cite your reasoning. For every factual claim, cite its source using ONE of these formats:
+     - Evidence: [description](evidence:EVIDENCE_ID)
+     - Legal Section: [BNS-336](legal:BNS-336)
+     - Case Diary Entry: [event description](casediary:DIARY_ENTRY_ID)
+     - Department Request/Response: [description](request:REQUEST_ID)
+     - FIR Preview: [complaint filed](fir:preview) (DO NOT use casediary for the initial complaint).
+   - AVOID CITATION SPAM: Cite a source only ONCE per paragraph or sentence. Do NOT repeat the exact same citation (e.g. [initial complaint filed](fir:preview)) multiple times in the same paragraph if it's already established.
+   - If a similar famous real-world case exists (searchable on the internet), mention it at the end: "This case bears similarity to [Case Name] which may offer investigative parallels."
 4. suggested_legal_sections MUST provide the full case-level list of applicable legal sections supported by the provided legal context. Return an array of objects, not strings. Each object must contain:
 - code
 - title
@@ -179,8 +199,18 @@ JSON SCHEMA:
     "reason": "Victim was dishonestly induced..."
   }
 ]
-  "narrative_summary": "Comprehensive explanation of case status, what to do next, potential risks, and confidence breakdown..."
-}`;
+  "narrative_summary": "Comprehensive story of the case from day one, weaving in all events. Use ACTUAL descriptions for citations instead of placeholders, e.g., [Bank Statement screenshot](evidence:EV-123) and [BNS-117](legal:BNS-117). End with similar real-world case reference if applicable.",
+  "case_completion_score": 34.5,
+  "checklist_completion_percentage": 25.0
+}
+case_completion_score rules: Mathematically and intuitively estimate the true percentage (0.0 to 99.9) of investigation completion. Use your intelligence and past case experience to gauge momentum based on the following general framework:
+- Initial Phase (0-20%): Blind case or basic complaint filed. Lacks actionable leads.
+- Foundation Phase (20-40%): Solid baseline established. Genuine complaint with useful recorded evidence (e.g., initial documents, screenshots) giving police a clear starting point.
+- Active Investigation Phase (40-70%): Significant momentum. Major identities, locations, or entities are known, but substantial work remains (e.g., waiting for department replies, cross-referencing, verifying alibis).
+- Resolution Phase (70-99.9%): Crucial breakthroughs made. Suspects fully identified, arrested/accused, and the case is progressing towards a charge sheet. (Never use 100%).
+Calculate the exact score by assessing what portion of the necessary investigative steps have been completed versus what critical work remains to close the case.
+
+checklist_completion_percentage rules: This represents the mechanical completion rate of the current active checklist. Calculate it mathematically: (number of COMPLETED steps / total number of steps in the current checklist provided in the facts) * 100. If the checklist is empty, output 0.0.`;
 
   const user = `Here is the current case state.
 
@@ -276,8 +306,18 @@ JSON SCHEMA:
       ]
     }
   ],
-  "narrative_summary": "Explanation of case status..."
-}`;
+  "narrative_summary": "Comprehensive story of the case from day one, weaving in all events. Use ACTUAL descriptions for citations instead of placeholders, e.g., [Bank Statement screenshot](evidence:EV-123) and [BNS-117](legal:BNS-117). End with similar real-world case reference if applicable.",
+  "case_completion_score": 34.5,
+  "checklist_completion_percentage": 25.0
+}
+case_completion_score rules: Mathematically and intuitively estimate the true percentage (0.0 to 99.9) of investigation completion. Use your intelligence and past case experience to gauge momentum based on the following general framework:
+- Initial Phase (0-20%): Blind case or basic complaint filed. Lacks actionable leads.
+- Foundation Phase (20-40%): Solid baseline established. Genuine complaint with useful recorded evidence (e.g., initial documents, screenshots) giving police a clear starting point.
+- Active Investigation Phase (40-70%): Significant momentum. Major identities, locations, or entities are known, but substantial work remains (e.g., waiting for department replies, cross-referencing, verifying alibis).
+- Resolution Phase (70-99.9%): Crucial breakthroughs made. Suspects fully identified, arrested/accused, and the case is progressing towards a charge sheet. (Never use 100%).
+Calculate the exact score by assessing what portion of the necessary investigative steps have been completed versus what critical work remains to close the case.
+
+checklist_completion_percentage rules: This represents the mechanical completion rate of the current active checklist. Calculate it mathematically: (number of COMPLETED steps / total number of steps in the current checklist provided in the facts) * 100. If the checklist is empty, output 0.0.`;
 
   const user = `Here is the current case state.
 
@@ -290,7 +330,9 @@ ${JSON.stringify({
     suggested_legal_sections: originalSnapshot.suggested_legal_sections,
     participant_recommendations: originalSnapshot.participant_recommendations,
     evidence_section_recommendations: originalSnapshot.evidence_section_recommendations,
-    narrative_summary: originalSnapshot.narrative_summary
+    narrative_summary: originalSnapshot.narrative_summary,
+    case_completion_score: originalSnapshot.case_completion_score,
+    checklist_completion_percentage: originalSnapshot.checklist_completion_percentage
   }, null, 2)}
 
 === HUMAN OFFICER CORRECTION ===

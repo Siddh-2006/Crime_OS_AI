@@ -9,7 +9,7 @@ const REFRESH_TOKEN_COOKIE = 'refreshToken';
 const cookieOptions = {
   httpOnly: true,
   secure: env.NODE_ENV === 'production',
-  sameSite: 'strict' as const,
+  sameSite: 'lax' as const,
   maxAge: env.JWT_REFRESH_EXPIRY_SECONDS * 1000,
   path: '/',
 };

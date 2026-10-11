@@ -24,11 +24,17 @@ export class PoliceAuthService {
 
   async login(email: string, password: string): Promise<PoliceAuthResult> {
     const officer = await this.officerRepository.findByEmail(email, true);
-    if (!officer) throw new AuthenticationError('Invalid credentials');
+    if (!officer) {
+      logger.warn('Login failed: Officer not found', { email });
+      throw new AuthenticationError('Invalid credentials');
+    }
     if (!officer.isActive) throw new AuthenticationError('Your account has been deactivated. Contact admin.');
 
     const isPasswordValid = await comparePassword(password, officer.password);
-    if (!isPasswordValid) throw new AuthenticationError('Invalid credentials');
+    if (!isPasswordValid) {
+      logger.warn('Login failed: Password mismatch', { email, providedPasswordLength: password.length });
+      throw new AuthenticationError('Invalid credentials');
+    }
 
     const { accessToken, refreshToken } = await this.tokenService.generateTokenPair({
       sub: String(officer._id),

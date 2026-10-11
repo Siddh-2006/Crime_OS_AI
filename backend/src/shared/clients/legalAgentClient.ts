@@ -10,11 +10,13 @@ const TIMEOUT_MS = 300000; // 300s timeout to allow for first-time ONNX export
  */
 export async function callLegalAgent(query: string): Promise<Record<string, any>> {
   try {
+    const t0 = Date.now();
     const response = await axios.post(
       `${env.LEGAL_AGENT_URL}/copilot`,
       { query },
       { timeout: TIMEOUT_MS }
     );
+    logger.debug('[legalAgent] call complete', { durationMs: Date.now() - t0 });
     return response.data;
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);

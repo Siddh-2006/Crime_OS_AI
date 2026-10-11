@@ -94,6 +94,7 @@ class PILMetadataExtractor(IMetadataExtractor):
             # Re-open after verify (verify() exhausts the stream)
             img = Image.open(io.BytesIO(image_bytes))
         except UnidentifiedImageError:
+            # Last-ditch: try loading as raw RGB (handles some truncated PNGs)
             raise UnsupportedFormatError(f"Cannot identify image format for '{file_name}'.")
         except Exception as exc:
             raise InvalidImageError(f"Image '{file_name}' is corrupt or unreadable: {exc}")

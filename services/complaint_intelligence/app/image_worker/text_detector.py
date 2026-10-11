@@ -32,7 +32,12 @@ async def detect_text_with_gemini(image_bytes: bytes, timeout: int | None = None
         raise LLMError("GEMINI_API_KEY is not set. Add it to the complaint-intelligence .env file to enable Gemini fallback.")
 
     image_b64 = base64.b64encode(image_bytes).decode("utf-8")
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.GEMINI_MODEL}:generateContent?key={api_key}"
+    _headers = {}
+    if api_key.startswith("AQ."):
+        _headers["Authorization"] = f"Bearer {api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.GEMINI_MODEL}:generateContent"
+    else:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.GEMINI_MODEL}:generateContent?key={api_key}"
     payload = {
         "contents": [
             {
@@ -56,28 +61,37 @@ async def detect_text_with_gemini(image_bytes: bytes, timeout: int | None = None
         "generationConfig": {"temperature": 0.0},
     }
 
-    try:
-        async with httpx.AsyncClient(timeout=timeout or settings.FLORENCE_TIMEOUT_SECONDS) as client:
-            resp = await client.post(url, json=payload)
-            resp.raise_for_status()
-            text = (
-                resp.json()
-                .get("candidates", [{}])[0]
-                .get("content", {})
-                .get("parts", [{}])[0]
-                .get("text", "")
-                .strip()
-                .lower()
-            )
-            if text.startswith("true"):
-                return True
-            if text.startswith("false"):
-                return False
-            raise LLMError(f"Gemini returned an invalid text-detection response: {text[:80]}")
-    except httpx.HTTPStatusError as exc:
-        raise LLMError(f"Gemini vision API returned error status: {exc.response.status_code}") from exc
-    except httpx.RequestError as exc:
-        raise LLMError(f"Failed to communicate with Gemini vision: {exc}") from exc
+    import asyncio
+    for attempt in range(3):
+        try:
+            async with httpx.AsyncClient(timeout=timeout or settings.FLORENCE_TIMEOUT_SECONDS) as client:
+                resp = await client.post(url, json=payload, headers=_headers)
+                resp.raise_for_status()
+                text = (
+                    resp.json()
+                    .get("candidates", [{}])[0]
+                    .get("content", {})
+                    .get("parts", [{}])[0]
+                    .get("text", "")
+                    .strip()
+                    .lower()
+                )
+                if text.startswith("true"):
+                    return True
+                if text.startswith("false"):
+                    return False
+                raise LLMError(f"Gemini returned an invalid text-detection response: {text[:80]}")
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code in (429, 503):
+                await asyncio.sleep(4 + (attempt * 2))
+                continue
+            raise LLMError(f"Gemini vision API returned error status: {exc.response.status_code}") from exc
+        except httpx.RequestError as exc:
+            if attempt < 2:
+                await asyncio.sleep(4 + (attempt * 2))
+                continue
+            raise LLMError(f"Failed to communicate with Gemini vision: {exc}") from exc
+    raise LLMError("Gemini vision API failed after 3 attempts")
 
 
 class FlorenceTextDetector(ITextDetector):

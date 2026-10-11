@@ -1,4 +1,4 @@
-﻿/**
+/**
  * geminiClient.ts
  *
  * Cloud fallback LLM client using Google Gemini via @google/genai.
@@ -35,6 +35,15 @@ const SAFETY_SETTINGS = [
   { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
 ];
 
+const _clientCache = new Map<string, GoogleGenAI>();
+
+function getClient(apiKey: string): GoogleGenAI {
+  if (!_clientCache.has(apiKey)) {
+    _clientCache.set(apiKey, new GoogleGenAI({ apiKey }));
+  }
+  return _clientCache.get(apiKey)!;
+}
+
 async function _geminiCall(
   systemPrompt: string,
   userPrompt:   string,
@@ -58,7 +67,7 @@ async function _geminiCall(
   for (let i = 0; i < allKeys.length; i++) {
     const attemptIndex = (_currentKeyIndex + i) % allKeys.length;
     const apiKey = allKeys[attemptIndex];
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = getClient(apiKey);
 
     const t0 = Date.now();
     try {

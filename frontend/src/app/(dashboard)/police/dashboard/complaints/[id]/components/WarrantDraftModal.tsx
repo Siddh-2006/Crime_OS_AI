@@ -17,7 +17,7 @@ interface Participant {
   identifiers?: Identifier[];
   roles: string[];
   suspectProfile?: { appliedSections?: AppliedSection[] };
-  accusedProfile?:  { appliedSections?: AppliedSection[] };
+  // accusedProfile was removed from the backend model — sections are always stored in suspectProfile
 }
 
 interface Warrant {
@@ -136,10 +136,8 @@ export function WarrantDraftModal({
   const [apiError,      setApiError]       = useState('');
   const [savedWarrant,  setSavedWarrant]   = useState<Warrant | null>(existingWarrant ?? null);
 
-  const sections: AppliedSection[] =
-    (participant.accusedProfile?.appliedSections?.length
-      ? participant.accusedProfile.appliedSections
-      : participant.suspectProfile?.appliedSections) ?? [];
+  // accusedProfile was removed from the backend model — sections are always stored in suspectProfile
+  const sections: AppliedSection[] = participant.suspectProfile?.appliedSections ?? [];
 
   const firNumber     = complaintData?.firNumber ?? '';
   const policeStation = complaintData?.policeStation?.name     ?? '—';

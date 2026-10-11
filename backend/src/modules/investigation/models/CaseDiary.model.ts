@@ -79,4 +79,6 @@ const CaseDiarySchema = new Schema<ICaseDiary>(
   },
 );
 
+CaseDiarySchema.index({ diary_id: 1 });
+
 export const CaseDiary = model<ICaseDiary>('CaseDiary', CaseDiarySchema);

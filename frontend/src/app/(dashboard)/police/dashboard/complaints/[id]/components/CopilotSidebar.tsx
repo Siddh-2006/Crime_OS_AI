@@ -5,6 +5,7 @@ import { Send, Loader2, CheckCircle2, AlertCircle, Sparkles, X } from 'lucide-re
 import apiClient from '@/lib/axios';
 import ReactMarkdown from 'react-markdown';
 import { useTranslation } from '@/context/TranslationContext';
+import { useRouter } from 'next/navigation';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -93,6 +94,7 @@ function parseAssistantMessage(raw: string): { content: string; proposal: Copilo
 }
 
 export function CopilotSidebar({ caseId, onStateChangeApplied, onClose }: CopilotSidebarProps) {
+  const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
@@ -216,7 +218,96 @@ export function CopilotSidebar({ caseId, onStateChangeApplied, onClose }: Copilo
                 }`}
               >
                 <div className="prose prose-sm dark:prose-invert max-w-none text-xs leading-relaxed">
-                  <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  <ReactMarkdown
+                    urlTransform={(url) => {
+                      if (
+                        url.startsWith('evidence:') ||
+                        url.startsWith('legal:') ||
+                        url.startsWith('casediary:') ||
+                        url.startsWith('http') ||
+                        url.startsWith('/')
+                      ) return url;
+                      return '#';
+                    }}
+                    components={{
+                      a: ({ node, href, children, ...props }) => {
+                        if (!href) return <a {...props}>{children}</a>;
+                        
+                        const handleClick = (e: React.MouseEvent, url: string) => {
+                          e.preventDefault();
+                          router.push(url);
+                        };
+                        
+                        // Evidence Link
+                        if (href.startsWith('evidence:')) {
+                          const id = href.replace('evidence:', '');
+                          return (
+                            <a 
+                              href={`?tab=evidence&openEvidenceId=${id}`}
+                              onClick={(e) => handleClick(e, `?tab=evidence&openEvidenceId=${id}`)}
+                              className="text-brand-primary font-semibold underline decoration-brand-primary/30 hover:decoration-brand-primary transition-colors cursor-pointer mx-1"
+                              title={`View Evidence: ${id}`}
+                              {...props}
+                            >
+                              {children}
+                            </a>
+                          );
+                        }
+                        
+                        // Legal Section Link
+                        if (href.startsWith('legal:')) {
+                          const section = href.replace('legal:', '');
+                          return (
+                            <a 
+                              href={`https://indiankanoon.org/search/?formInput=${encodeURIComponent(section)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-indigo-500 font-semibold underline decoration-indigo-500/30 hover:decoration-indigo-500 transition-colors cursor-pointer mx-1"
+                              title={`View Legal Documentation for ${section}`}
+                              {...props}
+                            >
+                              {children}
+                            </a>
+                          );
+                        }
+                        
+                        // Case Diary Link
+                        if (href.startsWith('casediary:')) {
+                          const id = href.replace('casediary:', '');
+                          return (
+                            <a 
+                              href={`?tab=diary&highlight=${id}`}
+                              onClick={(e) => handleClick(e, `?tab=diary&highlight=${id}`)}
+                              className="text-purple-600 font-semibold underline decoration-purple-600/30 hover:decoration-purple-600 transition-colors cursor-pointer mx-1"
+                              title={`View Case Diary Event: ${id}`}
+                              {...props}
+                            >
+                              {children}
+                            </a>
+                          );
+                        }
+                        // Case Diary Link
+                        if (href.startsWith('casediary:')) {
+                          const id = href.replace('casediary:', '');
+                          return (
+                            <a 
+                              href={`?tab=diary&highlight=${id}`}
+                              className="text-amber-600 font-semibold underline decoration-amber-600/30 hover:decoration-amber-600 transition-colors mx-1"
+                              title="View Case Diary Event"
+                              {...props}
+                            >
+                              {children}
+                            </a>
+                          );
+                        }
+
+                        // Default link
+                        return <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline hover:text-blue-600 mx-1" {...props}>{children}</a>;
+                      }
+                    }}
+                  >
+                    {msg.content}
+                  </ReactMarkdown>
                 </div>
 
                 {msg.proposal && (

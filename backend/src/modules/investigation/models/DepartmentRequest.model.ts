@@ -53,5 +53,6 @@ const DepartmentRequestSchema = new Schema<IDepartmentRequest>(
 
 DepartmentRequestSchema.index({ case_id: 1, status: 1 });
 DepartmentRequestSchema.index({ case_id: 1, step_id: 1 });
+DepartmentRequestSchema.index({ token: 1 }, { sparse: true });
 
 export const DepartmentRequest = model<IDepartmentRequest>('DepartmentRequest', DepartmentRequestSchema);

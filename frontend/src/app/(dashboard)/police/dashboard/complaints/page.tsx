@@ -48,6 +48,7 @@ export default function PoliceComplaintQueuePage(): React.ReactElement {
   
   const { toasts, showToast, removeToast } = useToast();
   const prevUnreadRef = useRef<Set<string>>(new Set());
+  const initialFetchRef = useRef(true);
 
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
@@ -88,12 +89,13 @@ export default function PoliceComplaintQueuePage(): React.ReactElement {
       (data.complaints || []).forEach((c: Complaint) => {
         if (c.hasUnreadDepartmentResponse) {
           currentUnread.add(c._id);
-          if (!prevUnreadRef.current.has(c._id)) {
+          if (!initialFetchRef.current && !prevUnreadRef.current.has(c._id)) {
             showToast(`New department response received for Complaint ${c.complaintNumber}`, 'success');
           }
         }
       });
       prevUnreadRef.current = currentUnread;
+      initialFetchRef.current = false;
 
       setTotalPages(Math.ceil((data.total || 0) / limit) || 1);
     } catch (err: any) {

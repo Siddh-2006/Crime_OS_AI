@@ -50,10 +50,10 @@ async def get_mongo_db() -> Any:
                     await asyncio.sleep(1.0)
                 else:
                     # Fallback to local
-                    logger.info("Falling back to local MongoDB...", extra={"uri": "mongodb://localhost:27017/crime_os"})
+                    logger.info("Falling back to local MongoDB...", extra={"uri": "mongodb://127.0.0.1:27017/crime-os"})
                     try:
                         client_kwargs["serverSelectionTimeoutMS"] = 30000
-                        client = AsyncIOMotorClient("mongodb://localhost:27017/crime_os", **client_kwargs)
+                        client = AsyncIOMotorClient("mongodb://127.0.0.1:27017/crime-os", **client_kwargs)
                         await client.admin.command('ping')
                         _mongo_client = client
                         logger.info("Connected to local MongoDB fallback successfully")

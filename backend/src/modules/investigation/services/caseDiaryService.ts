@@ -8,7 +8,8 @@ import { DiaryEntry } from '../models/DiaryEntry.model';
 import { Evidence } from '../models/Evidence.model';
 import { PlaceVisited } from '../models/PlaceVisited.model';
 import { DepartmentRequest } from '../models/DepartmentRequest.model';
-import { geminifast } from '../../../shared/llm/geminiClient';
+import { deepCall } from '../../../shared/llm/ollamaClient';
+import logger from '../../../config/logger';
 
 interface DiaryDraftInput {
   caseId: string;
@@ -158,7 +159,9 @@ CRITICAL INSTRUCTIONS FOR RECORD OF INVESTIGATION:
 
     const userPrompt = `Draft language preference: ${draftLanguage}\nCase context:\n${JSON.stringify(context, null, 2)}`;
 
-    const llmResult = await geminifast(systemPrompt, userPrompt, { jsonMode: true }) as Record<string, unknown>;
+    const t0 = Date.now();
+    const llmResult = await deepCall(systemPrompt, userPrompt, { jsonMode: true }) as Record<string, unknown>;
+    logger.info('[CaseDiaryService] AI drafting complete', { durationMs: Date.now() - t0, caseId: input.caseId });
     const safeResult = llmResult && typeof llmResult === 'object' ? llmResult : {};
 
     const generatedRecordOfInvestigationEn = String((safeResult.record_of_investigation_en as string) || '');

@@ -77,6 +77,8 @@ export interface EvidenceRow {
   type:                   string;
   status:                 string;
   ai_description?:        string;
+  ai_summary?:            string;
+  original_filename?:     string;
   ai_tags:                string[];
   applicable_sections?:   ILegalSectionSuggestion[];
   linked_diary_entry_id?: string;   // which diary entry added this evidence
@@ -282,7 +284,9 @@ export async function buildFactsObject(caseId: string): Promise<FactsObject> {
       evidence_id:            ev.evidence_id,
       type:                   ev.type,
       status:                 ev.status,
-      ai_description:         ev.ai_description,
+      ai_description:         (ev as any).aiMetadata?.aiSummary || ev.ai_description,
+      ai_summary:             (ev as any).aiMetadata?.aiSummary,
+      original_filename:      (ev as any).originalFilename,
       ai_tags:                ev.ai_tags ?? [],
       applicable_sections:    Array.isArray(ev.applicableSections) ? ev.applicableSections.map((section: any) => ({
         code: section.code,
@@ -305,7 +309,9 @@ export async function buildFactsObject(caseId: string): Promise<FactsObject> {
         evidence_id: evidence.evidence_id,
         type: evidence.type,
         status: evidence.status,
-        ai_description: evidence.ai_description,
+        ai_description: (evidence as any).aiMetadata?.aiSummary || evidence.ai_description,
+        ai_summary: (evidence as any).aiMetadata?.aiSummary,
+        original_filename: (evidence as any).originalFilename,
         ai_tags: evidence.ai_tags ?? [],
         applicable_sections: Array.isArray(evidence.applicableSections) ? evidence.applicableSections.map((section: any) => ({
           code: section.code,

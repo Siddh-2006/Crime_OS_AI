@@ -57,7 +57,10 @@ export function CommonTimeline({ items, emptyMessage = 'No timeline events recor
             <TimelineSeparator>
                 <TimelineDot
                   sx={{
-                    m: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    m: 'auto', // Keep it centered in the separator
                     p: 0,
                     width: item.icon ? 24 : 9,
                     height: item.icon ? 24 : 9,

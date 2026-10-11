@@ -38,14 +38,17 @@ async def recommend_officers(
         result = await service.recommend_officers(request)
         return result
     except Exception as exc:
+        import traceback
+        exc_str = traceback.format_exc()
         logger.error(
             "Recommend-officers endpoint error",
             extra={
                 "complaintId": request.complaint.complaintId,
                 "error": str(exc),
+                "traceback": exc_str,
             },
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Recommendation pipeline failed: {str(exc)}",
+            detail=f"Recommendation pipeline failed: {str(exc)}\n{exc_str}",
         )

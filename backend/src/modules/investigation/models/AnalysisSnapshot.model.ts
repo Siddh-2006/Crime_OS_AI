@@ -56,6 +56,8 @@ export interface IAnalysisSnapshot extends Document {
   narrative_summary: string;
   suggested_legal_sections: ILegalSectionSuggestion[];
   confidence_breakdown: Record<string, unknown>;
+  case_completion_score?: number;            // 0–99.9 AI-generated case progress score
+  checklist_completion_percentage?: number;  // 0-100 Checklist mechanical completion score
   officer_authored: boolean;
   parent_snapshot_id?: string;               // links to previous snapshot for diff
   compression_cache?: Map<string, string>;
@@ -130,6 +132,8 @@ const AnalysisSnapshotSchema = new Schema<IAnalysisSnapshot>(
     narrative_summary: { type: String, required: true },
     suggested_legal_sections: { type: [LegalSectionSuggestionSchema], default: [] },
     confidence_breakdown: { type: Schema.Types.Mixed, default: {} },
+    case_completion_score: { type: Number, default: 0 },
+    checklist_completion_percentage: { type: Number, default: 0 },
     officer_authored: { type: Boolean, default: false, required: true },
     parent_snapshot_id: { type: String },
     compression_cache: { type: Map, of: String, default: {} },

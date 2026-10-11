@@ -1,7 +1,5 @@
-import env from '../../config/env';
 import logger from '../../config/logger';
-import { fastCall } from '../../shared/llm/ollamaClient';
-import { geminifast } from '../../shared/llm/geminiClient';
+import env from '../../config/env';
 import { BatchTranslateInput, TranslationItem } from './types';
 
 const translationCache = new Map<string, string>();
@@ -13,12 +11,6 @@ function normalizeText(text: string): string {
 function cacheKey(sourceLanguage: string, targetLanguage: string, text: string): string {
   return `${sourceLanguage}:${targetLanguage}:${text}`;
 }
-
-const LANGUAGE_NAMES: Record<string, string> = {
-  en: 'English',
-  hi: 'Hindi',
-  gu: 'Gujarati',
-};
 
 export class TranslationService {
   async translateBatch(input: BatchTranslateInput): Promise<TranslationItem[]> {
@@ -88,80 +80,84 @@ export class TranslationService {
     input: BatchTranslateInput,
     texts: string[],
   ): Promise<string[]> {
-    // 1. Try local Ollama first
     try {
-      const sourceLanguage = LANGUAGE_NAMES[input.sourceLanguage] ?? input.sourceLanguage;
-      const targetLanguage = LANGUAGE_NAMES[input.targetLanguage] ?? input.targetLanguage;
-      
-      const result = await fastCall(
-        'You are a precise translation engine. Preserve meaning, punctuation, numbers, names, URLs, IDs, and line breaks. Return only valid JSON.',
-        JSON.stringify({
-          task: 'Translate each item and return a JSON array of strings in the same order.',
-          sourceLanguage,
-          targetLanguage,
-          texts,
-        }),
-        { jsonMode: true, temperature: 0.1, maxTokens: 4096 },
-      );
+      const targetLangMap: Record<string, string> = {
+        'English': 'English', 'Hindi': 'Hindi', 'Gujarati': 'Gujarati', 'en': 'English', 'hi': 'Hindi', 'gu': 'Gujarati'
+      };
+      const targetLang = targetLangMap[input.targetLanguage] || 'English';
 
-      if (Array.isArray(result) && result.length === texts.length) {
-        return texts.map((text, index) => {
-          const translatedText = result[index];
-          return typeof translatedText === 'string' && translatedText.trim()
-            ? translatedText
-            : text;
-        });
-      }
-      
-      logger.warn('[translation] Ollama returned invalid structure. Falling back to Gemini.');
-      return this.translateWithGemini(input, texts);
-    } catch (error) {
-      logger.warn('[translation] Ollama failed. Falling back to Gemini.', {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return this.translateWithGemini(input, texts);
-    }
-  }
-
-  private async translateWithGemini(
-    input: BatchTranslateInput,
-    texts: string[],
-  ): Promise<string[]> {
-    if (!env.GEMINI_API_KEY) {
-      logger.warn('[translation] GEMINI_API_KEY not set. Returning source text.');
-      return texts;
-    }
-
-    try {
-      const sourceLanguage = LANGUAGE_NAMES[input.sourceLanguage] ?? input.sourceLanguage;
-      const targetLanguage = LANGUAGE_NAMES[input.targetLanguage] ?? input.targetLanguage;
-      
-      const result = await geminifast(
-        'You are a precise translation engine. Preserve meaning, punctuation, numbers, names, URLs, IDs, and line breaks. Return only valid JSON.',
-        JSON.stringify({
-          task: 'Translate each item and return a JSON array of strings in the same order.',
-          sourceLanguage,
-          targetLanguage,
-          texts,
-        }),
-        { jsonMode: true, temperature: 0.1, maxTokens: 4096 },
-      );
-
-      if (!Array.isArray(result)) {
+      if (!env.GEMINI_API_KEY) {
+        logger.warn('[translation] GEMINI_API_KEY is missing, returning original texts');
         return texts;
       }
 
-      return texts.map((text, index) => {
-        const translatedText = result[index];
-        return typeof translatedText === 'string' && translatedText.trim()
-          ? translatedText
-          : text;
-      });
+      const keys = env.GEMINI_API_KEY.split(',');
+      const apiKey = keys[Math.floor(Math.random() * keys.length)].trim();
+
+      const { GoogleGenAI } = await import('@google/genai');
+      const ai = new GoogleGenAI({ apiKey });
+
+      const prompt = `Translate the following JSON array of strings from English to ${targetLang}. 
+You are translating a police investigation application UI and case data.
+Maintain the EXACT array length and string order. 
+Do not add any markdown formatting, only return the valid JSON array of translated strings.
+Preserve the exact meaning, tone, and any punctuation or spacing if possible.
+
+Strings to translate:
+${JSON.stringify(texts)}`;
+
+      let success = false;
+      let attempt = 0;
+      const maxRetries = 2;
+      
+      while (!success && attempt < maxRetries) {
+        try {
+          const response = await ai.models.generateContent({
+              model: env.GEMINI_MODEL || 'gemini-2.0-flash-lite',
+              contents: prompt,
+              config: {
+                 responseMimeType: 'application/json',
+              }
+          });
+
+          if (!response.text) {
+             throw new Error("Empty response from Gemini");
+          }
+
+          let responseText = response.text;
+          
+          if (responseText.startsWith('```json')) {
+              responseText = responseText.replace(/^```json/, '').replace(/```$/, '').trim();
+          } else if (responseText.startsWith('```')) {
+              responseText = responseText.replace(/^```/, '').replace(/```$/, '').trim();
+          }
+          
+          const translatedArray = JSON.parse(responseText);
+          
+          if (!Array.isArray(translatedArray)) {
+             throw new Error("Response is not a JSON array");
+          }
+          if (translatedArray.length !== texts.length) {
+             throw new Error(`Length mismatch: got ${translatedArray.length}, expected ${texts.length}`);
+          }
+          
+          return translatedArray;
+        } catch (e) {
+          logger.warn('[translation] Gemini API attempt failed', { error: String(e) });
+          attempt++;
+          if (attempt >= maxRetries) {
+             return texts;
+          }
+          await new Promise(r => setTimeout(r, 1000 * attempt));
+        }
+      }
+
+      return texts;
     } catch (error) {
-      logger.warn('[translation] Gemini fallback failed; returning source text', {
+      logger.error('[translation] Translation engine failed entirely', {
         error: error instanceof Error ? error.message : String(error),
       });
-      return texts;
+      return texts; // fallback to original
     }
   }
 }

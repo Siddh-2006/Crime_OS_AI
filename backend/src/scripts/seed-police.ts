@@ -45,7 +45,7 @@ async function seed(): Promise<void> {
       email: 'rajesh.singh@gujaratpolice.gov.in',
       phone: '9876543210',
       role: Role.SHO,
-      password: 'Admin@1234',
+      password: 'password123',
     },
     {
       officerName: 'Priya Patel',
@@ -53,7 +53,7 @@ async function seed(): Promise<void> {
       email: 'priya.patel@gujaratpolice.gov.in',
       phone: '9876543211',
       role: Role.IO,
-      password: 'Admin@1234',
+      password: 'password123',
     },
   ];
 

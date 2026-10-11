@@ -97,6 +97,24 @@ Use exactly this structure:
         "severity": "low|medium|high"
       }
     ]
+  },
+
+  "people_and_entities": {
+    "victims": [{"value": "...", "source_evidence_ids": [], "confidence": 0.9}],
+    "suspects": [{"value": "...", "source_evidence_ids": [], "confidence": 0.9}],
+    "witnesses": [],
+    "other_persons": [],
+    "organizations": [],
+    "locations": [],
+    "vehicles": [],
+    "phone_numbers": [{"value": "...", "source_evidence_ids": [], "confidence": 0.9}],
+    "emails": [],
+    "upi_ids": [],
+    "bank_accounts": [{"value": "...", "source_evidence_ids": [], "confidence": 0.9}],
+    "documents": [],
+    "money": [],
+    "digital_assets": [],
+    "physical_assets": []
   }
 }
 
@@ -229,6 +247,15 @@ Compute the following credibility factors based ONLY on the provided text/eviden
    - If no inconsistencies exist, return an empty array.
 
 --------------------------------------------------------
+PEOPLE & ENTITIES (SECTORS OF INFO)
+--------------------------------------------------------
+
+Extract ALL entities mentioned in the complaint or evidence.
+Categorize them exactly into the arrays provided (victims, suspects, phone_numbers, bank_accounts, upi_ids, etc.).
+Ensure NO DUPLICATES exist within the same sector array.
+Link each entity back to the source_evidence_ids that contain it.
+
+--------------------------------------------------------
 GROUNDING RULES
 --------------------------------------------------------
 
@@ -324,7 +351,7 @@ def build_case_understanding_user_prompt(case_context_json: str) -> str:
 
     lines.append("\n=== TASK INSTRUCTIONS ===")
     lines.append("1. Analyze ONLY the complaint text and uploaded evidence items listed above.")
-    lines.append("2. Return ONLY valid raw JSON matching the exact 5-section schema (case_understanding, timeline, evidence_intelligence, missing_information_and_evidence, contradictions). No markdown formatting. No conversational text.")
+    lines.append("2. Return ONLY valid raw JSON matching the exact schema (case_understanding, timeline, evidence_intelligence, missing_information_and_evidence, contradictions, credibility_metrics, people_and_entities). No markdown formatting. No conversational text.")
     lines.append("3. Generate exactly one evidence_intelligence object for every uploaded evidence item using its exact evidence_id.")
     lines.append("4. Build a chronological timeline using only the complaint and uploaded evidence.")
     lines.append("5. Populate missing_information_and_evidence only with information or evidence that the complainant can reasonably clarify or upload. Do NOT include anything requiring police investigation (e.g. CCTV collection, CDR analysis, witness interrogation, forensic examination).")

@@ -183,7 +183,12 @@ async def caption_with_gemini(image_bytes: bytes, timeout: int | None = None) ->
     if not api_key:
         raise LLMError("GEMINI_API_KEY is not set. Add it to the complaint-intelligence .env file to enable Gemini fallback.")
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.GEMINI_MODEL}:generateContent?key={api_key}"
+    _headers = {}
+    if api_key.startswith("AQ."):
+        _headers["Authorization"] = f"Bearer {api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.GEMINI_MODEL}:generateContent"
+    else:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.GEMINI_MODEL}:generateContent?key={api_key}"
     mime_type = _guess_image_mime_type(image_bytes)
     image_b64 = base64.b64encode(image_bytes).decode("utf-8")
 
@@ -213,46 +218,49 @@ async def caption_with_gemini(image_bytes: bytes, timeout: int | None = None) ->
         },
     }
 
-    try:
-        async with httpx.AsyncClient(timeout=timeout or settings.FLORENCE_TIMEOUT_SECONDS) as client:
-            resp = await client.post(url, json=payload)
-            resp.raise_for_status()
-            data = resp.json()
-            caption = (
-                data.get("candidates", [{}])[0]
-                .get("content", {})
-                .get("parts", [{}])[0]
-                .get("text", "")
-                .strip()
+    import asyncio
+    for attempt in range(3):
+        try:
+            async with httpx.AsyncClient(timeout=timeout or settings.FLORENCE_TIMEOUT_SECONDS) as client:
+                resp = await client.post(url, json=payload, headers=_headers)
+                resp.raise_for_status()
+                data = resp.json()
+                caption = (
+                    data.get("candidates", [{}])[0]
+                    .get("content", {})
+                    .get("parts", [{}])[0]
+                    .get("text", "")
+                    .strip()
+                )
+                if not caption:
+                    raise LLMError("Gemini returned an empty image caption")
+                result = _parse_caption(caption)
+                logger.info(
+                    "Gemini vision fallback completed",
+                    extra={"scene_type": result.scene_type, "tags": result.tags},
+                )
+                return result
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code in (429, 503):
+                logger.warning(f"Gemini vision HTTP 429/503. Retrying attempt {attempt+1}")
+                await asyncio.sleep(4 + (attempt * 2))
+                continue
+            logger.error(
+                "Gemini vision HTTP error",
+                extra={"status_code": exc.response.status_code, "error": str(exc)},
             )
-            if not caption:
-                raise LLMError("Gemini returned an empty image caption")
-            result = _parse_caption(caption)
-            logger.info(
-                "Gemini vision fallback completed",
-                extra={"scene_type": result.scene_type, "tags": result.tags},
+            raise LLMError(f"Gemini vision API returned error status: {exc.response.status_code}")
+        except httpx.RequestError as exc:
+            if attempt < 2:
+                logger.warning(f"Gemini vision communication error. Retrying attempt {attempt+1}")
+                await asyncio.sleep(4 + (attempt * 2))
+                continue
+            logger.warning(
+                "Gemini vision communication error",
+                extra={"error": str(exc)},
             )
-            return result
-    except httpx.HTTPStatusError as exc:
-        logger.error(
-            "Gemini vision HTTP error",
-            extra={"status_code": exc.response.status_code, "error": str(exc)},
-        )
-        raise LLMError(f"Gemini vision API returned error status: {exc.response.status_code}")
-    except httpx.RequestError as exc:
-        logger.warning(
-            "Gemini vision communication error",
-            extra={"error": str(exc)},
-        )
-        raise LLMError(f"Failed to communicate with Gemini vision: {exc}")
-    except Exception as exc:
-        if isinstance(exc, LLMError):
-            raise
-        logger.error(
-            "Gemini vision unexpected error",
-            extra={"error": str(exc)},
-        )
-        raise LLMError(f"Unexpected error calling Gemini vision: {exc}")
+            raise LLMError(f"Failed to communicate with Gemini vision: {exc}")
+    raise LLMError("Gemini vision API failed after 3 attempts")
 
 
 class MockImageCaptioner(IImageCaptioner):

@@ -95,6 +95,8 @@ _state = _ModelState()
 
 
 def load_model():
+    if torch is None:
+        raise RuntimeError("Cannot load model: PyTorch is not imported. Ensure VISION_BACKEND is not 'gemini'.")
     if _state.model is not None:
         return
     logger.info("Loading Florence-2 model", extra={"model_id": MODEL_ID})
@@ -115,7 +117,7 @@ def load_model():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Skip model loading in production when using Gemini Vision backend
-    if os.environ.get("VISION_BACKEND", "florence").lower() != "gemini":
+    if _VISION_BACKEND != "gemini":
         load_model()
     else:
         logger.info("VISION_BACKEND=gemini — skipping Florence model load")
@@ -182,12 +184,14 @@ def _gemini_predict(image_base64: str, task: str) -> str:
     """
     import httpx as _httpx
 
-    api_key = os.environ.get("GEMINI_API_KEY", "").strip()
-    model   = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite").strip()
+    api_keys_str = os.environ.get("GEMINI_API_KEY", "").strip()
+    model   = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash-lite").strip()
 
-    if not api_key:
+    if not api_keys_str:
         logger.error("GEMINI_API_KEY is not set but VISION_BACKEND=gemini")
         raise HTTPException(status_code=503, detail="GEMINI_API_KEY is not configured.")
+
+    api_keys = [k.strip() for k in api_keys_str.split(",") if k.strip()]
 
     # Detect MIME type from base64 header or default to JPEG
     mime_type = "image/jpeg"
@@ -199,10 +203,7 @@ def _gemini_predict(image_base64: str, task: str) -> str:
         mime_type = "image/webp"
 
     prompt = _GEMINI_PROMPTS.get(task, _DEFAULT_GEMINI_PROMPT)
-    url = (
-        f"https://generativelanguage.googleapis.com/v1beta/models/"
-        f"{model}:generateContent?key={api_key}"
-    )
+    
     payload = {
         "contents": [{
             "role": "user",
@@ -214,34 +215,49 @@ def _gemini_predict(image_base64: str, task: str) -> str:
         "generationConfig": {"temperature": 0.1, "maxOutputTokens": 512},
     }
 
-    try:
-        with _httpx.Client(timeout=30.0) as client:
-            resp = client.post(url, json=payload)
-            resp.raise_for_status()
-            data = resp.json()
-            result = (
-                data.get("candidates", [{}])[0]
-                    .get("content", {})
-                    .get("parts", [{}])[0]
-                    .get("text", "")
-                    .strip()
-            )
-            if not result:
-                logger.warning("Gemini returned empty vision result")
-            return result
-    except _httpx.HTTPStatusError as exc:
-        logger.error("Gemini Vision HTTP error", extra={"status": exc.response.status_code})
-        raise HTTPException(status_code=502, detail=f"Gemini Vision API error: {exc.response.status_code}")
-    except Exception as exc:
-        logger.error("Gemini Vision unexpected error", extra={"error": str(exc)})
-        raise HTTPException(status_code=502, detail=f"Gemini Vision failed: {exc}")
+    last_error = None
+    for api_key in api_keys:
+        headers = {}
+        if api_key.startswith("AQ."):
+            headers["Authorization"] = f"Bearer {api_key}"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+        else:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+        try:
+            with _httpx.Client(timeout=30.0) as client:
+                resp = client.post(url, json=payload, headers=headers)
+                resp.raise_for_status()
+                data = resp.json()
+                result = (
+                    data.get("candidates", [{}])[0]
+                        .get("content", {})
+                        .get("parts", [{}])[0]
+                        .get("text", "")
+                        .strip()
+                )
+                if not result:
+                    logger.warning("Gemini returned empty vision result")
+                return result
+        except _httpx.HTTPStatusError as exc:
+            last_error = exc
+            logger.warning(f"Gemini Vision key failed with {exc.response.status_code}. Trying next key if available.")
+            if exc.response.status_code in (429, 403, 503, 500):
+                continue
+            break # Don't retry on 400
+        except Exception as exc:
+            last_error = exc
+            logger.warning(f"Gemini Vision unexpected error: {exc}. Trying next key if available.")
+            continue
+
+    logger.error(f"All Gemini Vision keys failed. Last error: {last_error}")
+    raise HTTPException(status_code=502, detail=f"Gemini Vision failed. Last error: {last_error}")
 
 
 @app.get("/health")
 def health():
     logger.info("Florence health check requested")
     backend = os.environ.get("VISION_BACKEND", "florence").lower()
-    return {"status": "ok", "model": MODEL_ID if backend != "gemini" else os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite"), "device": _state.device, "backend": backend}
+    return {"status": "ok", "model": MODEL_ID if backend != "gemini" else os.environ.get("GEMINI_MODEL", "gemini-2.0-flash-lite"), "device": _state.device, "backend": backend}
 
 
 @app.post("/predict", response_model=PredictResponse)
@@ -343,6 +359,6 @@ if __name__ == "__main__":
     uvicorn.run(
         app,
         host=os.environ.get("HOST", "0.0.0.0"),
-        port=int(os.environ.get("PORT", "8002")),
+        port=int(os.environ.get("PORT") or "8002"),
         log_level="info",
     )

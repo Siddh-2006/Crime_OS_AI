@@ -26,6 +26,7 @@ export class ComplaintController {
     try {
       const text = String(req.body?.text ?? '');
       const context = typeof req.body?.context === 'string' ? req.body.context : '';
+      const language = typeof req.body?.language === 'string' ? req.body.language : 'English';
       const files = (req.files as Express.Multer.File[] | undefined) ?? [];
 
       const formData = new FormData();
@@ -33,6 +34,7 @@ export class ComplaintController {
       if (context) {
         formData.append('context', context);
       }
+      formData.append('language', language);
 
       for (const file of files) {
         const blob = new Blob([file.buffer], { type: file.mimetype || 'application/octet-stream' });

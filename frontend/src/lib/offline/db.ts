@@ -75,23 +75,28 @@ export class OfflineDB extends Dexie {
     super('CrimeOS_Offline');
     
     this.version(1).stores({
-      // Compound index [officer_id+case_id] for per-officer queries
       cases: 'case_id, officer_id, last_accessed, [officer_id+case_id]',
-      
-      // Index by officer_id and status for efficient outbox processing
       outbox: 'id, officer_id, status, timestamp, [officer_id+status], depends_on',
-      
       metadata: 'key, updated_at',
     });
     
-    // Add officer_role field and create compound primary key
     this.version(2).stores({
-      // Use compound key [case_id+officer_role] as primary key for role isolation
       cases: '[case_id+officer_role], case_id, officer_id, officer_role, last_accessed, [officer_id+case_id], [officer_id+officer_role]',
-      
-      // No changes to outbox and metadata
       outbox: 'id, officer_id, status, timestamp, [officer_id+status], depends_on',
       metadata: 'key, updated_at',
+    });
+
+    // v3: clear all cached cases to purge any stale snapshots saved with the
+    // wrong data (envelope stored instead of payload due to `|| response.data` bug).
+    // Outbox and metadata are preserved.
+    this.version(3).stores({
+      cases: '[case_id+officer_role], case_id, officer_id, officer_role, last_accessed, [officer_id+case_id], [officer_id+officer_role]',
+      outbox: 'id, officer_id, status, timestamp, [officer_id+status], depends_on',
+      metadata: 'key, updated_at',
+    }).upgrade(async tx => {
+      // Wipe the cases table — fresh data will be re-cached on next online fetch
+      await tx.table('cases').clear();
+      console.log('[OfflineDB] v3 migration: cleared stale case cache');
     });
   }
 }

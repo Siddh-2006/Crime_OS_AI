@@ -48,13 +48,15 @@ class OllamaLLMClient(ILLMClient):
         self.max_retries = max(1, max_retries or settings.LLM_MAX_RETRIES)
 
     async def _generate_with_gemini(self, prompt: str, system_prompt: str | None = None) -> str:
-        api_key = settings.GEMINI_API_KEY.strip()
-        if not api_key:
+        api_keys_str = settings.GEMINI_API_KEY.strip()
+        if not api_keys_str:
             raise LLMError(
                 "GEMINI_API_KEY is not set. Add it to the complaint-intelligence .env file to enable Gemini fallback."
             )
+        
+        api_keys = [k.strip() for k in api_keys_str.split(",") if k.strip()]
+        last_error = None
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.GEMINI_MODEL}:generateContent?key={api_key}"
         payload: dict[str, Any] = {
             "contents": [
                 {
@@ -72,45 +74,57 @@ class OllamaLLMClient(ILLMClient):
                 "parts": [{"text": system_prompt}],
             }
 
-        try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.post(url, json=payload)
-                response.raise_for_status()
-                data = response.json()
-                result = (
-                    data.get("candidates", [{}])[0]
-                    .get("content", {})
-                    .get("parts", [{}])[0]
-                    .get("text", "")
-                    .strip()
-                )
-                if not result:
-                    raise LLMError("Gemini returned an empty response")
-                logger.info(
-                    "Gemini fallback responded successfully",
-                    extra={"model": settings.GEMINI_MODEL, "response_length": len(result)},
-                )
-                return result
-        except httpx.HTTPStatusError as exc:
-            logger.error(
-                "Gemini HTTP error",
-                extra={"status_code": exc.response.status_code, "error": str(exc)},
-            )
-            raise LLMError(f"Gemini API returned error status: {exc.response.status_code}")
-        except httpx.RequestError as exc:
-            logger.warning(
-                "Gemini communication error",
-                extra={"error": str(exc)},
-            )
-            raise LLMError(f"Failed to communicate with Gemini: {exc}")
-        except Exception as exc:
-            if isinstance(exc, LLMError):
-                raise
-            logger.error(
-                "Gemini unexpected error",
-                extra={"error": str(exc)},
-            )
-            raise LLMError(f"Unexpected error calling Gemini: {exc}")
+        import asyncio
+        for api_key in api_keys:
+            headers = {}
+            if api_key.startswith("AQ."):
+                headers["Authorization"] = f"Bearer {api_key}"
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.GEMINI_MODEL}:generateContent"
+            else:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.GEMINI_MODEL}:generateContent?key={api_key}"
+            for attempt in range(3):
+                try:
+                    async with httpx.AsyncClient(timeout=self.timeout) as client:
+                        response = await client.post(url, json=payload, headers=headers)
+                        response.raise_for_status()
+                        data = response.json()
+                        result = (
+                            data.get("candidates", [{}])[0]
+                            .get("content", {})
+                            .get("parts", [{}])[0]
+                            .get("text", "")
+                            .strip()
+                        )
+                        if not result:
+                            raise LLMError("Gemini returned an empty response")
+                        logger.info(
+                            "Gemini fallback responded successfully",
+                            extra={"model": settings.GEMINI_MODEL, "response_length": len(result)},
+                        )
+                        return result
+                except httpx.HTTPStatusError as exc:
+                    last_error = exc
+                    logger.warning(f"Gemini key failed with {exc.response.status_code} on attempt {attempt+1}.")
+                    if exc.response.status_code in (429, 503):
+                        await asyncio.sleep(4 + (attempt * 2)) # sleep 4s, 6s, 8s
+                        continue # retry same key
+                    if exc.response.status_code in (403, 500):
+                        break # Try next key
+                    break  # Don't retry on 400 Bad Request
+                except httpx.RequestError as exc:
+                    last_error = exc
+                    if attempt < 2:
+                        await asyncio.sleep(4 + (attempt * 2))
+                        continue
+                    break
+                except Exception as exc:
+                    last_error = exc
+                    if attempt < 2:
+                        await asyncio.sleep(4 + (attempt * 2))
+                        continue
+                    break
+
+        raise LLMError(f"All provided Gemini API keys failed. Last error: {last_error}")
 
     async def _generate_with_ollama(self, prompt: str, system_prompt: str | None = None) -> str:
         url = f"{self.base_url}/api/generate"
@@ -144,6 +158,10 @@ class OllamaLLMClient(ILLMClient):
             return result
 
     async def generate(self, prompt: str, system_prompt: str | None = None) -> str:
+        if settings.LLM_BACKEND.lower() == "gemini":
+            logger.info("LLM_BACKEND is set to gemini. Bypassing Ollama and using Gemini directly.")
+            return await self._generate_with_gemini(prompt, system_prompt)
+
         last_error: Exception | None = None
         last_message = "Ollama call failed"
 

@@ -17,11 +17,16 @@ export async function callIoRecommendation(query: any): Promise<Record<string, a
        throw new Error('Not implemented: The Python service does not yet support string-based similar case search.');
     }
 
+    const t0 = Date.now();
     const response = await axios.post(
       `${env.IO_RECOMMENDATION_URL}/recommend-officers`,
-      query, // Assuming when it's not a string, it's the correct RecommendOfficersRequest payload
-      { timeout: TIMEOUT_MS }
+      query,
+      { 
+        timeout: TIMEOUT_MS,
+        headers: { 'x-api-key': env.SHARED_API_KEY } 
+      }
     );
+    logger.debug('[ioRecommendation] call complete', { durationMs: Date.now() - t0 });
     return response.data;
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);

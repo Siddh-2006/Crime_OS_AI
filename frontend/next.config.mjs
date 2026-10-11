@@ -16,9 +16,7 @@ const withPWA = withPWAInit({
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  turbopack: {},
 };
 
 export default withPWA(nextConfig);

@@ -3,7 +3,7 @@
 import React from 'react';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { CommonTimeline } from '@/components/ui/CommonTimeline';
-import { FileText, ShieldCheck, User, Activity, AlertTriangle, Send, Upload, Edit3, MessageSquare, Shield, Lock, CheckCircle2, XCircle, Clock, MapPin } from 'lucide-react';
+import { FileText, ShieldCheck, User, Activity, AlertTriangle, Send, Upload, Edit3, MessageSquare, Shield, Lock, CheckCircle2, XCircle, Clock, MapPin, ChevronRight } from 'lucide-react';
 
 interface DiaryEntry {
   _id: string;
@@ -177,16 +177,27 @@ export function CaseDiaryFeed({ entries = [], onEntryClick }: CaseDiaryFeedProps
               time: getFormattedTimestamp(entry?.timestamp),
               actor: getActorName(entry?.actor),
               icon: getEventIcon(entry?.event_type),
-              onClick: onEntryClick && entry ? () => onEntryClick(entry) : undefined,
+              tone: (
+                entry?.event_type?.includes('deleted') ? 'danger' :
+                entry?.event_type?.includes('completed') || entry?.event_type?.includes('approved') ? 'success' :
+                entry?.event_type?.includes('custody') || entry?.event_type?.includes('warrant') ? 'warning' :
+                'default'
+              ),
+              onClick: entry ? () => onEntryClick?.(entry) : undefined,
               content: (
-                <>
-                  <p className="text-xs font-bold text-text-primary">{getEventTitle(entry)}</p>
-                  {getEventDescription(entry) && (
-                    <div className="mt-2 rounded-xl border border-border bg-surface p-2.5 text-xs italic text-text-secondary">
-                      {getEventDescription(entry)}
-                    </div>
+                <div className={`group flex items-start justify-between gap-1 ${onEntryClick ? 'cursor-pointer' : ''}`}>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold text-text-primary group-hover:text-brand-primary transition-colors">{getEventTitle(entry)}</p>
+                    {getEventDescription(entry) && (
+                      <div className="mt-2 rounded-xl border border-border bg-surface p-2.5 text-xs italic text-text-secondary">
+                        {getEventDescription(entry)}
+                      </div>
+                    )}
+                  </div>
+                  {onEntryClick && (
+                    <ChevronRight size={12} className="flex-shrink-0 mt-0.5 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
                   )}
-                </>
+                </div>
               ),
             }))}
           />

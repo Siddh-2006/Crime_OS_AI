@@ -164,6 +164,7 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
   const isLanguageChangingRef = useRef(false);
   const mutationObserverRef = useRef<MutationObserver | null>(null);
   const pendingTranslationTimeoutRef = useRef<number | null>(null);
+  const pendingTranslationTargetRef = useRef<SupportedLanguage | null>(null);
   const activeMessageTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -272,8 +273,14 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
   );
 
   const applyTranslations = useCallback(async (targetLanguage: SupportedLanguage) => {
-    if (typeof document === 'undefined' || isApplyingRef.current) return;
+    if (typeof document === 'undefined') return;
+    
+    if (isApplyingRef.current) {
+      pendingTranslationTargetRef.current = targetLanguage;
+      return;
+    }
     isApplyingRef.current = true;
+    pendingTranslationTargetRef.current = null;
 
     // Pause the mutation observer while we apply translations to avoid
     // triggering infinite re-translation loops and disrupting React's DOM.
@@ -327,33 +334,54 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
       }
 
       setActiveMessage('Translating... please wait until the result is returned.');
-      const translations = await translateBatch(sourceTexts, targetLanguage);
+      
+      const uniqueSourceTexts = Array.from(new Set(sourceTexts));
+      const chunkSize = 20;
+      
+      for (let i = 0; i < uniqueSourceTexts.length; i += chunkSize) {
+        const chunk = uniqueSourceTexts.slice(i, i + chunkSize);
+        
+        const startTime = performance.now();
+        const translations = await translateBatch(chunk, targetLanguage);
+        const fetchTime = performance.now() - startTime;
+        
+        // Update nodes incrementally for this chunk
+        nodes.forEach((node) => {
+          const stored = textNodeOriginals.get(node);
+          const original = stored?.original ?? node.nodeValue ?? '';
+          const key = normalizeWhitespace(original);
+          
+          if (translations[key] !== undefined || targetLanguage === 'en') {
+            const nextValue = targetLanguage === 'en' ? original : translations[key];
+            if (nextValue !== node.nodeValue) {
+              node.nodeValue = nextValue;
+            }
+            textNodeOriginals.set(node, { original, lastApplied: nextValue });
+          }
+        });
 
-      // Only mutate nodes that actually need updating to minimise React disruption
-      nodes.forEach((node) => {
-        const stored = textNodeOriginals.get(node);
-        const original = stored?.original ?? node.nodeValue ?? '';
-        const key = normalizeWhitespace(original);
-        const nextValue = targetLanguage === 'en' ? original : translations[key] ?? original;
-        if (nextValue !== node.nodeValue) {
-          console.debug('[translation] node text updated', { original, nextValue });
-          node.nodeValue = nextValue;
+        // Update attributes incrementally
+        attrs.forEach(({ element, attr }) => {
+          const stored = attrOriginals.get(element)?.get(attr);
+          const original = stored?.original;
+          if (!original) return;
+          const key = normalizeWhitespace(original);
+          
+          if (translations[key] !== undefined || targetLanguage === 'en') {
+            const nextValue = targetLanguage === 'en' ? original : translations[key];
+            if (nextValue !== element.getAttribute(attr)) {
+              element.setAttribute(attr, nextValue);
+            }
+            attrOriginals.get(element)?.set(attr, { original, lastApplied: nextValue });
+          }
+        });
+        
+        // Only yield if a network request actually happened (took > 20ms)
+        if (fetchTime > 20) {
+          await new Promise(r => setTimeout(r, 20));
         }
-        textNodeOriginals.set(node, { original, lastApplied: nextValue });
-      });
+      }
 
-      attrs.forEach(({ element, attr }) => {
-        const stored = attrOriginals.get(element)?.get(attr);
-        const original = stored?.original;
-        if (!original) return;
-        const key = normalizeWhitespace(original);
-        const nextValue = targetLanguage === 'en' ? original : translations[key] ?? original;
-        if (nextValue !== element.getAttribute(attr)) {
-          console.debug('[translation] attr text updated', { attr, original, nextValue });
-          element.setAttribute(attr, nextValue);
-        }
-        attrOriginals.get(element)?.set(attr, { original, lastApplied: nextValue });
-      });
     } finally {
       isApplyingRef.current = false;
       if (activeMessageTimeoutRef.current) {
@@ -370,6 +398,14 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
           subtree: true,
           characterData: true,
         });
+      }
+
+      if (pendingTranslationTargetRef.current) {
+        const nextLang = pendingTranslationTargetRef.current;
+        pendingTranslationTargetRef.current = null;
+        window.setTimeout(() => {
+          void applyTranslations(nextLang);
+        }, 10);
       }
     }
   }, [translateBatch]);

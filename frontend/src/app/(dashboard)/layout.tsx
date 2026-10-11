@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
 import Link from 'next/link';
@@ -89,15 +89,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <Watermark />
       {isPolice && <OfflineBanner />}
       {/* â”€â”€ Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-      <CollapsibleSidebar
-        navItems={navItems}
-        caseNavList={activeCaseNavItems}
-        pathname={pathname}
-        displayName={displayName}
-        userRole={user?.role ?? ''}
-        onLogout={handleLogout}
-        isPolice={isPolice}
-      />
+      <React.Suspense fallback={<div className="hidden lg:flex w-16 bg-surface border-r border-border flex-shrink-0 z-20" />}>
+        <CollapsibleSidebar
+          navItems={navItems}
+          caseNavList={activeCaseNavItems}
+          pathname={pathname}
+          displayName={displayName}
+          userRole={user?.role ?? ''}
+          onLogout={handleLogout}
+          isPolice={isPolice}
+        />
+      </React.Suspense>
 
       {/* â”€â”€ Main content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="flex flex-1 flex-col min-w-0 bg-transparent text-text-primary relative z-10 overflow-y-auto">

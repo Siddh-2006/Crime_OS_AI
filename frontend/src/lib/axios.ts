@@ -25,7 +25,7 @@ function shouldUseOfflineFallback(url?: string): boolean {
   if (!url) return false;
   
   // Only use offline fallback for GET requests to case-related endpoints
-  return (
+  const isCaseDataUrl = (
     url.includes('/cases/') &&
     (url.includes('/analysis') ||
       url.includes('/checklist') ||
@@ -38,7 +38,13 @@ function shouldUseOfflineFallback(url?: string): boolean {
       url.includes('/room') ||
       url.includes('/graph') ||
       url.includes('/departments'))
-  ) || url.includes('/complaints/') || url.includes('/case-understanding/');
+  );
+
+  // Only match individual complaint detail (MongoDB ObjectId), NOT list/search endpoints
+  const isIndividualComplaint = /\/complaints\/[a-f0-9]{24}($|\?)/.test(url);
+  const isCaseUnderstanding = url.includes('/case-understanding/');
+
+  return isCaseDataUrl || isIndividualComplaint || isCaseUnderstanding;
 }
 
 /**
@@ -106,7 +112,15 @@ apiClient.interceptors.response.use(
             const existingCache = await CaseCacheManager.getCase(case_id, officer_id, role);
             
             const url = response.config.url || '';
-            const data = response.data?.data || response.data;
+            // response.data is always { success, message, data: <actual payload> }
+            // Extract only the actual payload — never store the envelope itself
+            const data = response.data?.data ?? null;
+
+            // Don't cache null/empty snapshot — it means no analysis run yet
+            // and would overwrite a valid cached snapshot with nothing
+            if (url.includes('/analysis') && (data === null || data === undefined)) {
+              return response;
+            }
             
             // Update the appropriate field in cache
             const updates: any = {};
@@ -165,6 +179,9 @@ apiClient.interceptors.response.use(
       originalRequest.url?.includes(API_ROUTES.AUTH.LOGIN) ||
       originalRequest.url?.includes(API_ROUTES.POLICE.LOGIN) ||
       originalRequest.url?.includes(API_ROUTES.ADMIN.LOGIN) ||
+      originalRequest.url?.includes(API_ROUTES.AUTH.LOGOUT) ||
+      originalRequest.url?.includes(API_ROUTES.POLICE.LOGOUT) ||
+      originalRequest.url?.includes(API_ROUTES.ADMIN.LOGOUT) ||
       originalRequest.url?.includes(API_ROUTES.AUTH.REGISTER) ||
       originalRequest.url?.includes(API_ROUTES.AUTH.VERIFY_EMAIL) ||
       originalRequest.url?.includes(API_ROUTES.AUTH.RESEND_OTP) ||
@@ -236,8 +253,8 @@ apiClient.interceptors.response.use(
           const result = await OfflineApiClient.request(originalRequest);
           console.log('[apiClient] Cache hit.');
           return result;
-        } catch (offlineError) {
-          console.error('[apiClient] Cache miss:', offlineError);
+        } catch (offlineError: any) {
+          console.warn(`[apiClient] Cache miss: ${offlineError.message || 'Offline data not available'}`);
         }
       }
       

@@ -68,7 +68,12 @@ def _clean_json_payload(raw: str) -> dict[str, object]:
     if start != -1 and end != -1 and end > start:
         text = text[start : end + 1]
 
-    parsed = json.loads(text)
+    try:
+        import json_repair
+        parsed = json_repair.repair_json(text, return_objects=True)
+    except Exception:
+        parsed = json.loads(text)
+        
     return parsed if isinstance(parsed, dict) else {}
 
 
@@ -86,6 +91,7 @@ def _build_multimodal_prompt(
     complaint_text: str,
     attachment_notes: list[str],
     context: dict[str, object],
+    language: str,
 ) -> tuple[str, str]:
     system_prompt = (
         "You are a police complaint intake assistant for Gujarat Police. "
@@ -112,6 +118,8 @@ def _build_multimodal_prompt(
         "   Default to 'CYBERCRIME' if digital/financial fraud is mentioned, 'OTHER' otherwise.\n"
         "10. missingFields: list only fields the complainant should manually verify or correct, "
         "    NOT fields you filled with inferred values.\n"
+        f"11. ALL TEXTUAL FIELDS (approximateDateText, detailedDescription, shortDescription, incidentPlace, etc.) "
+        f"    MUST BE TRANSLATED TO {language.upper()} if the original text is in Gujarati, Hindi, Hinglish, or Gujlish.\n"
     )
 
     # Build attachment block with clear labels
@@ -176,6 +184,7 @@ async def profile_complaint_multimodal(
     container: Annotated[Container, Depends(get_di_container)],
     text: str = Form(default=""),
     context: str = Form(default=""),
+    language: str = Form(default="English"),
     files: list[UploadFile] = File(default=[]),
 ) -> ComplaintDraftIntakeResponse:
     complaint_text = text.strip()
@@ -324,7 +333,7 @@ async def profile_complaint_multimodal(
     if not complaint_text and not attachment_notes:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Provide complaint text or upload at least one file.")
 
-    system_prompt, user_prompt = _build_multimodal_prompt(complaint_text, attachment_notes, parsed_context)
+    system_prompt, user_prompt = _build_multimodal_prompt(complaint_text, attachment_notes, parsed_context, language)
     raw_response: str | None = None
     parsed_output: dict[str, object] = {}
 

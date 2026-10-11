@@ -185,9 +185,14 @@ class Container:
     @property
     def ocr_engine(self) -> IOCREngine:
         if self._ocr_engine is None:
-            # Production: use Gemini Vision for OCR (no PaddleOCR/GPU required)
-            # Development: use PaddleOCR (local, offline)
-            if settings.is_production:
+            engine_choice = (getattr(settings, "OCR_ENGINE", "") or "").strip().lower()
+            if engine_choice == "paddle":
+                from app.ocr_worker.engine import PaddleOCREngine
+                self._ocr_engine = PaddleOCREngine()
+            elif engine_choice == "gemini":
+                from app.ocr_worker.engine import GeminiOCREngine
+                self._ocr_engine = GeminiOCREngine()
+            elif settings.is_production:
                 from app.ocr_worker.engine import GeminiOCREngine
                 self._ocr_engine = GeminiOCREngine()
             else:

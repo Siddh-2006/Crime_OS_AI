@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import {
   Shield, User, ChevronDown, ChevronUp, CheckCircle2,
-  Clock, XCircle, AlertTriangle, ExternalLink, Lock,
+  Clock, XCircle, AlertTriangle, ExternalLink, Lock, FileText, X, Eye,
 } from 'lucide-react';
 import apiClient from '@/lib/axios';
 import { API_ROUTES } from '@/lib/constants';
@@ -23,7 +23,7 @@ interface Participant {
   contact?: { phone?: string; email?: string; address?: string };
   identifiers?: Identifier[];
   suspectProfile?: { appliedSections?: AppliedSection[] };
-  accusedProfile?:  { appliedSections?: AppliedSection[] };
+  // accusedProfile was removed from the backend model — sections are always stored in suspectProfile
 }
 
 interface Warrant {
@@ -103,6 +103,187 @@ const STATUS_CFG: Record<string, { label: string; pill: string; icon: React.Reac
 
 const ACTIVE_STATUSES = ['draft', 'sent_to_magistrate', 'approved', 'in_custody'];
 
+// ─── Warrant View Modal (scrollable full document preview) ────────────────────
+
+function WarrantViewModal({
+  isOpen,
+  onClose,
+  warrant,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  warrant: Warrant;
+}) {
+  if (!isOpen) return null;
+
+  const cfg = STATUS_CFG[warrant.status] ?? STATUS_CFG.draft;
+  const sections = warrant.applied_sections ?? [];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+      <div
+        className="w-full max-w-2xl bg-surface rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden border border-border animate-in fade-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 bg-surface-elevated border-b border-border rounded-t-2xl">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center">
+              <Shield size={15} className="text-brand-primary" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-text-primary">Warrant Document — {warrant.accused_name}</h2>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${cfg.pill}`}>
+                  {cfg.icon} {cfg.label}
+                </span>
+                {warrant.sent_at && (
+                  <span className="text-[10px] text-text-secondary font-mono">
+                    Sent {new Date(warrant.sent_at).toLocaleDateString('en-IN')}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 text-text-secondary hover:text-text-primary hover:bg-surface rounded-lg transition-colors cursor-pointer">
+            <X size={15} />
+          </button>
+        </div>
+
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto px-5 py-5">
+          <div className="rounded-xl border border-border bg-surface-elevated p-5">
+
+            {/* Document header */}
+            <div className="text-center pb-4 mb-4 border-b border-border">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-text-secondary">Gujarat Police</p>
+              <p className="text-base font-black text-text-primary mt-1">WARRANT OF ARREST</p>
+              <p className="text-[11px] text-text-secondary mt-0.5">Bharatiya Nagarik Suraksha Sanhita, 2023 — Section 70</p>
+            </div>
+
+            {/* Meta grid */}
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs mb-4">
+              {[
+                ['FIR No.', warrant.fir_number || '(not registered)'],
+                ['Police Station', warrant.police_station],
+                ['District', warrant.district],
+                ['Date', warrant.createdAt ? new Date(warrant.createdAt).toLocaleDateString('en-IN') : '—'],
+              ].map(([label, val]) => (
+                <div key={label} className="flex gap-2">
+                  <span className="text-text-secondary font-medium shrink-0">{label}:</span>
+                  <span className="font-semibold text-text-primary">{val}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Accused block */}
+            <div className="rounded-lg border border-border bg-surface p-4 mb-4 text-xs space-y-1.5">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-text-secondary">Accused Person</p>
+              <p className="font-bold text-text-primary text-sm">{warrant.accused_name}</p>
+              {warrant.accused_address && (
+                <p className="text-text-secondary">of {warrant.accused_address}</p>
+              )}
+            </div>
+
+            {/* WHEREAS */}
+            <div className="mb-4">
+              <p className="text-xs text-text-primary leading-relaxed">
+                <span className="font-bold">WHEREAS</span> the above-named person stands charged with the offence(s) of:
+              </p>
+            </div>
+
+            {/* Sections */}
+            <div className="mb-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-text-secondary mb-2">Charged Under</p>
+              {sections.length > 0 ? (
+                <div className="space-y-2">
+                  {sections.map((s, i) => (
+                    <div key={i} className="flex items-start gap-2 text-xs">
+                      <span className="text-brand-primary font-bold shrink-0 min-w-[60px]">§ {s.code}</span>
+                      <span className="text-text-primary">{s.title}</span>
+                      {s.reason && <span className="text-text-secondary ml-1">— {s.reason}</span>}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-text-secondary italic text-[11px]">No sections were attached at the time of drafting.</p>
+              )}
+            </div>
+
+            {/* Justification */}
+            <div className="mb-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-text-secondary mb-2">Grounds for Arrest</p>
+              <div className="rounded-lg border border-border bg-surface p-3">
+                <p className="text-xs text-text-primary leading-relaxed whitespace-pre-wrap">
+                  {warrant.justification || '(No justification provided)'}
+                </p>
+              </div>
+            </div>
+
+            {/* Rejection reason (if rejected) */}
+            {warrant.status === 'rejected' && warrant.magistrate_rejection_reason && (
+              <div className="mb-4 rounded-lg border border-semantic-critical/30 bg-semantic-critical/5 p-3">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-semantic-critical mb-1">Magistrate Rejection Reason</p>
+                <p className="text-xs text-semantic-critical leading-relaxed">{warrant.magistrate_rejection_reason}</p>
+              </div>
+            )}
+
+            {/* Mandate text */}
+            <div className="text-xs text-text-primary border-t border-border pt-4 space-y-2">
+              <p>
+                You are hereby directed to arrest the said{' '}
+                <strong>{warrant.accused_name}</strong> and produce him/her before the Court /
+                Magistrate without delay. <strong>HEREIN FAIL NOT.</strong>
+              </p>
+              <p className="text-text-secondary">
+                Place: {warrant.police_station}
+              </p>
+            </div>
+
+            {/* Signature row */}
+            <div className="mt-5 pt-4 border-t border-border grid grid-cols-2 gap-4 text-[10px] text-text-secondary text-center">
+              <div className="border border-dashed border-border rounded-lg px-3 py-4">(Seal of the Court)</div>
+              <div className="border border-dashed border-border rounded-lg px-3 py-4">(Signature of Magistrate)</div>
+            </div>
+          </div>
+
+          {/* Raw text fallback — if warrant_draft_content differs from the structured preview */}
+          {warrant.warrant_draft_content && (
+            <details className="mt-4 group">
+              <summary className="text-[10px] font-bold uppercase tracking-wider text-text-secondary cursor-pointer hover:text-text-primary transition-colors select-none">
+                <span className="ml-1">Raw Warrant Text</span>
+              </summary>
+              <pre className="mt-2 rounded-lg border border-border bg-surface p-3 text-[11px] text-text-primary font-mono whitespace-pre-wrap leading-relaxed max-h-[300px] overflow-y-auto">
+                {warrant.warrant_draft_content}
+              </pre>
+            </details>
+          )}
+
+          {/* Warrant ID */}
+          <p className="text-[10px] text-text-secondary font-mono mt-3">Warrant ID: {warrant.warrant_id}</p>
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-3 border-t border-border bg-surface-elevated rounded-b-2xl flex items-center justify-between">
+          <button onClick={onClose} className="text-sm text-text-secondary hover:text-text-primary font-medium transition-colors cursor-pointer">
+            Close
+          </button>
+          {warrant.signed_warrant_pdf_url && (
+            <a
+              href={warrant.signed_warrant_pdf_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl bg-brand-primary hover:bg-brand-primary/90 text-white transition-colors"
+            >
+              <ExternalLink size={13} /> View Signed PDF
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Warrant card ─────────────────────────────────────────────────────────────
 
 function WarrantCard({
@@ -122,6 +303,7 @@ function WarrantCard({
 }) {
   const [expanded,       setExpanded]       = useState(false);
   const [draftOpen,      setDraftOpen]      = useState(false);
+  const [viewOpen,       setViewOpen]       = useState(false);
   const [custodyLoading, setCustodyLoading] = useState(false);
   const [produceLoading, setProduceLoading] = useState(false);
   const [releaseLoading, setReleaseLoading] = useState(false);
@@ -176,13 +358,23 @@ function WarrantCard({
       <div className="rounded-xl border border-border bg-surface shadow-xs overflow-hidden">
         {/* Header row */}
         <div className="flex items-start gap-3 p-4">
-          <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-surface-elevated border border-border flex items-center justify-center">
+          <div
+            className="flex-shrink-0 w-8 h-8 rounded-lg bg-surface-elevated border border-border flex items-center justify-center cursor-pointer hover:bg-brand-primary/10 hover:border-brand-primary/20 transition-colors"
+            onClick={() => setViewOpen(true)}
+            title="View full warrant document"
+          >
             <Shield size={14} className="text-text-secondary" />
           </div>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-bold text-text-primary">{warrant.accused_name}</span>
+              <span
+                className="text-sm font-bold text-text-primary cursor-pointer hover:text-brand-primary transition-colors"
+                onClick={() => setViewOpen(true)}
+                title="View full warrant document"
+              >
+                {warrant.accused_name}
+              </span>
               <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${cfg.pill}`}>
                 {cfg.icon} {cfg.label}
               </span>
@@ -194,6 +386,14 @@ function WarrantCard({
           </div>
 
           <div className="flex-shrink-0 flex flex-col items-end gap-2">
+            {/* View Warrant button — always visible */}
+            <button
+              onClick={() => setViewOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border border-brand-primary/30 bg-brand-primary/5 hover:bg-brand-primary/10 text-brand-primary transition-colors cursor-pointer"
+            >
+              <Eye size={12} /> View Warrant
+            </button>
+
             {/* Contextual actions */}
             {warrant.status === 'draft' && (
               <button
@@ -307,6 +507,13 @@ function WarrantCard({
         )}
       </div>
 
+      {/* Full warrant document view modal */}
+      <WarrantViewModal
+        isOpen={viewOpen}
+        onClose={() => setViewOpen(false)}
+        warrant={warrant}
+      />
+
       {/* Draft modal */}
       {participant && (
         <WarrantDraftModal
@@ -339,10 +546,8 @@ function ParticipantRow({
 }) {
   const [draftOpen, setDraftOpen] = useState(false);
 
-  const sections: AppliedSection[] =
-    (participant.accusedProfile?.appliedSections?.length
-      ? participant.accusedProfile.appliedSections
-      : participant.suspectProfile?.appliedSections) ?? [];
+  // accusedProfile was removed from the backend model — sections are always stored in suspectProfile
+  const sections: AppliedSection[] = participant.suspectProfile?.appliedSections ?? [];
 
   return (
     <>
@@ -353,7 +558,7 @@ function ParticipantRow({
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-text-primary">{participant.name}</p>
           <div className="flex items-center gap-2 flex-wrap mt-0.5">
-            {participant.roles.map(r => (
+            {participant.roles.filter(r => !(r === 'Suspect' && participant.roles.includes('Accused'))).map(r => (
               <span key={r} className="text-[10px] font-bold px-1.5 py-0.5 rounded-lg bg-surface-elevated text-text-secondary border border-border">
                 {r}
               </span>

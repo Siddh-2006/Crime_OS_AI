@@ -5,10 +5,12 @@ import { Card, CardHeader } from '@/components/ui/Card';
 import { Modal } from '@/components/ui/Modal';
 import { 
   FileText, Clock, ShieldAlert, AlertTriangle, HelpCircle, 
-  CheckCircle2, Send, Loader2, CheckCheck 
+  CheckCircle2, Send, Loader2, CheckCheck, ExternalLink 
 } from 'lucide-react';
 import apiClient from '@/lib/apiClient';
 import { CommonTimeline } from '@/components/ui/CommonTimeline';
+import { TextFormatter } from '../ui/TextFormatter';
+import { PdfViewer } from '@/components/ui/PdfViewer';
 
 export interface CaseUnderstandingData {
   case_id: string;
@@ -87,11 +89,12 @@ export interface CaseUnderstandingData {
 interface Props {
   data: CaseUnderstandingData;
   caseId?: string;
+  complaintEvidence?: Array<{originalFilename: string, secureUrl: string}>;
 }
 
-export function CaseUnderstandingView({ data, caseId }: Props): React.ReactElement {
+export function CaseUnderstandingView({ data, caseId, complaintEvidence }: Props): React.ReactElement {
   const [activeTab, setActiveTab] = useState<string>('overview');
-  const [previewEvidence, setPreviewEvidence] = useState<{id: string, name: string, summary: string, caption?: string} | null>(null);
+  const [previewEvidence, setPreviewEvidence] = useState<{id: string, name: string, summary: string, caption?: string, url?: string} | null>(null);
   const [previewImageError, setPreviewImageError] = useState(false);
   const [requestedItems, setRequestedItems] = useState<Record<string, 'loading' | 'sent'>>({});
 
@@ -201,11 +204,17 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
             <div className="space-y-4">
               <div>
                 <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary">Executive Summary</h4>
-                <p className="text-sm font-semibold text-text-primary mt-1.5 leading-relaxed bg-surface-elevated/80 p-4 rounded-xl border border-border">{overviewData.executive_summary}</p>
+                <TextFormatter 
+                  text={overviewData.executive_summary}
+                  className="text-sm text-text-primary mt-1.5 leading-relaxed bg-surface-elevated/80 p-4 rounded-xl border border-border" 
+                />
               </div>
               <div className="border-t border-border pt-4">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary">Incident Brief</h4>
-                <p className="text-sm text-text-primary mt-1.5 leading-relaxed whitespace-pre-line bg-surface-elevated/80 p-4 rounded-xl border border-border">{overviewData.incident_brief}</p>
+                <TextFormatter 
+                  text={overviewData.incident_brief}
+                  className="text-sm text-text-primary mt-1.5 leading-relaxed bg-surface-elevated/80 p-4 rounded-xl border border-border"
+                />
               </div>
             </div>
           </Card>
@@ -269,11 +278,13 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
                         className="p-4 border border-border rounded-xl space-y-3 bg-surface-elevated/70 hover:bg-surface-elevated cursor-pointer transition-all shadow-xs"
                         onClick={() => {
                           setPreviewImageError(false);
+                          const matchedEvidence = complaintEvidence?.find(e => e.originalFilename === ev.filename);
                           setPreviewEvidence({
                             id: ev.evidence_id,
                             name: ev.filename,
                             summary: summaryText,
                             caption: captionText,
+                            url: matchedEvidence?.secureUrl
                           });
                         }}
                       >
@@ -401,36 +412,61 @@ export function CaseUnderstandingView({ data, caseId }: Props): React.ReactEleme
       >
         {previewEvidence && (
           <div className="flex flex-col gap-4">
-            <div className="flex min-h-[300px] items-center justify-center overflow-hidden rounded-lg border border-border bg-surface-elevated p-4 text-text-primary">
-              {previewEvidence.name.match(/\.(mp4|mov|webm)$/i) ? (
-                <video 
-                  src={`https://res.cloudinary.com/q9ixw3zp/video/upload/${previewEvidence.id}`} 
-                  controls 
-                  className="max-w-full max-h-[50vh] object-contain"
-                />
-              ) : previewEvidence.name.match(/\.(mp3|wav|ogg)$/i) ? (
-                <audio 
-                  src={`https://res.cloudinary.com/q9ixw3zp/video/upload/${previewEvidence.id}`} 
-                  controls 
-                  className="w-full"
+            {previewEvidence.url ? (
+              previewEvidence.name.match(/\.pdf$/i) || previewEvidence.url.toLowerCase().includes('.pdf') ? (
+                <PdfViewer
+                  url={previewEvidence.url}
+                  title={previewEvidence.name}
+                  className="w-full h-[55vh]"
                 />
               ) : (
-                previewImageError ? (
-                  <p className="text-sm font-medium text-text-secondary">Preview not available for this file type.</p>
-                ) : (
-                  <img
-                    src={`https://res.cloudinary.com/q9ixw3zp/image/upload/${previewEvidence.id}`}
-                    alt={previewEvidence.name}
-                    className="max-h-[50vh] max-w-full object-contain"
-                    onError={() => setPreviewImageError(true)}
-                  />
-                )
-              )}
-            </div>
+                <div className="flex min-h-[300px] items-center justify-center overflow-hidden rounded-lg border border-border bg-surface-elevated p-4 text-text-primary">
+                  {previewEvidence.name.match(/\.(mp4|mov|webm)$/i) ? (
+                    <video 
+                      src={previewEvidence.url} 
+                      controls 
+                      className="max-w-full max-h-[50vh] object-contain"
+                    />
+                  ) : previewEvidence.name.match(/\.(mp3|wav|ogg)$/i) ? (
+                    <audio 
+                      src={previewEvidence.url} 
+                      controls 
+                      className="w-full"
+                    />
+                  ) : previewImageError ? (
+                    <p className="text-sm font-medium text-text-secondary">Preview not available for this file type.</p>
+                  ) : (
+                    <img
+                      src={previewEvidence.url}
+                      alt={previewEvidence.name}
+                      className="max-h-[50vh] max-w-full object-contain"
+                      onError={() => setPreviewImageError(true)}
+                    />
+                  )}
+                </div>
+              )
+            ) : (
+              <div className="flex min-h-[160px] items-center justify-center rounded-lg border border-border bg-surface-elevated p-4 text-text-primary">
+                <p className="text-sm font-medium text-text-secondary">Evidence file could not be found.</p>
+              </div>
+            )}
 
             <div className="space-y-4 rounded-lg border border-border bg-surface-elevated p-4 text-text-primary">
               <div>
-                <h3 className="mb-1 text-sm font-bold text-text-secondary">Evidence Title / Caption</h3>
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="text-sm font-bold text-text-secondary">Evidence Title / Caption</h3>
+                  {previewEvidence.url && (
+                    <a
+                      href={previewEvidence.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-brand-primary hover:underline"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      <span>Open in New Tab</span>
+                    </a>
+                  )}
+                </div>
                 <p className="text-sm font-semibold text-text-primary">{previewEvidence.caption || previewEvidence.name}</p>
               </div>
               

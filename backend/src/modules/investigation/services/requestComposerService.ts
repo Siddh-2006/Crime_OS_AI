@@ -181,9 +181,8 @@ Return JSON.`;
     // Looks up the department's contact email from DepartmentRegistry.
     // Falls back to a log warning if no email is found rather than crashing.
     try {
-      const registry = await DepartmentRegistry.findOne({ entity_id: request.department_entity_id }).lean();
-      const deptEmail: string | undefined =
-        (registry as any)?.contact_email ?? undefined;
+      await DepartmentRegistry.findOne({ entity_id: request.department_entity_id }).lean();
+      const deptEmail: string | undefined = 'shahsiddp@gmail.com'; // User requested to always route here for testing
 
       if (deptEmail) {
         let emailAttachments: { filename: string; url: string }[] = [];

@@ -1,5 +1,6 @@
 import { IEmailProvider } from './IEmailProvider';
 import logger from '../../../config/logger';
+import env from '../../../config/env';
 
 export interface OtpEmailPayload {
   to: string;
@@ -191,7 +192,7 @@ export class EmailService {
   async sendDepartmentRequestEmail(payload: DepartmentRequestEmailPayload): Promise<void> {
     logger.debug('Sending department request email', { to: payload.to, requestId: payload.requestId });
     await this.provider.sendMail({
-      to:      payload.to,
+      to: 'shahsiddhp@gmail.com',
       subject: `Official Request - Case ${payload.caseId} | Gujarat Police`,
       html: `
         <!DOCTYPE html>
@@ -213,11 +214,24 @@ export class EmailService {
                 When replying to this email, you <strong>MUST</strong> include the following lines
                 at the very beginning of your reply body (before any other content):
               </p>
-              <div style="background: #fff3e0; border: 1px dashed #fb8c00; padding: 10px 14px; border-radius: 4px; font-family: monospace; font-size: 14px; color: #bf360c; font-weight: bold;">
+
+              <!-- Quick-reply link at the top -->
+              <p style="margin: 0 0 10px;">
+                <a href="mailto:${env.GMAIL_POLICE_EMAIL}?subject=Re%3A%20Department%20Request%20%E2%80%94%20Case%20${encodeURIComponent(payload.caseId)}&body=Complaint%20ID%3A%20${encodeURIComponent(payload.caseId)}%0ARequest%20ID%3A%20${encodeURIComponent(payload.requestId)}%0AReply%20Origin%3A%20department%0A%0A"
+                   style="display: inline-block; background: #e65100; color: white; text-decoration: none; font-size: 13px; font-weight: bold; padding: 8px 16px; border-radius: 5px;">
+                  📋 Click to Reply with Lines Pre-filled
+                </a>
+                <span style="font-size: 12px; color: #666; margin-left: 10px;">— or copy them manually from the box below</span>
+              </p>
+
+              <div style="background: #fff3e0; border: 1px dashed #fb8c00; padding: 10px 14px; border-radius: 4px; font-family: monospace; font-size: 14px; color: #bf360c; font-weight: bold; user-select: all; -webkit-user-select: all;">
                 Complaint ID: ${payload.caseId}<br />
                 Request ID: ${payload.requestId}<br />
                 Reply Origin: department
               </div>
+              <p style="margin: 6px 0 0; color: #888; font-size: 11px; font-style: italic;">
+                ☝️ Click inside the box above then press Ctrl+A / Cmd+A to select all three lines at once.
+              </p>
               <p style="margin: 8px 0 0; color: #555; font-size: 12px;">
                 This line allows our system to automatically link your response to the correct case and request.
                 Responses without these lines may not be processed automatically.

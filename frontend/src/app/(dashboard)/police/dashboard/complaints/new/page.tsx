@@ -10,6 +10,7 @@ import { Select } from '@/components/ui/Select';
 import { Modal } from '@/components/ui/Modal';
 import apiClient from '@/lib/axios';
 import { API_ROUTES, APP_ROUTES } from '@/lib/constants';
+import { useTranslation } from '@/context/TranslationContext';
 import {
   ShieldAlert, ArrowLeft, ArrowRight, ClipboardCheck, Check, Search, X, FileText, Upload,
   Loader2, Mic, Calendar, Clock, MapPin, Film, Music, Eye, Trash2, HelpCircle, Paperclip, MailCheck, BadgeCheck
@@ -64,6 +65,7 @@ interface ComplaintDraftResponse {
 
 export default function NewComplaintPage(): React.ReactElement {
   const router = useRouter();
+  const { language } = useTranslation();
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState('');
@@ -860,6 +862,9 @@ export default function NewComplaintPage(): React.ReactElement {
           address: incidentPlace,
           category,
         }));
+        const languageMap: Record<string, string> = { en: 'English', hi: 'Hindi', gu: 'Gujarati' };
+        const fullLanguageName = languageMap[language || 'en'] || 'English';
+        formData.append('language', fullLanguageName);
 
         files.forEach((file) => formData.append('files', file));
 

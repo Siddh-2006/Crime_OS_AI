@@ -168,9 +168,11 @@ IMPORTANT: You must provide your response directly in the following language cod
     const maxTokens = isComplex ? 2000 : 1200;
     logger.debug(`[Copilot] ${isComplex ? 'deepCall' : 'fastCall'} for: "${message.substring(0, 80)}"`);
 
+    const t0 = Date.now();
     const response = isComplex
       ? await deepCall(systemPrompt, message, { maxTokens }) as string
       : await fastCall(systemPrompt, message, { maxTokens }) as string;
+    logger.info(`[Copilot] AI response generated`, { durationMs: Date.now() - t0, isComplex, responseLength: response?.length ?? 0 });
 
     return response;
   }
