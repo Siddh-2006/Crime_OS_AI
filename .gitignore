@@ -94,6 +94,11 @@ services/legal_agent/embedded/
 *.db
 .kiro
 
+# Local secrets file — NEVER COMMIT
+SECRETS.md
+secrets.md
+LOCAL_SECRETS.md
+
 # Scratch / debug / test scripts (local dev only)
 backend/scratch_*.ts
 backend/simulate_*.ts
